@@ -1,0 +1,5 @@
+# Ignore netrwhist
+.netrwhist
+
+# Ignore backups
+*~
