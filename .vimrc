@@ -43,7 +43,7 @@ if has('statusline')
     set laststatus=2
     set statusline=%<%f\        
     set statusline+=%w%h%m%r    
-    " set statusline+=%{fugitive#statusline()} " shmexy git status from fugitive
+    set statusline+=%{fugitive#statusline()} " shmexy git status from fugitive
     set statusline+=\ [%{&ff}/%Y]   " filetype
     set statusline+=\ [%{getcwd()}] " current working directory
     set statusline+=%=%-14.(%l,%c%V%)\ %p%% " right aligned file navigation info
