@@ -1,5 +1,5 @@
-set nocompatible
-set background=dark             " assume dark background
+set nocompatible                " needed for cool vim stuff I guess
+set background=dark             " dark background
 
 " pathogen setup stuff
 runtime! autoload/pathogen.vim
@@ -16,10 +16,14 @@ let g:miniBufExplMapWindowNavVim = 1
 let g:miniBufExplMapWindowNavArrows = 1
 let g:miniBufExplMapCTabSwitchBufs = 1
 let g:miniBufExplModSelTarget = 1
+set hidden                      " change buffers w/o having to write first
 
 " Syntastic syntax settings
 " Python - set default to pyflakes (must have pyflakes installed)
 let g:syntastic_python_checker = 'pyflakes'
+
+" Tagbar settings
+let g:tagbar_usearrows = 1
 
 set mouse=a                     " enable mouse
 scriptencoding=utf-8            " set encoding to utf-8
@@ -95,6 +99,22 @@ autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buff
 
 let mapleader = ','
 
+" ---------
+" Functions
+" ---------
+
+" open line in browser function
+function! Browser ()
+    let line = getline(".")
+    let line = matchstr(line, "http[^   ]*")
+    exec "!google-chrome ".line
+endfunction
+
+
+" -----------
+" Keybindings
+" -----------
+
 " run php file
 "autocmd FileType php noremap <F5> :w!<CR>:!php %<CR>
 
@@ -106,3 +126,20 @@ nnoremap <up> <nop>
 nnoremap <down> <nop>
 nnoremap <left> <nop>
 nnoremap <right> <nop>
+
+" remap jj to escape insert mode
+inoremap jj <Esc>
+
+" open line in browser keybind
+map <Leader>w :call Browser ()<CR>
+
+" map S-J and S-K to next and prev buffer
+nnoremap J :bp<CR>
+nnoremap K :bn<CR>
+
+" map S-H and S-K to undo and redo
+nnoremap H u
+nnoremap K <C-R>
+
+" toggle tagbar
+nnoremap <Leader>l :TagbarToggle<CR>

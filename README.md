@@ -15,3 +15,4 @@ Dependencies:
  - pytest
  - nose
  - ack
+ - pyflakes
