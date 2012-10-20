@@ -92,10 +92,10 @@ autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buff
 let mapleader = ','
 
 " run php file
-autocmd FileType php noremap <F5> :w!<CR>:!php %<CR>
+"autocmd FileType php noremap <F5> :w!<CR>:!php %<CR>
 
 " php syntax check
-autocmd FileType php noremap <C-L> :!php -l %<CR>
+"autocmd FileType php noremap <C-L> :!php -l %<CR>
 
 " disable arrow keys
 nnoremap <up> <nop>

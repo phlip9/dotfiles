@@ -3,5 +3,5 @@
 
 # Ignore backups
 *~
-add_plugins.sh
 bundle.backup
+.*.swp
