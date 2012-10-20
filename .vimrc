@@ -17,6 +17,10 @@ let g:miniBufExplMapWindowNavArrows = 1
 let g:miniBufExplMapCTabSwitchBufs = 1
 let g:miniBufExplModSelTarget = 1
 
+" Syntastic syntax settings
+" Python - set default to pyflakes (must have pyflakes installed)
+let g:syntastic_python_checker = 'pyflakes'
+
 set mouse=a                     " enable mouse
 scriptencoding=utf-8            " set encoding to utf-8
 set shortmess+=filmnrxoOtT      " abbreviate annoying messages
@@ -35,8 +39,8 @@ set tabpagemax=15               " max # of tabs per page
 set showmode                    " show current display mode
 
 set cursorline                  " highlight current line
-hi cursorline guibg=#333333     " highlight bg color of current line
-hi CursorColumn guibg=#333333   " highlight cursor
+" hi cursorline guibg=#333333     " highlight bg color of current line
+" hi CursorColumn guibg=#333333   " highlight cursor
 
 if has('cmdline_info')
     set ruler                   " show rulerz
