@@ -11,7 +11,13 @@ silent! call pathogen#infect()
 filetype plugin indent on       " detect filetypes
 syntax on                       " syntax highlighting
 
-set mouse=a                     " enable mouse?
+" Mini Buffer Explorer Settings
+let g:miniBufExplMapWindowNavVim = 1
+let g:miniBufExplMapWindowNavArrows = 1
+let g:miniBufExplMapCTabSwitchBufs = 1
+let g:miniBufExplModSelTarget = 1
+
+set mouse=a                     " enable mouse
 scriptencoding=utf-8            " set encoding to utf-8
 set shortmess+=filmnrxoOtT      " abbreviate annoying messages
 
