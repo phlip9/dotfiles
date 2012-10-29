@@ -137,9 +137,9 @@ map <Leader>w :call Browser ()<CR>
 nnoremap J :bp<CR>
 nnoremap K :bn<CR>
 
-" map S-H and S-K to undo and redo
+" map S-H and S-L to undo and redo
 nnoremap H u
-nnoremap K <C-R>
+nnoremap L <C-R>
 
 " toggle tagbar
 nnoremap <Leader>l :TagbarToggle<CR>
