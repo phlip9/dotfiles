@@ -24,6 +24,8 @@ let g:syntastic_python_checker = 'pyflakes'
 
 " Tagbar settings
 let g:tagbar_usearrows = 1
+let g:tagbar_autoclose = 1
+let g:tagbar_sort = 0
 
 set mouse=a                     " enable mouse
 scriptencoding=utf-8            " set encoding to utf-8
