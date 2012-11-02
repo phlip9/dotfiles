@@ -24,8 +24,13 @@ let g:syntastic_python_checker = 'pyflakes'
 
 " Tagbar settings
 let g:tagbar_usearrows = 1
-let g:tagbar_autoclose = 1
-let g:tagbar_sort = 0
+let g:tagbar_autoclose = 1      " auto close after selecting a tag
+let g:tagbar_sort = 0           " don't sort
+
+" NERDTree Settings
+" q closes NERDTree if it is the only window open
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
+
 
 set mouse=a                     " enable mouse
 scriptencoding=utf-8            " set encoding to utf-8
@@ -133,7 +138,7 @@ nnoremap <right> <nop>
 inoremap jj <Esc>
 
 " open line in browser keybind
-map <Leader>w :call Browser ()<CR>
+map <leader>w :call Browser ()<CR>
 
 " map S-J and S-K to next and prev buffer
 nnoremap J :bp<CR>
@@ -144,4 +149,10 @@ nnoremap H u
 nnoremap L <C-R>
 
 " toggle tagbar
-nnoremap <Leader>l :TagbarToggle<CR>
+nnoremap <leader>l :TagbarToggle<CR>
+
+" Reload Vimrc
+nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>'
+
+" Open NERDTree
+nnoremap <leader>n :NERDTreeToggle<CR>
