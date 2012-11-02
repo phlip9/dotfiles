@@ -4,9 +4,12 @@
 setlocal tabstop=4
 setlocal softtabstop=4
 setlocal shiftwidth=4
-" setlocal textwidth=79
+" setlocal textwidth=79         " this is annoying
 setlocal smarttab
 setlocal expandtab
 
 " python press F5 to run
-noremap <F5> :w!<CR>:!python %<CR>
+nnoremap <F5> :w!<CR>:!python %<CR>
+
+" autocomplete
+set omnifunc=pythoncomplete#Complete

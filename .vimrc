@@ -122,12 +122,6 @@ endfunction
 " Keybindings
 " -----------
 
-" run php file
-"autocmd FileType php noremap <F5> :w!<CR>:!php %<CR>
-
-" php syntax check
-"autocmd FileType php noremap <C-L> :!php -l %<CR>
-
 " disable arrow keys
 nnoremap <up> <nop>
 nnoremap <down> <nop>
@@ -157,7 +151,7 @@ nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 
 " Open NERDTree
 nnoremap <leader>n :NERDTreeToggle<CR>
 
-" Window movement /w CTRL + J,K,L,H
+" Window movement w CTRL + J,K,L,H
 nnoremap <c-j> <c-w>j
 nnoremap <c-k> <c-w>k
 nnoremap <c-l> <c-w>l
