@@ -156,3 +156,9 @@ nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 
 
 " Open NERDTree
 nnoremap <leader>n :NERDTreeToggle<CR>
+
+" Window movement /w CTRL + J,K,L,H
+nnoremap <c-j> <c-w>j
+nnoremap <c-k> <c-w>k
+nnoremap <c-l> <c-w>l
+nnoremap <c-h> <c-w>h
