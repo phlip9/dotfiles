@@ -20,7 +20,59 @@ set hidden                      " change buffers w/o having to write first
 
 " Syntastic syntax settings
 " Python - set default to pyflakes (must have pyflakes installed)
-let g:syntastic_python_checker = 'pyflakes'
+" let g:syntastic_python_checker = 'pyflakes'
+
+" --- Python-Mode --- "
+" =================== "
+
+" Auto fix vim python paths if virtualenv enabled
+let g:pymode_virtualenv = 1
+
+" Enable python objects and motion
+let g:pymode_motion = 1
+
+" Pymode-Linting "
+" -------------- "
+let g:pymode_lint = 1
+let g:pymode_lint_checker = "pyflakes, pylint"
+" skip no errors
+let g:pymode_lint_ignore = ""
+
+" Pymode-Documentation "
+" -------------------- "
+let g:pymode_doc = 1
+let g:pymode_doc_key = '<F4>'
+
+" Pymode-Rope "
+" ----------- "
+" Enable python folding
+let g:pymode_folding = 1
+" Rope command prefixes "
+"let g:pymode_rope_global_prefix = "<leader>p"
+"let g:pymode_rope_local_prefix = "<leader>R"
+"let g:pymode_rope_short_prefix = "<leader>r"
+
+" Manually remapping b/c python-mode is being annoying
+nnoremap <leader>rg :RopeGotoDefinition<CR>
+nnoremap <leader>rd :RopeShowDoc<CR>
+nnoremap <leader>rf :RopeFindOccurrences<CR>
+nnoremap <leader>rm :emenu Rope . <TAB>
+
+" Lint after saving
+let g:pymode_lint_write = 1
+
+" Pymode-Run "
+" ---------- "
+" Run on <F5>
+let g:pymode_run = 1
+let g:pymode_run_key = '<F5>'
+
+" Pymode-Debugging "
+" ---------------- "
+" Key for set/unset breakpoint
+let g:pymode_breakpoint_key = '<leader>b'
+
+" ===================== "
 
 " Tagbar settings
 let g:tagbar_usearrows = 1
@@ -30,7 +82,6 @@ let g:tagbar_sort = 0           " don't sort
 " NERDTree Settings
 " q closes NERDTree if it is the only window open
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
-
 
 set mouse=a                     " enable mouse
 scriptencoding=utf-8            " set encoding to utf-8
@@ -44,19 +95,18 @@ set history=1000                " make the history larger
 " set undolevels=1000             " # of changes that can be undone
 " set undoreload=10000            " # of lines that can be undone
 
-" color solarized
+"color evening
 
 set tabpagemax=15               " max # of tabs per page
 set showmode                    " show current display mode
 
-set cursorline                  " highlight current line
-" hi cursorline guibg=#333333     " highlight bg color of current line
-" hi CursorColumn guibg=#333333   " highlight cursor
+set cursorline                  " show a line under the cursor
+hi CursorLine cterm=none ctermbg=Black 
 
 if has('cmdline_info')
-    set ruler                   " show rulerz
+    set ruler                                           " show rulerz
     set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
-    set showcmd                 " show partial commands in status line
+    set showcmd                                         " show partial commands in status line
 endif
 
 " status line stuff
@@ -143,10 +193,13 @@ nnoremap H u
 nnoremap L <C-R>
 
 " toggle tagbar
-nnoremap <leader>l :TagbarToggle<CR>
+nnoremap <leader>t :TagbarToggle<CR>
 
 " Reload Vimrc
 nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>'
+
+" hitting <ESC> ends find
+" nnoremap <ESC> :noh<CR><ESC>
 
 " Open NERDTree
 nnoremap <leader>n :NERDTreeToggle<CR>

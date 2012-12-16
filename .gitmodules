@@ -25,3 +25,9 @@
 [submodule "bundle/gundo"]
 	path = bundle/gundo
 	url = git://github.com/sjl/gundo.vim.git
+[submodule "bundle/snipmate"]
+	path = bundle/snipmate
+	url = git@github.com:phlip9/snipmate.vim.git
+[submodule "bundle/python-mode"]
+	path = bundle/python-mode
+	url = git://github.com/klen/python-mode.git
