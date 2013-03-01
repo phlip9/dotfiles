@@ -7,6 +7,7 @@ Install
 =======
 
 Dependencies:
+ - vim compiled with +python
  - pip
  - pep8
  - exuberant-ctags
@@ -16,3 +17,4 @@ Dependencies:
  - nose
  - ack
  - pyflakes
+ - powerline

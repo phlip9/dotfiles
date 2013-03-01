@@ -110,6 +110,8 @@ if has('cmdline_info')
 endif
 
 " status line stuff
+" powerline
+set rtp+=/usr/local/lib/python2.7/dist-packages/Powerline-beta-py2.7.egg/powerline/bindings/vim
 if has('statusline')
     set laststatus=2
     set statusline=%<%f\        
