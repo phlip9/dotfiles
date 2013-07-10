@@ -113,6 +113,7 @@ endif
 " powerline
 set rtp+=/usr/local/lib/python2.7/dist-packages/Powerline-beta-py2.7.egg/powerline/bindings/vim
 if has('statusline')
+    set ambiwidth=single
     set laststatus=2
     set statusline=%<%f\        
     set statusline+=%w%h%m%r    
@@ -145,6 +146,7 @@ set foldenable                  " auto fold code
 set gdefault                    " always use /g on :s substitution
 
 set nowrap                      " warp long lines
+set clipboard=unnamedplus       " place yanked text into the clipboard
 
 " tab rules
 set autoindent                  " indent at same level as previous line
