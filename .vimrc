@@ -11,19 +11,18 @@ call vundle#rc()
 Bundle 'gmarik/vundle'
 
 " Other bundles
-Bundle 'tpope/vim-fugitive'
-Bundle 'sontek/minibufexpl.vim'
-Bundle 'scrooloose/nerdcommenter'
 Bundle 'Raimondi/delimitMate'
-Bundle 'tpope/vim-surround'
-Bundle 'scrooloose/syntastic'
-Bundle 'majutsushi/tagbar'
-Bundle 'scrooloose/nerdtree'
-Bundle 'sjl/gundo.vim'
-" Bundle 'phlip9/snipmate.vim'
-Bundle 'klen/python-mode'
 Bundle 'kchmck/vim-coffee-script'
+Bundle 'majutsushi/tagbar'
+Bundle 'scrooloose/nerdcommenter'
+Bundle 'scrooloose/nerdtree'
+Bundle 'scrooloose/syntastic'
+Bundle 'sjl/gundo.vim'
+Bundle 'sontek/minibufexpl.vim'
+Bundle 'tpope/vim-fugitive'
 Bundle 'tpope/vim-ragtag'
+Bundle 'tpope/vim-surround'
+Bundle 'Valloric/YouCompleteMe'
 
 " filetype
 filetype plugin indent on       " detect filetypes
