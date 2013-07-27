@@ -1,11 +1,29 @@
 set nocompatible                " needed for cool vim stuff I guess
 set background=dark             " dark background
+filetype off
 
-" pathogen setup stuff
-runtime! autoload/pathogen.vim
-silent! call pathogen#helptags()
-silent! call pathogen#runtime_append_all_bundles()
-silent! call pathogen#infect()
+" Vundle Setup
+set rtp+=~/.vim/bundle/vundle/
+call vundle#rc()
+
+" let Vundle manage Vundle
+" required!
+Bundle 'gmarik/vundle'
+
+" Other bundles
+Bundle 'tpope/vim-fugitive'
+Bundle 'sontek/minibufexpl.vim'
+Bundle 'scrooloose/nerdcommenter'
+Bundle 'Raimondi/delimitMate'
+Bundle 'tpope/vim-surround'
+Bundle 'scrooloose/syntastic'
+Bundle 'majutsushi/tagbar'
+Bundle 'scrooloose/nerdtree'
+Bundle 'sjl/gundo.vim'
+" Bundle 'phlip9/snipmate.vim'
+Bundle 'klen/python-mode'
+Bundle 'kchmck/vim-coffee-script'
+Bundle 'tpope/vim-ragtag'
 
 " filetype
 filetype plugin indent on       " detect filetypes
