@@ -35,59 +35,11 @@ let g:miniBufExplMapCTabSwitchBufs = 1
 let g:miniBufExplModSelTarget = 1
 set hidden                      " change buffers w/o having to write first
 
-" Syntastic syntax settings
-" Python - set default to pyflakes (must have pyflakes installed)
-" let g:syntastic_python_checker = 'pyflakes'
-
-" --- Python-Mode --- "
-" =================== "
-
-" Auto fix vim python paths if virtualenv enabled
-let g:pymode_virtualenv = 1
-
-" Enable python objects and motion
-let g:pymode_motion = 1
-
-" Pymode-Linting "
-" -------------- "
-let g:pymode_lint = 1
-let g:pymode_lint_checker = "pyflakes, pylint"
-" skip no errors
-let g:pymode_lint_ignore = ""
-
-" Pymode-Documentation "
-" -------------------- "
-let g:pymode_doc = 1
-let g:pymode_doc_key = '<F4>'
-
-" Pymode-Rope "
-" ----------- "
-" Enable python folding
-let g:pymode_folding = 1
-" Rope command prefixes "
-"let g:pymode_rope_global_prefix = "<leader>p"
-"let g:pymode_rope_local_prefix = "<leader>R"
-"let g:pymode_rope_short_prefix = "<leader>r"
-
 " Manually remapping b/c python-mode is being annoying
 nnoremap <leader>rg :RopeGotoDefinition<CR>
 nnoremap <leader>rd :RopeShowDoc<CR>
 nnoremap <leader>rf :RopeFindOccurrences<CR>
 nnoremap <leader>rm :emenu Rope . <TAB>
-
-" Lint after saving
-let g:pymode_lint_write = 1
-
-" Pymode-Run "
-" ---------- "
-" Run on <F5>
-let g:pymode_run = 1
-let g:pymode_run_key = '<F5>'
-
-" Pymode-Debugging "
-" ---------------- "
-" Key for set/unset breakpoint
-let g:pymode_breakpoint_key = '<leader>b'
 
 " ===================== "
 
@@ -96,7 +48,7 @@ let g:tagbar_usearrows = 1
 let g:tagbar_autoclose = 1      " auto close after selecting a tag
 let g:tagbar_sort = 0           " don't sort
 
-" Tagbar languages
+" Additional Tagbar languages
 " Markdown
 let g:tagbar_type_markdown = {
     \ 'ctagstype' : 'markdown',
@@ -144,14 +96,6 @@ scriptencoding=utf-8            " set encoding to utf-8
 set shortmess+=filmnrxoOtT      " abbreviate annoying messages
 
 set history=1000                " make the history larger
-" set spell                       " spell checking
-
-" set backup                      " keep backups of files
-" set undofile                    " set persistant undo (accross vim instances)
-" set undolevels=1000             " # of changes that can be undone
-" set undoreload=10000            " # of lines that can be undone
-
-"color evening
 
 set tabpagemax=15               " max # of tabs per page
 set showmode                    " show current display mode
