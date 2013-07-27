@@ -79,6 +79,45 @@ let g:tagbar_usearrows = 1
 let g:tagbar_autoclose = 1      " auto close after selecting a tag
 let g:tagbar_sort = 0           " don't sort
 
+" Tagbar languages
+" Markdown
+let g:tagbar_type_markdown = {
+    \ 'ctagstype' : 'markdown',
+    \ 'kinds' : [
+        \ 'h:Heading_L1',
+        \ 'i:Heading_L2',
+        \ 'k:Heading_L3'
+    \ ]
+\ }
+
+" CSS
+let g:tagbar_type_css = {
+    \ 'ctagstype' : 'css',
+    \ 'kinds' : [
+        \ 'c:class',
+        \ 'i:id',
+        \ 't:tag',
+        \ 'm:media'
+    \ ]
+\ }
+
+" CoffeeScript
+if executable('coffeetags')
+    let g:tagbar_type_coffee = {
+      \ 'ctagsbin' : 'coffeetags',
+      \ 'ctagsargs' : '',
+      \ 'kinds' : [
+          \ 'f:functions',
+          \ 'o:object',
+      \ ],
+      \ 'sro' : ".",
+      \ 'kind2scope' : {
+          \ 'f' : 'object',
+          \ 'o' : 'object',
+      \ }
+  \ }
+endif
+
 " NERDTree Settings
 " q closes NERDTree if it is the only window open
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif

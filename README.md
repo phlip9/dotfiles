@@ -18,3 +18,4 @@ Dependencies:
  - ack
  - pyflakes
  - powerline
+ - CoffeeTags
