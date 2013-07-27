@@ -23,6 +23,8 @@ Bundle 'tpope/vim-fugitive'
 Bundle 'tpope/vim-ragtag'
 Bundle 'tpope/vim-surround'
 Bundle 'Valloric/YouCompleteMe'
+Bundle 'Lokaltog/vim-easymotion'
+Bundle 'wincent/Command-T'
 
 " filetype
 filetype plugin indent on       " detect filetypes
@@ -36,10 +38,10 @@ let g:miniBufExplModSelTarget = 1
 set hidden                      " change buffers w/o having to write first
 
 " Manually remapping b/c python-mode is being annoying
-nnoremap <leader>rg :RopeGotoDefinition<CR>
-nnoremap <leader>rd :RopeShowDoc<CR>
-nnoremap <leader>rf :RopeFindOccurrences<CR>
-nnoremap <leader>rm :emenu Rope . <TAB>
+"nnoremap <leader>rg :RopeGotoDefinition<CR>
+"nnoremap <leader>rd :RopeShowDoc<CR>
+"nnoremap <leader>rf :RopeFindOccurrences<CR>
+"nnoremap <leader>rm :emenu Rope . <TAB>
 
 " ===================== "
 
@@ -48,7 +50,7 @@ let g:tagbar_usearrows = 1
 let g:tagbar_autoclose = 1      " auto close after selecting a tag
 let g:tagbar_sort = 0           " don't sort
 
-" Additional Tagbar languages
+" Additional Ctags languages
 " Markdown
 let g:tagbar_type_markdown = {
     \ 'ctagstype' : 'markdown',
@@ -86,6 +88,9 @@ if executable('coffeetags')
       \ }
   \ }
 endif
+
+" tags search location
+set tags=./tags;~/projects;/usr/local/lib/python3.3
 
 " NERDTree Settings
 " q closes NERDTree if it is the only window open
@@ -182,6 +187,10 @@ nnoremap <down> <nop>
 nnoremap <left> <nop>
 nnoremap <right> <nop>
 
+" remap Visual Block selection to something that doesn't conflict with system
+" copy/paste
+nnoremap <leader>v <C-v>
+
 " remap jj to escape insert mode
 inoremap jj <Esc>
 
@@ -197,7 +206,10 @@ nnoremap H u
 nnoremap L <C-R>
 
 " toggle tagbar
-nnoremap <leader>t :TagbarToggle<CR>
+nnoremap <leader>tb :TagbarToggle<CR>
+
+" Toggle Command-T
+nnoremap <leader>tt :Command-T<CR>
 
 " Reload Vimrc
 nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>'
@@ -216,3 +228,10 @@ nnoremap <c-h> <c-w>h
 
 " Gundo
 nnoremap <leader>g :GundoToggle<CR>
+
+" Make vim into a hex editor
+nnoremap <leader>hx :%!xxd
+nnoremap <leader>hr :%!xxd -r
+
+" YouCompleteMe GoToDefinition
+nnoremap <leader>jd :YcmCompleter GoToDefinitionElseDeclaration<CR>
