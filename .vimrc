@@ -11,24 +11,37 @@ call vundle#rc()
 Bundle 'gmarik/vundle'
 
 " Other bundles
-Bundle 'Raimondi/delimitMate'
 Bundle 'kchmck/vim-coffee-script'
+Bundle 'Lokaltog/vim-easymotion'
 Bundle 'majutsushi/tagbar'
+Bundle 'Raimondi/delimitMate'
 Bundle 'scrooloose/nerdcommenter'
 Bundle 'scrooloose/nerdtree'
 Bundle 'scrooloose/syntastic'
+Bundle 'Shougo/vimproc.vim'
+Bundle 'SirVer/ultisnips'
 Bundle 'sjl/gundo.vim'
 Bundle 'sontek/minibufexpl.vim'
 Bundle 'tpope/vim-fugitive'
 Bundle 'tpope/vim-ragtag'
 Bundle 'tpope/vim-surround'
 Bundle 'Valloric/YouCompleteMe'
-Bundle 'Lokaltog/vim-easymotion'
 Bundle 'wincent/Command-T'
+Bundle 'yuratomo/gmail.vim'
 
 " filetype
 filetype plugin indent on       " detect filetypes
 syntax on                       " syntax highlighting
+
+" gmail.vim Settings "
+let &path = $PATH
+let g:gmail_imap = 'imap.gmail.com:993'
+let g:gmail_smtp = 'smtp.gmail.com:465'
+let g:gmail_page_size = 50
+
+" Two factor authentication. Don't want my password publicly available in my
+" vimrc.
+source ~/.gmail.vim
 
 " Mini Buffer Explorer Settings
 let g:miniBufExplMapWindowNavVim = 1
@@ -195,7 +208,7 @@ nnoremap <leader>v <C-v>
 inoremap jj <Esc>
 
 " open line in browser keybind
-map <leader>w :call Browser ()<CR>
+map <silent> <leader>w :call Browser ()<CR>
 
 " map S-J and S-K to next and prev buffer
 nnoremap J :bp<CR>
@@ -208,14 +221,14 @@ nnoremap L <C-R>
 " toggle tagbar
 nnoremap <leader>tb :TagbarToggle<CR>
 
+" update tags "
+nnoremap <leader>tr :!ctags -R .
+
 " Toggle Command-T
-nnoremap <leader>tt :Command-T<CR>
+nnoremap <leader>ct :CommandT<CR>
 
 " Reload Vimrc
-nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>'
-
-" hitting <ESC> ends find
-" nnoremap <ESC> :noh<CR><ESC>
+nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
 
 " Open NERDTree
 nnoremap <leader>n :NERDTreeToggle<CR>
@@ -230,8 +243,18 @@ nnoremap <c-h> <c-w>h
 nnoremap <leader>g :GundoToggle<CR>
 
 " Make vim into a hex editor
-nnoremap <leader>hx :%!xxd
-nnoremap <leader>hr :%!xxd -r
+nnoremap <leader>hx :%!xxd<CR>
+nnoremap <leader>hr :%!xxd -r<CR>
 
-" YouCompleteMe GoToDefinition
+" YouCompleteMe
+let g:ycm_key_list_previous_completion=['<Up>']
+let g:ycm_key_list_select_completion=['<Down>', '<Enter>']
+
+" GoToDefinition
 nnoremap <leader>jd :YcmCompleter GoToDefinitionElseDeclaration<CR>
+
+"" Ultisnips
+let g:UltiSnipsExpandTrigger="<Tab>"
+let g:UltiSnipsJumpForwardTrigger="<Tab>"
+
+nnoremap <leader><leader>u :py UltiSnips_Manager.list_snippets()<CR>
