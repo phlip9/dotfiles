@@ -28,20 +28,21 @@ Bundle 'tpope/vim-surround'
 Bundle 'Valloric/YouCompleteMe'
 Bundle 'wincent/Command-T'
 Bundle 'yuratomo/gmail.vim'
+Bundle 'chrisbra/SudoEdit.vim'
 
 " filetype
 filetype plugin indent on       " detect filetypes
 syntax on                       " syntax highlighting
 
 " gmail.vim Settings "
-let &path = $PATH
-let g:gmail_imap = 'imap.gmail.com:993'
-let g:gmail_smtp = 'smtp.gmail.com:465'
-let g:gmail_page_size = 50
+"let &path = $PATH
+"let g:gmail_imap = 'imap.gmail.com:993'
+"let g:gmail_smtp = 'smtp.gmail.com:465'
+"let g:gmail_page_size = 50
 
 " Two factor authentication. Don't want my password publicly available in my
 " vimrc.
-source ~/.gmail.vim
+"source ~/.gmail.vim
 
 " Mini Buffer Explorer Settings
 let g:miniBufExplMapWindowNavVim = 1
