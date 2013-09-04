@@ -1,6 +1,4 @@
 set nocompatible                " needed for cool vim stuff I guess
-set background=dark             " dark background
-filetype off
 
 " Vundle Setup
 set rtp+=~/.vim/bundle/vundle/
@@ -11,6 +9,7 @@ call vundle#rc()
 Bundle 'gmarik/vundle'
 
 " Other bundles
+Bundle 'altercation/vim-colors-solarized.git'
 Bundle 'kchmck/vim-coffee-script'
 Bundle 'Lokaltog/vim-easymotion'
 Bundle 'majutsushi/tagbar'
@@ -27,10 +26,17 @@ Bundle 'tpope/vim-ragtag'
 Bundle 'tpope/vim-surround'
 Bundle 'Valloric/YouCompleteMe'
 Bundle 'wincent/Command-T'
+Bundle 'bling/vim-airline'
 
 " filetype
 filetype plugin indent on       " detect filetypes
 syntax on                       " syntax highlighting
+
+" colorscheme
+colorscheme solarized           " solarized
+set background=dark             " dark background
+
+let g:solarized_termtrans = 1   " use terminal transparent background
 
 " Mini Buffer Explorer Settings
 let g:miniBufExplMapWindowNavVim = 1
@@ -99,6 +105,11 @@ set history=1000                " make the history larger
 set tabpagemax=15               " max # of tabs per page
 set showmode                    " show current display mode
 
+" use 256 colors if gnome-terminal
+if $COLORTERM == 'gnome-terminal'
+  set t_Co=256
+endif
+
 set cursorline                  " show a line under the cursor
 hi CursorLine cterm=none ctermbg=Black 
 
@@ -109,18 +120,20 @@ if has('cmdline_info')
 endif
 
 " status line stuff
-" powerline
-set rtp+=/usr/local/lib/python2.7/dist-packages/Powerline-beta-py2.7.egg/powerline/bindings/vim
-if has('statusline')
-    set ambiwidth=single
-    set laststatus=2
-    set statusline=%<%f\        
-    set statusline+=%w%h%m%r    
-    set statusline+=%{fugitive#statusline()} " shmexy git status from fugitive
-    set statusline+=\ [%{&ff}/%Y]   " filetype
-    set statusline+=\ [%{getcwd()}] " current working directory
-    set statusline+=%=%-14.(%l,%c%V%)\ %p%% " right aligned file navigation info
-endif
+" airline
+set laststatus=2
+
+let g:airline_powerline_fonts=1
+
+" powerline symbols
+let g:airline_symbols = {}
+let g:airline_left_sep = ''
+let g:airline_left_alt_sep = ''
+let g:airline_right_sep = ''
+let g:airline_right_alt_sep = ''
+let g:airline_symbols.branch = ''
+let g:airline_symbols.readonly = ''
+let g:airline_symbols.linenr = ''
 
 set backspace=indent,eol,start  " easy backspace
 set linespace=0                 " reduce space between lines
