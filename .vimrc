@@ -27,21 +27,10 @@ Bundle 'tpope/vim-ragtag'
 Bundle 'tpope/vim-surround'
 Bundle 'Valloric/YouCompleteMe'
 Bundle 'wincent/Command-T'
-Bundle 'yuratomo/gmail.vim'
 
 " filetype
 filetype plugin indent on       " detect filetypes
 syntax on                       " syntax highlighting
-
-" gmail.vim Settings "
-let &path = $PATH
-let g:gmail_imap = 'imap.gmail.com:993'
-let g:gmail_smtp = 'smtp.gmail.com:465'
-let g:gmail_page_size = 50
-
-" Two factor authentication. Don't want my password publicly available in my
-" vimrc.
-source ~/.gmail.vim
 
 " Mini Buffer Explorer Settings
 let g:miniBufExplMapWindowNavVim = 1
@@ -49,14 +38,6 @@ let g:miniBufExplMapWindowNavArrows = 1
 let g:miniBufExplMapCTabSwitchBufs = 1
 let g:miniBufExplModSelTarget = 1
 set hidden                      " change buffers w/o having to write first
-
-" Manually remapping b/c python-mode is being annoying
-"nnoremap <leader>rg :RopeGotoDefinition<CR>
-"nnoremap <leader>rd :RopeShowDoc<CR>
-"nnoremap <leader>rf :RopeFindOccurrences<CR>
-"nnoremap <leader>rm :emenu Rope . <TAB>
-
-" ===================== "
 
 " Tagbar settings
 let g:tagbar_usearrows = 1
