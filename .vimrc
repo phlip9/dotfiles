@@ -1,4 +1,5 @@
 set nocompatible                " needed for cool vim stuff I guess
+filetype off
 
 " Vundle Setup
 set rtp+=~/.vim/bundle/vundle/
