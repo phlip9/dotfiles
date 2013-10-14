@@ -19,7 +19,6 @@ Bundle 'scrooloose/nerdcommenter'
 Bundle 'scrooloose/nerdtree'
 Bundle 'scrooloose/syntastic'
 Bundle 'Shougo/vimproc.vim'
-Bundle 'SirVer/ultisnips'
 Bundle 'sjl/gundo.vim'
 Bundle 'sontek/minibufexpl.vim'
 Bundle 'tpope/vim-fugitive'
@@ -242,15 +241,5 @@ nnoremap <leader>g :GundoToggle<CR>
 nnoremap <leader>hx :%!xxd<CR>
 nnoremap <leader>hr :%!xxd -r<CR>
 
-" YouCompleteMe
-let g:ycm_key_list_previous_completion=['<Up>']
-let g:ycm_key_list_select_completion=['<Down>', '<Enter>']
-
 " GoToDefinition
 nnoremap <leader>jd :YcmCompleter GoToDefinitionElseDeclaration<CR>
-
-"" Ultisnips
-let g:UltiSnipsExpandTrigger="<Tab>"
-let g:UltiSnipsJumpForwardTrigger="<Tab>"
-
-nnoremap <leader><leader>u :py UltiSnips_Manager.list_snippets()<CR>
