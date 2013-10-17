@@ -28,6 +28,7 @@ Bundle 'Valloric/YouCompleteMe'
 Bundle 'wincent/Command-T'
 Bundle 'chrisbra/SudoEdit.vim'
 Bundle 'bling/vim-airline'
+Bundle 'phlip9/google-vim_cpp_indent'
 
 " filetype
 filetype plugin indent on       " detect filetypes
