@@ -9,26 +9,51 @@ call vundle#rc()
 " required!
 Bundle 'gmarik/vundle'
 
-" Other bundles
+""" Other bundles
+
+" Solarized Color Scheme "
 Bundle 'altercation/vim-colors-solarized.git'
+
+" Coffee script syntax highlighting and indenting "
 Bundle 'kchmck/vim-coffee-script'
-Bundle 'Lokaltog/vim-easymotion'
+
+" ctags list "
 Bundle 'majutsushi/tagbar'
+
+" Autocompletion for delimiters "
 Bundle 'Raimondi/delimitMate'
+
+" Easily comment lines or blocks of text "
 Bundle 'scrooloose/nerdcommenter'
+
+" Vim file explorer "
 Bundle 'scrooloose/nerdtree'
+
+" Vim syntax and error checking "
 Bundle 'scrooloose/syntastic'
-Bundle 'Shougo/vimproc.vim'
+
+" Visualize Vim undo tree "
 Bundle 'sjl/gundo.vim'
+
+" Mini Buffer explorer "
 Bundle 'sontek/minibufexpl.vim'
+
+" Vim Git integration "
 Bundle 'tpope/vim-fugitive'
-Bundle 'tpope/vim-ragtag'
-Bundle 'tpope/vim-surround'
+
+" Vim autocompletion "
 Bundle 'Valloric/YouCompleteMe'
-Bundle 'wincent/Command-T'
+
+" Easily write to protected files "
 Bundle 'chrisbra/SudoEdit.vim'
+
+" Lightweight and yet fancy status line "
 Bundle 'bling/vim-airline'
+
+" Google C++ indent style "
 Bundle 'phlip9/google-vim_cpp_indent'
+
+""" End Bundles "
 
 " filetype
 filetype plugin indent on       " detect filetypes
