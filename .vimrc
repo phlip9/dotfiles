@@ -215,11 +215,17 @@ endfunction
 " Keybindings
 " -----------
 
-" disable arrow keys
-nnoremap <up> <nop>
-nnoremap <down> <nop>
-nnoremap <left> <nop>
-nnoremap <right> <nop>
+" Rebind Arrow keys to something more useful
+" Left and Right indent and un-indent the current line/selection
+nmap <silent><Left> <<
+nmap <silent><Right> >>
+
+vmap <silent><Left> <gv
+vmap <silent><Right> >gv
+
+" Bind Up and Down keys to add line above and below
+nmap <silent><Up> O<Esc>j
+nmap <silent><Down> o<Esc>k
 
 " remap Visual Block selection to something that doesn't conflict with system
 " copy/paste
