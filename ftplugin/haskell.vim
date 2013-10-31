@@ -10,8 +10,11 @@ set nojoinspaces                " Don't convert spaces to tabs
 " ghcmod.vim keybindings "
 " ====================== "
 
-" Print type info "
-nnoremap <leader>hi :GhcModInfo<CR>
+" Print identifier info "
+nnoremap <leader>hp :GhcModInfo<CR>
 
-" Insert type "
-nnoremap <leader>ht :GhcModTypeInsert<CR>
+" Insert subexpression type "
+nnoremap <leader>hi :GhcModTypeInsert<CR>
+
+" Print subexpression type "
+nnoremap <leader>ht :GhcModType<CR>
