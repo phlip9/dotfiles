@@ -14,6 +14,9 @@ Bundle 'gmarik/vundle'
 " Solarized Color Scheme "
 Bundle 'altercation/vim-colors-solarized.git'
 
+" vimproc (Dependency for some other plugins) "
+Bundle 'https://github.com/Shougo/vimproc.vim'
+
 " Coffee script syntax highlighting and indenting "
 Bundle 'kchmck/vim-coffee-script'
 
