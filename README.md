@@ -25,3 +25,12 @@ Dependencies:
  - pyflakes
  - powerline
  - CoffeeTags
+
+Haskell stuff:
+Update cabal
+`cabal update`
+
+Add cabal bin files to PATH
+
+Install ghc-mod
+`cabal install ghc-mod`

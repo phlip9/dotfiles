@@ -53,6 +53,9 @@ Bundle 'bling/vim-airline'
 " Google C++ indent style "
 Bundle 'phlip9/google-vim_cpp_indent'
 
+" ghcmod.vim - Haskell linting and syntax checking "
+Bundle 'https://github.com/eagletmt/ghcmod-vim'
+
 """ End Bundles "
 
 " filetype
