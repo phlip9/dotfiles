@@ -253,9 +253,6 @@ nnoremap <leader>tb :TagbarToggle<CR>
 " update tags "
 nnoremap <leader>tr :!ctags -R .
 
-" Toggle Command-T
-nnoremap <leader>ct :CommandT<CR>
-
 " Reload Vimrc
 nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
 
