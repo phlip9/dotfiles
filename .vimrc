@@ -150,8 +150,9 @@ set laststatus=2
 
 let g:airline_powerline_fonts=1
 
-" powerline symbols
+"" powerline symbols
 let g:airline_symbols = {}
+let g:airline_symbols.space = ' '
 let g:airline_left_sep = ''
 let g:airline_left_alt_sep = ''
 let g:airline_right_sep = ''
