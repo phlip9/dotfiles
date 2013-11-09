@@ -38,9 +38,6 @@ Bundle 'scrooloose/syntastic'
 " Visualize Vim undo tree "
 Bundle 'sjl/gundo.vim'
 
-" Mini Buffer explorer "
-Bundle 'sontek/minibufexpl.vim'
-
 " Vim Git integration "
 Bundle 'tpope/vim-fugitive'
 
@@ -71,11 +68,6 @@ set background=dark             " dark background
 
 let g:solarized_termtrans = 1   " use terminal transparent background
 
-" Mini Buffer Explorer Settings
-let g:miniBufExplMapWindowNavVim = 1
-let g:miniBufExplMapWindowNavArrows = 1
-let g:miniBufExplMapCTabSwitchBufs = 1
-let g:miniBufExplModSelTarget = 1
 set hidden                      " change buffers w/o having to write first
 
 " Tagbar settings
@@ -167,6 +159,9 @@ let g:airline_right_alt_sep = ''
 let g:airline_symbols.branch = ''
 let g:airline_symbols.readonly = ''
 let g:airline_symbols.linenr = ''
+
+" airline buffer tab line "
+let g:airline#extensions#tabline#enabled = 1
 
 set backspace=indent,eol,start  " easy backspace
 set linespace=0                 " reduce space between lines
