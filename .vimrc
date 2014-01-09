@@ -56,6 +56,9 @@ Bundle 'phlip9/google-vim_cpp_indent'
 " ghcmod.vim - Haskell linting and syntax checking "
 Bundle 'https://github.com/eagletmt/ghcmod-vim'
 
+" hynek/vim-python-pep8-indent - Python indent file
+Bundle 'hynek/vim-python-pep8-indent'
+
 """ End Bundles "
 
 " filetype
