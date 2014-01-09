@@ -201,6 +201,11 @@ autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buff
 
 let mapleader = ','
 
+" YouCompleteMe settings
+let g:ycm_autoclose_preview_window_after_completion = 1
+let g:ycm_confirm_extra_conf = 0
+
+
 " ---------
 " Functions
 " ---------
