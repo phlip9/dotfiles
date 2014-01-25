@@ -1,69 +1,74 @@
-set nocompatible                " needed for cool vim stuff I guess
-filetype off
+" NeoBundle Setup
+if has('vim_starting')
+    set nocompatible                " needed for cool vim stuff I guess
+    set runtimepath+=~/.vim/bundle/neobundle.vim/
+endif
 
-" Vundle Setup
-set rtp+=~/.vim/bundle/vundle/
-call vundle#rc()
+call neobundle#rc(expand('~/.vim/bundle/'))
 
 " let Vundle manage Vundle
 " required!
-Bundle 'gmarik/vundle'
+NeoBundleFetch 'Shougo/neobundle.vim'
 
 """ Other bundles
 
 " Solarized Color Scheme "
-Bundle 'altercation/vim-colors-solarized.git'
+NeoBundle 'altercation/vim-colors-solarized.git'
 
 " vimproc (Dependency for some other plugins) "
-Bundle 'https://github.com/Shougo/vimproc.vim'
+NeoBundle 'https://github.com/Shougo/vimproc.vim'
 
 " Coffee script syntax highlighting and indenting "
-Bundle 'kchmck/vim-coffee-script'
+NeoBundle 'kchmck/vim-coffee-script'
 
 " ctags list "
-Bundle 'majutsushi/tagbar'
+NeoBundle 'majutsushi/tagbar'
 
 " Autocompletion for delimiters "
-Bundle 'Raimondi/delimitMate'
+NeoBundle 'Raimondi/delimitMate'
 
 " Easily comment lines or blocks of text "
-Bundle 'scrooloose/nerdcommenter'
+NeoBundle 'scrooloose/nerdcommenter'
 
 " Vim file explorer "
-Bundle 'scrooloose/nerdtree'
+NeoBundle 'scrooloose/nerdtree'
 
 " Vim syntax and error checking "
-Bundle 'scrooloose/syntastic'
+NeoBundle 'scrooloose/syntastic'
 
 " Visualize Vim undo tree "
-Bundle 'sjl/gundo.vim'
+NeoBundle 'sjl/gundo.vim'
 
 " Vim Git integration "
-Bundle 'tpope/vim-fugitive'
+NeoBundle 'tpope/vim-fugitive'
 
 " Vim autocompletion "
-Bundle 'Valloric/YouCompleteMe'
+NeoBundle 'Valloric/YouCompleteMe'
 
 " Easily write to protected files "
-Bundle 'chrisbra/SudoEdit.vim'
+NeoBundle 'chrisbra/SudoEdit.vim'
 
 " Lightweight and yet fancy status line "
-Bundle 'bling/vim-airline'
+NeoBundle 'bling/vim-airline'
 
 " Google C++ indent style "
-Bundle 'phlip9/google-vim_cpp_indent'
+NeoBundle 'phlip9/google-vim_cpp_indent'
 
 " ghcmod.vim - Haskell linting and syntax checking "
-Bundle 'https://github.com/eagletmt/ghcmod-vim'
+NeoBundle 'https://github.com/eagletmt/ghcmod-vim'
 
 " hynek/vim-python-pep8-indent - Python indent file
-Bundle 'hynek/vim-python-pep8-indent'
+NeoBundle 'hynek/vim-python-pep8-indent'
 
 """ End Bundles "
 
 " filetype
 filetype plugin indent on       " detect filetypes
 syntax on                       " syntax highlighting
+
+" If there are uninstalled bundles found on startup,
+" this will conveniently prompt you to install them.
+NeoBundleCheck
 
 " colorscheme
 colorscheme solarized           " solarized
