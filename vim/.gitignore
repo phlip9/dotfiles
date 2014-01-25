@@ -1,3 +1,6 @@
 # Ignore the bundle folder
 bundle/
 
+# Ignore netrwhist
+.netrwhist
+

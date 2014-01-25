@@ -1,6 +1,3 @@
-# Ignore netrwhist
-.netrwhist
-
 # Ignore backups
 *~
 bundle.backup
