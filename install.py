@@ -15,6 +15,10 @@ def install_vim(dotfiles_dir, install_dir):
     symlink(path.join(dotfiles_dir, "vim", "vimrc"),
             path.join(install_dir, ".vimrc"))
 
+def install_tmux(dotfiles_dir, install_dir):
+    symlink(path.join(dotfiles_dir, "tmux.conf"),
+            path.join(install_dir, ".tmux.conf"))
+
 def install_xresources(dotfiles_dir, install_dir):
     symlink(path.join(dotfiles_dir, "Xresources"),
             path.join(install_dir, ".Xresources"))
