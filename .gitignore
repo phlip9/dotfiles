@@ -5,6 +5,3 @@
 *~
 bundle.backup
 .*.swp
-
-# Ignore the bundle folder
-bundle/
