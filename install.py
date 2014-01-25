@@ -4,6 +4,10 @@
 import os.path as path
 from os import symlink
 
+def install_bashrc(dotfiles_dir, install_dir):
+    symlink(path.join(dotfiles_dir, "bashrc"),
+            path.join(install_dir, ".bashrc"))
+
 def install_vim(dotfiles_dir, install_dir):
     symlink(path.join(dotfiles_dir, "vim"),
             path.join(install_dir, ".vim"))
@@ -16,6 +20,7 @@ def install_xresources(dotfiles_dir, install_dir):
             path.join(install_dir, ".Xresources"))
 
 def install_dotfiles(dotfiles_dir, install_dir):
+    install_bashrc(dotfiles_dir, install_dir)
     install_vim(dotfiles_dir, install_dir)
     install_xresources(dotfiles_dir, install_dir)
 
