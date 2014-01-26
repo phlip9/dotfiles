@@ -6,18 +6,21 @@ Vim settings for use across different computers
 Install
 =======
 
-Install vundle:
-        
-    git clone https://github.com/gmarik/vundle.git bundle/vundle
+Install NeoBundle:
+    
+    git clone git@github.com:Shougo/neobundle.vim.git bundle/neobundle.vim
 
 Install all of the plugins:
     
-    vim +BundleInstall +qall
+    vim +NeoBundleInstall +qall
 
 Build vimproc:
     
-    cd ./bundle/vimproc.vim/
-    make
+    cd bundle/vimproc.vim/ && make
+
+Build YouCompleteMe:
+
+    cd bundle/YouCompleteMe && ./install.sh
 
 Dependencies:
 =============
@@ -25,17 +28,14 @@ Dependencies:
  - vim compiled with +python
  - pip
  - pep8
- - exuberant-ctags
  - ruby
  - rake
  - pytest
  - nose
  - ack
  - pyflakes
- - powerline
- - CoffeeTags
 
-Haskell stuff:
+Haskell setup:
 ==============
 
 Update cabal
