@@ -24,15 +24,17 @@ def install_dotfile(dotfile):
 
 def install_dotfiles(dotfiles_dir, install_dir):
     dotfiles = [(path.join(dotfiles_dir, "bashrc"),
-              path.join(install_dir, ".bashrc")),
-             (path.join(dotfiles_dir, "vim", "vimrc"),
-              path.join(install_dir, ".vimrc")),
-             (path.join(dotfiles_dir, "vim"),
-              path.join(install_dir, ".vim")),
-             (path.join(dotfiles_dir, "tmux.conf"),
-              path.join(install_dir, ".tmux.conf")),
-             (path.join(dotfiles_dir, "Xresources"),
-              path.join(install_dir, ".Xresources"))]
+                 path.join(install_dir, ".bashrc")),
+                (path.join(dotfiles_dir, "vim", "vimrc"),
+                 path.join(install_dir, ".vimrc")),
+                (path.join(dotfiles_dir, "vim"),
+                 path.join(install_dir, ".vim")),
+                (path.join(dotfiles_dir, "tmux.conf"),
+                 path.join(install_dir, ".tmux.conf")),
+                (path.join(dotfiles_dir, "Xresources"),
+                 path.join(install_dir, ".Xresources")),
+                (path.join(dotfiles_dir, "gitconfig"),
+                 path.join(install_dir, ".gitconfig"))]
 
     force(map(install_dotfile, dotfiles))
 
