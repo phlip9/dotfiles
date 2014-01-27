@@ -1,290 +1,374 @@
-" NeoBundle Setup
-if has('vim_starting')
-    set nocompatible                " needed for cool vim stuff I guess
-    set runtimepath+=~/.vim/bundle/neobundle.vim/
-endif
+" SETUP {{{
 
-call neobundle#rc(expand('~/.vim/bundle/'))
+    if has('vim_starting')
+        " needed for cool vim stuff I guess
+        set nocompatible
+        set runtimepath+=~/.vim/bundle/neobundle.vim/
+    endif
 
-" let Vundle manage Vundle
-" required!
-NeoBundleFetch 'Shougo/neobundle.vim'
+    call neobundle#rc(expand('~/.vim/bundle/'))
 
-""" Other bundles
+    " let Vundle manage Vundle
+    " required!
+    NeoBundleFetch 'Shougo/neobundle.vim'
 
-" Solarized Color Scheme "
-NeoBundle 'altercation/vim-colors-solarized.git'
+" SETUP }}}
 
-" vimproc (Dependency for some other plugins) "
-NeoBundle 'https://github.com/Shougo/vimproc.vim'
+" vimproc - Interactive command execution in Vim {{{
 
-" Coffee script syntax highlighting and indenting "
-NeoBundle 'kchmck/vim-coffee-script'
+    NeoBundle 'Shougo/vimproc.vim', {
+                \  'build': {
+                \    'windows' : 'make -f make_mingw32.mak',
+                \    'cygwin'  : 'make -f make_cygwin.mak',
+                \    'mac'     : 'make -f make_mac.mak',
+                \    'unix'    : 'make -f make_unix.mak'
+                \  }
+                \}
 
-" ctags list "
-NeoBundle 'majutsushi/tagbar'
+" vimproc }}}
 
-" Autocompletion for delimiters "
-NeoBundle 'Raimondi/delimitMate'
+" vim-tmux-navigator - Seamless navigation between tmux panes and vim splits {{{
 
-" Easily comment lines or blocks of text "
-NeoBundle 'scrooloose/nerdcommenter'
+    NeoBundle 'christoomey/vim-tmux-navigator', { 'disabled': !executable('tmux') }
 
-" Vim file explorer "
-NeoBundle 'scrooloose/nerdtree'
+    " Window movement w CTRL + J,K,L,H
+    nnoremap <c-j> <c-w>j
+    nnoremap <c-k> <c-w>k
+    nnoremap <c-l> <c-w>l
+    nnoremap <c-h> <c-w>h
 
-" Vim syntax and error checking "
-NeoBundle 'scrooloose/syntastic'
+" }}}
 
-" Visualize Vim undo tree "
-NeoBundle 'sjl/gundo.vim'
+" Solarized Color Scheme {{{
 
-" Vim Git integration "
-NeoBundle 'tpope/vim-fugitive'
+    NeoBundle 'altercation/vim-colors-solarized.git'
 
-" Vim autocompletion "
-NeoBundle 'Valloric/YouCompleteMe'
+    colorscheme solarized
+    set background=dark
+    let g:solarized_termtrans=1
 
-" Easily write to protected files "
-NeoBundle 'chrisbra/SudoEdit.vim'
+" }}}
 
-" Lightweight and yet fancy status line "
-NeoBundle 'bling/vim-airline'
+" vim-coffee-script - Coffee script syntax highlighting and indenting {{{
 
-" Google C++ indent style "
-NeoBundle 'phlip9/google-vim_cpp_indent'
+    NeoBundle 'kchmck/vim-coffee-script'
 
-" ghcmod.vim - Haskell linting and syntax checking "
-NeoBundle 'https://github.com/eagletmt/ghcmod-vim'
+" vim-coffee-script }}}
 
-" hynek/vim-python-pep8-indent - Python indent file
-NeoBundle 'hynek/vim-python-pep8-indent'
+" delimitMate - Autocompletion for delimiters {{{
 
-""" End Bundles "
+    NeoBundle 'Raimondi/delimitMate'
 
-" filetype
-filetype plugin indent on       " detect filetypes
-syntax on                       " syntax highlighting
+" delimitMate }}}
 
-" If there are uninstalled bundles found on startup,
-" this will conveniently prompt you to install them.
-NeoBundleCheck
+" NERDCommenter - Easily comment lines or blocks of text {{{
 
-" colorscheme
-colorscheme solarized           " solarized
-set background=dark             " dark background
+    NeoBundle 'scrooloose/nerdcommenter'
 
-let g:solarized_termtrans = 1   " use terminal transparent background
+" NERDCommenter }}}
 
-set hidden                      " change buffers w/o having to write first
+" NERDTree - Vim file explorer {{{
 
-" Tagbar settings
-let g:tagbar_usearrows = 1
-let g:tagbar_autoclose = 1      " auto close after selecting a tag
-let g:tagbar_sort = 0           " don't sort
+    NeoBundle 'scrooloose/nerdtree'
 
-" Additional Ctags languages
-" Markdown
-let g:tagbar_type_markdown = {
-    \ 'ctagstype' : 'markdown',
-    \ 'kinds' : [
-        \ 'h:Heading_L1',
-        \ 'i:Heading_L2',
-        \ 'k:Heading_L3'
-    \ ]
-\ }
+    " NERDTree Settings
+    " q closes NERDTree if it is the only window open
+    autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
 
-" CSS
-let g:tagbar_type_css = {
-    \ 'ctagstype' : 'css',
-    \ 'kinds' : [
-        \ 'c:class',
-        \ 'i:id',
-        \ 't:tag',
-        \ 'm:media'
-    \ ]
-\ }
+    " Open NERDTree
+    nnoremap <leader>n :NERDTreeToggle<CR>
 
-" CoffeeScript
-if executable('coffeetags')
-    let g:tagbar_type_coffee = {
-      \ 'ctagsbin' : 'coffeetags',
-      \ 'ctagsargs' : '',
-      \ 'kinds' : [
-          \ 'f:functions',
-          \ 'o:object',
-      \ ],
-      \ 'sro' : ".",
-      \ 'kind2scope' : {
-          \ 'f' : 'object',
-          \ 'o' : 'object',
+" NERDTree }}}
+
+" Syntastic - syntax and error checking {{{
+
+    NeoBundle 'scrooloose/syntastic'
+
+" }}}
+
+" Gundo - Visualize vim undo tree {{{
+
+    NeoBundleLazy 'sjl/gundo.vim', { 'autoload': { 'commands': ['GundoToggle'] }}
+
+    nnoremap <leader>g :GundoToggle<CR>
+
+" Gundo }}}
+
+" Tagbar - tag browser {{{
+
+    NeoBundleLazy 'majutsushi/tagbar',
+                \ { 'autoload': { 'commands': ['TagbarToggle'] }}
+
+    " Additional Ctags languages
+    " Markdown
+    let g:tagbar_type_markdown = {
+        \ 'ctagstype' : 'markdown',
+        \ 'kinds' : [
+            \ 'h:Heading_L1',
+            \ 'i:Heading_L2',
+            \ 'k:Heading_L3'
+        \ ]
+    \ }
+
+    " CSS
+    let g:tagbar_type_css = {
+        \ 'ctagstype' : 'css',
+        \ 'kinds' : [
+            \ 'c:class',
+            \ 'i:id',
+            \ 't:tag',
+            \ 'm:media'
+        \ ]
+    \ }
+
+    " CoffeeScript
+    if executable('coffeetags')
+        let g:tagbar_type_coffee = {
+          \ 'ctagsbin' : 'coffeetags',
+          \ 'ctagsargs' : '',
+          \ 'kinds' : [
+              \ 'f:functions',
+              \ 'o:object',
+          \ ],
+          \ 'sro' : ".",
+          \ 'kind2scope' : {
+              \ 'f' : 'object',
+              \ 'o' : 'object',
+          \ }
       \ }
-  \ }
-endif
+    endif
 
-" tags search location
-set tags=./tags;~/projects;/usr/local/lib/python3.3
+    " tags search location
+    set tags=./tags;~/projects;/usr/local/lib/python3.3
 
-" NERDTree Settings
-" q closes NERDTree if it is the only window open
-autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
+    let g:tagbar_usearrows = 1
+    let g:tagbar_autoclose = 1      " auto close after selecting a tag
+    let g:tagbar_sort = 0           " don't sort
 
-set mouse=a                     " enable mouse
-scriptencoding=utf-8            " set encoding to utf-8
-set shortmess+=filmnrxoOtT      " abbreviate annoying messages
+    nnoremap <leader>tb :TagbarToggle<CR>
 
-set history=1000                " make the history larger
+    " update tags
+    nnoremap <leader>tr :!ctags -R .
 
-set tabpagemax=15               " max # of tabs per page
-set showmode                    " show current display mode
+" Tagbar }}}
 
-" use 256 colors if gnome-terminal
-if $COLORTERM == 'gnome-terminal'
-  set t_Co=256
-endif
+" vim-fugitive - Vim Git integration {{{
 
-set cursorline                  " show a line under the cursor
-hi CursorLine cterm=none ctermbg=Black 
+    NeoBundle 'tpope/vim-fugitive'
 
-if has('cmdline_info')
-    set ruler                                           " show rulerz
-    set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
-    set showcmd                                         " show partial commands in status line
-endif
+" }}}
 
-" status line stuff
-" airline
-set laststatus=2
+" YouCompleteMe {{{
 
-let g:airline_powerline_fonts=1
+    NeoBundleLazy 'Valloric/YouCompleteMe',
+                \ { 'autoload': { 'filetypes': ['c', 'cpp', 'python']} }
 
-"" powerline symbols
-let g:airline_symbols = {}
-let g:airline_symbols.space = ' '
-let g:airline_left_sep = ''
-let g:airline_left_alt_sep = ''
-let g:airline_right_sep = ''
-let g:airline_right_alt_sep = ''
-let g:airline_symbols.branch = ''
-let g:airline_symbols.readonly = ''
-let g:airline_symbols.linenr = ''
+    let g:ycm_autoclose_preview_window_after_completion = 1
+    let g:ycm_confirm_extra_conf = 0
+    let g:ycm_key_list_previous_completion = ['<S-TAB>', '<Up>']
 
-" airline buffer tab line "
-let g:airline#extensions#tabline#enabled = 1
+    " GoToDefinition
+    nnoremap <leader>jd :YcmCompleter GoToDefinitionElseDeclaration<CR>
 
-set backspace=indent,eol,start  " easy backspace
-set linespace=0                 " reduce space between lines
+" YouCompleteMe }}}
 
-set nu                          " set line numbers
+" SudoEdit.vim - Easily write to protected files {{{
 
-set showmatch                   " show matching brackets/parenthesis
-set incsearch                   " find as you search
-set hlsearch                    " highlight search
-set ignorecase                  " ignore case
-set smartcase                   " case sensitive when uc
+    NeoBundleLazy 'chrisbra/SudoEdit.vim',
+                \ { 'autoload': { 'commands': ['SudoWrite', 'SudoRead'] }}
 
-set wildmenu                    " show list instead of just completing
-set wildmode=list:longest,full  " command completion
-set whichwrap=b,s,h,l,<,>,[,]   " backspace and cursor keys also wrap
+" }}}
 
-set scrolljump=5                " lines to scroll when cursor leaves screen
-set scrolloff=3                 " min # of lines to keep below cursor
+" vim-airline - Lightweight yet fancy status line {{{
 
-set foldenable                  " auto fold code
+    NeoBundle 'bling/vim-airline'
 
-set gdefault                    " always use /g on :s substitution
+    set laststatus=2
 
-set nowrap                      " warp long lines
-set clipboard=unnamedplus       " place yanked text into the clipboard
+    let g:airline_powerline_fonts=1
 
-" tab rules
-set autoindent                  " indent at same level as previous line
-set expandtab                   " space tabs
-set shiftwidth=4                " 4 spaces per tab
-set softtabstop=4               " backspace deletes pseudo-tab
-set tabstop=4                   " indent every 4 columns
+    "" powerline symbols
+    let g:airline_symbols = {}
+    let g:airline_symbols.space = ' '
+    let g:airline_left_sep = ''
+    let g:airline_left_alt_sep = ''
+    let g:airline_right_sep = ''
+    let g:airline_right_alt_sep = ''
+    let g:airline_symbols.branch = ''
+    let g:airline_symbols.readonly = ''
+    let g:airline_symbols.linenr = ''
 
-" Remove trailing whitespaces and ^M chars
-autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buffer> :call setline(1,map(getline(1,"$"),'substitute(v:val,"\\s\\+$","","")'))
+    " airline buffer tab line "
+    let g:airline#extensions#tabline#enabled = 1
 
-let mapleader = ','
+" }}}
 
-" YouCompleteMe settings
-let g:ycm_autoclose_preview_window_after_completion = 1
-let g:ycm_confirm_extra_conf = 0
-let g:ycm_key_list_previous_completion = ['<S-TAB>', '<Up>']
+" vim_cpp_indent - Google C++ indent style {{{
 
+    NeoBundleLazy 'phlip9/google-vim_cpp_indent',
+                \ { 'autoload': { 'filetypes': ['cpp'] }}
 
-" ---------
-" Functions
-" ---------
+" }}}
 
-" open line in browser function
-function! Browser ()
-    let line = getline(".")
-    let line = matchstr(line, "http[^   ]*")
-    exec "!google-chrome ".line
-endfunction
+" ghcmod.vim - Haskell linting and syntax checking {{{
 
+    NeoBundleLazy 'https://github.com/eagletmt/ghcmod-vim',
+                \ { 'autoload': { 'filetypes': ['haskell'] }}
 
-" -----------
-" Keybindings
-" -----------
+" }}}
 
-" Rebind Arrow keys to something more useful
-" Left and Right indent and un-indent the current line/selection
-nmap <silent><Left> <<
-nmap <silent><Right> >>
+" pep8 indent - Python indenting {{{
 
-vmap <silent><Left> <gv
-vmap <silent><Right> >gv
+    NeoBundleLazy 'hynek/vim-python-pep8-indent',
+                \ { 'autoload': { 'filetypes': ['python'] }}
 
-" Bind Up and Down keys to add line above and below
-nmap <silent><Up> O<Esc>j
-nmap <silent><Down> o<Esc>k
+" }}}
 
-" remap Visual Block selection to something that doesn't conflict with system
-" copy/paste
-nnoremap <leader>v <C-v>
+" GENERAL {{{
 
-" remap jj to escape insert mode
-inoremap jj <Esc>
+    filetype plugin indent on       " detect filetypes
+    syntax on                       " syntax highlighting
 
-" open line in browser keybind
-map <silent> <leader>w :call Browser ()<CR>
+    " If there are uninstalled bundles found on startup,
+    " this will conveniently prompt you to install them.
+    NeoBundleCheck
 
-" map S-J and S-K to next and prev buffer
-nnoremap J :bp<CR>
-nnoremap K :bn<CR>
+    set history=1000                " make the history larger
+    set hidden                      " change buffers w/o having to write first
+    set mouse=a                     " enable mouse
+    scriptencoding=utf-8            " set encoding to utf-8
+    set shortmess+=filmnrxoOtT      " abbreviate annoying messages
 
-" map S-H and S-L to undo and redo
-nnoremap H u
-nnoremap L <C-R>
+" GENERAL }}}
 
-" toggle tagbar
-nnoremap <leader>tb :TagbarToggle<CR>
+" VISUAL {{{
 
-" update tags "
-nnoremap <leader>tr :!ctags -R .
+    " use 256 colors if gnome-terminal
+    if $COLORTERM == 'gnome-terminal'
+      set t_Co=256
+    endif
 
-" Reload Vimrc
-nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
+    set nu                          " set line numbers
+    set showmode                    " show current display mode
+    set cursorline                  " show a line under the cursor
+    hi CursorLine cterm=none ctermbg=Black 
 
-" Open NERDTree
-nnoremap <leader>n :NERDTreeToggle<CR>
+    if has('cmdline_info')
+        set ruler                                           " show ruler
+        set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
+        set showcmd                                         " show partial commands in status line
+    endif
 
-" Window movement w CTRL + J,K,L,H
-nnoremap <c-j> <c-w>j
-nnoremap <c-k> <c-w>k
-nnoremap <c-l> <c-w>l
-nnoremap <c-h> <c-w>h
+" VISUAL }}}
 
-" Gundo
-nnoremap <leader>g :GundoToggle<CR>
+" BEHAVIOR {{{
 
-" Make vim into a hex editor
-nnoremap <leader>hx :%!xxd<CR>
-nnoremap <leader>hr :%!xxd -r<CR>
+    set backspace=indent,eol,start  " easy backspace
+    set linespace=0                 " reduce space between lines
 
-" GoToDefinition
-nnoremap <leader>jd :YcmCompleter GoToDefinitionElseDeclaration<CR>
+    set showmatch                   " show matching brackets/parenthesis
+    set incsearch                   " find as you search
+    set hlsearch                    " highlight search
+    set ignorecase                  " ignore case
+    set smartcase                   " case sensitive when uc
+
+    set wildmenu                    " show list instead of just completing
+    set wildmode=list:longest,full  " command completion
+    set whichwrap=b,s,h,l,<,>,[,]   " backspace and cursor keys also wrap
+
+    set scrolljump=5                " lines to scroll when cursor leaves screen
+    set scrolloff=3                 " min # of lines to keep below cursor
+
+    set foldenable                  " auto fold code
+
+    set gdefault                    " always use /g on :s substitution
+
+    set nowrap                      " warp long lines
+    set clipboard=unnamedplus       " place yanked text into the clipboard
+
+    " Remove trailing whitespaces and ^M chars
+    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buffer> :call setline(1,map(getline(1,"$"),'substitute(v:val,"\\s\\+$","","")'))
+
+    " custom text folding function
+    function! NeatFoldText()
+        let line = ' ' . substitute(getline(v:foldstart), '^\s*"\?\s*\|\s*"\?\s*{{' . '{\d*\s*', '', 'g') . ' '
+        let lines_count = v:foldend - v:foldstart + 1
+        let lines_count_text = '| ' . printf("%10s", lines_count . ' lines') . ' |'
+        let foldchar = matchstr(&fillchars, 'fold:\zs.')
+        let foldtextstart = strpart('+' . repeat(foldchar, v:foldlevel*2) . line, 0, (winwidth(0)*2)/3)
+        let foldtextend = lines_count_text . repeat(foldchar, 8)
+        let foldtextlength = strlen(substitute(foldtextstart . foldtextend, '.', 'x', 'g')) + &foldcolumn
+        return foldtextstart . repeat(' ', winwidth(0)-foldtextlength) . foldtextend
+    endfunction
+
+    set foldtext=NeatFoldText()
+
+" BEHAVIOR }}}
+
+" TAB SETTINGS {{{
+
+    set tabpagemax=15               " max # of tabs per page
+    set autoindent                  " indent at same level as previous line
+    set expandtab                   " space tabs
+    set shiftwidth=4                " 4 spaces per tab
+    set softtabstop=4               " backspace deletes pseudo-tab
+    set tabstop=4                   " indent every 4 columns
+
+" TAB SETTINGS }}}
+
+" FUNCTIONS {{{
+
+    " open line in browser function
+    function! Browser ()
+        let line = getline(".")
+        let line = matchstr(line, "http[^   ]*")
+        exec "!google-chrome ".line
+    endfunction
+
+" }}}
+
+" KEYBINDINGS {{{
+
+    " Rebind mapleader to something more accessible.
+    let mapleader = ','
+
+    " Rebind Arrow keys to something more useful
+    " Left and Right indent and un-indent the current line/selection
+    nmap <silent><Left> <<
+    nmap <silent><Right> >>
+
+    vmap <silent><Left> <gv
+    vmap <silent><Right> >gv
+
+    " Bind Up and Down keys to add line above and below
+    nmap <silent><Up> O<Esc>j
+    nmap <silent><Down> o<Esc>k
+
+    " remap Visual Block selection to something that doesn't conflict with system
+    " copy/paste
+    nnoremap <leader>v <C-v>
+
+    " remap jj to escape insert mode
+    inoremap jj <Esc>
+
+    " open line in browser keybind
+    map <silent> <leader>w :call Browser ()<CR>
+
+    " map S-J and S-K to next and prev buffer
+    nnoremap J :bp<CR>
+    nnoremap K :bn<CR>
+
+    " map S-H and S-L to undo and redo
+    nnoremap H u
+    nnoremap L <C-R>
+
+    " Reload Vimrc
+    nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
+
+    " Make vim into a hex editor
+    nnoremap <leader>hx :%!xxd<CR>
+    nnoremap <leader>hr :%!xxd -r<CR>
+
+" KEYBINDINGS }}}
+
+" vim: foldmethod=marker
