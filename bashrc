@@ -25,7 +25,6 @@ shopt -s checkwinsize
 # make less more friendly for non-text input files, see lesspipe(1)
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
-
 # use auto-complete after these words
 complete -cf sudo
 complete -cf man
@@ -74,37 +73,15 @@ xterm*|rxvt*)
     ;;
 esac
 
-#if [ "$TERM" = "linux" ]; then
-    #echo -en "\e]P0222222" #black    -> also the background
-    #echo -en "\e]P18b3e2f" #darkred
-    #echo -en "\e]P2526f33" #darkgreen
-    #echo -en "\e]P38b814c" #brown
-    #echo -en "\e]P44a708b" #darkblue
-    #echo -en "\e]P57a378b" #darkmagenta
-    #echo -en "\e]P6528b8b" #darkcyan
-    #echo -en "\e]P7e8e9ca" #lightgray
-    #echo -en "\e]P8666666" #darkgray
-    #echo -en "\e]P9d75f00" #red
-    #echo -en "\e]PA8ea433" #green
-    #echo -en "\e]PBeee685" #yellow
-    #echo -en "\e]PC9ac0cd" #blue
-    #echo -en "\e]PD9f79ee" #magenta
-    #echo -en "\e]PE79cdcd" #cyan
-    #echo -en "\e]PFffffff" #white   -> also the foreground
-    #clear #for background artifacting
-#fi
-
 # }}}
 
-# enable color support of ls and also add handy aliases
-if [ -x /usr/bin/dircolors ]; then
-    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto'
+## ALIASES {{{
 
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
-fi
+alias ls='ls --color=auto'
+
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
 
 # some more ls aliases
 alias ll='ls -alhF --color=auto'
@@ -146,14 +123,10 @@ if [ -f ~/.bash_aliases ]; then
     source ~/.bash_aliases
 fi
 
-# enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    source /etc/bash_completion
-fi
+## ALIASES }}}
 
-# VARIABLES
+## SHELL VARIABLES {{{
+
 export UTORRENT=/home/phlip9/utorrent
 export ALSOFT_LOGLEVEL=3
 export TIDE_SDK=/home/phlip9/.tidesdk/sdk/linux/1.3.1-beta
@@ -178,12 +151,20 @@ source /usr/local/bin/virtualenvwrapper.sh
 # Android NDK
 export ANDROID_NDK=/home/phlip9/android/ndk
 
-# add 256 color support
-if [ "$TERM" == "xterm" ]; then
-    export TERM=xterm-256color
+## SHELL VARIABLES }}}
+
+## MISC {{{
+
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
+    source /etc/bash_completion
 fi
 
 # bash vi editing mode
 set -o vi
+
+## MISC }}}
 
 # vim:foldmethod=marker
