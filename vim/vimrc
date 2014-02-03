@@ -1,8 +1,9 @@
 " SETUP {{{
 
+    set nocompatible
+
     if has('vim_starting')
         " needed for cool vim stuff I guess
-        set nocompatible
         set runtimepath+=~/.vim/bundle/neobundle.vim/
     endif
 
@@ -11,6 +12,9 @@
     " let Vundle manage Vundle
     " required!
     NeoBundleFetch 'Shougo/neobundle.vim'
+
+    " Rebind mapleader to something more accessible.
+    let mapleader = ','
 
 " SETUP }}}
 
@@ -31,11 +35,11 @@
 
     NeoBundle 'christoomey/vim-tmux-navigator', { 'disabled': !executable('tmux') }
 
-    " Window movement w CTRL + J,K,L,H
-    nnoremap <c-j> <c-w>j
-    nnoremap <c-k> <c-w>k
-    nnoremap <c-l> <c-w>l
-    nnoremap <c-h> <c-w>h
+    " Window movement w/ CTRL + h,j,k,l
+    nnoremap <C-h> <C-w>h
+    nnoremap <C-j> <C-w>j
+    nnoremap <C-k> <C-w>k
+    nnoremap <C-l> <C-w>l
 
 " }}}
 
@@ -48,12 +52,6 @@
     let g:solarized_termtrans=1
 
 " }}}
-
-" vim-coffee-script - Coffee script syntax highlighting and indenting {{{
-
-    NeoBundle 'kchmck/vim-coffee-script'
-
-" vim-coffee-script }}}
 
 " delimitMate - Autocompletion for delimiters {{{
 
@@ -69,7 +67,7 @@
 
 " NERDTree - Vim file explorer {{{
 
-    NeoBundle 'scrooloose/nerdtree'
+    NeoBundle 'scrooloose/nerdtree', { 'augroup' : 'NERDTreeHijackNetrw'}
 
     " NERDTree Settings
     " q closes NERDTree if it is the only window open
@@ -154,14 +152,19 @@
 
 " vim-fugitive - Vim Git integration {{{
 
-    NeoBundle 'tpope/vim-fugitive'
+    NeoBundle 'tpope/vim-fugitive', { 'augroup' : 'fugitive'}
 
 " }}}
 
-" YouCompleteMe {{{
+" YouCompleteMe - vim semantic auto-completition {{{
 
     NeoBundleLazy 'Valloric/YouCompleteMe',
-                \ { 'autoload': { 'filetypes': ['c', 'cpp', 'python']} }
+                \ {
+                \   'depends' : 'Shougo/vimproc.vim',
+                \   'autoload': { 'filetypes': ['c', 'cpp', 'python'] },
+                \   'build' : { 'unix' : './install.sh --clang-completer',
+                \               'other': './install.sh --clang-completer' }
+                \ }
 
     let g:ycm_autoclose_preview_window_after_completion = 1
     let g:ycm_confirm_extra_conf = 0
@@ -200,8 +203,19 @@
 
     " airline buffer tab line "
     let g:airline#extensions#tabline#enabled = 1
+    
+    " straight separators for tabline
+    let g:airline#extensions#tabline#left_sep = ''
+    let g:airline#extensions#tabline#left_alt_sep = '|'
 
 " }}}
+
+" vim-coffee-script - Coffee script syntax highlighting and indenting {{{
+
+    NeoBundleLazy 'kchmck/vim-coffee-script',
+                \ { 'autoload': { 'filename_patters': '\.coffee$' }}
+
+" vim-coffee-script }}}
 
 " vim_cpp_indent - Google C++ indent style {{{
 
@@ -212,8 +226,9 @@
 
 " ghcmod.vim - Haskell linting and syntax checking {{{
 
-    NeoBundleLazy 'https://github.com/eagletmt/ghcmod-vim',
-                \ { 'autoload': { 'filetypes': ['haskell'] }}
+    NeoBundleLazy 'eagletmt/ghcmod-vim',
+                \ { 'autoload': { 'filetypes': ['haskell'] },
+                \   'external_commands': 'ghc-mod' }
 
 " }}}
 
@@ -237,7 +252,7 @@
     set hidden                      " change buffers w/o having to write first
     set mouse=a                     " enable mouse
     scriptencoding=utf-8            " set encoding to utf-8
-    set shortmess+=filmnrxoOtT      " abbreviate annoying messages
+    "set shortmess+=filmnrxoOtT      " abbreviate annoying messages
 
 " GENERAL }}}
 
@@ -328,9 +343,6 @@
 " }}}
 
 " KEYBINDINGS {{{
-
-    " Rebind mapleader to something more accessible.
-    let mapleader = ','
 
     " Rebind Arrow keys to something more useful
     " Left and Right indent and un-indent the current line/selection
