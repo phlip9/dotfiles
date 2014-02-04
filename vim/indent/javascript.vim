@@ -376,7 +376,7 @@ function! GetJsIndent(lnum)
 			call s:Log("Line matched an object beg")
 			return ind
 		else
-			call s:Log("Line didn't match a control mid or object beg."
+			call s:Log("Line didn't match a control mid or object beg.")
 			return ind + &sw
 		endif
 	endif
