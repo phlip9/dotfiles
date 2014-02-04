@@ -96,6 +96,9 @@ alias cim='vim'
 alias sl='ls'
 alias shh='ssh'
 
+# tmux 256 colors
+alias tmux="TERM=screen-256color-bce tmux -2"
+
 alias install='sudo apt-get install'
 alias update='sudo apt-get update'
 alias upgrade='sudo apt-get upgrade'
