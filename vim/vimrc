@@ -156,6 +156,24 @@
 
 " }}}
 
+" vim-gitgutter - Show git diff in the gutter {{{
+
+    " Don't automatically set mappings.
+    let g:gitgutter_map_keys = 0
+
+    NeoBundle 'airblade/vim-gitgutter', { 'disabled': !has('signs') }
+
+    nmap <leader>gg :GitGutterToggle<CR>
+
+    " Hunk management
+    nmap <leader>hs :GitGutterStageHunk<CR>
+    nmap <leader>hr :GitGutterRevertHunk<CR>
+
+    nmap <leader>hn :GitGutterNextHunk<CR>
+    nmap <leader>hp :GitGutterPrevHunk<CR>
+
+" }}}
+
 " YouCompleteMe - vim semantic auto-completition {{{
 
     NeoBundleLazy 'Valloric/YouCompleteMe',
@@ -273,6 +291,12 @@
         set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
         set showcmd                                         " show partial commands in status line
     endif
+
+    " Sign column color should be the same as the line number column
+    highlight SignColumn ctermbg=NONE ctermbg=NONE
+
+    " Don't underline the fold lines
+    highlight Folded term=bold cterm=bold
 
 " VISUAL }}}
 
