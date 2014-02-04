@@ -355,17 +355,6 @@
 
 " TAB SETTINGS }}}
 
-" FUNCTIONS {{{
-
-    " open line in browser function
-    function! Browser ()
-        let line = getline(".")
-        let line = matchstr(line, "http[^   ]*")
-        exec "!google-chrome ".line
-    endfunction
-
-" }}}
-
 " KEYBINDINGS {{{
 
     " Rebind Arrow keys to something more useful
@@ -384,12 +373,6 @@
     " copy/paste
     nnoremap <leader>v <C-v>
 
-    " remap jj to escape insert mode
-    inoremap jj <Esc>
-
-    " open line in browser keybind
-    map <silent> <leader>w :call Browser ()<CR>
-
     " map S-J and S-K to next and prev buffer
     nnoremap J :bp<CR>
     nnoremap K :bn<CR>
@@ -400,10 +383,6 @@
 
     " Reload Vimrc
     nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
-
-    " Make vim into a hex editor
-    nnoremap <leader>hx :%!xxd<CR>
-    nnoremap <leader>hr :%!xxd -r<CR>
 
 " KEYBINDINGS }}}
 
