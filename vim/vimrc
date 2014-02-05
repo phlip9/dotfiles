@@ -70,21 +70,6 @@
 
 " NERDCommenter }}}
 
-" NERDTree - Vim file explorer {{{
-    
-    " Mappings:
-    " <leader>n - Toggle the NERDTree file browser
-
-    NeoBundle 'scrooloose/nerdtree', { 'augroup' : 'NERDTreeHijackNetrw'}
-
-    " Close NERDTree (and vim) if it is the only buffer open
-    autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
-
-    " Open NERDTree
-    nnoremap <leader>n :NERDTreeToggle<CR>
-
-" NERDTree }}}
-
 " Syntastic - syntax and error checking {{{
 
     NeoBundle 'scrooloose/syntastic'
