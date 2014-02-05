@@ -168,6 +168,9 @@ fi
 # bash vi editing mode
 set -o vi
 
+# Open tmux automatically
+[[ -z "$TMUX" ]] && tmux
+
 ## MISC }}}
 
 # vim:foldmethod=marker
