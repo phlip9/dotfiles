@@ -117,6 +117,12 @@
 
 " vim-gitgutter }}}
 
+" vim-vinegar - Enhance the default netrw (avoid using NERDTree) {{{
+
+    NeoBundle 'tpope/vim-vinegar'
+
+" vim-vinegar }}}
+
 " YouCompleteMe - vim semantic auto-completition {{{
 
     NeoBundleLazy 'Valloric/YouCompleteMe',
