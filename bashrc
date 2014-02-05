@@ -169,7 +169,14 @@ fi
 set -o vi
 
 # Open tmux automatically
-[[ -z "$TMUX" ]] && tmux
+# If a session exists, just connect to it instead of creating a new one.
+if [[ -z "$TMUX" ]]; then
+    if [[ $(tmux ls 2>&1) == "failed to connect to server" ]]; then
+        tmux
+    else
+        tmux attach
+    fi
+fi
 
 ## MISC }}}
 
