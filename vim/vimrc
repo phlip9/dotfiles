@@ -200,6 +200,16 @@
 
 " }}}
 
+" vim-multiple-cursors - Emulate Sublime Text's multiple cursors feature {{{
+    " Mappings:
+    " Ctrl-n - Select current/next word
+    " Ctrl-p - Select previous word
+    " Ctrl-x - Skip current word
+
+    NeoBundle 'terryma/vim-multiple-cursors'
+
+" }}}
+
 " vim-airline - Lightweight yet fancy status line {{{
 
     NeoBundle 'bling/vim-airline'
