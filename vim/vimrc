@@ -102,68 +102,6 @@
 
 " Gundo }}}
 
-" Tagbar - tag browser {{{
-
-    " Mappings:
-    " <leader>tb - Toggle Tagbar
-    " <leader>tr - Reload tags for file
-
-    NeoBundleLazy 'majutsushi/tagbar',
-                \ { 'autoload': { 'commands': ['TagbarToggle'] }}
-
-    " Additional Ctags languages
-    " Markdown
-    let g:tagbar_type_markdown = {
-        \ 'ctagstype' : 'markdown',
-        \ 'kinds' : [
-            \ 'h:Heading_L1',
-            \ 'i:Heading_L2',
-            \ 'k:Heading_L3'
-        \ ]
-    \ }
-
-    " CSS
-    let g:tagbar_type_css = {
-        \ 'ctagstype' : 'css',
-        \ 'kinds' : [
-            \ 'c:class',
-            \ 'i:id',
-            \ 't:tag',
-            \ 'm:media'
-        \ ]
-    \ }
-
-    " CoffeeScript
-    if executable('coffeetags')
-        let g:tagbar_type_coffee = {
-          \ 'ctagsbin' : 'coffeetags',
-          \ 'ctagsargs' : '',
-          \ 'kinds' : [
-              \ 'f:functions',
-              \ 'o:object',
-          \ ],
-          \ 'sro' : ".",
-          \ 'kind2scope' : {
-              \ 'f' : 'object',
-              \ 'o' : 'object',
-          \ }
-      \ }
-    endif
-
-    " tags search location
-    set tags=./tags;~/projects;/usr/local/lib/python3.3
-
-    let g:tagbar_usearrows = 1
-    let g:tagbar_autoclose = 1      " auto close after selecting a tag
-    let g:tagbar_sort = 0           " don't sort
-
-    nmap <leader>tb :TagbarToggle<CR>
-
-    " update tags
-    nmap <leader>tr :!ctags -R .
-
-" Tagbar }}}
-
 " vim-fugitive - Vim Git integration {{{
 
     NeoBundle 'tpope/vim-fugitive', { 'augroup' : 'fugitive'}
