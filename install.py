@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # Install the dotfiles
 
-import os.path as path
 import os
+import os.path as path
+import argparse
 
 def force(generator):
+    """Force a generator (like calling list(generator) but ignoring the
+    return value)"""
     while True:
         try:
             next(generator)
@@ -12,6 +15,9 @@ def force(generator):
             break
 
 def install_dotfile(dotfile):
+    """install_dotfile first removes any file/directory at the install
+    location and then makes a symbolic link to the local file at the
+    target destination."""
     src = dotfile[0]
     dest = dotfile[1]
 
@@ -38,7 +44,23 @@ def install_dotfiles(dotfiles_dir, install_dir):
 
     force(map(install_dotfile, dotfiles))
 
-if __name__=="__main__":
-    dotfiles_dir = path.dirname(path.abspath(__file__))
-    install_dir = "/home/phlip9"
+def main():
+    parse = argparse.ArgumentParser()
+    parse.add_argument('--dotfiles-dir', action='store', dest='dotfiles_dir',
+                       default=path.dirname(path.abspath(__file__)), type=str,
+                       help="""Directory of the dotfiles to install (defaults
+                       to the script directory).""")
+    parse.add_argument('--install-dir', action='store', dest='install_dir',
+                       default=os.getenv('HOME'), type=str,
+                       help="""Where to install the dotfiles (defaults to
+                       $HOME).""")
+
+    args = parse.parse_args()
+
+    dotfiles_dir = path.abspath(args.dotfiles_dir)
+    install_dir = path.abspath(args.install_dir)
+
     install_dotfiles(dotfiles_dir, install_dir)
+
+if __name__ == "__main__":
+    main()
