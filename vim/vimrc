@@ -284,7 +284,6 @@
     set nu                          " set line numbers
     set showmode                    " show current display mode
     set cursorline                  " show a line under the cursor
-    hi CursorLine cterm=none ctermbg=Black 
 
     if has('cmdline_info')
         set ruler                                           " show ruler
@@ -293,7 +292,10 @@
     endif
 
     " Sign column color should be the same as the line number column
-    highlight SignColumn ctermbg=NONE ctermbg=NONE
+    highlight SignColumn ctermbg=NONE
+
+    " Make line number column same as background color
+    highlight LineNr ctermbg=NONE
 
     " Don't underline the fold lines
     highlight Folded term=bold cterm=bold ctermbg=NONE
