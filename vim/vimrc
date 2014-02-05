@@ -1,16 +1,15 @@
 " SETUP {{{
 
+    " No vi compatibility
+    " Also needed for cool vim stuff
     set nocompatible
 
+    " NeoBundle Setup
     if has('vim_starting')
-        " needed for cool vim stuff I guess
         set runtimepath+=~/.vim/bundle/neobundle.vim/
+        call neobundle#rc(expand('~/.vim/bundle/'))
     endif
 
-    call neobundle#rc(expand('~/.vim/bundle/'))
-
-    " let Vundle manage Vundle
-    " required!
     NeoBundleFetch 'Shougo/neobundle.vim'
 
     " Rebind mapleader to something more accessible.
@@ -20,14 +19,15 @@
 
 " vimproc - Interactive command execution in Vim {{{
 
-    NeoBundle 'Shougo/vimproc.vim', {
-                \  'build': {
-                \    'windows' : 'make -f make_mingw32.mak',
-                \    'cygwin'  : 'make -f make_cygwin.mak',
-                \    'mac'     : 'make -f make_mac.mak',
-                \    'unix'    : 'make -f make_unix.mak'
-                \  }
-                \}
+    NeoBundle 'Shougo/vimproc.vim',
+            \ {
+            \   'build': {
+            \       'windows' : 'make -f make_mingw32.mak',
+            \       'cygwin'  : 'make -f make_cygwin.mak',
+            \       'mac'     : 'make -f make_mac.mak',
+            \       'unix'    : 'make -f make_unix.mak'
+            \   }
+            \ }
 
 " vimproc }}}
 
@@ -41,7 +41,7 @@
     nnoremap <C-k> <C-w>k
     nnoremap <C-l> <C-w>l
 
-" }}}
+" vim-tmux-navigator }}}
 
 " Solarized Color Scheme {{{
 
@@ -49,9 +49,8 @@
 
     colorscheme solarized
     set background=dark
-    " let g:solarized_termtrans=1
 
-" }}}
+" Solarized Color Scheme }}}
 
 " delimitMate - Autocompletion for delimiters {{{
 
@@ -61,16 +60,24 @@
 
 " NERDCommenter - Easily comment lines or blocks of text {{{
 
+    " Mappings:
+    " <leader>c  - Toggle current line comment
+    " <leader>cm - Block comment
+    " <leader>c$ - Comment from cursor to end of line
+    " <leader>cA - Comment from cursor to end of line and go into insert mode
+
     NeoBundle 'scrooloose/nerdcommenter'
 
 " NERDCommenter }}}
 
 " NERDTree - Vim file explorer {{{
+    
+    " Mappings:
+    " <leader>n - Toggle the NERDTree file browser
 
     NeoBundle 'scrooloose/nerdtree', { 'augroup' : 'NERDTreeHijackNetrw'}
 
-    " NERDTree Settings
-    " q closes NERDTree if it is the only window open
+    " Close NERDTree (and vim) if it is the only buffer open
     autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
 
     " Open NERDTree
@@ -82,9 +89,12 @@
 
     NeoBundle 'scrooloose/syntastic'
 
-" }}}
+" Syntastic }}}
 
 " Gundo - Visualize vim undo tree {{{
+    
+    " Mappings:
+    " <leader>g - Toggle Gundo
 
     NeoBundleLazy 'sjl/gundo.vim', { 'autoload': { 'commands': ['GundoToggle'] }}
 
@@ -93,6 +103,10 @@
 " Gundo }}}
 
 " Tagbar - tag browser {{{
+
+    " Mappings:
+    " <leader>tb - Toggle Tagbar
+    " <leader>tr - Reload tags for file
 
     NeoBundleLazy 'majutsushi/tagbar',
                 \ { 'autoload': { 'commands': ['TagbarToggle'] }}
@@ -143,10 +157,10 @@
     let g:tagbar_autoclose = 1      " auto close after selecting a tag
     let g:tagbar_sort = 0           " don't sort
 
-    nnoremap <leader>tb :TagbarToggle<CR>
+    nmap <leader>tb :TagbarToggle<CR>
 
     " update tags
-    nnoremap <leader>tr :!ctags -R .
+    nmap <leader>tr :!ctags -R .
 
 " Tagbar }}}
 
@@ -154,9 +168,15 @@
 
     NeoBundle 'tpope/vim-fugitive', { 'augroup' : 'fugitive'}
 
-" }}}
+" vim-fugitive }}}
 
 " vim-gitgutter - Show git diff in the gutter {{{
+    " Mappings:
+    " <leader>gg - Toggle git gutter
+    " <leader>hs - Stage hunk
+    " <leader>hr - Revert hunk
+    " <leader>hn - Next hunk
+    " <leader>hp - Previous hunk
 
     " Don't automatically set mappings.
     let g:gitgutter_map_keys = 0
@@ -172,7 +192,7 @@
     nmap <leader>hn :GitGutterNextHunk<CR>
     nmap <leader>hp :GitGutterPrevHunk<CR>
 
-" }}}
+" vim-gitgutter }}}
 
 " YouCompleteMe - vim semantic auto-completition {{{
 
@@ -188,9 +208,6 @@
     let g:ycm_confirm_extra_conf = 0
     let g:ycm_key_list_previous_completion = ['<S-TAB>', '<Up>']
 
-    " GoToDefinition
-    nnoremap <leader>jd :YcmCompleter GoToDefinitionElseDeclaration<CR>
-
 " YouCompleteMe }}}
 
 " SudoEdit.vim - Easily write to protected files {{{
@@ -198,9 +215,10 @@
     NeoBundleLazy 'chrisbra/SudoEdit.vim',
                 \ { 'autoload': { 'commands': ['SudoWrite', 'SudoRead'] }}
 
-" }}}
+" SudoEdit.vim }}}
 
 " vim-multiple-cursors - Emulate Sublime Text's multiple cursors feature {{{
+
     " Mappings:
     " Ctrl-n - Select current/next word
     " Ctrl-p - Select previous word
@@ -208,7 +226,7 @@
 
     NeoBundle 'terryma/vim-multiple-cursors'
 
-" }}}
+" vim-multiple-cursors }}}
 
 " vim-airline - Lightweight yet fancy status line {{{
 
@@ -236,7 +254,7 @@
     let g:airline#extensions#tabline#left_sep = ''
     let g:airline#extensions#tabline#left_alt_sep = '|'
 
-" }}}
+" vim-airline }}}
 
 " vim-coffee-script - Coffee script syntax highlighting and indenting {{{
 
@@ -250,7 +268,7 @@
     NeoBundleLazy 'phlip9/google-vim_cpp_indent',
                 \ { 'autoload': { 'filetypes': ['cpp'] }}
 
-" }}}
+" vim_cpp_indent }}}
 
 " ghcmod.vim - Haskell linting and syntax checking {{{
 
@@ -258,14 +276,14 @@
                 \ { 'autoload': { 'filetypes': ['haskell'] },
                 \   'external_commands': 'ghc-mod' }
 
-" }}}
+" ghcmod.vim }}}
 
-" pep8 indent - Python indenting {{{
+" pep8-indent - Python indenting {{{
 
     NeoBundleLazy 'hynek/vim-python-pep8-indent',
                 \ { 'autoload': { 'filetypes': ['python'] }}
 
-" }}}
+" pep8-indent }}}
 
 " GENERAL {{{
 
