@@ -10,7 +10,11 @@ Vim settings for use across different computers
 
 Install luajit
 
-        # sudo apt-get install luajit libluajit-5.1-2 libluajit-5.1-common libluajit-5.1-dev
+        $ sudo apt-get install luajit libluajit-5.1-2 libluajit-5.1-common libluajit-5.1-dev
+
+Install ag (the silver searcher)
+
+        $ sudo apt-get install silversearcher-ag
 
 
 ## Haskell setup:
