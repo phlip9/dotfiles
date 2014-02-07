@@ -3,6 +3,7 @@ vim-settings
 
 Vim settings for use across different computers
 
+
 # Setup / Dependencies
 
 ## General Dependencies
@@ -10,7 +11,7 @@ Vim settings for use across different computers
 Install luajit
 
         # sudo apt-get install luajit libluajit-5.1-2 libluajit-5.1-common libluajit-5.1-dev
-        
+
 
 ## Haskell setup:
 
@@ -21,10 +22,17 @@ Add cabal bin files to PATH and install ghc-mod
         $ echo "export PATH=$PATH:$HOME/.cabal/bin" >> ~/.bashrc
         $ cabal install ghc-mod
 
+
 Compile vim
 ===========
 
 We need to compile vim with all the necessary features.
+
+Install vim dependencies
+
+        $ sudo apt-get build-dep vim
+
+Compile vim
 
         $ mkdir src
         $ cd src
@@ -38,6 +46,7 @@ We need to compile vim with all the necessary features.
         $ make
         $ sudo make install
         $ make distclean
+
 
 Install
 =======
