@@ -3,33 +3,157 @@
 ! http://ethanschoonover.com/solarized
 
 ! *Note*
-! For some reason, the preproccessor isn't being invoked on this file,
+! For some reason, the preproccessor isn't being invoked on this file
 ! so I just pasted in the values directly.
 
-*background:              #002b36
-*foreground:              #839496
-*fading:                  40
-*fadeColor:               #002b36
-*cursorColor:             #93a1a1
-*pointerColorBackground:  #586e75
-*pointerColorForeground:  #93a1a1
+*background:                #002b36
+*foreground:                #839496
+*fading:                    40
+*fadeColor:                 #002b36
+*cursorColor:               #93a1a1
+*pointerColorBackground:    #586e75
+*pointerColorForeground:    #93a1a1
 
-*color0:                  #073642
-*color1:                  #dc322f
-*color2:                  #859900
-*color3:                  #b58900
-*color4:                  #268bd2
-*color5:                  #d33682
-*color6:                  #2aa198
-*color7:                  #eee8d5
-*color8:                  #002b36
-*color9:                  #cb4b16
-*color10:                 #586e75
-*color11:                 #657b83
-*color12:                 #839496
-*color13:                 #6c71c4
-*color14:                 #93a1a1
-*color15:                 #fdf6e3
+*color0:                    #073642
+*color1:                    #dc322f
+*color2:                    #859900
+*color3:                    #b58900
+*color4:                    #268bd2
+*color5:                    #d33682
+*color6:                    #2aa198
+*color7:                    #eee8d5
+*color8:                    #002b36
+*color9:                    #cb4b16
+*color10:                   #586e75
+*color11:                   #657b83
+*color12:                   #839496
+*color13:                   #6c71c4
+*color14:                   #93a1a1
+*color15:                   #fdf6e3
 
-Xcursor.theme:  DMZ-White
-Xcursor.size:   22
+Xcursor.theme:              DMZ-White
+Xcursor.size:               22
+
+! URxvt*termName:           string
+! URxvt*geometry:           geometry
+! URxvt*chdir:              string
+! URxvt*reverseVideo:       boolean
+! URxvt*loginShell:         boolean
+! URxvt*jumpScroll:         boolean
+! URxvt*skipScroll:         boolean
+! URxvt*pastableTabs:       boolean
+URxvt*scrollstyle:          plain
+URxvt*scrollBar:            false
+! URxvt*scrollBar_right:    boolean
+! URxvt*scrollBar_align:    mode
+! URxvt*thickness:          number
+
+! don't scroll on output
+URxvt*scrollTtyOutput:      false
+
+! scroll to the bottom on keypress
+URxvt*scrollTtyKeypress:    true
+
+! scroll in relation to buffer
+URxvt*scrollWithBuffer:     true
+
+! URxvt*inheritPixmap:      boolean
+! URxvt*transparent:        boolean
+! URxvt*tintColor:          color
+! URxvt*shading:            number
+! URxvt*blurRadius:         HxV
+! URxvt*fading:             number
+! URxvt*fadeColor:          color
+! URxvt*utmpInhibit:        boolean
+! URxvt*urgentOnBell:       boolean
+! URxvt*visualBell:         boolean
+! URxvt*mapAlert:           boolean
+! URxvt*meta8:              boolean
+! URxvt*mouseWheelScrollPage:   boolean
+! URxvt*tripleclickwords:   boolean
+! URxvt*insecure:           boolean
+! URxvt*cursorUnderline:    boolean
+URxvt*cursorBlink:          true
+! URxvt*pointerBlank:       boolean
+! URxvt*background:         color
+! URxvt*foreground:         color
+! URxvt*color0:             color
+! URxvt*color1:             color
+! URxvt*color2:             color
+! URxvt*color3:             color
+! URxvt*color4:             color
+! URxvt*color5:             color
+! URxvt*color6:             color
+! URxvt*color7:             color
+! URxvt*color8:             color
+! URxvt*color9:             color
+! URxvt*color10:            color
+! URxvt*color11:            color
+! URxvt*color12:            color
+! URxvt*color13:            color
+! URxvt*color14:            color
+! URxvt*color15:            color
+! URxvt*colorBD:            color
+! URxvt*colorIT:            color
+! URxvt*colorUL:            color
+! URxvt*colorRV:            color
+! URxvt*underlineColor:     color
+! URxvt*scrollColor:        color
+! URxvt*troughColor:        color
+! URxvt*highlightColor:     color
+! URxvt*cursorColor:        color
+! URxvt*cursorColor2:       color
+! URxvt*pointerColor:       color
+! URxvt*pointerColor2:      color
+! URxvt*borderColor:        color
+! URxvt*path:               search path
+! URxvt*backgroundPixmap:   file[;geom]
+! URxvt*iconFile:           file
+URxvt.font:                 xft:Source Code Pro for Powerline:size=9
+! URxvt*boldFont:           fontname
+! URxvt*italicFont:         fontname
+! URxvt*boldItalicFont:     fontname
+URxvt*intensityStyles:      on
+! URxvt*inputMethod:        name
+! URxvt*preeditType:        style
+! URxvt*imLocale:           string
+! URxvt*imFont:             fontname
+! URxvt*title:              string
+! URxvt*iconName:           string
+URxvt*saveLines:            500
+! URxvt*depth:              number
+! URxvt*buffered:           boolean
+! URxvt*transient-for:      windowid
+! URxvt*override-redirect:  boolean
+! URxvt*hold:               boolean
+! URxvt*externalBorder:     number
+! URxvt*internalBorder:     number
+URxvt*borderLess:           false
+! URxvt*lineSpace:          number
+URxvt*letterSpace:          -1
+! URxvt*skipBuiltinGlyphs:  boolean
+! URxvt*pointerBlankDelay:  number
+! URxvt*backspacekey:       string
+! URxvt*deletekey:          string
+! URxvt*print-pipe:         string
+! URxvt*modifier:           modifier
+! URxvt*cutchars:           string
+! URxvt*answerbackString:   string
+! URxvt*secondaryScreen:    boolean
+! URxvt*secondaryScroll:    boolean
+! URxvt*perl-eval:          perl-eval
+
+! Disable perl
+URxvt.perl-ext-common:      default,clipboard
+!URxvt*perl-ext:
+URxvt.perl-lib:             /home/phlip9/.urxvt/lib/
+
+URxvt.iso14755:             false
+! URxvt*iso14755_52:        boolean
+! URxvt*xrm:                string
+! URxvt*keysym.sym:         keysym
+
+! Keybindings
+!! Copy and paste
+URxvt.keysym.C-S-C:         perl:clipboard:copy
+URxvt.keysym.C-S-V:         perl:clipboard:paste
