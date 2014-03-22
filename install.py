@@ -3,6 +3,7 @@
 
 import os
 import os.path as path
+import subprocess
 import argparse
 
 def force(generator):
@@ -20,6 +21,8 @@ def install_dotfile(dotfile):
     target destination."""
     src = dotfile[0]
     dest = dotfile[1]
+
+    print("Installing symlink from %s to %s" % (src, dest))
 
     if path.exists(dest):
         if path.isdir(dest) and not path.islink(dest):
@@ -44,6 +47,23 @@ def install_dotfiles(dotfiles_dir, install_dir):
 
     force(map(install_dotfile, dotfiles))
 
+def install_package(package):
+    install_cmd = 'sudo apt-get install %s' % package
+
+    print(install_cmd)
+    if subprocess.call(install_cmd, shell=True):
+        print('failed to install package ' + package)
+
+def install_dependencies():
+    packages = ['git', 'tmux', 'rxvt-unicode-256color']
+    install_cmd = 'sudo apt-get install %s'
+    install_cmd = install_cmd % (' '.join(packages))
+
+    print(install_cmd)
+
+    if subprocess.call(install_cmd, shell=True):
+        print('Failed to install packages')
+
 def main():
     parse = argparse.ArgumentParser()
     parse.add_argument('--dotfiles-dir', action='store', dest='dotfiles_dir',
@@ -54,11 +74,19 @@ def main():
                        default=os.getenv('HOME'), type=str,
                        help="""Where to install the dotfiles (defaults to
                        $HOME).""")
+    parse.add_argument('--install-packages', action='store_true',
+                       dest='install_packages', default=False,
+                       help="""If selected, install dotfile dependencies with the
+                       OS package manager.""")
 
     args = parse.parse_args()
 
     dotfiles_dir = path.abspath(args.dotfiles_dir)
     install_dir = path.abspath(args.install_dir)
+    install_packages = args.install_packages
+
+    if install_packages:
+        install_dependencies()
 
     install_dotfiles(dotfiles_dir, install_dir)
 
