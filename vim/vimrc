@@ -31,18 +31,6 @@
 
 " vimproc }}}
 
-" vim-tmux-navigator - Seamless navigation between tmux panes and vim splits {{{
-
-    NeoBundle 'christoomey/vim-tmux-navigator', { 'disabled': !executable('tmux') }
-
-    " Window movement w/ CTRL + h,j,k,l
-    nnoremap <C-h> <C-w>h
-    nnoremap <C-j> <C-w>j
-    nnoremap <C-k> <C-w>k
-    nnoremap <C-l> <C-w>l
-
-" vim-tmux-navigator }}}
-
 " Solarized Color Scheme {{{
 
     NeoBundle 'altercation/vim-colors-solarized.git'
@@ -385,6 +373,12 @@
     " map S-H and S-L to undo and redo
     nnoremap H u
     nnoremap L <C-R>
+
+    " Window movement w/ CTRL + h,j,k,l
+    nnoremap <C-h> <C-w>h
+    nnoremap <C-j> <C-w>j
+    nnoremap <C-k> <C-w>k
+    nnoremap <C-l> <C-w>l
 
     " Reload Vimrc
     nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
