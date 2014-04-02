@@ -209,6 +209,7 @@
     " <space>/ - run ag with pattern (search)
     " <space>y - show yank history
     " <space>b - switch buffer
+    " <space>o - file outline
 
     NeoBundle 'Shougo/unite.vim', { 'depends': 'Shougo/vimproc.vim' }
 
@@ -247,6 +248,13 @@
 	let g:unite_split_rule = 'botright'
 
 " unite.vim }}}
+
+" vim-indent-html - Better html formatting and indenting {{{
+
+    NeoBundleLazy 'bitfyre/vim-indent-html',
+                \ { 'autoload': { 'filetypes': ['html'] }}
+
+" }}}
 
 " GENERAL {{{
 
