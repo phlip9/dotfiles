@@ -249,9 +249,9 @@
 
 " unite.vim }}}
 
-" vim-indent-html - Better html formatting and indenting {{{
+" html5.vim - html5 autocompletion, syntax, and indentation {{{
 
-    NeoBundleLazy 'bitfyre/vim-indent-html',
+    NeoBundleLazy 'othree/html5.vim',
                 \ { 'autoload': { 'filetypes': ['html'] }}
 
 " }}}
