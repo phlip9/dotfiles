@@ -256,6 +256,13 @@
 
 " }}}
 
+" scss-syntax.vim - scss syntax and indenting {{{
+
+    NeoBundleLazy 'cakebaker/scss-syntax.vim',
+                \ { 'autoload': { 'filetypes': ['scss'] }}
+
+" }}}
+
 " GENERAL {{{
 
     filetype plugin indent on       " detect filetypes
