@@ -17,6 +17,8 @@
 
 " SETUP }}}
 
+" BUNDLES {{{
+
 " vimproc - Interactive command execution in Vim {{{
 
     NeoBundle 'Shougo/vimproc.vim',
@@ -113,12 +115,13 @@
 
 " YouCompleteMe - vim semantic auto-completition {{{
 
-    NeoBundleLazy 'Valloric/YouCompleteMe',
+    NeoBundle 'Valloric/YouCompleteMe',
                 \ {
                 \   'depends' : 'Shougo/vimproc.vim',
-                \   'autoload': { 'filetypes': ['c', 'cpp', 'python'] },
-                \   'build' : { 'unix' : './install.sh --clang-completer',
-                \               'other': './install.sh --clang-completer' }
+                \   'build' : {
+                \       'unix' : './install.sh --clang-completer',
+                \       'other': './install.sh --clang-completer'
+                \   }
                 \ }
 
     let g:ycm_autoclose_preview_window_after_completion = 1
@@ -188,6 +191,20 @@
 " vim_cpp_indent }}}
 
 " ghcmod.vim - Haskell linting and syntax checking {{{
+" javacomplete - Java omnicomplete {{{
+
+    NeoBundleLazy 'Shougo/javacomplete',
+                \ {
+                \   'depends': 'Valloric/YouCompleteMe',
+                \   'autoload': { 'filetypes': ['java'] },
+                \   'build': {
+                \       'unix': 'javac ./autoload/Reflection.java',
+                \       'others': 'javac ./autoload/Reflection.java'
+                \   }
+                \ }
+
+" }}}
+
 
     NeoBundleLazy 'eagletmt/ghcmod-vim',
                 \ { 'autoload': { 'filetypes': ['haskell'] },
@@ -264,6 +281,8 @@
 " }}}
 
 " GENERAL {{{
+" }}}
+
 
     filetype plugin indent on       " detect filetypes
     syntax on                       " syntax highlighting
