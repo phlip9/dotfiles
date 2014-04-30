@@ -63,6 +63,7 @@
 " Syntastic - syntax and error checking {{{
 
     NeoBundle 'scrooloose/syntastic'
+    let syntastic_javascript_checkers = ['jshint']
 
 " Syntastic }}}
 
@@ -179,7 +180,7 @@
 " vim-coffee-script - Coffee script syntax highlighting and indenting {{{
 
     NeoBundleLazy 'kchmck/vim-coffee-script',
-                \ { 'autoload': { 'filename_patters': '\.coffee$' }}
+                \ { 'autoload': { 'filename_patterns': '\.coffee$' }}
 
 " vim-coffee-script }}}
 
@@ -190,7 +191,6 @@
 
 " vim_cpp_indent }}}
 
-" ghcmod.vim - Haskell linting and syntax checking {{{
 " javacomplete - Java omnicomplete {{{
 
     NeoBundleLazy 'Shougo/javacomplete',
@@ -205,6 +205,7 @@
 
 " }}}
 
+" ghcmod.vim - Haskell linting and syntax checking {{{
 
     NeoBundleLazy 'eagletmt/ghcmod-vim',
                 \ { 'autoload': { 'filetypes': ['haskell'] },
@@ -280,9 +281,9 @@
 
 " }}}
 
-" GENERAL {{{
 " }}}
 
+" GENERAL {{{
 
     filetype plugin indent on       " detect filetypes
     syntax on                       " syntax highlighting

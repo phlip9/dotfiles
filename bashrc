@@ -137,7 +137,7 @@ export NLTK_DATA=/home/phlip9/nltk_data
 
 # Java
 export JAVA_HOME=/usr/lib/jvm/java-7-oracle
-export CLASSPATH=/opt/eclipse/plugins:/usr/local/lib
+export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib
 
 # PATH
 export PATH=$PATH:/home/phlip9/android/tools:/home/phlip9/android/platform-tools:/opt/eclipse:/home/phlip9/tidesdk/linux/1.3.1-beta:/home/phlip9/arduino-1.0.4:$JAVA_HOME:/home/phlip9/git-submodule-tools:$HOME/.cabal/bin
