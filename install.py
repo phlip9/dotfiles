@@ -44,8 +44,11 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".urxvt")),
                 (path.join(dotfiles_dir, "Xresources"),
                  path.join(install_dir, ".Xresources")),
-                (path.join(dotfiles_dir, "gitconfig"),
-                 path.join(install_dir, ".gitconfig"))]
+                (path.join(dotfiles_dir, "config/git"),
+                 path.join(install_dir, ".config/git")),
+                (path.join(dotfiles_dir, "config/htop"),
+                 path.join(install_dir, ".config/htop"))
+                ]
 
     force(map(install_dotfile, dotfiles))
 

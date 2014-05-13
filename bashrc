@@ -113,6 +113,9 @@ alias less='less -r'
 #   sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
+# media nfs mount shortcut
+alias phlipnfs='sudo mount -t nfs 192.168.0.43:/export/media ~/media'
+
 function mcd() {
     mkdir $@ && cd $_
 }
