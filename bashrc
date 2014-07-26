@@ -44,7 +44,7 @@ esac
 # uncomment for a colored prompt, if the terminal has the capability; turned
 # off by default to not distract the user: the focus in a terminal window
 # should be on the output of commands, not on the prompt
-#force_color_prompt=yes
+force_color_prompt=yes
 
 if [ -n "$force_color_prompt" ]; then
     if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
@@ -116,6 +116,7 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 # media nfs mount shortcut
 alias phlipnfs='sudo mount -t nfs 192.168.0.43:/export/media ~/media'
 
+# makes a directory and cd's into it
 function mcd() {
     mkdir $@ && cd $_
 }
@@ -131,31 +132,47 @@ fi
 
 ## ALIASES }}}
 
-## SHELL VARIABLES {{{
+## ENVIRONMENT VARIABLES {{{
 
-export UTORRENT=/home/phlip9/utorrent
-export ALSOFT_LOGLEVEL=3
-export TIDE_SDK=/home/phlip9/.tidesdk/sdk/linux/1.3.1-beta
-export NLTK_DATA=/home/phlip9/nltk_data
+export UTORRENT=$HOME/utorrent
+export NLTK_DATA=$HOME/nltk_data
+export TIDE_SDK=$HOME/.tidesdk/sdk/linux/1.3.1-beta
 
 # Java
 export JAVA_HOME=/usr/lib/jvm/java-7-oracle
 export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib
-
-# PATH
-export PATH=$PATH:/home/phlip9/android/tools:/home/phlip9/android/platform-tools:/opt/eclipse:/home/phlip9/tidesdk/linux/1.3.1-beta:/home/phlip9/arduino-1.0.4:$JAVA_HOME:/home/phlip9/git-submodule-tools:$HOME/.cabal/bin
+ECLIPSE=/opt/eclipse
 
 # solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
 export SYSRESOURCES=/etc/X11/Xresources
 export USRRESOURCES=$HOME/.Xresources
 
-# virtualenvwrapper
-export WORKON_HOME=~/.virtualenvs
-export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
-source /usr/local/bin/virtualenvwrapper.sh
+# Python
+THE_ONE_TRUE_PYTHON=/usr/bin/python3
 
-# Android NDK
-export ANDROID_NDK=/home/phlip9/android/ndk
+# virtualenvwrapper
+export WORKON_HOME=$HOME/.virtualenvs
+export VIRTUALENVWRAPPER_PYTHON=$THE_ONE_TRUE_PYTHON
+VIRTUALENV_WRAPPER=/usr/local/bin/virtualenvwrapper.sh
+
+[ -f $VIRTUALENV_WRAPPER ] && source $VIRTUALENV_WRAPPER
+
+# Android
+export ANDROID_HOME=/home/phlip9/android
+export ANDROID_NDK=$ANDROID_HOME/ndk
+ANDROID_PATH=$HOME/android/tools:$HOME/android/platform-tools
+
+# Arduino
+ARDUINO_SDK=$HOME/arduino-1.0.4
+
+# Haskell
+CABAL_BIN=$HOME/.cabal/bin
+
+# Git submodule tools
+GIT_SUBMODULE_TOOLS=$HOME/git-submodule-tools
+
+# PATH
+export PATH=$PATH:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN
 
 ## SHELL VARIABLES }}}
 
