@@ -138,6 +138,11 @@ export UTORRENT=$HOME/utorrent
 export NLTK_DATA=$HOME/nltk_data
 export TIDE_SDK=$HOME/.tidesdk/sdk/linux/1.3.1-beta
 
+# Disable 'Couldn't connect to accessibility bus' error on opening gnome
+# applications.
+# http://askubuntu.com/questions/227515/terminal-warning-when-opening-a-file-in-gedit
+export NO_AT_BRIDGE=1
+
 # Java
 export JAVA_HOME=/usr/lib/jvm/java-7-oracle
 export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib
