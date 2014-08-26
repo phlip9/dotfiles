@@ -191,20 +191,6 @@
 
 " vim_cpp_indent }}}
 
-" javacomplete - Java omnicomplete {{{
-
-    NeoBundleLazy 'Shougo/javacomplete',
-                \ {
-                \   'depends': 'Valloric/YouCompleteMe',
-                \   'autoload': { 'filetypes': ['java'] },
-                \   'build': {
-                \       'unix': 'javac ./autoload/Reflection.java',
-                \       'others': 'javac ./autoload/Reflection.java'
-                \   }
-                \ }
-
-" }}}
-
 " ghcmod.vim - Haskell linting and syntax checking {{{
 
     NeoBundleLazy 'eagletmt/ghcmod-vim',
