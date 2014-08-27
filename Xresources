@@ -109,7 +109,7 @@ URxvt*cursorBlink:          true
 ! URxvt*path:               search path
 ! URxvt*backgroundPixmap:   file[;geom]
 ! URxvt*iconFile:           file
-URxvt.font:                 xft:Source Code Pro for Powerline:size=9
+URxvt.font:                 xft:Source Code Pro for Powerline:size=10
 ! URxvt*boldFont:           fontname
 ! URxvt*italicFont:         fontname
 ! URxvt*boldItalicFont:     fontname
