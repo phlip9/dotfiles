@@ -8,4 +8,4 @@ setlocal smarttab
 setlocal expandtab
 
 " autocomplete
-"set omnifunc=pythoncomplete#Complete
+setlocal omnifunc=pythoncomplete#Complete

@@ -7,3 +7,4 @@ setlocal smarttab                    " Indent instead of tab at start of line
 setlocal shiftround                  " Round spaces to nearest shiftwidth multiple
 setlocal nojoinspaces                " Don't convert spaces to tabs
 
+setlocal omnifunc=xmlcomplete#CompleteTags
