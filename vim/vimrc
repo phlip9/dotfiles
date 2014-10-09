@@ -153,6 +153,11 @@
     inoremap <expr><C-y> neocomplete#close_popup()
     inoremap <expr><C-e> neocomplete#cancel_popup()
 
+    if !exists('g:neocomplete#force_omni_input_patterns')
+      let g:neocomplete#force_omni_input_patterns = {}
+    endif
+    let g:neocomplete#force_omni_input_patterns.javascript = '[^. \t]\.\w*'
+
     " Enable heavy omni completion.
     if !exists('g:neocomplete#sources#omni#input_patterns')
       let g:neocomplete#sources#omni#input_patterns = {}
@@ -160,10 +165,6 @@
     "let g:neocomplete#sources#omni#input_patterns.php = '[^. \t]->\h\w*\|\h\w*::'
     "let g:neocomplete#sources#omni#input_patterns.c = '[^.[:digit:] *\t]\%(\.\|->\)'
     "let g:neocomplete#sources#omni#input_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\|\h\w*::'
-
-    " For perlomni.vim setting.
-    " https://github.com/c9s/perlomni.vim
-    let g:neocomplete#sources#omni#input_patterns.perl = '\h\w*->\h\w*\|\h\w*::'
 
 " }}}
 
@@ -212,6 +213,37 @@
     let g:airline#extensions#tabline#left_alt_sep = '|'
 
 " vim-airline }}}
+
+" vim-tern - Javascript autocompletion {{{
+
+    " ## Commands ##
+    " TernDef: Jump to the definition of the thing under the cursor.
+    " TernDoc: Look up the documentation of something.
+    " TernType: Find the type of the thing under the cursor.
+    " TernRefs: Show all references to the variable or property under the cursor.
+    " TernRename: Rename the variable under the cursor.
+
+    NeoBundle 'marijnh/tern_for_vim',
+                \ { 'build': { 'others': 'npm install' }}
+
+" }}}
+
+" vim-javascript-syntax - Javascript syntax file {{{
+
+    NeoBundleLazy 'jelera/vim-javascript-syntax',
+                \ { 'autoload': { 'filetypes': ['javascript'] }}
+
+" }}}
+
+" vim-node - Tools to make Vim superb for developing with Node.js {{{
+
+    " Mappings:
+    " gj : Use on paths or requires to open file Node would
+
+    NeoBundleLazy 'moll/vim-node',
+                \ { 'autoload': { 'filetypes': ['javascript'] }}
+
+" }}}
 
 " vim-coffee-script - Coffee script syntax highlighting and indenting {{{
 
