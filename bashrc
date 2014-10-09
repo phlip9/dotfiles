@@ -121,6 +121,10 @@ function mcd() {
     mkdir $@ && cd $_
 }
 
+function ssh-copy-key() {
+    cat ~/.ssh/id_rsa.pub | ssh $@ 'cat >> ~/.ssh/authorized_keys'
+}
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
@@ -167,6 +171,9 @@ export ANDROID_HOME=/home/phlip9/android
 export ANDROID_NDK=$ANDROID_HOME/ndk
 ANDROID_PATH=$HOME/android/tools:$HOME/android/platform-tools
 
+### Added by the Heroku Toolbelt
+export HEROKU_TOOLBELT=/usr/local/heroku/bin
+
 # Arduino
 ARDUINO_SDK=$HOME/arduino-1.0.4
 
@@ -177,7 +184,7 @@ CABAL_BIN=$HOME/.cabal/bin
 GIT_SUBMODULE_TOOLS=$HOME/git-submodule-tools
 
 # PATH
-export PATH=$PATH:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN
+export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN
 
 ## SHELL VARIABLES }}}
 
