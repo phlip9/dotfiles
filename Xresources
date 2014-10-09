@@ -105,7 +105,7 @@ URxvt*cursorBlink:          true
 ! URxvt*cursorColor2:       color
 ! URxvt*pointerColor:       color
 ! URxvt*pointerColor2:      color
-! URxvt*borderColor:        color
+! URxvt*borderColor:        #fdf6e3
 ! URxvt*path:               search path
 ! URxvt*backgroundPixmap:   file[;geom]
 ! URxvt*iconFile:           file
@@ -127,7 +127,7 @@ URxvt*saveLines:            500
 ! URxvt*override-redirect:  boolean
 ! URxvt*hold:               boolean
 ! URxvt*externalBorder:     number
-! URxvt*internalBorder:     number
+! URxvt*internalBorder:     5
 URxvt*borderLess:           false
 ! URxvt*lineSpace:          number
 URxvt*letterSpace:          -1
