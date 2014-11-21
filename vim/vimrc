@@ -80,6 +80,33 @@
 
 " Gundo }}}
 
+" vim-ref - View reference docs for keyword under cursor {{{
+
+    " Mappings:
+    " ---------
+    "
+    " (In global)
+    " <leader>r - open reference docs for keyword under cursor
+    "
+    " (In reference viewer)
+    " <CR> - (same as K)
+    " <C-t> - ref backward
+    " <C-o> - ref backward
+    " <C-i> - ref forward
+
+    NeoBundle 'thinca/vim-ref', { 'depends': 'Shougo/vimproc.vim' }
+
+    let g:ref_no_default_key_mappings = 1
+
+    let g:ref_pydoc_cmd = "python3 -m pydoc"
+
+    nnoremap <leader>r :call ref#K('normal')<CR>
+
+    " Can use as a unite source
+    " :Unite ref/pydoc
+
+" }}}
+
 " vim-fugitive - Vim Git integration {{{
 
     NeoBundle 'tpope/vim-fugitive', { 'augroup' : 'fugitive'}
