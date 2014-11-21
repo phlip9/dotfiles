@@ -37,6 +37,8 @@
 
     NeoBundle 'altercation/vim-colors-solarized.git'
 
+    let g:solarized_termtrans=1
+    let g:solarized_termcolors=256
     colorscheme solarized
     set background=dark
 
@@ -356,11 +358,6 @@
 
 " VISUAL {{{
 
-    " use 256 colors if gnome-terminal
-    if $COLORTERM == 'gnome-terminal'
-      set t_Co=256
-    endif
-
     set nu                          " set line numbers
     set showmode                    " show current display mode
     set cursorline                  " show a line under the cursor
@@ -370,6 +367,9 @@
         set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
         set showcmd                                         " show partial commands in status line
     endif
+
+    " Highlight CursorLine as lighter background color
+    highlight CursorLine ctermbg=black
 
     " Sign column color should be the same as the line number column
     highlight SignColumn ctermbg=NONE

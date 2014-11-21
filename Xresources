@@ -3,7 +3,7 @@
 ! http://ethanschoonover.com/solarized
 
 ! *Note*
-! For some reason, the preproccessor isn't being invoked on this file
+! For some reason, the preproccessor isnt being invoked on this file
 ! so I just pasted in the values directly.
 
 *background:                #002b36
@@ -22,7 +22,7 @@
 *color5:                    #d33682
 *color6:                    #2aa198
 *color7:                    #eee8d5
-*color8:                    #002b36
+*color8:                    #657b83
 *color9:                    #cb4b16
 *color10:                   #586e75
 *color11:                   #657b83
@@ -48,7 +48,7 @@ URxvt*scrollBar:            false
 ! URxvt*scrollBar_align:    mode
 ! URxvt*thickness:          number
 
-! don't scroll on output
+! dont scroll on output
 URxvt*scrollTtyOutput:      false
 
 ! scroll to the bottom on keypress
