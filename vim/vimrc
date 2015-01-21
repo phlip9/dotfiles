@@ -44,6 +44,12 @@
 
 " Solarized Color Scheme }}}
 
+" vim-rooter - Change vim root directory to project root {{{
+
+    NeoBundle 'airblade/vim-rooter'
+
+" }}}
+
 " delimitMate - Autocompletion for delimiters {{{
 
     NeoBundle 'Raimondi/delimitMate'
