@@ -213,8 +213,8 @@
 
 " neosnippet - neocomplete compatible vim snippets {{{
 
-    NeoBundle 'Shougo/neosnippet'
-    NeoBundle 'Shougo/neosnippet-snippets'
+    NeoBundle 'Shougo/neosnippet', { 'depends': 'Shougo/neocomplete.vim' }
+    NeoBundle 'Shougo/neosnippet-snippets', { 'depends': 'Shougo/neosnippet' }
 
     " Plugin key-mappings.
     imap <C-k> <Plug>(neosnippet_expand_or_jump)
@@ -334,6 +334,20 @@
                 \   'external_commands': 'ghc-mod' }
 
 " ghcmod.vim }}}
+
+" javacomplete - Java omnicomplete {{{
+
+    NeoBundleLazy 'Shougo/javacomplete',
+                \ {
+                \   'depends': 'Shougo/neocomplete.vim',
+                \   'autoload': { 'filetypes': ['java'] },
+                \   'build': {
+                \     'unix': 'javac ./autoload/Reflection.java',
+                \     'others': 'javac ./autoload/Reflection.java'
+                \   }
+                \ }
+
+" }}}
 
 " pep8-indent - Python indenting {{{
 
