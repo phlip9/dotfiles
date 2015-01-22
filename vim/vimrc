@@ -1,8 +1,13 @@
 " SETUP {{{
 
+    " Note: Skip initialization for vim-tiny or vim-small.
+    if !1 | finish | endif
+
     " No vi compatibility
     " Also needed for cool vim stuff
-    set nocompatible
+    if &compatible
+        set nocompatible
+    endif
 
     " NeoBundle Setup
     if has('vim_starting')
@@ -375,11 +380,11 @@
 
 " }}}
 
-    call neobundle#end()
-
 " }}}
 
 " GENERAL {{{
+
+    call neobundle#end()
 
     filetype plugin indent on       " detect filetypes
     syntax on                       " syntax highlighting
@@ -387,6 +392,11 @@
     " If there are uninstalled bundles found on startup,
     " this will conveniently prompt you to install them.
     NeoBundleCheck
+
+	if !has('vim_starting')
+	  " Call on_source hook when reloading .vimrc.
+	  call neobundle#call_hook('on_source')
+	endif
 
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
