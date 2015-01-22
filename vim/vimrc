@@ -41,12 +41,10 @@
 
 " Solarized Color Scheme {{{
 
-    NeoBundle 'altercation/vim-colors-solarized.git'
+    NeoBundle 'altercation/vim-colors-solarized'
 
     let g:solarized_termtrans=1
     let g:solarized_termcolors=256
-    colorscheme solarized
-    set background=dark
 
 " Solarized Color Scheme }}}
 
@@ -417,6 +415,10 @@
         set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
         set showcmd                                         " show partial commands in status line
     endif
+
+    " Colorscheme
+    set background=dark
+    colorscheme solarized
 
     " Highlight CursorLine as lighter background color
     highlight CursorLine ctermbg=black
