@@ -148,8 +148,10 @@ export TIDE_SDK=$HOME/.tidesdk/sdk/linux/1.3.1-beta
 export NO_AT_BRIDGE=1
 
 # Java
-export JAVA_HOME=/usr/lib/jvm/java-7-oracle
-export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib
+export JAVA_HOME=/usr/lib/jvm/default-java
+export CS61B_LIBS=$HOME/dev/cs61b/afx/lib
+export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib:$CS61B_LIBS
+IDEA_BIN=$HOME/idea/bin
 ECLIPSE=/opt/eclipse
 
 # solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
@@ -167,9 +169,10 @@ VIRTUALENV_WRAPPER=/usr/local/bin/virtualenvwrapper.sh
 [ -f $VIRTUALENV_WRAPPER ] && source $VIRTUALENV_WRAPPER
 
 # Android
-export ANDROID_HOME=/home/phlip9/android
+export ANDROID_HOME=$HOME/android
 export ANDROID_NDK=$ANDROID_HOME/ndk
-ANDROID_PATH=$HOME/android/tools:$HOME/android/platform-tools
+export ANDROID_STUDIO=$HOME/android-studio
+ANDROID_PATH=$HOME/android/tools:$HOME/android/platform-tools:$ANDROID_STUDIO/bin
 
 ### Added by the Heroku Toolbelt
 export HEROKU_TOOLBELT=/usr/local/heroku/bin
@@ -184,7 +187,7 @@ CABAL_BIN=$HOME/.cabal/bin
 GIT_SUBMODULE_TOOLS=$HOME/git-submodule-tools
 
 # PATH
-export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN
+export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN
 
 ## SHELL VARIABLES }}}
 
