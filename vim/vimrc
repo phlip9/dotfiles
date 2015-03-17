@@ -417,6 +417,13 @@
 
 " }}}
 
+" goyo.vim - distraction free editing {{{
+
+    " ':Goyo' to toggle distraction free mode
+    NeoBundle 'junegunn/goyo.vim'
+
+" }}}
+
 " }}}
 
 " GENERAL {{{
@@ -461,6 +468,9 @@
 
     " Highlight CursorLine as lighter background color
     highlight CursorLine ctermbg=black
+
+    " Make matching text readable
+    highlight MatchParen ctermbg=black
 
     " Sign column color should be the same as the line number column
     highlight SignColumn ctermbg=NONE
