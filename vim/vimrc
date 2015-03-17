@@ -327,6 +327,13 @@
 
 " vim_cpp_indent }}}
 
+" rust.vim - Rust file detection and syntax highlighting {{{
+
+    NeoBundle 'rust-lang/rust.vim',
+                \ { 'autoload': { 'filetypes': ['rust'] }}
+
+" }}}
+
 " ghcmod.vim - Haskell linting and syntax checking {{{
 
     NeoBundleLazy 'eagletmt/ghcmod-vim',
