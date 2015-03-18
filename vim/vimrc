@@ -334,6 +334,19 @@
 
 " }}}
 
+" Racer - code completion for Rust {{{
+
+    NeoBundle 'phildawes/racer',
+                \ {
+                \   'autoload': { 'filetypes': ['rust'] },
+                \   'build': { 'unix': 'cargo build --release' }
+                \ }
+
+    let $RUST_SRC_PATH = $HOME . '/dev/rust/src/'
+    let g:racer_cmd = $HOME . '/dev/dotfiles/vim/bundle/racer/target/release/racer'
+
+" }}}
+
 " ghcmod.vim - Haskell linting and syntax checking {{{
 
     NeoBundleLazy 'eagletmt/ghcmod-vim',
