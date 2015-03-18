@@ -161,20 +161,15 @@
 
     NeoBundle 'shougo/neocomplete.vim'
 
-    " Disable AutoComplPop.
+    " neocomplete configuration
     let g:acp_enableAtStartup = 0
-    " Use neocomplete.
     let g:neocomplete#enable_at_startup = 1
-    " Use smartcase.
     let g:neocomplete#enable_smart_case = 1
-    " Set minimum syntax keyword length.
-    let g:neocomplete#sources#syntax#min_keyword_length = 3
-
-    " Define keyword.
-    if !exists('g:neocomplete#keyword_patterns')
-        let g:neocomplete#keyword_patterns = {}
-    endif
-    let g:neocomplete#keyword_patterns['default'] = '\h\w*'
+    let g:neocomplete#enable_prefetch                   = 1
+    let g:neocomplete#enable_auto_close_preview = 0
+    let g:neocomplete#sources#syntax#min_keyword_length = 2
+    let g:neocomplete#auto_completion_start_length      = 3
+    let g:neocomplete#sources#buffer#cache_limit_size   = 500000
 
     " Plugin key-mappings.
     inoremap <expr><C-g> neocomplete#undo_completion()
@@ -196,18 +191,20 @@
     inoremap <expr><C-y> neocomplete#close_popup()
     inoremap <expr><C-e> neocomplete#cancel_popup()
 
+    if !exists('g:neocomplete#keyword_patterns')
+        let g:neocomplete#keyword_patterns = {}
+    endif
+    let g:neocomplete#keyword_patterns.default = '\h\w*'
+
+    " light omni completion, i.e., no neocomplete caching etc
     if !exists('g:neocomplete#force_omni_input_patterns')
       let g:neocomplete#force_omni_input_patterns = {}
     endif
-    let g:neocomplete#force_omni_input_patterns.javascript = '[^. \t]\.\w*'
 
-    " Enable heavy omni completion.
+    " Enable heavy omni completion
     if !exists('g:neocomplete#sources#omni#input_patterns')
       let g:neocomplete#sources#omni#input_patterns = {}
     endif
-    "let g:neocomplete#sources#omni#input_patterns.php = '[^. \t]->\h\w*\|\h\w*::'
-    "let g:neocomplete#sources#omni#input_patterns.c = '[^.[:digit:] *\t]\%(\.\|->\)'
-    "let g:neocomplete#sources#omni#input_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\|\h\w*::'
 
 " }}}
 
@@ -291,14 +288,17 @@
     " TernRefs: Show all references to the variable or property under the cursor.
     " TernRename: Rename the variable under the cursor.
 
-    NeoBundle 'marijnh/tern_for_vim',
-                \ { 'build': { 'others': 'npm install' }}
+    NeoBundleLazy 'marijnh/tern_for_vim',
+                \ { 
+                \   'autoload': { 'filetypes': ['javascript'] },
+                \   'build': { 'unix': 'npm install' }
+                \ }
 
 " }}}
 
-" vim-javascript-syntax - Javascript syntax file {{{
+" vim-javascript - Javascript syntax and indent file {{{
 
-    NeoBundleLazy 'jelera/vim-javascript-syntax',
+    NeoBundleLazy 'pangloss/vim-javascript',
                 \ { 'autoload': { 'filetypes': ['javascript'] }}
 
 " }}}
@@ -329,14 +329,14 @@
 
 " rust.vim - Rust file detection and syntax highlighting {{{
 
-    NeoBundle 'rust-lang/rust.vim',
+    NeoBundleLazy 'rust-lang/rust.vim',
                 \ { 'autoload': { 'filetypes': ['rust'] }}
 
 " }}}
 
 " Racer - code completion for Rust {{{
 
-    NeoBundle 'phildawes/racer',
+    NeoBundleLazy 'phildawes/racer',
                 \ {
                 \   'autoload': { 'filetypes': ['rust'] },
                 \   'build': { 'unix': 'cargo build --release' }
