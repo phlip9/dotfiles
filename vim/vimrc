@@ -363,7 +363,6 @@
                 \   'autoload': { 'filetypes': ['java'] },
                 \   'build': {
                 \     'unix': 'javac ./autoload/Reflection.java',
-                \     'others': 'javac ./autoload/Reflection.java'
                 \   }
                 \ }
 
@@ -441,6 +440,12 @@
 
     " ':Goyo' to toggle distraction free mode
     NeoBundle 'junegunn/goyo.vim'
+
+" }}}
+
+" Recover.vim - Show a diff when recovering swp files {{{
+
+    NeoBundle 'chrisbra/Recover.vim'
 
 " }}}
 
