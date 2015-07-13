@@ -66,7 +66,7 @@ unset color_prompt force_color_prompt
 
 # If this is an xterm set the title to user@host:dir
 case "$TERM" in
-xterm*|rxvt*)
+xterm*|urxvt*)
     PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
     ;;
 *)
@@ -168,6 +168,9 @@ VIRTUALENV_WRAPPER=/usr/local/bin/virtualenvwrapper.sh
 
 [ -f $VIRTUALENV_WRAPPER ] && source $VIRTUALENV_WRAPPER
 
+# Anaconda3
+ANACONDA_HOME=$HOME/anaconda3/bin
+
 # Android
 export ANDROID_HOME=$HOME/android
 export ANDROID_NDK=$ANDROID_HOME/ndk
@@ -187,7 +190,7 @@ CABAL_BIN=$HOME/.cabal/bin
 GIT_SUBMODULE_TOOLS=$HOME/git-submodule-tools
 
 # PATH
-export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN
+export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN:$ANACONDA_HOME
 
 ## SHELL VARIABLES }}}
 
@@ -206,7 +209,7 @@ set -o vi
 # Open tmux automatically
 # If a session exists, just connect to it instead of creating a new one.
 if [[ -z "$TMUX" ]]; then
-    if [[ $(tmux ls 2>&1) == "failed to connect to server" ]]; then
+    if [[ $(tmux ls 2>&1) =~ "failed to connect to server" ]]; then
         tmux
     else
         tmux attach
