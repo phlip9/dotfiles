@@ -36,7 +36,7 @@ Compile nvim
 
         $ git clone git@github.com:neovim/neovim.git
         $ cd neovim
-        $ make CMAKE_BUILD_TYPE=MinSizeRel
+        $ make
         $ sudo make install
         $ make clean
 
