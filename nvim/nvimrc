@@ -21,6 +21,13 @@
     " Rebind mapleader to something more accessible.
     let mapleader = ','
 
+    " python setup
+    let g:python3_host_prog = '/usr/bin/python3'
+    "" disable python
+    " let g:loaded_python3_provider = 1
+    "" skip if_has('python3') check
+    " let g:python3_host_skip_check = 1
+
 " SETUP }}}
 
 " BUNDLES {{{
@@ -159,6 +166,14 @@
     NeoBundle 'tpope/vim-vinegar'
 
 " vim-vinegar }}}
+
+" deoplete.nvim - neovim autocomplete {{{
+
+    NeoBundle 'Shougo/deoplete.nvim'
+
+    let g:deoplete#enable_at_startup = 1
+
+" }}}
 
 " neosnippet - neocomplete compatible vim snippets {{{
 
