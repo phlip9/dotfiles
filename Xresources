@@ -144,7 +144,7 @@ URxvt*letterSpace:          -1
 ! URxvt*perl-eval:          perl-eval
 
 ! Disable perl
-URxvt.perl-ext-common:      default,clipboard
+URxvt.perl-ext-common:      default,clipboard,font-size
 !URxvt*perl-ext:
 URxvt.perl-lib:             /home/phlip9/.urxvt/lib/
 
@@ -157,3 +157,7 @@ URxvt.iso14755:             false
 !! Copy and paste
 URxvt.keysym.C-S-C:         perl:clipboard:copy
 URxvt.keysym.C-S-V:         perl:clipboard:paste
+
+!! Increase/decrease font size
+URxvt.keysym.C-equal:       perl:font-size:increase
+URxvt.keysym.C-minus:       perl:font-size:decrease
