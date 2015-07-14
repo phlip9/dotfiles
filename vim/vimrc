@@ -165,11 +165,11 @@
     let g:acp_enableAtStartup = 0
     let g:neocomplete#enable_at_startup = 1
     let g:neocomplete#enable_smart_case = 1
-    let g:neocomplete#enable_prefetch                   = 1
+    let g:neocomplete#enable_prefetch = 1
     let g:neocomplete#enable_auto_close_preview = 0
     let g:neocomplete#sources#syntax#min_keyword_length = 2
-    let g:neocomplete#auto_completion_start_length      = 3
-    let g:neocomplete#sources#buffer#cache_limit_size   = 500000
+    let g:neocomplete#auto_completion_start_length = 3
+    let g:neocomplete#sources#buffer#cache_limit_size = 500000
 
     " Plugin key-mappings.
     inoremap <expr><C-g> neocomplete#undo_completion()
@@ -448,6 +448,12 @@
 " Recover.vim - Show a diff when recovering swp files {{{
 
     NeoBundle 'chrisbra/Recover.vim'
+
+" }}}
+
+" vim-bbye - Close a buffer without messing up your layout {{{
+
+    NeoBundle 'moll/vim-bbye'
 
 " }}}
 

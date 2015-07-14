@@ -113,7 +113,7 @@ URxvt.font:                 xft:Source Code Pro for Powerline:size=9
 ! URxvt*boldFont:           fontname
 ! URxvt*italicFont:         fontname
 ! URxvt*boldItalicFont:     fontname
-URxvt*intensityStyles:      on
+URxvt*intensityStyles:      false
 ! URxvt*inputMethod:        name
 ! URxvt*preeditType:        style
 ! URxvt*imLocale:           string

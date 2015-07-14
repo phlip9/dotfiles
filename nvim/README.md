@@ -12,9 +12,10 @@ Vim settings for use across different computers
 Install ag (the silver searcher)
 
         $ sudo apt-get install silversearcher-ag
+        $ sudo pip3 install neovim
 
 
-### Haskell setup ###
+### _Optional_: Haskell setup ###
 
         $ cabal update
 
@@ -24,7 +25,7 @@ Add cabal bin files to PATH and install ghc-mod
         $ cabal install ghc-mod
 
 
-### Compile vim ###
+### Compile neovim ###
 
 We need to compile vim with all the necessary features.
 
@@ -36,7 +37,7 @@ Compile nvim
 
         $ git clone git@github.com:neovim/neovim.git
         $ cd neovim
-        $ make CMAKE_BUILD_TYPE=MinSizeRel
+        $ make
         $ sudo make install
         $ make clean
 
