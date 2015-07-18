@@ -6,5 +6,6 @@ setlocal expandtab
 
 setlocal omnifunc=racer#Complete
 
-let g:neocomplete#sources#omni#input_patterns.rust = '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*'
+" TODO: Uncomment when deoplete supports custom completion patterns
+" let g:neocomplete#sources#omni#input_patterns.rust = '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*'
 

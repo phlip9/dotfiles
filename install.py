@@ -66,7 +66,7 @@ def install_package(package):
         print('failed to install package ' + package)
 
 def install_dependencies():
-    packages = ['git', 'tmux', 'rxvt-unicode-256color', 'xsel']
+    packages = ['git', 'rxvt-unicode-256color', 'xsel']
     install_cmd = 'sudo apt-get install %s'
     install_cmd = install_cmd % (' '.join(packages))
 
