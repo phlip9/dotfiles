@@ -1,4 +1,4 @@
-" SETUP {{{
+" PRELUDE {{{
 
     " Note: Skip initialization for vim-tiny or vim-small.
     if !1 | finish | endif
@@ -431,10 +431,6 @@
     filetype plugin indent on       " detect filetypes
     syntax on                       " syntax highlighting
 
-    " If there are uninstalled bundles found on startup,
-    " this will conveniently prompt you to install them.
-    NeoBundleCheck
-
 	if !has('vim_starting')
 	  " Call on_source hook when reloading .vimrc.
 	  call neobundle#call_hook('on_source')
@@ -572,5 +568,13 @@
     nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
 
 " KEYBINDINGS }}}
+
+" POSTLUDE {{{
+
+    " If there are uninstalled bundles found on startup,
+    " this will conveniently prompt you to install them.
+    NeoBundleCheck
+
+" }}}
 
 " vim: foldmethod=marker
