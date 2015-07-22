@@ -36,6 +36,7 @@
 
     NeoBundle 'Shougo/vimproc.vim',
             \ {
+            \   'build_commands': 'make',
             \   'build': {
             \       'windows' : 'make -f make_mingw32.mak',
             \       'cygwin'  : 'make -f make_cygwin.mak',
@@ -196,7 +197,7 @@
 
 " }}}
 
-" neosnippet - neocomplete compatible vim snippets {{{
+" neosnippet - vim snippets {{{
 
     NeoBundle 'Shougo/neosnippet'
     NeoBundle 'Shougo/neosnippet-snippets', { 'depends': 'Shougo/neosnippet' }
@@ -279,6 +280,7 @@
     NeoBundleLazy 'marijnh/tern_for_vim',
                 \ { 
                 \   'autoload': { 'filetypes': ['javascript'] },
+                \   'build_commands': 'npm',
                 \   'build': { 'unix': 'npm install' }
                 \ }
 
@@ -327,6 +329,7 @@
     NeoBundleLazy 'phildawes/racer',
                 \ {
                 \   'autoload': { 'filetypes': ['rust'] },
+                \   'build_commands': 'cargo',
                 \   'build': { 'unix': 'cargo build --release' }
                 \ }
 
@@ -347,8 +350,8 @@
 
     NeoBundleLazy 'Shougo/javacomplete',
                 \ {
-                \   'depends': 'Shougo/neocomplete.vim',
                 \   'autoload': { 'filetypes': ['java'] },
+                \   'build_commands': 'javac',
                 \   'build': {
                 \     'unix': 'javac ./autoload/Reflection.java',
                 \   }
