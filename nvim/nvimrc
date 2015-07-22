@@ -90,6 +90,27 @@
 
 " Syntastic }}}
 
+" vim-test - Run tests at the speed of thought {{{
+
+    " Mappings:
+    " <leader>t<Space> Run the test nearest to the cursor
+    " <leader>tf Test the current file
+    " <leader>ts Test the current suite
+    " <leader>tl Run the last test
+    " <leader>tv Open the test file for the last run tests
+
+    NeoBundle 'janko-m/vim-test'
+
+    nnoremap <silent> <leader>t<Space> :TestNearest<CR>
+    nnoremap <silent> <leader>tf :TestFile<CR>
+    nnoremap <silent> <leader>ts :TestSuite<CR>
+    nnoremap <silent> <leader>tl :TestLast<CR>
+    nnoremap <silent> <leader>tv :TestVisit<CR>
+
+    let test#strategy = "neovim"
+
+" }}}
+
 " Gundo - Visualize vim undo tree {{{
     
     " Mappings:
