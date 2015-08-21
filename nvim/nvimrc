@@ -195,6 +195,9 @@
 
     let g:deoplete#enable_at_startup = 1
 
+    " Disable the annoying autocomplete window
+    set completeopt-=preview
+
 " }}}
 
 " neosnippet - vim snippets {{{
@@ -284,6 +287,9 @@
                 \   'build': { 'unix': 'npm install' }
                 \ }
 
+    " Display function signatures in the completion menu
+    let g:tern_show_signature_in_pum = 1
+
 " }}}
 
 " vim-javascript - Javascript syntax and indent file {{{
@@ -366,7 +372,7 @@
 
 " pep8-indent }}}
 
-" unite.vim - fuzzy file matching and buffer searching {{{
+" Unite.vim - fuzzy file matching and buffer searching {{{
     
     " Mappings:
     " <space>f - find files
@@ -380,15 +386,17 @@
     " File outline plugin
     NeoBundle 'Shougo/unite-outline', { 'depends': 'Shougo/unite.vim' }
 
-    " ctrlp-like functionality: fuzzy file searching
-    nmap <space>f :Unite -buffer-name=files file_rec/async<CR>
-
     " use ag to for searching
     if executable('ag')
         let g:unite_source_grep_command = 'ag'
-        let g:unite_source_grep_default_opts = '--noheading --nocolor --column'
+        let g:unite_source_grep_default_opts = '--follow --noheading --nocolor --column'
         let g:unite_source_grep_recursive_opt = ''
+        let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
+		let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
     endif
+
+    " ctrlp-like functionality: fuzzy file searching
+    nmap <space>f :Unite -buffer-name=files file_rec/async<CR>
 
     nmap <space>/ :Unite -buffer-name=search grep:.<CR>
 
@@ -417,6 +425,19 @@
 
     NeoBundleLazy 'othree/html5.vim',
                 \ { 'autoload': { 'filetypes': ['html'] }}
+
+" }}}
+
+" vim-jade - Jade template engine syntax and highlighting {{{
+
+    NeoBundleLazy 'digitaltoad/vim-jade',
+                \ { 'autoload': { 'filetypes': ['jade'] }}
+
+" }}}
+
+" vim-mustace-handlebars - Mustache & Handlebars syntax highlighting {{{
+
+    NeoBundle 'mustache/vim-mustache-handlebars'
 
 " }}}
 
