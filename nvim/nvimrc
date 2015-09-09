@@ -448,6 +448,12 @@
 
 " }}}
 
+" julia-vim - Julia syntax highlighting and ftplugin {{{
+
+    NeoBundle 'JuliaLang/julia-vim'
+
+" }}}
+
 " goyo.vim - distraction free editing {{{
 
     " ':Goyo' to toggle distraction free mode
