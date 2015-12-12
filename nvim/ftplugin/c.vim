@@ -1,17 +1,16 @@
 " ignore linux kernel and module files
 set wildignore+=*.ko,*.mod.c,*.order,modules.builtin
 
-" linux kernel style guide
-" https://www.kernel.org/doc/Documentation/CodingStyle
-setlocal tabstop=8
-setlocal shiftwidth=8
-setlocal softtabstop=8
+setlocal tabstop=2
+setlocal shiftwidth=2
+setlocal softtabstop=2
 setlocal textwidth=80
-setlocal noexpandtab
+setlocal smarttab
+setlocal expandtab
 
 setlocal cindent
 setlocal formatoptions=tcqlron
-setlocal cinoptions=:0,l1,t0,g0
+setlocal cinoptions=l1,t0,g0
 
 " define some common kernel macros and types
 " as syntax for the fancy colors
