@@ -11,10 +11,10 @@
 
     " NeoBundle Setup
     if has('vim_starting')
-        set runtimepath+=~/.nvim/bundle/neobundle.vim/
+        set runtimepath+=$XDG_CONFIG_HOME/nvim/bundle/neobundle.vim/
     endif
 
-    call neobundle#begin(expand('~/.nvim/bundle/'))
+    call neobundle#begin(expand('$XDG_CONFIG_HOME/nvim/bundle/'))
 
     NeoBundleFetch 'Shougo/neobundle.vim'
 
