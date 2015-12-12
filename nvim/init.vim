@@ -190,10 +190,18 @@
 " vim-vinegar }}}
 
 " deoplete.nvim - neovim autocomplete {{{
-
+    
     NeoBundle 'Shougo/deoplete.nvim'
 
     let g:deoplete#enable_at_startup = 1
+
+    if !exists('g:deoplete#omni_patterns')
+        let g:deoplete#omni_patterns = {}
+    endif
+
+    " Custom auto completion trigger patterns
+    let g:deoplete#omni_patterns.c = '[^. *\t](\.|->)\w*'
+    "let g:deoplete#omni_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*'
 
     " Disable the annoying autocomplete window
     set completeopt-=preview
@@ -323,6 +331,23 @@
 
 " vim_cpp_indent }}}
 
+" vim-clang - C/C++ Auto completion {{{
+
+    "NeoBundleLazy 'justmao945/vim-clang',
+                "\ { 'autoload': { 'filetypes': ['c', 'cpp'] }}
+    NeoBundle 'justmao945/vim-clang'
+
+    " disable vim-clang's auto completion
+    let g:clang_auto = 0
+    let g:clang_debug = 0
+    " remove 'longest' option -- doesn't work with vim-clang
+    let g:clang_c_completeopt = 'menuone'
+    let g:clang_cpp_completeopt = 'menuone'
+    let g:clang_c_options = '-std=gnu11'
+    let g:clang_cpp_options = '-std=c++11 -stdlib=libc++'
+
+" vim-clang }}}
+
 " rust.vim - Rust file detection and syntax highlighting {{{
 
     NeoBundleLazy 'rust-lang/rust.vim',
@@ -362,6 +387,13 @@
                 \     'unix': 'javac ./autoload/Reflection.java',
                 \   }
                 \ }
+
+" }}}
+
+" {{{
+
+    NeoBundleLazy 'derekwyatt/vim-scala',
+                \ { 'autoload': { 'filetypes': ['scala'] }}
 
 " }}}
 
@@ -451,6 +483,9 @@
 " julia-vim - Julia syntax highlighting and ftplugin {{{
 
     NeoBundle 'JuliaLang/julia-vim'
+    
+    " Turn off the Latex symbol to unicode key mapping
+    let g:latex_to_unicode_tab = 0
 
 " }}}
 
@@ -615,8 +650,8 @@
     nnoremap <C-k> <C-w>k
     nnoremap <C-l> <C-w>l
 
-    " Reload Vimrc
-    nnoremap <silent> <leader>V :source ~/.vimrc<CR>:filetype detect<CR>:exe ":echo 'vimrc reloaded'"<CR>
+    " Reload nvimrc
+    nnoremap <silent> <leader>V :source ~/.nvimrc<CR>:filetype detect<CR>:exe ":echo 'nvimrc reloaded'"<CR>
 
 " KEYBINDINGS }}}
 

@@ -138,6 +138,8 @@ fi
 
 ## ENVIRONMENT VARIABLES {{{
 
+export XDG_CONFIG_HOME=$HOME/.config
+
 export UTORRENT=$HOME/utorrent
 export NLTK_DATA=$HOME/nltk_data
 export TIDE_SDK=$HOME/.tidesdk/sdk/linux/1.3.1-beta
@@ -174,8 +176,9 @@ ANACONDA_HOME=$HOME/anaconda3/bin
 # Android
 export ANDROID_HOME=$HOME/android
 export ANDROID_NDK=$ANDROID_HOME/ndk
+export ANDROID_NDK_HOME=$ANDROID_NDK
 export ANDROID_STUDIO=$HOME/android-studio
-ANDROID_PATH=$HOME/android/tools:$HOME/android/platform-tools:$ANDROID_STUDIO/bin
+ANDROID_PATH=$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$ANDROID_NDK
 
 ### Added by the Heroku Toolbelt
 export HEROKU_TOOLBELT=/usr/local/heroku/bin
@@ -189,8 +192,14 @@ CABAL_BIN=$HOME/.cabal/bin
 # Git submodule tools
 GIT_SUBMODULE_TOOLS=$HOME/git-submodule-tools
 
+INTEL_HOME=/opt/intel
+INTEL_BIN=$INTEL_HOME/bin
+
+SPARK_HOME=$HOME/spark
+SPARK_BIN=$SPARK_HOME/bin
+
 # PATH
-export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN:$ANACONDA_HOME
+export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN:$ANACONDA_HOME:$INTEL_BIN:$SPARK_BIN
 
 ## SHELL VARIABLES }}}
 
