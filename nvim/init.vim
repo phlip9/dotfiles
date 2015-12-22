@@ -379,18 +379,18 @@
 
 " javacomplete - Java omnicomplete {{{
 
-    NeoBundleLazy 'Shougo/javacomplete',
-                \ {
-                \   'autoload': { 'filetypes': ['java'] },
-                \   'build_commands': 'javac',
-                \   'build': {
-                \     'unix': 'javac ./autoload/Reflection.java',
-                \   }
-                \ }
+    "NeoBundleLazy 'Shougo/javacomplete',
+                "\ {
+                "\   'autoload': { 'filetypes': ['java'] },
+                "\   'build_commands': 'javac',
+                "\   'build': {
+                "\     'unix': 'javac ./autoload/Reflection.java',
+                "\   }
+                "\ }
 
 " }}}
 
-" {{{
+" vim-scala - Scala syntax plugin {{{
 
     NeoBundleLazy 'derekwyatt/vim-scala',
                 \ { 'autoload': { 'filetypes': ['scala'] }}

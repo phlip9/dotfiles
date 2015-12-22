@@ -91,14 +91,14 @@ fu! s:ParseVimClasspath(vim_classpath)
     endif
 endfu
 
-if !exists('g:loaded_vim_classpath')
-    let g:loaded_vim_classpath = 0
-endif
+"if !exists('g:loaded_vim_classpath')
+    "let g:loaded_vim_classpath = 0
+"endif
 
-if !g:loaded_vim_classpath
-    let s:vim_classpath = s:FindVimClasspath(expand('.'))
-    if !empty(s:vim_classpath)
-        call s:ParseVimClasspath(s:vim_classpath)
-    endif
-endif
+"if !g:loaded_vim_classpath
+    "let s:vim_classpath = s:FindVimClasspath(expand('.'))
+    "if !empty(s:vim_classpath)
+        "call s:ParseVimClasspath(s:vim_classpath)
+    "endif
+"endif
 
