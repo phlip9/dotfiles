@@ -199,11 +199,16 @@ export INTEL_LICENSE_FILE=$INTEL_HOME/licenses/l_CZSTLDHD.lic
 SPARK_HOME=$HOME/spark
 SPARK_BIN=$SPARK_HOME/bin
 
+NPM_HOME=~/.npm
+NPM_BIN=$NPM_HOME/bin
+
 # LD Path
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_HOME/lib/intel64
 
 # PATH
-export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN:$ANACONDA_HOME:$INTEL_BIN:$SPARK_BIN
+export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK
+export PATH=$PATH:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN:$ANACONDA_HOME
+export PATH=$PATH:$INTEL_BIN:$SPARK_BIN:$NPM_BIN
 
 ## SHELL VARIABLES }}}
 
@@ -230,5 +235,56 @@ if [[ -z $TMUX ]]; then
 fi
 
 ## MISC }}}
+
+## NPM COMPLETITON {{{
+
+# npm command completion script
+
+COMP_WORDBREAKS=${COMP_WORDBREAKS/=/}
+COMP_WORDBREAKS=${COMP_WORDBREAKS/@/}
+export COMP_WORDBREAKS
+
+if type complete &>/dev/null; then
+  _npm_completion () {
+    local si="$IFS"
+    IFS=$'\n' COMPREPLY=($(COMP_CWORD="$COMP_CWORD" \
+                           COMP_LINE="$COMP_LINE" \
+                           COMP_POINT="$COMP_POINT" \
+                           npm completion -- "${COMP_WORDS[@]}" \
+                           2>/dev/null)) || return $?
+    IFS="$si"
+  }
+  complete -F _npm_completion npm
+elif type compdef &>/dev/null; then
+  _npm_completion() {
+    si=$IFS
+    compadd -- $(COMP_CWORD=$((CURRENT-1)) \
+                 COMP_LINE=$BUFFER \
+                 COMP_POINT=0 \
+                 npm completion -- "${words[@]}" \
+                 2>/dev/null)
+    IFS=$si
+  }
+  compdef _npm_completion npm
+elif type compctl &>/dev/null; then
+  _npm_completion () {
+    local cword line point words si
+    read -Ac words
+    read -cn cword
+    let cword-=1
+    read -l line
+    read -ln point
+    si="$IFS"
+    IFS=$'\n' reply=($(COMP_CWORD="$cword" \
+                       COMP_LINE="$line" \
+                       COMP_POINT="$point" \
+                       npm completion -- "${words[@]}" \
+                       2>/dev/null)) || return $?
+    IFS="$si"
+  }
+  compctl -K _npm_completion npm
+fi
+
+## }}}
 
 # vim:foldmethod=marker
