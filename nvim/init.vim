@@ -509,6 +509,27 @@
 
 " }}}
 
+" vimfiler.vim - vim file manager {{{
+
+    NeoBundle 'Shougo/vimfiler.vim',
+                \ {
+                \   'depends': [ 'Shougo/unite.vim' ]
+                \ }
+
+    " replace netr
+    let g:vimfiler_as_default_explorer = 1
+
+" }}}
+
+" neossh.vim - SSH interface for neovim {{{
+
+    NeoBundle 'Shougo/neossh.vim',
+                \ {
+                \   'depends': [ 'Shougo/vimproc.vim', 'Shougo/unite.vim' ]
+                \ }
+
+" }}}
+
 " }}}
 
 " GENERAL {{{
@@ -591,6 +612,9 @@
 
     " Remove trailing whitespaces and ^M chars
     autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buffer> :call setline(1,map(getline(1,"$"),'substitute(v:val,"\\s\\+$","","")'))
+
+    " ethereum serpent contract language
+    au BufNewFile,BufRead *.se set filetype=python
 
     " custom text folding function
     function! NeatFoldText()
