@@ -122,8 +122,30 @@ function mcd() {
 }
 
 function ssh-copy-key() {
-    cat ~/.ssh/id_rsa.pub | ssh $@ 'cat >> ~/.ssh/authorized_keys'
+    echo 'ssh-copy-key is DEPRECATED. Use ssh-copy-id instead.'
 }
+
+# pyvenv helpers
+
+function mkvenv() {
+    echo Creating new python virtual env at \'$ENV_DIR/$1\'
+    pyvenv $ENV_DIR/$1
+}
+
+function lsvenv() {
+    ls $ENV_DIR
+}
+
+function rmvenv() {
+    echo Deleting python virtual env \'$ENV_DIR/$1\'
+    rm -rf $ENV_DIR/$1
+}
+
+function workon() {
+    echo Entering python virtual env \'$1\'. Use \'deactivate\' to exit
+    source $ENV_DIR/$1/bin/activate
+}
+
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
@@ -161,14 +183,10 @@ export SYSRESOURCES=/etc/X11/Xresources
 export USRRESOURCES=$HOME/.Xresources
 
 # Python
-THE_ONE_TRUE_PYTHON=/usr/bin/python3
+THE_ONE_TRUE_PYTHON=/usr/local/bin/python3.5
 
-# virtualenvwrapper
-export WORKON_HOME=$HOME/.virtualenvs
-export VIRTUALENVWRAPPER_PYTHON=$THE_ONE_TRUE_PYTHON
-VIRTUALENV_WRAPPER=/usr/local/bin/virtualenvwrapper.sh
-
-[ -f $VIRTUALENV_WRAPPER ] && source $VIRTUALENV_WRAPPER
+# pyvenv
+ENV_DIR=$HOME/.virtualenvs
 
 # Anaconda3
 ANACONDA_HOME=$HOME/anaconda3/bin

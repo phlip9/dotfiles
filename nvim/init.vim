@@ -84,7 +84,8 @@
 
     NeoBundle 'scrooloose/syntastic'
     let syntastic_javascript_checkers = ['jshint', 'jscs']
-    let g:syntastic_python_python_exec = '/usr/bin/python3'
+
+    let g:syntastic_python_python_exec = '/usr/local/bin/python3.5'
 
     let g:syntastic_cpp_compiler = 'g++'
     let g:syntastic_cpp_compiler_options = ' -std=c++11 -stdlib=libc++'
