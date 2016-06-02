@@ -28,7 +28,7 @@
     "" skip if_has('python3') check
     " let g:python3_host_skip_check = 1
 
-" SETUP }}}
+" PRELUDE }}}
 
 " BUNDLES {{{
 
@@ -357,8 +357,6 @@
 
 " rust.vim - Rust file detection and syntax highlighting {{{
 
-    au BufNewFile,BufRead *.rs setf rust
-
     call dein#add('rust-lang/rust.vim',
                 \ {
                 \   'lazy': 1,
@@ -394,7 +392,7 @@
 
 " ghcmod.vim }}}
 
-" javacomplete - Java omnicomplete {{{
+" (disabled) javacomplete - Java omnicomplete {{{
 
     "NeoBundleLazy 'Shougo/javacomplete',
                 "\ {
@@ -407,7 +405,7 @@
 
 " }}}
 
-" vim-monster - Ruby omnicomplete {{{
+" (disabled) vim-monster - Ruby omnicomplete {{{
 
     "call dein#add('osyo-manga/vim-monster',
                 "\ {
@@ -479,8 +477,8 @@
     " mru (most-recently-used) file list limit
     let g:unite_source_file_mru_long_limit = 1000
 
-	let g:unite_winheight = 10
-	let g:unite_split_rule = 'botright'
+    let g:unite_winheight = 10
+    let g:unite_split_rule = 'botright'
 
 " unite.vim }}}
 
@@ -577,7 +575,7 @@
 
 " }}}
 
-" }}}
+" BUNDLES }}}
 
 " GENERAL {{{
 
@@ -589,9 +587,9 @@
     syntax on                       " syntax highlighting
 
     " Call on_source hook when reloading .vimrc.
-	if !has('vim_starting')
-	  call dein#call_hook('on_source')
-	endif
+    if !has('vim_starting')
+        call dein#call_hook('on_source')
+    endif
 
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
@@ -737,6 +735,6 @@
         call dein#install()
     endif
 
-" }}}
+" POSTLUDE }}}
 
 " vim: foldmethod=marker
