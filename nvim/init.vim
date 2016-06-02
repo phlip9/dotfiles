@@ -9,20 +9,20 @@
         set nocompatible
     endif
 
-    " NeoBundle Setup
+    " dein setup
     if has('vim_starting')
-        set runtimepath+=$XDG_CONFIG_HOME/nvim/bundle/neobundle.vim/
+        set runtimepath+=$XDG_CONFIG_HOME/nvim/plugins/repos/github.com/Shougo/dein.vim
     endif
 
-    call neobundle#begin(expand('$XDG_CONFIG_HOME/nvim/bundle/'))
-
-    NeoBundleFetch 'Shougo/neobundle.vim'
+    call dein#begin(expand('$XDG_CONFIG_HOME/nvim/plugins/'))
+    call dein#add('Shougo/dein.vim')
 
     " Rebind mapleader to something more accessible.
     let mapleader = ','
 
-    " python setup
-    let g:python3_host_prog = '/usr/bin/python3'
+    " python3 setup
+    let python3 = '/usr/local/bin/python3.5'
+    let g:python3_host_prog = python3
     "" disable python
     " let g:loaded_python3_provider = 1
     "" skip if_has('python3') check
@@ -34,22 +34,17 @@
 
 " vimproc - Interactive command execution in Vim {{{
 
-    NeoBundle 'Shougo/vimproc.vim',
-            \ {
-            \   'build_commands': 'make',
-            \   'build': {
-            \       'windows' : 'make -f make_mingw32.mak',
-            \       'cygwin'  : 'make -f make_cygwin.mak',
-            \       'mac'     : 'make -f make_mac.mak',
-            \       'unix'    : 'make -f make_unix.mak'
-            \   }
-            \ }
+    call dein#add('Shougo/vimproc.vim',
+                \ {
+                \   'if': executable('make'),
+                \   'build': 'make'
+                \ })
 
 " vimproc }}}
 
 " Solarized Color Scheme {{{
 
-    NeoBundle 'altercation/vim-colors-solarized'
+    call dein#add('altercation/vim-colors-solarized')
 
     let g:solarized_termtrans=1
     let g:solarized_termcolors=256
@@ -58,13 +53,13 @@
 
 " vim-rooter - Change vim root directory to project root {{{
 
-    NeoBundle 'airblade/vim-rooter'
+    call dein#add('airblade/vim-rooter')
 
 " }}}
 
 " delimitMate - Autocompletion for delimiters {{{
 
-    NeoBundle 'Raimondi/delimitMate'
+    call dein#add('Raimondi/delimitMate')
 
 " delimitMate }}}
 
@@ -76,16 +71,16 @@
     " <leader>c$ - Comment from cursor to end of line
     " <leader>cA - Comment from cursor to end of line and go into insert mode
 
-    NeoBundle 'scrooloose/nerdcommenter'
+    call dein#add('scrooloose/nerdcommenter')
 
 " NERDCommenter }}}
 
 " Syntastic - syntax and error checking {{{
 
-    NeoBundle 'scrooloose/syntastic'
+    call dein#add('scrooloose/syntastic')
     let syntastic_javascript_checkers = ['jshint', 'jscs']
 
-    let g:syntastic_python_python_exec = '/usr/local/bin/python3.5'
+    let g:syntastic_python_python_exec = python3
 
     let g:syntastic_cpp_compiler = 'g++'
     let g:syntastic_cpp_compiler_options = ' -std=c++11 -stdlib=libc++'
@@ -101,7 +96,13 @@
     " <leader>tl Run the last test
     " <leader>tv Open the test file for the last run tests
 
-    NeoBundle 'janko-m/vim-test'
+    call dein#add('janko-m/vim-test',
+                \ {
+                \   'lazy': 1,
+                \   'on_cmd': [
+                \     'TestNearest', 'TestFile', 'TestSuite', 'TestLast', 'TestVisit'
+                \   ]
+                \ })
 
     nnoremap <silent> <leader>t<Space> :TestNearest<CR>
     nnoremap <silent> <leader>tf :TestFile<CR>
@@ -112,17 +113,6 @@
     let test#strategy = "neovim"
 
 " }}}
-
-" Gundo - Visualize vim undo tree {{{
-    
-    " Mappings:
-    " <leader>g - Toggle Gundo
-
-    NeoBundleLazy 'sjl/gundo.vim', { 'autoload': { 'commands': ['GundoToggle'] }}
-
-    nnoremap <leader>g :GundoToggle<CR>
-
-" Gundo }}}
 
 " vim-ref - View reference docs for keyword under cursor {{{
 
@@ -138,13 +128,12 @@
     " <C-o> - ref backward
     " <C-i> - ref forward
 
-    NeoBundle 'thinca/vim-ref',
+    call dein#add('thinca/vim-ref',
                 \ {
-                \   'depends': 'Shougo/vimproc.vim',
-                \ }
+                \   'depends': 'vimproc.vim'
+                \ })
 
     let g:ref_no_default_key_mappings = 1
-
     let g:ref_pydoc_cmd = "python3 -m pydoc"
 
     nnoremap <leader>r :call ref#K('normal')<CR>
@@ -156,7 +145,11 @@
 
 " vim-fugitive - Vim Git integration {{{
 
-    NeoBundle 'tpope/vim-fugitive', { 'augroup' : 'fugitive'}
+    call dein#add('tpope/vim-fugitive',
+                \ {
+                \   'if': executable('git'),
+                \   'augroup' : 'fugitive'
+                \ })
 
 " vim-fugitive }}}
 
@@ -171,7 +164,10 @@
     " Don't automatically set mappings.
     let g:gitgutter_map_keys = 0
 
-    NeoBundle 'airblade/vim-gitgutter', { 'disabled': !has('signs') }
+    call dein#add('airblade/vim-gitgutter',
+                \ {
+                \   'if': has('signs') && executable('git')
+                \ })
 
     nmap <leader>gg :GitGutterToggle<CR>
 
@@ -184,15 +180,9 @@
 
 " vim-gitgutter }}}
 
-" vim-vinegar - Enhance the default netrw (avoid using NERDTree) {{{
-
-    NeoBundle 'tpope/vim-vinegar'
-
-" vim-vinegar }}}
-
 " deoplete.nvim - neovim autocomplete {{{
     
-    NeoBundle 'Shougo/deoplete.nvim'
+    call dein#add('Shougo/deoplete.nvim', { 'if': has('python3') })
 
     let g:deoplete#enable_at_startup = 1
 
@@ -203,6 +193,7 @@
     " Custom auto completion trigger patterns
     let g:deoplete#omni_patterns.c = '[^. *\t](\.|->)\w*'
     "let g:deoplete#omni_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*'
+    let g:deoplete#omni_patterns.ruby = ['[^. *\t]\.\w*\|\h\w*::']
 
     " Disable the annoying autocomplete window
     set completeopt-=preview
@@ -211,8 +202,8 @@
 
 " neosnippet - vim snippets {{{
 
-    NeoBundle 'Shougo/neosnippet'
-    NeoBundle 'Shougo/neosnippet-snippets', { 'depends': 'Shougo/neosnippet' }
+    call dein#add('Shougo/neosnippet')
+    call dein#add('Shougo/neosnippet-snippets', { 'depends': 'neosnippet' })
 
     " Plugin key-mappings.
     imap <C-k> <Plug>(neosnippet_expand_or_jump)
@@ -236,8 +227,7 @@
 
 " SudoEdit.vim - Easily write to protected files {{{
 
-    NeoBundleLazy 'chrisbra/SudoEdit.vim',
-                \ { 'autoload': { 'commands': ['SudoWrite', 'SudoRead'] }}
+    call dein#add('chrisbra/SudoEdit.vim', { 'on_cmd': ['SudoWrite', 'SudoRead'] })
 
 " SudoEdit.vim }}}
 
@@ -248,19 +238,21 @@
     " Ctrl-p - Select previous word
     " Ctrl-x - Skip current word
 
-    NeoBundle 'terryma/vim-multiple-cursors'
+    call dein#add('terryma/vim-multiple-cursors')
 
 " vim-multiple-cursors }}}
 
 " vim-airline - Lightweight yet fancy status line {{{
 
-    NeoBundle 'bling/vim-airline'
+    call dein#add('bling/vim-airline')
 
     set laststatus=2
 
     let g:airline_powerline_fonts=1
 
-    "" powerline symbols
+    " powerline symbols
+    " If these look like garbage, then you need to install the patched
+    " powerline fonts: https://github.com/powerline/fonts
     let g:airline_symbols = {}
     let g:airline_symbols.space = ' '
     let g:airline_left_sep = ''
@@ -289,12 +281,13 @@
     " TernRefs: Show all references to the variable or property under the cursor.
     " TernRename: Rename the variable under the cursor.
 
-    NeoBundleLazy 'marijnh/tern_for_vim',
+    call dein#add('marijnh/tern_for_vim',
                 \ { 
-                \   'autoload': { 'filetypes': ['javascript'] },
-                \   'build_commands': 'npm',
-                \   'build': { 'unix': 'npm install' }
-                \ }
+                \   'if': executable('npm'),
+                \   'lazy': 1,
+                \   'build': 'npm install',
+                \   'on_ft': ['javascript'],
+                \ })
 
     " Display function signatures in the completion menu
     let g:tern_show_signature_in_pum = 1
@@ -303,8 +296,11 @@
 
 " vim-javascript - Javascript syntax and indent file {{{
 
-    NeoBundleLazy 'pangloss/vim-javascript',
-                \ { 'autoload': { 'filetypes': ['javascript'] }}
+    call dein#add('pangloss/vim-javascript',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['javascript']
+                \ })
 
 " }}}
 
@@ -313,68 +309,88 @@
     " Mappings:
     " gj : Use on paths or requires to open file Node would
 
-    NeoBundleLazy 'moll/vim-node',
-                \ { 'autoload': { 'filetypes': ['javascript'] }}
+    call dein#add('moll/vim-node',
+                \ {
+                \   'if': executable('node'),
+                \   'lazy': 1,
+                \   'on_ft': ['javascript']
+                \ })
 
 " }}}
 
 " vim-coffee-script - Coffee script syntax highlighting and indenting {{{
 
-    NeoBundleLazy 'kchmck/vim-coffee-script',
-                \ { 'autoload': { 'filename_patterns': '\.coffee$' }}
+    call dein#add('kchmck/vim-coffee-script',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['coffee']
+                \ })
 
 " vim-coffee-script }}}
 
 " vim_cpp_indent - Google C++ indent style {{{
 
-    NeoBundleLazy 'phlip9/google-vim_cpp_indent',
-                \ { 'autoload': { 'filetypes': ['cpp'] }}
+    call dein#add('phlip9/google-vim_cpp_indent',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['cpp']
+                \ })
 
 " vim_cpp_indent }}}
 
-" vim-clang - C/C++ Auto completion {{{
+" deoplete-clang - C/C++ Autocomplete integrated with deoplete {{{
 
-    "NeoBundleLazy 'justmao945/vim-clang',
-                "\ { 'autoload': { 'filetypes': ['c', 'cpp'] }}
-    NeoBundle 'justmao945/vim-clang'
+    call dein#add('zchee/deoplete-clang',
+                \ {
+                \   'if': executable('clang'),
+                \   'depends': 'deoplete.nvim',
+                \   'lazy': 1,
+                \   'on_ft': ['c', 'cpp']
+                \ })
 
-    " disable vim-clang's auto completion
-    let g:clang_auto = 0
-    let g:clang_debug = 0
-    " remove 'longest' option -- doesn't work with vim-clang
-    let g:clang_c_completeopt = 'menuone'
-    let g:clang_cpp_completeopt = 'menuone'
-    let g:clang_c_options = '-std=gnu11'
-    let g:clang_cpp_options = '-std=c++11 -stdlib=libc++'
-
-" vim-clang }}}
-
-" rust.vim - Rust file detection and syntax highlighting {{{
-
-    NeoBundleLazy 'rust-lang/rust.vim',
-                \ { 'autoload': { 'filetypes': ['rust'] }}
+    " `echo -n ...` strips the trailing newline from output
+    let cmd = 'echo -n `llvm-config-3.6 --libdir`'
+    let g:deoplete#sources#clang#libclang_path = system(cmd) . '/libclang.so'
+    let g:deoplete#sources#clang#clang_header = '/usr/include/clang'
 
 " }}}
 
-" Racer - code completion for Rust {{{
+" rust.vim - Rust file detection and syntax highlighting {{{
 
-    NeoBundleLazy 'phildawes/racer',
+    au BufNewFile,BufRead *.rs setf rust
+
+    call dein#add('rust-lang/rust.vim',
                 \ {
-                \   'autoload': { 'filetypes': ['rust'] },
-                \   'build_commands': 'cargo',
-                \   'build': { 'unix': 'cargo build --release' }
-                \ }
+                \   'lazy': 1,
+                \   'on_ft': ['rust']
+                \ })
+
+" }}}
+
+" vim-racer - code completion for Rust {{{
+
+    call dein#add('racer-rust/vim-racer',
+                \ {
+                \   'if': executable('racer'),
+                \   'lazy': 1,
+                \   'on_ft': ['rust']
+                \ })
+
+    let g:racer_no_default_keymappings = 1
 
     let $RUST_SRC_PATH = $HOME . '/dev/rust/src/'
-    let g:racer_cmd = $HOME . '/dev/dotfiles/vim/bundle/racer/target/release/racer'
+    "let g:racer_cmd = $HOME . '/dev/dotfiles/vim/bundle/racer/target/release/racer'
 
 " }}}
 
 " ghcmod.vim - Haskell linting and syntax checking {{{
 
-    NeoBundleLazy 'eagletmt/ghcmod-vim',
-                \ { 'autoload': { 'filetypes': ['haskell'] },
-                \   'external_commands': 'ghc-mod' }
+    call dein#add('eagletmt/ghcmod-vim',
+                \ {
+                \   'if': executable('ghc-mod'),
+                \   'lazy': 1,
+                \   'on_ft': ['haskell']
+                \ })
 
 " ghcmod.vim }}}
 
@@ -391,17 +407,38 @@
 
 " }}}
 
+" vim-monster - Ruby omnicomplete {{{
+
+    "call dein#add('osyo-manga/vim-monster',
+                "\ {
+                "\   'if': executable('rct-complete'),
+                "\   'depends': 'vimproc.vim',
+                "\   'lazy': 1,
+                "\   'on_ft': 'ruby'
+                "\ })
+
+    ""let g:monster#debug#enable = 1
+    "let g:monster#completion#rcodetools#backend = "async_rct_complete"
+
+" }}}
+
 " vim-scala - Scala syntax plugin {{{
 
-    NeoBundleLazy 'derekwyatt/vim-scala',
-                \ { 'autoload': { 'filetypes': ['scala'] }}
+    call dein#add('derekwyatt/vim-scala',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['scala']
+                \ })
 
 " }}}
 
 " pep8-indent - Python indenting {{{
 
-    NeoBundleLazy 'hynek/vim-python-pep8-indent',
-                \ { 'autoload': { 'filetypes': ['python'] }}
+    call dein#add('hynek/vim-python-pep8-indent',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['python']
+                \ })
 
 " pep8-indent }}}
 
@@ -414,10 +451,10 @@
     " <space>b - switch buffer
     " <space>o - file outline
 
-    NeoBundle 'Shougo/unite.vim', { 'depends': 'Shougo/vimproc.vim' }
+    call dein#add('Shougo/unite.vim', { 'depends': 'vimproc.vim' })
 
     " File outline plugin
-    NeoBundle 'Shougo/unite-outline', { 'depends': 'Shougo/unite.vim' }
+    call dein#add('Shougo/unite-outline', { 'depends': 'unite.vim' })
 
     " use ag to for searching
     if executable('ag')
@@ -432,13 +469,6 @@
     nmap <space>f :Unite -buffer-name=files file_rec/async<CR>
 
     nmap <space>/ :Unite -buffer-name=search grep:.<CR>
-
-    " unite yank history
-    let g:unite_source_history_yank_enable = 1
-    nmap <space>y :Unite -buffer-name=yank history/yank<CR>
-
-    " Fancy buffer switching
-    nmap <space>b :Unite -buffer-name=buffers -quick-match buffer<CR>
 
     " Show file outline
     nmap <space>o :Unite -buffer-name=outline outline<CR>
@@ -456,34 +486,43 @@
 
 " html5.vim - html5 autocompletion, syntax, and indentation {{{
 
-    NeoBundleLazy 'othree/html5.vim',
-                \ { 'autoload': { 'filetypes': ['html'] }}
+    call dein#add('othree/html5.vim',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['html']
+                \ })
 
 " }}}
 
 " vim-jade - Jade template engine syntax and highlighting {{{
 
-    NeoBundleLazy 'digitaltoad/vim-jade',
-                \ { 'autoload': { 'filetypes': ['jade'] }}
+    call dein#add('digitaltoad/vim-jade',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['jade']
+                \ })
 
 " }}}
 
 " vim-mustace-handlebars - Mustache & Handlebars syntax highlighting {{{
 
-    NeoBundle 'mustache/vim-mustache-handlebars'
+    call dein#add('mustache/vim-mustache-handlebars')
 
 " }}}
 
 " scss-syntax.vim - scss syntax and indenting {{{
 
-    NeoBundleLazy 'cakebaker/scss-syntax.vim',
-                \ { 'autoload': { 'filetypes': ['scss'] }}
+    call dein#add('cakebaker/scss-syntax.vim',
+                \ {
+                \   'lazy': 1,
+                \   'on_ft': ['scss']
+                \ })
 
 " }}}
 
 " julia-vim - Julia syntax highlighting and ftplugin {{{
 
-    NeoBundle 'JuliaLang/julia-vim'
+    call dein#add('JuliaLang/julia-vim')
     
     " Turn off the Latex symbol to unicode key mapping
     let g:latex_to_unicode_tab = 0
@@ -493,28 +532,36 @@
 " goyo.vim - distraction free editing {{{
 
     " ':Goyo' to toggle distraction free mode
-    NeoBundle 'junegunn/goyo.vim'
+    call dein#add('junegunn/goyo.vim',
+                \ {
+                \   'lazy': 1,
+                \   'on_cmd': ['Goyo']
+                \ })
 
 " }}}
 
 " Recover.vim - Show a diff when recovering swp files {{{
 
-    NeoBundle 'chrisbra/Recover.vim'
+    call dein#add('chrisbra/Recover.vim')
 
 " }}}
 
 " vim-bbye - Close a buffer without messing up your layout {{{
 
-    NeoBundle 'moll/vim-bbye'
+    call dein#add('moll/vim-bbye',
+                \ {
+                \   'lazy': 1,
+                \   'on_cmd': ['Bdelete']
+                \ })
 
 " }}}
 
 " vimfiler.vim - vim file manager {{{
 
-    NeoBundle 'Shougo/vimfiler.vim',
+    call dein#add('Shougo/vimfiler.vim',
                 \ {
-                \   'depends': [ 'Shougo/unite.vim' ]
-                \ }
+                \   'depends': ['unite.vim']
+                \ })
 
     " replace netr
     let g:vimfiler_as_default_explorer = 1
@@ -523,10 +570,10 @@
 
 " neossh.vim - SSH interface for neovim {{{
 
-    NeoBundle 'Shougo/neossh.vim',
+    call dein#add('Shougo/neossh.vim',
                 \ {
-                \   'depends': [ 'Shougo/vimproc.vim', 'Shougo/unite.vim' ]
-                \ }
+                \   'depends': ['Shougo/vimproc.vim', 'unite.vim']
+                \ })
 
 " }}}
 
@@ -534,14 +581,16 @@
 
 " GENERAL {{{
 
-    call neobundle#end()
+    " Required after all plugins have been declared
+    call dein#end()
+    "call dein#remote_plugins()
 
     filetype plugin indent on       " detect filetypes
     syntax on                       " syntax highlighting
 
+    " Call on_source hook when reloading .vimrc.
 	if !has('vim_starting')
-	  " Call on_source hook when reloading .vimrc.
-	  call neobundle#call_hook('on_source')
+	  call dein#call_hook('on_source')
 	endif
 
     set history=1000                " make the history larger
@@ -676,7 +725,7 @@
     nnoremap <C-l> <C-w>l
 
     " Reload nvimrc
-    nnoremap <silent> <leader>V :source ~/.nvimrc<CR>:filetype detect<CR>:exe ":echo 'nvimrc reloaded'"<CR>
+    nnoremap <silent> <leader>V :source $XDG_CONFIG_HOME/nvim/init.vim<CR>:filetype detect<CR>:exe ":echo 'nvimrc reloaded'"<CR>
 
 " KEYBINDINGS }}}
 
@@ -684,7 +733,9 @@
 
     " If there are uninstalled bundles found on startup,
     " this will conveniently prompt you to install them.
-    NeoBundleCheck
+    if dein#check_install()
+        call dein#install()
+    endif
 
 " }}}
 

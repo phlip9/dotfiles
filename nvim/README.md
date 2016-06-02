@@ -9,45 +9,79 @@ Vim settings for use across different computers
 
 ### General Dependencies ###
 
-Install ag (the silver searcher)
-
-        $ sudo apt-get install silversearcher-ag
+        $ sudo apt-get install rsync silversearcher-ag
         $ sudo pip3 install neovim
+
+
+### _Optional_: Powerline fonts ###
+
+Install patched powerline fonts from: https://github.com/powerline/fonts
 
 
 ### _Optional_: Haskell setup ###
 
         $ cabal update
-
-Add cabal bin files to PATH and install ghc-mod
-
-        $ echo "export PATH=$PATH:$HOME/.cabal/bin" >> ~/.bashrc
         $ cabal install ghc-mod
 
 
-### Compile neovim ###
+### _Optional_: Rust setup ###
 
-We need to compile vim with all the necessary features.
+Install `rustc`:
 
-Install nvim dependencies
+        $ git clone git@github.com:rust-lang/rust.git
+        $ cd rust
+        $ ./configure
+        $ make
+        $ sudo make install
+        $ make clean
 
-        $ sudo apt-get install libtool autoconf automake cmake libncurses5-dev g++ pkg-config unzip ninja-build
+Install `cargo`:
 
-Compile nvim
+        $ git clone --recursive https://github.com/rust-lang/cargo
+        $ cd cargo
+        $ ./configure
+        $ make
+        $ sudo make install
+        $ make clean
+
+Install `racer`:
+
+        $ cargo install racer
+
+
+### _Optional_: C/C++ setup ###
+
+Install clang
+
+        $ sudo apt-get install clang
+
+
+### Neovim ###
+
+Install `nvim` dependencies
+
+        $ sudo apt-get install libtool libtool-bin autoconf automake cmake g++ pkg-config unzip
+
+Compile and install `nvim`
 
         $ git clone git@github.com:neovim/neovim.git
         $ cd neovim
-        $ make
+        $ make CMAKE_BUILD_TYPE=Release
         $ sudo make install
         $ make clean
 
 
 ### Install ###
 
-Install NeoBundle
+Install neovim/python-client
+
+        $ sudo pip3 install --upgrade neovim
+
+Install dein plugin manager
     
-        $ git clone git@github.com:Shougo/neobundle.vim.git bundle/neobundle.vim
+        $ git clone git@github.com:Shougo/dein.vim.git plugins/repos/github.com/Shougo/dein.vim
 
 Install all plugins
     
-        $ nvim +NeoBundleInstall +qa
+        $ nvim +":call dein#update()" +qa
+
