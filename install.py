@@ -67,7 +67,9 @@ def install_dotfiles(dotfiles_dir, install_dir):
                 (path.join(dotfiles_dir, "config/git"),
                  path.join(install_dir, ".config/git")),
                 (path.join(dotfiles_dir, "config/htop"),
-                 path.join(install_dir, ".config/htop"))
+                 path.join(install_dir, ".config/htop")),
+                (path.join(dotfiles_dir, "irssi/config"),
+                 path.join(install_dir, ".irssi/config"))
                 ]
 
     force(map(install_dotfile, dotfiles))
