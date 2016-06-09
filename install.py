@@ -1,24 +1,37 @@
 #!/usr/bin/env python3
 # Install the dotfiles
 
+import errno
 import os
 import os.path as path
 import subprocess
 import argparse
 
 def force(generator):
-    """Force a generator (like calling list(generator) but ignoring the
-    return value)"""
+    """
+    Force a generator (like calling list(generator) but ignoring the
+    return value)
+    """
     while True:
         try:
             next(generator)
         except StopIteration:
             break
 
+def mkdirs(filename):
+    dirname = path.dirname(filename)
+    try:
+        os.makedirs(dirname)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise e
+
 def install_dotfile(dotfile):
-    """install_dotfile first removes any file/directory at the install
+    """
+    install_dotfile first removes any file/directory at the install
     location and then makes a symbolic link to the local file at the
-    target destination."""
+    target destination.
+    """
     src = dotfile[0]
     dest = dotfile[1]
 
@@ -29,6 +42,9 @@ def install_dotfile(dotfile):
             os.rmdir(dest)
         else:
             os.remove(dest)
+    else:
+        mkdirs(dest)
+
     os.symlink(src, dest)
 
 def install_dotfiles(dotfiles_dir, install_dir):
