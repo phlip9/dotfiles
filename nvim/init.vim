@@ -430,6 +430,12 @@
 
 " }}}
 
+" vim-opencl - OpenCL syntax plugin {{{
+
+    call dein#add('petRUShka/vim-opencl')
+
+" }}}
+
 " pep8-indent - Python indenting {{{
 
     call dein#add('hynek/vim-python-pep8-indent',
