@@ -157,7 +157,7 @@
     " Mappings:
     " <leader>gg - Toggle git gutter
     " <leader>hs - Stage hunk
-    " <leader>hr - Revert hunk
+    " <leader>hr - Undo hunk
     " <leader>hn - Next hunk
     " <leader>hp - Previous hunk
 
@@ -173,8 +173,9 @@
 
     " Hunk management
     nmap <leader>hs :GitGutterStageHunk<CR>
-    nmap <leader>hr :GitGutterRevertHunk<CR>
+    nmap <leader>hr :GitGutterUndoHunk<CR>
 
+    " Hunk movement
     nmap <leader>hn :GitGutterNextHunk<CR>
     nmap <leader>hp :GitGutterPrevHunk<CR>
 
@@ -192,36 +193,22 @@
 
     " Custom auto completion trigger patterns
     let g:deoplete#omni_patterns.c = '[^. *\t](\.|->)\w*'
-    "let g:deoplete#omni_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*'
+    let g:deoplete#omni_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*'
     let g:deoplete#omni_patterns.ruby = ['[^. *\t]\.\w*\|\h\w*::']
+
+    " tab complete
+    inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
+    
+    " Disable deoplete while using vim-multiple-cursors
+	function g:Multiple_cursors_before()
+	  let g:deoplete#disable_auto_complete = 1
+	endfunction
+	function g:Multiple_cursors_after()
+	  let g:deoplete#disable_auto_complete = 0
+	endfunction
 
     " Disable the annoying autocomplete window
     set completeopt-=preview
-
-" }}}
-
-" neosnippet - vim snippets {{{
-
-    call dein#add('Shougo/neosnippet')
-    call dein#add('Shougo/neosnippet-snippets', { 'depends': 'neosnippet' })
-
-    " Plugin key-mappings.
-    imap <C-k> <Plug>(neosnippet_expand_or_jump)
-    smap <C-k> <Plug>(neosnippet_expand_or_jump)
-    xmap <C-k> <Plug>(neosnippet_expand_target)
-
-    " SuperTab like snippets behavior.
-    imap <expr><TAB> neosnippet#expandable_or_jumpable() ?
-                \ "\<Plug>(neosnippet_expand_or_jump)"
-                \: pumvisible() ? "\<C-n>" : "\<TAB>"
-    smap <expr><TAB> neosnippet#expandable_or_jumpable() ?
-                \ "\<Plug>(neosnippet_expand_or_jump)"
-                \: "\<TAB>"
-
-    " For snippet_complete marker.
-    if has('conceal')
-        set conceallevel=2 concealcursor=i
-    endif
 
 " }}}
 
@@ -271,6 +258,12 @@
     let g:airline#extensions#tabline#left_alt_sep = '|'
 
 " vim-airline }}}
+
+" deoplete-jedi - Python autocompletion {{{
+
+    call dein#add('zchee/deoplete-jedi')
+
+" }}}
 
 " vim-tern - Javascript autocompletion {{{
 
@@ -620,6 +613,9 @@
     " Colorscheme
     set background=dark
     colorscheme solarized
+    " Light colorscheme
+    "set background=light
+    "colorscheme morning
 
     " Highlight CursorLine as lighter background color
     highlight CursorLine ctermbg=black
@@ -661,7 +657,8 @@
     set gdefault                    " always use /g on :s substitution
 
     set nowrap                      " warp long lines
-    set clipboard=unnamedplus       " place yanked text into the clipboard
+    
+    set clipboard+=unnamedplus      " place yanked text into the clipboard
 
     " Remove trailing whitespaces and ^M chars
     autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buffer> :call setline(1,map(getline(1,"$"),'substitute(v:val,"\\s\\+$","","")'))
