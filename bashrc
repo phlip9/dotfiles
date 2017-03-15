@@ -116,6 +116,18 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 # media nfs mount shortcut
 alias phlipnfs='sudo mount -t nfs 192.168.0.43:/export/media ~/media'
 
+#java switches
+alias java_ibm='export JAVA_HOME=$IBM_JAVA'
+alias java_openjdk='export JAVA_HOME=$OPENJDK_JAVA'
+alias jruby_9='rm ~/jruby && ln -s ~/jruby-9.1.2.0 ~/jruby'
+alias jruby_1.7='rm ~/jruby && ln -s ~/jruby-1.7.25 ~/jruby'
+
+# reset network daemon
+alias nmr='sudo service network-manager restart'
+
+# latexmk alias
+alias lmk='latexmk -pdf -pvc -shell-escape'
+
 # makes a directory and cd's into it
 function mcd() {
     mkdir $@ && cd $_
@@ -164,7 +176,6 @@ export XDG_CONFIG_HOME=$HOME/.config
 
 export UTORRENT=$HOME/utorrent
 export NLTK_DATA=$HOME/nltk_data
-export TIDE_SDK=$HOME/.tidesdk/sdk/linux/1.3.1-beta
 
 # Disable 'Couldn't connect to accessibility bus' error on opening gnome
 # applications.
@@ -172,18 +183,24 @@ export TIDE_SDK=$HOME/.tidesdk/sdk/linux/1.3.1-beta
 export NO_AT_BRIDGE=1
 
 # Java
-export JAVA_HOME=/usr/lib/jvm/default-java
-export CS61B_LIBS=$HOME/dev/cs61b/afx/lib
-export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib:$CS61B_LIBS
+JVM=/usr/lib/jvm
+IBM_JAVA=$JVM/java-1.7.0-ibm-amd64/jre
+OPENJDK_JAVA=$JVM/java-1.7.0-openjdk-amd64
+ORACLE_JAVA=$JVM/java-1.8.0-oracle-amd64
+export JAVA_HOME=$ORACLE_JAVA
+export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib
 IDEA_BIN=$HOME/idea/bin
 ECLIPSE=/opt/eclipse
+
+# Go
+export GOROOT=$HOME/go1.8
+GO_BIN=$GOROOT/bin
+export GOPATH=$HOME/dev/go
+GO_HOME_BIN=$GOPATH/bin
 
 # solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
 export SYSRESOURCES=/etc/X11/Xresources
 export USRRESOURCES=$HOME/.Xresources
-
-# Python
-THE_ONE_TRUE_PYTHON=/usr/local/bin/python3.5
 
 # pyvenv
 ENV_DIR=$HOME/.virtualenvs
@@ -224,7 +241,7 @@ NPM_HOME=~/.npm
 NPM_BIN=$NPM_HOME/bin
 
 # JRuby
-JRUBY_HOME=/usr/local/share/jruby-1.7.24
+JRUBY_HOME=$HOME/jruby
 JRUBY_BIN=$JRUBY_HOME/bin
 
 export GUROBI_HOME=$HOME/gurobi651/linux64
@@ -236,15 +253,33 @@ export RUST_SRC_PATH=$HOME/dev/rust/src
 export CARGO_HOME=$HOME/.cargo
 CARGO_BIN=$CARGO_HOME/bin
 
+# Google
+DEPOT_TOOLS=$HOME/depot_tools
+
 LOCAL_BIN=$HOME/.local/bin
 
 # LD Path
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_LIB:$GUROBI_LIB
 
 # PATH
-export PATH=$PATH:$HEROKU_TOOLBELT:$ANDROID_PATH:$ECLIPSE:$TIDE_SDK:$ARDUINO_SDK
-export PATH=$PATH:$JAVA_HOME:$GIT_SUBMODULE_TOOLS:$CABAL_BIN:$IDEA_BIN:$ANACONDA_HOME:$LOCAL_BIN
-export PATH=$PATH:$INTEL_BIN:$SPARK_BIN:$NPM_BIN:$GUROBI_BIN:$CARGO_BIN:$JRUBY_BIN
+export PATH=""
+export PATH=$PATH:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH=$PATH:$GO_BIN
+export PATH=$PATH:$GO_HOME_BIN
+export PATH=$PATH:/usr/local/sbin:/usr/local/bin
+export PATH=$PATH:/usr/games:/usr/local/games
+export PATH=$PATH:$ANDROID_PATH
+export PATH=$PATH:$ARDUINO_SDK
+export PATH=$PATH:$JAVA_HOME/bin
+export PATH=$PATH:$GIT_SUBMODULE_TOOLS
+export PATH=$PATH:$CABAL_BIN
+export PATH=$PATH:$ANACONDA_HOME
+export PATH=$PATH:$LOCAL_BIN
+export PATH=$PATH:$INTEL_BIN
+export PATH=$PATH:$NPM_BIN
+export PATH=$PATH:$GUROBI_BIN
+export PATH=$PATH:$CARGO_BIN
+export PATH=$PATH:$DEPOT_TOOLS
 
 ## SHELL VARIABLES }}}
 
