@@ -1,41 +1,62 @@
-! Solarized color scheme for the X Window System
-!
-! http://ethanschoonover.com/solarized
+! Cursor theme
+Xcursor.theme:              DMZ-White
+Xcursor.size:               22
 
 ! *Note*
 ! For some reason, the preproccessor isnt being invoked on this file
 ! so I just pasted in the values directly.
 
-*background:                #002b36
-*foreground:                #839496
+!!! Crayon Colorscheme (https://github.com/Unathi-Skosana/dotfiles/blob/master/x/.Xresources)
+! gray06
+*foreground:                #d8d8d8
+! black
+*background:                #111213
+! gray06
+*cursorColor:               #d8d8d8
 *fading:                    40
-*fadeColor:                 #002b36
-*cursorColor:               #93a1a1
-*pointerColorBackground:    #586e75
-*pointerColorForeground:    #93a1a1
+! black
+*fadingColor:               #111213
+! gray01
+*pointerColorBackground:    #282c33
+! gray06
+*pointerColorForeground:    #d8d8d8
 
-*color0:                    #073642
-*color1:                    #dc322f
-*color2:                    #859900
-*color3:                    #b58900
-*color4:                    #268bd2
-*color5:                    #d33682
-*color6:                    #2aa198
-*color7:                    #eee8d5
-*color8:                    #657b83
-*color9:                    #cb4b16
-*color10:                   #586e75
-*color11:                   #657b83
-*color12:                   #839496
-*color13:                   #6c71c4
-*color14:                   #93a1a1
-*color15:                   #fdf6e3
+! black
+*color0:                    #111213
+! orange
+*color1:                    #c48d62
+! green
+*color2:                    #99ae63
+! yellow
+*color3:                    #d8c27a
+! blue
+*color4:                    #7485b6
+! magenta
+*color5:                    #b59cd8
+! cyan
+*color6:                    #8dc9c3
+! gray05
+*color7:                    #7495b6
+! gray03
+*color8:                    #586270
+! red
+*color9:                    #b27b78
+! gray01
+*color10:                   #282c33
+! gray02
+*color11:                   #383e47
+! gray04
+*color12:                   #798494
+! gray06
+*color13:                   #d8d8d8
+! pink
+*color14:                   #cc99b3
+! white
+*color15:                   #fdfeff
 
-Xcursor.theme:              DMZ-White
-Xcursor.size:               22
-
+!!! URxvt config
 ! URxvt*termName:           string
-! URxvt*geometry:           geometry
+URxvt*geometry:             85x40
 ! URxvt*chdir:              string
 ! URxvt*reverseVideo:       boolean
 ! URxvt*loginShell:         boolean
@@ -75,7 +96,7 @@ URxvt*scrollWithBuffer:     true
 ! URxvt*cursorUnderline:    boolean
 URxvt*cursorBlink:          true
 ! URxvt*pointerBlank:       boolean
-! URxvt*background:         color
+URxvt*background:           rgba:1000/1100/1200/e000
 ! URxvt*foreground:         color
 ! URxvt*color0:             color
 ! URxvt*color1:             color
@@ -121,13 +142,13 @@ URxvt*intensityStyles:      false
 ! URxvt*title:              string
 ! URxvt*iconName:           string
 URxvt*saveLines:            500
-! URxvt*depth:              number
+URxvt*depth:                32
 ! URxvt*buffered:           boolean
 ! URxvt*transient-for:      windowid
 ! URxvt*override-redirect:  boolean
 ! URxvt*hold:               boolean
-! URxvt*externalBorder:     number
-! URxvt*internalBorder:     5
+URxvt*externalBorder:       40
+URxvt*internalBorder:       40
 URxvt*borderLess:           false
 ! URxvt*lineSpace:          number
 URxvt*letterSpace:          -1
@@ -149,7 +170,7 @@ URxvt.perl-ext-common:      default,clipboard,font-size
 URxvt.perl-lib:             /home/phlip9/.urxvt/lib/
 
 URxvt.iso14755:             false
-! URxvt*iso14755_52:        boolean
+URxvt.iso14755_52:          false
 ! URxvt*xrm:                string
 ! URxvt*keysym.sym:         keysym
 

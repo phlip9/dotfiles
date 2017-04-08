@@ -42,14 +42,11 @@
 
 " vimproc }}}
 
-" Solarized Color Scheme {{{
+" crayon - A colorschemee for *Vim {{{
 
-    call dein#add('altercation/vim-colors-solarized')
+    call dein#add('jansenfuller/crayon')
 
-    let g:solarized_termtrans=1
-    let g:solarized_termcolors=256
-
-" Solarized Color Scheme }}}
+" }}}
 
 " vim-rooter - Change vim root directory to project root {{{
 
@@ -200,10 +197,10 @@
     inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
     
     " Disable deoplete while using vim-multiple-cursors
-	function g:Multiple_cursors_before()
+	function! g:Multiple_cursors_before()
 	  let g:deoplete#disable_auto_complete = 1
 	endfunction
-	function g:Multiple_cursors_after()
+	function! g:Multiple_cursors_after()
 	  let g:deoplete#disable_auto_complete = 0
 	endfunction
 
@@ -240,15 +237,21 @@
     " powerline symbols
     " If these look like garbage, then you need to install the patched
     " powerline fonts: https://github.com/powerline/fonts
-    let g:airline_symbols = {}
+    if !exists('g:airline_symbols')
+        let g:airline_symbols = {}
+    endif
     let g:airline_symbols.space = ' '
-    let g:airline_left_sep = ''
-    let g:airline_left_alt_sep = ''
-    let g:airline_right_sep = ''
-    let g:airline_right_alt_sep = ''
     let g:airline_symbols.branch = ''
     let g:airline_symbols.readonly = ''
     let g:airline_symbols.linenr = ''
+    let g:airline_symbols.maxlinenr = ''
+
+    "let g:airline_left_sep = ''
+    "let g:airline_right_sep = ''
+    let g:airline_left_sep = ''
+    let g:airline_left_alt_sep = ''
+    let g:airline_right_sep = ''
+    let g:airline_right_alt_sep = ''
 
     " airline buffer tab line "
     let g:airline#extensions#tabline#enabled = 1
@@ -602,7 +605,12 @@
 
     set nu                          " set line numbers
     set showmode                    " show current display mode
-    set cursorline                  " show a line under the cursor
+    set t_Co=256                    " number of available terminal colors
+    "set cursorline                  " show a line under the cursor
+
+    " Highlight the 80+1'th column to help keep text under 80 characters per
+    " line
+    set cc=81
 
     if has('cmdline_info')
         set ruler                                           " show ruler
@@ -610,27 +618,48 @@
         set showcmd                                         " show partial commands in status line
     endif
 
+    " Colorscheme highlight overrides
+    function! CustomColors()
+        hi ColorColumn ctermbg=10 ctermfg=15
+        
+        " Make sure text doesn't fill ctermbg so terminal transparency works
+        hi Normal ctermbg=NONE ctermfg=15 cterm=NONE
+        hi Comment ctermbg=NONE ctermfg=12 cterm=NONE
+
+        " make tabline background clear so terminal transparency isn't blocked
+        " out
+        "hi airline_tabsel cterm=bold ctermfg=7 ctermbg=NONE
+
+        " Highlight CursorLine as lighter background color
+        hi CursorLine ctermbg=10 ctermfg=None cterm=NONE
+
+        " Make matching text readable
+        hi MatchParen ctermbg=10 ctermfg=NONE cterm=NONE
+
+        " Sign column color should be the same as the line number column
+        hi SignColumn ctermbg=NONE
+
+        " Make line number column same as background color
+        hi LineNr ctermbg=NONE
+
+        " Don't underline the fold lines
+        hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold 
+    endfunction
+
+    " override colors on colorscheme change
+    autocmd ColorScheme * :call CustomColors()
+
     " Colorscheme
     set background=dark
-    colorscheme solarized
-    " Light colorscheme
+    colorscheme crayon
+
+    "" Light colorscheme
     "set background=light
     "colorscheme morning
 
-    " Highlight CursorLine as lighter background color
-    highlight CursorLine ctermbg=black
-
-    " Make matching text readable
-    highlight MatchParen ctermbg=black
-
-    " Sign column color should be the same as the line number column
-    highlight SignColumn ctermbg=NONE
-
-    " Make line number column same as background color
-    highlight LineNr ctermbg=NONE
-
-    " Don't underline the fold lines
-    highlight Folded term=bold cterm=bold ctermbg=NONE
+    " Minimalistic Airline theme with fixed backgrounds for terminal
+    " transparency
+    let g:airline_theme = 'crayon3'
 
 " VISUAL }}}
 
@@ -656,15 +685,18 @@
 
     set gdefault                    " always use /g on :s substitution
 
-    set nowrap                      " warp long lines
+    set nowrap                      " don't wrap long lines
     
     set clipboard+=unnamedplus      " place yanked text into the clipboard
 
     " Remove trailing whitespaces and ^M chars
-    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml autocmd BufWritePre <buffer> :call setline(1,map(getline(1,"$"),'substitute(v:val,"\\s\\+$","","")'))
+    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml 
+                \ autocmd BufWritePre <buffer>
+                \     :call setline(1,map(getline(1,"$"),
+                \         'substitute(v:val,"\\s\\+$","","")'))
 
     " ethereum serpent contract language
-    au BufNewFile,BufRead *.se set filetype=python
+    autocmd BufNewFile,BufRead *.se set filetype=python
 
     " custom text folding function
     function! NeatFoldText()
@@ -707,8 +739,8 @@
     nnoremap <silent><Up> O<Esc>j
     nnoremap <silent><Down> o<Esc>k
 
-    " remap Visual Block selection to something that doesn't conflict with system
-    " copy/paste
+    " remap Visual Block selection to something that doesn't conflict with
+    " system copy/paste
     nnoremap <leader>v <C-v>
 
     " map S-J and S-K to next and prev buffer
