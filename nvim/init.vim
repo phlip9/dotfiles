@@ -204,7 +204,11 @@
 	  let g:deoplete#disable_auto_complete = 0
 	endfunction
 
-    " Disable the annoying autocomplete window
+    " Do not select a match in the menu, force the user to
+    " select one from the menu.
+    set completeopt+=noselect
+    " Disable the annoying autocomplete window that pops up
+    " on the bottom of the screen.
     set completeopt-=preview
 
 " }}}
@@ -261,6 +265,31 @@
     let g:airline#extensions#tabline#left_alt_sep = '|'
 
 " vim-airline }}}
+
+" vim-go - Go linting, highlighting, building, formatting {{{
+
+    call dein#add('fatih/vim-go')
+
+    " don't use <shift>-k to show go docs, since we use it for buffer switching
+    let g:go_doc_keywordprg_enabled = 0
+
+" }}}
+
+" deoplete-go - Go Autocompletion {{{
+
+    call dein#add('zchee/deoplete-go', { 'build': 'make' })
+
+    let g:deoplete#sources#go#gocode_binary = $GOPATH . '/bin/gocode'
+    let g:deoplete#sources#go#sort_class =
+                \ ['package', 'func', 'type', 'var', 'const']
+    let g:deoplete#sources#go#pointer = 1
+
+    " cache the Go stdlib completions
+    let g:deoplete#sources#go#use_cache = 1
+    let g:deoplete#sources#go#json_directory = 
+                \ '~/.cache/deoplete/go/' . $GOOS . '_' . $GOARCH
+
+" }}}
 
 " deoplete-jedi - Python autocompletion {{{
 

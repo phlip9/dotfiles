@@ -197,6 +197,8 @@ export GOROOT=$HOME/go1.8
 GO_BIN=$GOROOT/bin
 export GOPATH=$HOME/dev/go
 GO_HOME_BIN=$GOPATH/bin
+export GOOS=linux
+export GOARCH=amd64
 
 # solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
 export SYSRESOURCES=/etc/X11/Xresources
