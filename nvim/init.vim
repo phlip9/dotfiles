@@ -476,8 +476,6 @@
     " Mappings:
     " <space>f - find files
     " <space>/ - run ag with pattern (search)
-    " <space>y - show yank history
-    " <space>b - switch buffer
     " <space>o - file outline
 
     call dein#add('Shougo/unite.vim', { 'depends': 'vimproc.vim' })
