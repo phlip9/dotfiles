@@ -265,6 +265,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_LIB:$GUROBI_LIB
 
 # PATH
 export PATH=""
+export PATH=$PATH:$JAVA_HOME/bin
 export PATH=$PATH:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH=$PATH:$GO_BIN
 export PATH=$PATH:$GO_HOME_BIN
@@ -272,7 +273,6 @@ export PATH=$PATH:/usr/local/sbin:/usr/local/bin
 export PATH=$PATH:/usr/games:/usr/local/games
 export PATH=$PATH:$ANDROID_PATH
 export PATH=$PATH:$ARDUINO_SDK
-export PATH=$PATH:$JAVA_HOME/bin
 export PATH=$PATH:$GIT_SUBMODULE_TOOLS
 export PATH=$PATH:$CABAL_BIN
 export PATH=$PATH:$ANACONDA_HOME

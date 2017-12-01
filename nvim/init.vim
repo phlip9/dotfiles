@@ -604,6 +604,13 @@
 
 " }}}
 
+" cup.vim - JavaCUP syntax {{{
+
+    call dein#add('vim-scripts/cup.vim')
+    au BufNewFile,BufRead *.cup set filetype=cup
+
+" }}}
+
 " BUNDLES }}}
 
 " GENERAL {{{
