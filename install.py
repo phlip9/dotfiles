@@ -62,12 +62,16 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".urxvt")),
                 (path.join(dotfiles_dir, "Xresources"),
                  path.join(install_dir, ".Xresources")),
+                (path.join(dotfiles_dir, "Xresources"),
+                 path.join(install_dir, ".Xdefaults")),
                 (path.join(dotfiles_dir, "Xmodmap"),
                  path.join(install_dir, ".Xmodmap")),
                 (path.join(dotfiles_dir, "config/git"),
                  path.join(install_dir, ".config/git")),
                 (path.join(dotfiles_dir, "config/htop"),
                  path.join(install_dir, ".config/htop")),
+                (path.join(dotfiles_dir, "config/gtk-3.0"),
+                 path.join(install_dir, ".config/gtk-3.0")),
                 (path.join(dotfiles_dir, "irssi/config"),
                  path.join(install_dir, ".irssi/config"))
                 ]
@@ -103,8 +107,8 @@ def main():
                        $HOME).""")
     parse.add_argument('--install-packages', action='store_true',
                        dest='install_packages', default=False,
-                       help="""If selected, install dotfile dependencies with the
-                       OS package manager.""")
+                       help="""If selected, install dotfile dependencies with
+                       the OS package manager.""")
 
     args = parse.parse_args()
 
