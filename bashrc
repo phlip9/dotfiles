@@ -193,7 +193,7 @@ IDEA_BIN=$HOME/idea/bin
 ECLIPSE=/opt/eclipse
 
 # Go
-export GOROOT=$HOME/go1.8
+export GOROOT=$HOME/go1.10.3
 GO_BIN=$GOROOT/bin
 export GOPATH=$HOME/dev/go
 GO_HOME_BIN=$GOPATH/bin

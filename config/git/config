@@ -2,7 +2,7 @@
     name = Philip Hayes
     email = philiphayes9@gmail.com
     editor = nvim
-    signingkey = A123AA92
+    signingkey = C5464595
 [core]
     editor = nvim
 [push]
