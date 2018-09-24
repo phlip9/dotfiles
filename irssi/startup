@@ -1,0 +1,6 @@
+NICKLIST FIFO
+ignore * joins
+ignore * parts
+ignore * quits
+toggle awl_viewer
+statusbar window remove act

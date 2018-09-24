@@ -7,6 +7,7 @@ import os.path as path
 import subprocess
 import argparse
 
+
 def force(generator):
     """
     Force a generator (like calling list(generator) but ignoring the
@@ -18,6 +19,7 @@ def force(generator):
         except StopIteration:
             break
 
+
 def mkdirs(filename):
     dirname = path.dirname(filename)
     try:
@@ -25,6 +27,7 @@ def mkdirs(filename):
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise e
+
 
 def install_dotfile(dotfile):
     """
@@ -46,6 +49,7 @@ def install_dotfile(dotfile):
         mkdirs(dest)
 
     os.symlink(src, dest)
+
 
 def install_dotfiles(dotfiles_dir, install_dir):
     dotfiles = [(path.join(dotfiles_dir, "bashrc"),
@@ -74,11 +78,12 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".config/htop")),
                 (path.join(dotfiles_dir, "config/gtk-3.0"),
                  path.join(install_dir, ".config/gtk-3.0")),
-                (path.join(dotfiles_dir, "irssi/config"),
-                 path.join(install_dir, ".irssi/config"))
+                (path.join(dotfiles_dir, "irssi"),
+                 path.join(install_dir, ".irssi"))
                 ]
 
     force(map(install_dotfile, dotfiles))
+
 
 def install_package(package):
     install_cmd = 'sudo apt-get install %s' % package
@@ -86,6 +91,7 @@ def install_package(package):
     print(install_cmd)
     if subprocess.call(install_cmd, shell=True):
         print('failed to install package ' + package)
+
 
 def install_dependencies():
     packages = ['git', 'rsync', 'rxvt-unicode-256color', 'xsel']
@@ -96,6 +102,7 @@ def install_dependencies():
 
     if subprocess.call(install_cmd, shell=True):
         print('Failed to install packages')
+
 
 def main():
     parse = argparse.ArgumentParser()
@@ -122,6 +129,7 @@ def main():
         install_dependencies()
 
     install_dotfiles(dotfiles_dir, install_dir)
+
 
 if __name__ == "__main__":
     main()

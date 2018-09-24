@@ -38,6 +38,20 @@ servers = (
     address = "irc.undernet.org";
     chatnet = "Undernet";
     port = "6667";
+  },
+  # Facebook internal IRC
+  {
+    address = "irc.tfbnw.net";
+    chatnet = "facebook";
+    port = "6443";
+    use_ssl = "yes";
+    ssl_verify = "no";
+    autoconnect = "yes";
+    # From https://our.intern.facebook.com/intern/irc
+    password = "{username}:{password}"
+    family = "inet6";
+    # comment this out if you need v4
+    resolve_prefer_ipv6 = "on";
   }
 );
 
@@ -116,6 +130,15 @@ chatnets = {
     max_msgs = "1";
     max_whois = "1";
   };
+  # Facebook
+  FB = {
+    type = "IRC";
+    max_kicks = "4";
+    max_msgs = "5";
+    max_whois = "4";
+    max_query_chans = "5";
+  };
+  facebook = { type = "IRC"; };
 };
 
 channels = (
@@ -331,7 +354,6 @@ statusbar = {
         window = { };
         window_empty = { };
         lag = { priority = "-1"; };
-        act = { priority = "10"; };
         more = { priority = "-1"; alignment = "right"; };
         barend = { priority = "100"; alignment = "right"; };
       };
@@ -386,8 +408,9 @@ statusbar = {
 settings = {
   core = {
     real_name = "Philip Hayes";
-    user_name = "phlip9";
-    nick = "phlip9";
+    user_name = "philiphayes";
+    nick = "philiphayes";
   };
   "fe-text" = { actlist_sort = "refnum"; };
 };
+ignores = ( { level = "JOINS PARTS QUITS"; } );
