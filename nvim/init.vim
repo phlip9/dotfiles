@@ -21,7 +21,7 @@
     let mapleader = ','
 
     " python3 setup
-    let python3 = '/usr/local/bin/python3.5'
+    let python3 = '/usr/bin/python3.6'
     let g:python3_host_prog = python3
     "" disable python
     " let g:loaded_python3_provider = 1
@@ -69,6 +69,20 @@
     " <leader>cA - Comment from cursor to end of line and go into insert mode
 
     call dein#add('scrooloose/nerdcommenter')
+
+    " Add spaces after comment delimiters by default
+    let g:NERDSpaceDelims = 1
+
+    " Align line-wise comment delimiters flush left instead of following code indentation
+    let g:NERDDefaultAlign = 'left'
+
+    " Allow commenting and inverting empty lines (useful when commenting a region)
+    let g:NERDCommentEmptyLines = 1
+
+    " custom comment formats
+    let g:NERDCustomDelimiters = {
+                \     'lean': { 'left': '--', 'leftAlt': '/-', 'rightAlt': '-/' },
+                \ }
 
 " NERDCommenter }}}
 
@@ -184,25 +198,92 @@
 
     let g:deoplete#enable_at_startup = 1
 
-    if !exists('g:deoplete#omni_patterns')
-        let g:deoplete#omni_patterns = {}
-    endif
+    function! s:deoplete_setup() abort
+        call deoplete#custom#option('sources',
+                    \ {
+                    \   'rust': ['omni'],
+                    \   'c': ['clang'],
+                    \   'cpp': ['clang'],
+                    \   'go': ['go'],
+                    \   'python': ['jedi'],
+                    \   'python3': ['jedi'],
+                    \   'javascript': ['omni'],
+                    \   'lean': ['LanguageClient'],
+                    \ })
 
-    " Custom auto completion trigger patterns
-    let g:deoplete#omni_patterns.c = '[^. *\t](\.|->)\w*'
-    let g:deoplete#omni_patterns.cpp = '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*'
-    let g:deoplete#omni_patterns.ruby = ['[^. *\t]\.\w*\|\h\w*::']
+        " <TAB>: completion.
+        inoremap <silent><expr> <TAB>
+                    \ pumvisible() ? "\<C-n>" :
+                    \ <SID>check_back_space() ? "\<TAB>" :
+                    \ deoplete#manual_complete()
+        function! s:check_back_space() abort
+            let col = col('.') - 1
+            return !col || getline('.')[col - 1]  =~ '\s'
+        endfunction
+
+        " <S-TAB>: completion back.
+        inoremap <expr><S-TAB>  pumvisible() ? "\<C-p>" : "\<C-h>"
+
+        " <BS>: close popup and delete backword char.
+        inoremap <expr><BS> deoplete#smart_close_popup()."\<C-h>"
+
+        " <CR>: close popup and save indent.
+        inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
+        function! s:my_cr_function() abort
+            return deoplete#cancel_popup() . "\<CR>"
+        endfunction
+
+        inoremap <expr> '  pumvisible() ? deoplete#close_popup() : "'"
+        
+        " Disable deoplete while using vim-multiple-cursors
+        function! g:Multiple_cursors_before()
+            call deoplete#custom#buffer_option('auto_complete', v:false)
+        endfunction
+        function! g:Multiple_cursors_after()
+            call deoplete#custom#buffer_option('auto_complete', v:true)
+        endfunction
+
+        " Disable the candidates in Comment/String syntaxes.
+        call deoplete#custom#source('_',
+                    \ 'disabled_syntaxes', ['Comment', 'String'])
+
+        " ignore completions from the current buffer
+        call deoplete#custom#option('ignore_sources', {'_': ['buffer']})
+
+        " Go deoplete configuration
+        " =========================
+        call deoplete#custom#source('go', 'gocode_binary', $GOPATH . '/bin/gocode')
+        call deoplete#custom#source('go', 'sort_class',
+                    \ ['package', 'func', 'type', 'var', 'const'])
+        call deoplete#custom#source('go', 'pointer', 1)
+        " cache the Go stdlib completions
+        call deoplete#custom#source('go', 'use_cache', 1)
+        call deoplete#custom#source('go', 'json_directory',
+                    \ $HOME . '/.cache/deoplete/go/' . $GOOS . '_' . $GOARCH)
+
+        " clang deoplete configuration
+        " ============================
+        if executable('llvm-config-4.0')
+            " `echo -n ...` strips the trailing newline from output
+            let llvm_libdir = system('echo -n `llvm-config-4.0 --libdir`')
+            call deoplete#custom#source('clang', 'libclang_path',
+                        \ llvm_libdir . '/libclang.so')
+            call deoplete#custom#source('clang', 'clang_header', '/usr/include/clang')
+        endif
+    endfunction
+
+    "" Custom auto completion trigger patterns
+    "call deoplete#custom#option('omni_patterns', 
+                "\ {
+                "\   'c': '[^. *\t](\.|->)\w*',
+                "\   'cpp': '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*',
+                "\   'ruby': '[^. *\t]\.\w*\|\h\w*::',
+                "\ })
+                "\   'lean': '[^. *\t]\.\w*',
+
 
     " tab complete
-    inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
-    
-    " Disable deoplete while using vim-multiple-cursors
-	function! g:Multiple_cursors_before()
-	  let g:deoplete#disable_auto_complete = 1
-	endfunction
-	function! g:Multiple_cursors_after()
-	  let g:deoplete#disable_auto_complete = 0
-	endfunction
+    "inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
 
     " Do not select a match in the menu, force the user to
     " select one from the menu.
@@ -266,6 +347,50 @@
 
 " vim-airline }}}
 
+" LanguageClient-neovim - Language Server Protocol support for neovim {{{
+
+    call dein#add('autozimu/LanguageClient-neovim',
+                \ {
+                \   'rev': 'next',
+                \   'build': 'bash install.sh',
+                \ })
+
+    let g:LanguageClient_autoStart = 1
+
+    let g:LanguageClient_rootMarkers =
+                \ {
+                \   'cpp': ['compile_commands.json', 'build'],
+                \   'c': ['compile_commands.json', 'build'],
+                \   'rust': ['Cargo.toml', 'build'],
+                \ }
+
+    let g:LanguageClient_serverCommands = {}
+                "\   'rust': ['rustup', 'run', 'nightly', 'rls'],
+                "\   'javascript': ['javascript-typescript-stdio'],
+                "\   'javascript.jsx': ['tcp://127.0.0.1:2089'],
+
+    if executable('npm')
+        " `echo -n ...` strips the trailing newline from output
+        let npm_bin = system('echo -n `npm bin --global`')
+        let g:LanguageClient_serverCommands.lean =
+                    \ ['node', npm_bin . '/lean-language-server', '--stdio']
+    endif
+
+    "autocmd FileType lean setlocal omnifunc=LanguageClient#complete
+
+    nnoremap <silent> <leader>gd :call LanguageClient_contextMenu()<CR>
+
+    "nnoremap <F5> :call LanguageClient_contextMenu()<CR>
+    "" Or map each action separately
+    "nnoremap <silent> K :call LanguageClient#textDocument_hover()<CR>
+    "nnoremap <silent> gd :call LanguageClient#textDocument_definition()<CR>
+    "nnoremap <silent> <F2> :call LanguageClient#textDocument_rename()<CR>
+
+    "set completefunc=LanguageClient#complete
+    "set formatexpr=LanguageClient_textDocument_rangeFormatting()
+
+" }}}
+
 " vim-go - Go linting, highlighting, building, formatting {{{
 
     call dein#add('fatih/vim-go')
@@ -278,16 +403,6 @@
 " deoplete-go - Go Autocompletion {{{
 
     call dein#add('zchee/deoplete-go', { 'build': 'make' })
-
-    let g:deoplete#sources#go#gocode_binary = $GOPATH . '/bin/gocode'
-    let g:deoplete#sources#go#sort_class =
-                \ ['package', 'func', 'type', 'var', 'const']
-    let g:deoplete#sources#go#pointer = 1
-
-    " cache the Go stdlib completions
-    let g:deoplete#sources#go#use_cache = 1
-    let g:deoplete#sources#go#json_directory = 
-                \ '~/.cache/deoplete/go/' . $GOOS . '_' . $GOARCH
 
 " }}}
 
@@ -373,11 +488,6 @@
                 \   'on_ft': ['c', 'cpp']
                 \ })
 
-    " `echo -n ...` strips the trailing newline from output
-    let cmd = 'echo -n `llvm-config-3.6 --libdir`'
-    let g:deoplete#sources#clang#libclang_path = system(cmd) . '/libclang.so'
-    let g:deoplete#sources#clang#clang_header = '/usr/include/clang'
-
 " }}}
 
 " rust.vim - Rust file detection and syntax highlighting {{{
@@ -403,6 +513,12 @@
 
     let $RUST_SRC_PATH = $HOME . '/dev/rust/src/'
     "let g:racer_cmd = $HOME . '/dev/dotfiles/vim/bundle/racer/target/release/racer'
+
+" }}}
+
+" lean.vim - Lean syntax plugin {{{
+    
+    call dein#add('leanprover/lean.vim')
 
 " }}}
 
@@ -627,6 +743,8 @@
         call dein#call_hook('on_source')
     endif
 
+    call s:deoplete_setup()
+
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
     set mouse=a                     " enable mouse
@@ -745,6 +863,52 @@
     endfunction
 
     set foldtext=NeatFoldText()
+
+    " custom math digraphs
+    " N natural numbers
+    digraphs na 8469
+    " Z integers
+    digraphs in 8484
+    " ▸ small black right-pointing triangle
+    digraphs tr 9656
+    " ⟩ vector right bracket
+    digraphs br 10217
+    " ⟨ vector left bracket
+    digraphs bl 10216
+    " ‹ french quote left
+    digraphs << 8249
+    " › french quote left
+    digraphs >> 8250
+    " ∀ for all
+    digraphs fa 8704
+    " ∃ there exists
+    digraphs te 8707
+    " ¬ not
+    digraphs no 172
+    " ≠ not equal
+    digraphs ne 8800
+    " ∧ and
+    digraphs an 8743
+    " ∨ or
+    digraphs or 8744
+    " × multiplication
+    digraphs xx 215
+    " ⊕ o-plus
+    digraphs op 8853
+    " ⁻ superscript minus
+    digraphs s- 8315
+    " ¹ superscript one
+    digraphs s1 185
+    " ∣ divides
+    digraphs di 8739
+    " ⦃ left curly bracket
+    digraphs cl 10627
+    " ⦄ right curly bracket
+    digraphs cr 10628
+    " ≡ equivalence
+    digraphs eq 8801
+    " ↑ up arrow
+    digraphs up 8593
 
 " BEHAVIOR }}}
 
