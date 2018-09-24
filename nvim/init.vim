@@ -21,8 +21,7 @@
     let mapleader = ','
 
     " python3 setup
-    let python3 = '/usr/bin/python3.6'
-    let g:python3_host_prog = python3
+    let g:python3_host_prog = $PYTHON3_BIN
     "" disable python
     " let g:loaded_python3_provider = 1
     "" skip if_has('python3') check
@@ -91,7 +90,7 @@
     call dein#add('scrooloose/syntastic')
     let syntastic_javascript_checkers = ['jshint', 'jscs']
 
-    let g:syntastic_python_python_exec = python3
+    let g:syntastic_python_python_exec = g:python3_host_prog
 
     let g:syntastic_cpp_compiler = 'g++'
     let g:syntastic_cpp_compiler_options = ' -std=c++11 -stdlib=libc++'
@@ -145,7 +144,7 @@
                 \ })
 
     let g:ref_no_default_key_mappings = 1
-    let g:ref_pydoc_cmd = "python3 -m pydoc"
+    let g:ref_pydoc_cmd = "$PYTHON3_BIN -m pydoc"
 
     nnoremap <leader>r :call ref#K('normal')<CR>
 

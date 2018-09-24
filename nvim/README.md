@@ -1,7 +1,7 @@
-vim-settings
-============
+nvim-settings
+=============
 
-Vim settings for use across different computers
+Neovim settings for use across different computers
 
 
 ## Setup / Dependencies ##
@@ -84,4 +84,3 @@ Install dein plugin manager
 Install all plugins
     
         $ nvim +":call dein#update()" +qa
-
