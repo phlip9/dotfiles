@@ -1,0 +1,25 @@
+# GNU readline settings
+# Following https://www.topbug.net/blog/2017/07/31/inputrc-for-humans/
+
+# include any distro default settings
+$include /etc/inputrc
+
+# display possible completions according to $LC_COLORS
+set colored-stats On
+
+# auto completion ignores case
+set completion-ignore-case On
+
+# only display 3 characters of the common prefix in the completion
+set completion-prefix-display-length 3
+
+# display a / after any symlinked directories
+set mark-symlinked-directories On
+
+# don't ring the bell, but instead show the completions immediately
+set show-all-if-ambiguous On
+set show-all-if-unmodified On
+
+# append completions by characters that indicate their file type according to 
+# stat
+set visible-stats On

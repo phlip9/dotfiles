@@ -66,6 +66,8 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".Xdefaults")),
                 (path.join(dotfiles_dir, "Xmodmap"),
                  path.join(install_dir, ".Xmodmap")),
+                (path.join(dotfiles_dir, "inputrc"),
+                 path.join(install_dir, ".inputrc")),
                 (path.join(dotfiles_dir, "config/git"),
                  path.join(install_dir, ".config/git")),
                 (path.join(dotfiles_dir, "config/htop"),
