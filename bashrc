@@ -7,16 +7,34 @@
 # If not running interactively, don't do anything
 [ -z "$PS1" ] && return
 
-# don't put duplicate lines in the history. See bash(1) for more options
-# ... or force ignoredups and ignorespace
-HISTCONTROL=ignoredups:ignorespace
+# OS detection to make this bashrc *hopefully* cross-compatible
+OS="UNKNOWN"
+case "$OSTYPE" in
+    linux*)  OS="LINUX" ;;
+    darwin*) OS="OSX" ;;
+    msys*)   OS="WIN" ;;
+    cygwin*) OS="WIN" ;;
+    win32*)  OS="WIN" ;;
+    *)       echo "Uknown OS: $OSTYPE" ;;
+esac
+
+# Share history state across terminals
+# Following: https://cdaddr.com/programming/keeping-bash-history-in-sync-on-disk-and-between-multiple-terminals/
 
 # append to the history file, don't overwrite it
 shopt -s histappend
 
 # for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
+HISTSIZE=50000
+HISTFILESIZE=1048576
+
+# don't put duplicate lines in the history. See bash(1) for more options
+# ... or force ignoredups and ignorespace
+HISTCONTROL=ignoredups:ignorespace
+
+# append the current history to ~/.bash_history and reload other terminal
+# instances' history at every new bash prompt
+export PROMPT_COMMAND="history -a; history -n"
 
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
@@ -77,16 +95,23 @@ esac
 
 ## ALIASES {{{
 
-alias ls='ls --color=auto'
+if [ "$OS" == "LINUX" ]; then
+    alias ls='ls --color=auto'
 
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
 
-# some more ls aliases
-alias ll='ls -alhF --color=auto'
-alias la='ls -A --color=auto'
-alias l='ls -CF --color=auto'
+    # some more ls aliases
+    alias ll='ls -alhF --color=auto'
+    alias la='ls -A --color=auto'
+    alias l='ls -CF --color=auto'
+elif [ "$OS" == "OSX" ]; then
+    # some more ls aliases
+    alias ll='ls -alhF'
+    alias la='ls -A'
+    alias l='ls -CF'
+fi
 
 # annoying typos
 alias ks='ls'
@@ -99,31 +124,21 @@ alias shh='ssh'
 # tmux 256 colors
 alias tmux="TERM=screen-256color-bce tmux -2"
 
-alias install='sudo apt-get install'
-alias update='sudo apt-get update'
-alias upgrade='sudo apt-get upgrade'
+if [ "$OS" == "LINUX" ]; then
+    alias install='sudo apt-get install'
+    alias update='sudo apt-get update'
+    alias upgrade='sudo apt-get upgrade'
 
-# pulseaudio sucks
-alias restartpulse='sudo killall -9 pulseaudio; pulseaudio >/dev/null 2>&1 &'
+    # pulseaudio sucks
+    alias restartpulse='sudo killall -9 pulseaudio; pulseaudio >/dev/null 2>&1 &'
+
+    # Add an "alert" alias for long running commands.  Use like so:
+    #   sleep 10; alert
+    alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+fi
 
 # less with color
 alias less='less -r'
-
-# Add an "alert" alias for long running commands.  Use like so:
-#   sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-
-# media nfs mount shortcut
-alias phlipnfs='sudo mount -t nfs 192.168.0.43:/export/media ~/media'
-
-#java switches
-alias java_ibm='export JAVA_HOME=$IBM_JAVA'
-alias java_openjdk='export JAVA_HOME=$OPENJDK_JAVA'
-alias jruby_9='rm ~/jruby && ln -s ~/jruby-9.1.2.0 ~/jruby'
-alias jruby_1.7='rm ~/jruby && ln -s ~/jruby-1.7.25 ~/jruby'
-
-# reset network daemon
-alias nmr='sudo service network-manager restart'
 
 # latexmk alias
 alias lmk='latexmk -pdf -pvc -shell-escape'
@@ -131,10 +146,6 @@ alias lmk='latexmk -pdf -pvc -shell-escape'
 # makes a directory and cd's into it
 function mcd() {
     mkdir $@ && cd $_
-}
-
-function ssh-copy-key() {
-    echo 'ssh-copy-key is DEPRECATED. Use ssh-copy-id instead.'
 }
 
 # pyvenv helpers
@@ -206,14 +217,19 @@ export USRRESOURCES=$HOME/.Xresources
 
 # pyvenv
 ENV_DIR=$HOME/.virtualenvs
+if [ "$OS" == "LINUX" ]; then
+    export PYTHON3_BIN=/usr/bin/python3.6
+elif [ "$OS" == "OSX" ]; then
+    export PYTHON3_BIN=/opt/homebrew/bin/python3.6
+fi
 
 # Anaconda3
 ANACONDA_HOME=$HOME/anaconda3/bin
 
 # Android
-export ANDROID_HOME=$HOME/android
-export ANDROID_NDK=$ANDROID_HOME/ndk
-export ANDROID_NDK_HOME=$ANDROID_NDK
+# export ANDROID_HOME=$HOME/android
+# export ANDROID_NDK=$ANDROID_HOME/ndk
+# export ANDROID_NDK_HOME=$ANDROID_NDK
 ANDROID_STUDIO=$HOME/android-studio
 ANDROID_ARM_TOOLCHAIN=$HOME/arm-linux-androideabi
 ANDROID_STANDALONE_TOOLCHAIN=$ANDROID_ARM_TOOLCHAIN
@@ -261,27 +277,29 @@ DEPOT_TOOLS=$HOME/depot_tools
 LOCAL_BIN=$HOME/.local/bin
 
 # LD Path
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_LIB:$GUROBI_LIB
+if [ "$OS" == "LINUX" ]; then
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_LIB:$GUROBI_LIB
+fi
 
 # PATH
-export PATH=""
-export PATH=$PATH:$JAVA_HOME/bin
-export PATH=$PATH:/usr/sbin:/usr/bin:/sbin:/bin
-export PATH=$PATH:$GO_BIN
-export PATH=$PATH:$GO_HOME_BIN
-export PATH=$PATH:/usr/local/sbin:/usr/local/bin
-export PATH=$PATH:/usr/games:/usr/local/games
-export PATH=$PATH:$ANDROID_PATH
-export PATH=$PATH:$ARDUINO_SDK
-export PATH=$PATH:$GIT_SUBMODULE_TOOLS
-export PATH=$PATH:$CABAL_BIN
-export PATH=$PATH:$ANACONDA_HOME
-export PATH=$PATH:$LOCAL_BIN
-export PATH=$PATH:$INTEL_BIN
-export PATH=$PATH:$NPM_BIN
-export PATH=$PATH:$GUROBI_BIN
-export PATH=$PATH:$CARGO_BIN
-export PATH=$PATH:$DEPOT_TOOLS
+if [ "$OS" == "LINUX" ]; then
+    export PATH=$PATH:$JAVA_HOME/bin
+    export PATH=$PATH:$GO_BIN
+    export PATH=$PATH:$GO_HOME_BIN
+    export PATH=$PATH:$ANDROID_PATH
+    export PATH=$PATH:$ARDUINO_SDK
+    export PATH=$PATH:$GIT_SUBMODULE_TOOLS
+    export PATH=$PATH:$CABAL_BIN
+    export PATH=$PATH:$ANACONDA_HOME
+    export PATH=$PATH:$LOCAL_BIN
+    export PATH=$PATH:$INTEL_BIN
+    export PATH=$PATH:$NPM_BIN
+    export PATH=$PATH:$GUROBI_BIN
+    export PATH=$PATH:$CARGO_BIN
+    export PATH=$PATH:$DEPOT_TOOLS
+elif [ "$OS" == "OSX" ]; then
+    export PATH=$PATH:$LOCAL_BIN
+fi
 
 ## SHELL VARIABLES }}}
 
