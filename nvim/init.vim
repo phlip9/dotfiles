@@ -21,7 +21,16 @@
     let mapleader = ','
 
     " python3 setup
-    let g:python3_host_prog = $PYTHON3_BIN
+    " Try to use a neovim-specific pyvenv first, otherwise fallback to a global
+    " python install.
+    let python3_bin_pyenv = expand('$PYTHON3_ENV_DIR/nvim_py/bin/python3.6')
+    let python3_bin_global = '/bin/python3.6'
+    if executable(python3_bin_pyenv)
+        let g:python3_host_prog = python3_bin_pyenv
+    elseif executable(python3_bin_global)
+        let g:python3_host_prog = python3_bin_global
+    endif
+
     "" disable python
     " let g:loaded_python3_provider = 1
     "" skip if_has('python3') check
@@ -47,9 +56,9 @@
 
 " }}}
 
-" vim-rooter - Change vim root directory to project root {{{
+" (disabled) vim-rooter - Change vim root directory to project root {{{
 
-    call dein#add('airblade/vim-rooter')
+    " call dein#add('airblade/vim-rooter')
 
 " }}}
 
@@ -510,9 +519,6 @@
 
     let g:racer_no_default_keymappings = 1
 
-    let $RUST_SRC_PATH = $HOME . '/dev/rust/src/'
-    "let g:racer_cmd = $HOME . '/dev/dotfiles/vim/bundle/racer/target/release/racer'
-
 " }}}
 
 " lean.vim - Lean syntax plugin {{{
@@ -590,7 +596,7 @@
     
     " Mappings:
     " <space>f - find files
-    " <space>/ - run ag with pattern (search)
+    " <space>/ - grep with pattern (search)
     " <space>o - file outline
 
     call dein#add('Shougo/unite.vim', { 'depends': 'vimproc.vim' })
@@ -598,8 +604,15 @@
     " File outline plugin
     call dein#add('Shougo/unite-outline', { 'depends': 'unite.vim' })
 
-    " use ag to for searching
-    if executable('ag')
+    " use ripgrep or ag to for searching
+    if executable('rg')
+        let g:unite_source_grep_command = 'rg'
+        let g:unite_source_grep_default_opts = '--ignore-case --vimgrep'
+        let g:unite_source_grep_recursive_opt = ''
+        " TODO: use rg?
+        let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
+		let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
+    elseif executable('ag')
         let g:unite_source_grep_command = 'ag'
         let g:unite_source_grep_default_opts = '--follow --noheading --nocolor --column'
         let g:unite_source_grep_recursive_opt = ''

@@ -7,6 +7,16 @@
 # If not running interactively, don't do anything
 [ -z "$PS1" ] && return
 
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+  source /etc/bashrc
+fi
+
+# Source Facebook definitions
+if [ -f /usr/facebook/ops/rc/master.bashrc ]; then
+  source /usr/facebook/ops/rc/master.bashrc
+fi
+
 # OS detection to make this bashrc *hopefully* cross-compatible
 OS="UNKNOWN"
 case "$OSTYPE" in
@@ -17,6 +27,13 @@ case "$OSTYPE" in
     win32*)  OS="WIN" ;;
     *)       echo "Uknown OS: $OSTYPE" ;;
 esac
+
+FB_DEVVM_RE="^devvm[0-9]+.*facebook\.com$"
+if [[ $(uname --nodename) =~ $FB_DEVVM_RE ]]; then
+    IS_FB_DEVVM=true
+else
+    IS_DB_DEVVM=false
+fi
 
 # Share history state across terminals
 # Following: https://cdaddr.com/programming/keeping-bash-history-in-sync-on-disk-and-between-multiple-terminals/
@@ -122,7 +139,7 @@ alias sl='ls'
 alias shh='ssh'
 
 # tmux 256 colors
-alias tmux="TERM=screen-256color-bce tmux -2"
+alias tmux="TERM=screen-256color tmux -2"
 
 if [ "$OS" == "LINUX" ]; then
     alias install='sudo apt-get install'
@@ -145,28 +162,28 @@ alias lmk='latexmk -pdf -pvc -shell-escape'
 
 # makes a directory and cd's into it
 function mcd() {
-    mkdir $@ && cd $_
+    mkdir "$@" && cd "$_" || exit
 }
 
 # pyvenv helpers
 
 function mkvenv() {
-    echo Creating new python virtual env at \'$ENV_DIR/$1\'
-    pyvenv $ENV_DIR/$1
+    echo "Creating new python virtual env at '$PYTHON3_ENV_DIR/$1'"
+    pyvenv "$PYTHON3_ENV_DIR/$1"
 }
 
 function lsvenv() {
-    ls $ENV_DIR
+    ls "$PYTHON3_ENV_DIR"
 }
 
 function rmvenv() {
-    echo Deleting python virtual env \'$ENV_DIR/$1\'
-    rm -rf $ENV_DIR/$1
+    echo "Deleting python virtual env '$PYTHON3_ENV_DIR/$1'"
+    rm -rf "${PYTHON3_ENV_DIR:?}/$1"
 }
 
 function workon() {
-    echo Entering python virtual env \'$1\'. Use \'deactivate\' to exit
-    source $ENV_DIR/$1/bin/activate
+    echo "Entering python virtual env '$1'. Use 'deactivate' to exit"
+    source "$PYTHON3_ENV_DIR/$1/bin/activate"
 }
 
 
@@ -175,8 +192,8 @@ function workon() {
 # ~/.bash_aliases, instead of adding them here directly.
 # See /usr/share/doc/bash-doc/examples in the bash-doc package.
 
-if [ -f ~/.bash_aliases ]; then
-    source ~/.bash_aliases
+if [ -f "$HOME/.bash_aliases" ]; then
+    source "$HOME/.bash_aliases"
 fi
 
 ## ALIASES }}}
@@ -185,13 +202,19 @@ fi
 
 export XDG_CONFIG_HOME=$HOME/.config
 
-export UTORRENT=$HOME/utorrent
-export NLTK_DATA=$HOME/nltk_data
+# Facebook devserver proxy
+if [ "$IS_FB_DEVVM" == "true" ]; then
+    export no_proxy=".fbcdn.net,.facebook.com,.thefacebook.com,.tfbnw.net,.fb.com,.fburl.com,.facebook.net,.sb.fbsbx.com,localhost"
+    export http_proxy=fwdproxy:8080
+    export https_proxy=fwdproxy:8080
+fi
 
 # Disable 'Couldn't connect to accessibility bus' error on opening gnome
 # applications.
 # http://askubuntu.com/questions/227515/terminal-warning-when-opening-a-file-in-gedit
-export NO_AT_BRIDGE=1
+if [ "$OS" == "LINUX" ]; then
+    export NO_AT_BRIDGE=1
+fi
 
 # Java
 JVM=/usr/lib/jvm
@@ -208,28 +231,21 @@ export GOROOT=$HOME/go1.10.3
 GO_BIN=$GOROOT/bin
 export GOPATH=$HOME/dev/go
 GO_HOME_BIN=$GOPATH/bin
-export GOOS=linux
-export GOARCH=amd64
-
-# solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
-export SYSRESOURCES=/etc/X11/Xresources
-export USRRESOURCES=$HOME/.Xresources
-
-# pyvenv
-ENV_DIR=$HOME/.virtualenvs
 if [ "$OS" == "LINUX" ]; then
-    export PYTHON3_BIN=/usr/bin/python3.6
-elif [ "$OS" == "OSX" ]; then
-    export PYTHON3_BIN=/opt/homebrew/bin/python3.6
+    export GOOS=linux
+    export GOARCH=amd64
 fi
 
-# Anaconda3
-ANACONDA_HOME=$HOME/anaconda3/bin
+# solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
+if [ "$OS" == "LINUX" ]; then
+    export SYSRESOURCES=/etc/X11/Xresources
+    export USRRESOURCES=$HOME/.Xresources
+fi
 
 # Android
-# export ANDROID_HOME=$HOME/android
-# export ANDROID_NDK=$ANDROID_HOME/ndk
-# export ANDROID_NDK_HOME=$ANDROID_NDK
+export ANDROID_HOME=$HOME/android
+export ANDROID_NDK=$ANDROID_HOME/ndk
+export ANDROID_NDK_HOME=$ANDROID_NDK
 ANDROID_STUDIO=$HOME/android-studio
 ANDROID_ARM_TOOLCHAIN=$HOME/arm-linux-androideabi
 ANDROID_STANDALONE_TOOLCHAIN=$ANDROID_ARM_TOOLCHAIN
@@ -250,24 +266,33 @@ GIT_SUBMODULE_TOOLS=$HOME/git-submodule-tools
 INTEL_HOME=/opt/intel
 INTEL_BIN=$INTEL_HOME/bin
 INTEL_LIB=$INTEL_HOME/lib/intel64
-export INTEL_LICENSE_FILE=$INTEL_HOME/licenses/l_CZSTLDHD.lic
+if [ -f "$INTEL_HOME" ]; then
+    export INTEL_LICENSE_FILE=$INTEL_HOME/licenses/l_CZSTLDHD.lic
+fi
 
 SPARK_HOME=$HOME/spark
 SPARK_BIN=$SPARK_HOME/bin
 
-NPM_HOME=~/.npm
+NPM_HOME=$HOME/.npm
 NPM_BIN=$NPM_HOME/bin
 
 # JRuby
 JRUBY_HOME=$HOME/jruby
 JRUBY_BIN=$JRUBY_HOME/bin
 
-export GUROBI_HOME=$HOME/gurobi651/linux64
+# Gurobi
+if [ "$OS" == "LINUX" ]; then
+    export GUROBI_HOME=$HOME/gurobi651/linux64
+fi
 export GRB_LICENSE_FILE=$HOME/gurobi.lic
 GUROBI_BIN=$GUROBI_HOME/bin
 GUROBI_LIB=$GUROBI_HOME/lib
 
-export RUST_SRC_PATH=$HOME/dev/rust/src
+# Rust
+if [ -x "$(command -v rustc)" ]; then
+    RUST_SYSROOT=$(rustc --print sysroot)
+    export RUST_SRC_PATH=$RUST_SYSROOT/lib/rustlib/src/rust/src/
+fi
 export CARGO_HOME=$HOME/.cargo
 CARGO_BIN=$CARGO_HOME/bin
 
@@ -281,25 +306,34 @@ if [ "$OS" == "LINUX" ]; then
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_LIB:$GUROBI_LIB
 fi
 
-# PATH
+# python3
+export PYTHON3_VERSION=python3.6
+# pyvenv virtual environments
+export PYTHON3_ENV_DIR=$HOME/virtualenvs
+ANACONDA_HOME=$HOME/anaconda3/bin
 if [ "$OS" == "LINUX" ]; then
-    export PATH=$PATH:$JAVA_HOME/bin
-    export PATH=$PATH:$GO_BIN
-    export PATH=$PATH:$GO_HOME_BIN
-    export PATH=$PATH:$ANDROID_PATH
-    export PATH=$PATH:$ARDUINO_SDK
-    export PATH=$PATH:$GIT_SUBMODULE_TOOLS
-    export PATH=$PATH:$CABAL_BIN
-    export PATH=$PATH:$ANACONDA_HOME
-    export PATH=$PATH:$LOCAL_BIN
-    export PATH=$PATH:$INTEL_BIN
-    export PATH=$PATH:$NPM_BIN
-    export PATH=$PATH:$GUROBI_BIN
-    export PATH=$PATH:$CARGO_BIN
-    export PATH=$PATH:$DEPOT_TOOLS
+    # Global python3 install
+    export PYTHON3_BIN="/bin/$PYTHON3_VERSION"
 elif [ "$OS" == "OSX" ]; then
-    export PATH=$PATH:$LOCAL_BIN
+    # Use Brew python3 install
+    export PYTHON3_BIN="/opt/homebrew/bin/$PYTHON3_VERSION"
 fi
+
+# PATH
+export PATH=$PATH:$JAVA_HOME/bin
+export PATH=$PATH:$GO_BIN
+export PATH=$PATH:$GO_HOME_BIN
+export PATH=$PATH:$ANDROID_PATH
+export PATH=$PATH:$ARDUINO_SDK
+export PATH=$PATH:$GIT_SUBMODULE_TOOLS
+export PATH=$PATH:$CABAL_BIN
+export PATH=$PATH:$ANACONDA_HOME
+export PATH=$PATH:$LOCAL_BIN
+export PATH=$PATH:$INTEL_BIN
+export PATH=$PATH:$NPM_BIN
+export PATH=$PATH:$GUROBI_BIN
+export PATH=$PATH:$CARGO_BIN
+export PATH=$PATH:$DEPOT_TOOLS
 
 ## SHELL VARIABLES }}}
 
