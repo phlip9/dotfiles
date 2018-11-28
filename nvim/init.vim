@@ -601,52 +601,91 @@
 
 " pep8-indent }}}
 
-" Unite.vim - fuzzy file matching and buffer searching {{{
+" (disabled) Unite.vim - fuzzy file matching and buffer searching {{{
     
     " Mappings:
     " <space>f - find files
     " <space>/ - grep with pattern (search)
     " <space>o - file outline
 
-    call dein#add('Shougo/unite.vim', { 'depends': 'vimproc.vim' })
-
-    " File outline plugin
-    call dein#add('Shougo/unite-outline', { 'depends': 'unite.vim' })
-
-    " use ripgrep or ag to for searching
-    if executable('rg')
-        let g:unite_source_grep_command = 'rg'
-        let g:unite_source_grep_default_opts = '--ignore-case --vimgrep'
-        let g:unite_source_grep_recursive_opt = ''
-        " TODO: use rg?
-        let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
-		let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
-    elseif executable('ag')
-        let g:unite_source_grep_command = 'ag'
-        let g:unite_source_grep_default_opts = '--follow --noheading --nocolor --column'
-        let g:unite_source_grep_recursive_opt = ''
-        let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
-		let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
-    endif
-
-    " ctrlp-like functionality: fuzzy file searching
-    nmap <space>f :Unite -buffer-name=files file_rec/async<CR>
-
-    nmap <space>/ :Unite -buffer-name=search grep:.<CR>
-
-    " Show file outline
-    nmap <space>o :Unite -buffer-name=outline outline<CR>
-
-    " Start in insert mode
-    let g:unite_enable_start_insert = 1
-    
-    " mru (most-recently-used) file list limit
-    let g:unite_source_file_mru_long_limit = 1000
-
-    let g:unite_winheight = 10
-    let g:unite_split_rule = 'botright'
+    " call dein#add('Shougo/unite.vim', { 'depends': 'vimproc.vim' })
+    " 
+    " " File outline plugin
+    " call dein#add('Shougo/unite-outline', { 'depends': 'unite.vim' })
+    " 
+    " " use ripgrep or ag to for searching
+    " if executable('rg')
+    "     let g:unite_source_grep_command = 'rg'
+    "     let g:unite_source_grep_default_opts = '--ignore-case --vimgrep'
+    "     let g:unite_source_grep_recursive_opt = ''
+    "     " TODO: use rg?
+    "     let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
+	"     let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
+    " elseif executable('ag')
+    "     let g:unite_source_grep_command = 'ag'
+    "     let g:unite_source_grep_default_opts = '--follow --noheading --nocolor --column'
+    "     let g:unite_source_grep_recursive_opt = ''
+    "     let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
+	"     let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
+    " endif
+    " 
+    " " ctrlp-like functionality: fuzzy file searching
+    " nmap <space>f :Unite -buffer-name=files file_rec/async<CR>
+    " 
+    " nmap <space>/ :Unite -buffer-name=search grep:.<CR>
+    " 
+    " " Show file outline
+    " nmap <space>o :Unite -buffer-name=outline outline<CR>
+    " 
+    " " Start in insert mode
+    " let g:unite_enable_start_insert = 1
+    " 
+    " " mru (most-recently-used) file list limit
+    " let g:unite_source_file_mru_long_limit = 1000
+    " 
+    " let g:unite_winheight = 10
+    " let g:unite_split_rule = 'botright'
 
 " unite.vim }}}
+
+" fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
+
+    " Mappings:
+    "        O - open file
+    " <space>o - file ctags outline
+    " <space>t - project ctags search
+    "        T - open buffers search
+    " <space>/ - grep with pattern
+    " <space>' - grep using word under cursor
+
+    let fzf_home = expand('$FZF_HOME')
+    let fzf_enabled = isdirectory(fzf_home) && executable('fzf')
+    let g:fzf_command_prefix = 'Fzf'
+
+    call dein#add(fzf_home, { 'if': fzf_enabled })
+    call dein#add('junegunn/fzf.vim', { 'if': fzf_enabled })
+
+    nnoremap <silent> O :FzfFiles<cr>
+    nnoremap <silent> T :FzfBuffers<cr>
+    nnoremap <silent> <space>o :FzfBTags<cr>
+    nnoremap <silent> <space>t :FzfTags<cr>
+
+    if executable('rg')
+        command! -bang -nargs=* FzfFind call fzf#vim#grep(
+                    \ 'rg --column --line-number --no-heading --fixed-strings ' .
+                    \ '--ignore-case --no-ignore --hidden --follow ' .
+                    \ '--glob "!.git/*" --glob "!target/*" --glob "!tags" ' .
+                    \ '--color "always" ' .
+                    \ shellescape(<q-args>),
+                    \ 1,
+                    \ fzf#vim#with_preview('right:50%'),
+                    \ <bang>0)
+
+        nnoremap <space>/ :FzfFind<space>
+        nnoremap <silent> <space>' :FzfFind <C-R><C-W><cr>
+    endif
+
+" }}}
 
 " html5.vim - html5 autocompletion, syntax, and indentation {{{
 

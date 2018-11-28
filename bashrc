@@ -14,6 +14,9 @@
 [ -f /usr/facebook/ops/rc/master.bashrc ] \
     && source /usr/facebook/ops/rc/master.bashrc
 
+# FZF keybindings and fuzzy autocomplete
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
+
 # OS detection to make this bashrc *hopefully* cross-compatible
 OS="UNKNOWN"
 case "$OSTYPE" in
@@ -319,6 +322,18 @@ if [ "$OS" == "LINUX" ]; then
 elif [ "$OS" == "OSX" ]; then
     # Use Brew python3 install
     export PYTHON3_BIN="/opt/homebrew/bin/$PYTHON3_VERSION"
+fi
+
+# FZF
+if [ "$OS" == "OSX" ]; then
+    export FZF_HOME=/usr/local/opt/fzf
+fi
+
+# Use ripgrep for fzf filename searching
+if [ -x "$(command -v rg)" ]; then
+    export FZF_DEFAULT_COMMAND='rg --files --fixed-strings --ignore-case '\
+'--no-ignore --hidden --follow '\
+'--glob "!.git/*" --glob "!target/*" '
 fi
 
 # PATH
