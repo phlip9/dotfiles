@@ -133,35 +133,6 @@
 
 " }}}
 
-" vim-ref - View reference docs for keyword under cursor {{{
-
-    " Mappings:
-    " ---------
-    "
-    " (In global)
-    " <leader>r - open reference docs for keyword under cursor
-    "
-    " (In reference viewer)
-    " <CR> - (same as K)
-    " <C-t> - ref backward
-    " <C-o> - ref backward
-    " <C-i> - ref forward
-
-    call dein#add('thinca/vim-ref',
-                \ {
-                \   'depends': 'vimproc.vim'
-                \ })
-
-    let g:ref_no_default_key_mappings = 1
-    let g:ref_pydoc_cmd = "$PYTHON3_BIN -m pydoc"
-
-    nnoremap <leader>r :call ref#K('normal')<CR>
-
-    " Can use as a unite source
-    " :Unite ref/pydoc
-
-" }}}
-
 " vim-fugitive - Vim Git integration {{{
 
     call dein#add('tpope/vim-fugitive',
@@ -173,6 +144,7 @@
 " vim-fugitive }}}
 
 " vim-gitgutter - Show git diff in the gutter {{{
+
     " Mappings:
     " <leader>gg - Toggle git gutter
     " <leader>hs - Stage hunk
@@ -269,7 +241,7 @@
         " ============================
         if executable('llvm-config-4.0')
             " `echo -n ...` strips the trailing newline from output
-            let llvm_libdir = system('echo -n `llvm-config-4.0 --libdir`')
+            let llvm_libdir = system('echo -n $(llvm-config-4.0 --libdir)')
             call deoplete#custom#source('clang', 'libclang_path',
                         \ llvm_libdir . '/libclang.so')
             call deoplete#custom#source('clang', 'clang_header', '/usr/include/clang')
@@ -759,27 +731,6 @@
 
 " }}}
 
-" vimfiler.vim - vim file manager {{{
-
-    call dein#add('Shougo/vimfiler.vim',
-                \ {
-                \   'depends': ['unite.vim']
-                \ })
-
-    " replace netr
-    let g:vimfiler_as_default_explorer = 1
-
-" }}}
-
-" neossh.vim - SSH interface for neovim {{{
-
-    call dein#add('Shougo/neossh.vim',
-                \ {
-                \   'depends': ['Shougo/vimproc.vim', 'unite.vim']
-                \ })
-
-" }}}
-
 " cup.vim - JavaCUP syntax {{{
 
     call dein#add('vim-scripts/cup.vim')
@@ -931,6 +882,9 @@
     set foldtext=NeatFoldText()
 
     " custom math digraphs
+    " Directions: type <C-K><digraph-code> to write digraph
+    " Example: <C-K>na => ℕ
+
     " N natural numbers
     digraphs na 8469
     " Z integers
@@ -1023,6 +977,15 @@
 
     " Reload nvimrc
     nnoremap <silent> <leader>V :source $XDG_CONFIG_HOME/nvim/init.vim<CR>:filetype detect<CR>:exe ":echo 'nvimrc reloaded'"<CR>
+
+    " Terminal Mode
+    " Use escape to go back to normal mode
+    tnoremap <Esc> <C-\><C-n>
+    " Window movement in terminal mode w/ CTRL + h,j,k,l
+    tnoremap <C-h> <C-\><C-n><C-W>h
+    tnoremap <C-j> <C-\><C-n><C-W>j
+    tnoremap <C-k> <C-\><C-n><C-W>k
+    tnoremap <C-l> <C-\><C-n><C-W>l
 
 " KEYBINDINGS }}}
 
