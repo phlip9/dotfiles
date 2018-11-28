@@ -202,14 +202,10 @@
 
 " deoplete.nvim - neovim autocomplete {{{
     
-    call dein#add('Shougo/deoplete.nvim', { 'if': has('python3') })
-
-    let g:deoplete#enable_at_startup = 1
-
     function! s:deoplete_setup() abort
         call deoplete#custom#option('sources',
                     \ {
-                    \   'rust': ['omni'],
+                    \   'rust': ['LanguageClient'],
                     \   'c': ['clang'],
                     \   'cpp': ['clang'],
                     \   'go': ['go'],
@@ -289,6 +285,13 @@
                 "\ })
                 "\   'lean': '[^. *\t]\.\w*',
 
+    call dein#add('Shougo/deoplete.nvim',
+                \ {
+                \   'if': has('python3'),
+                \   'hook_source': function('s:deoplete_setup'),
+                \ })
+
+    let g:deoplete#enable_at_startup = 1
 
     " tab complete
     "inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
@@ -357,6 +360,13 @@
 
 " LanguageClient-neovim - Language Server Protocol support for neovim {{{
 
+    " Mappings:
+    " <leader>m  - show the context menu with all available commands
+    " <leader>gd - go to definition of symbol under cursor
+    " <leader>h  - hover info about symbol under cursor
+    " <leader>r  - rename symbol under cursor
+    " <leader>f  - display references to symbol under cursor
+
     call dein#add('autozimu/LanguageClient-neovim',
                 \ {
                 \   'rev': 'next',
@@ -373,9 +383,10 @@
                 \ }
 
     let g:LanguageClient_serverCommands = {}
-                "\   'rust': ['rustup', 'run', 'nightly', 'rls'],
-                "\   'javascript': ['javascript-typescript-stdio'],
-                "\   'javascript.jsx': ['tcp://127.0.0.1:2089'],
+    
+    if executable('rls')
+        let g:LanguageClient_serverCommands.rust = ['rls']
+    endif
 
     if executable('npm')
         " `echo -n ...` strips the trailing newline from output
@@ -386,16 +397,11 @@
 
     "autocmd FileType lean setlocal omnifunc=LanguageClient#complete
 
-    nnoremap <silent> <leader>gd :call LanguageClient_contextMenu()<CR>
-
-    "nnoremap <F5> :call LanguageClient_contextMenu()<CR>
-    "" Or map each action separately
-    "nnoremap <silent> K :call LanguageClient#textDocument_hover()<CR>
-    "nnoremap <silent> gd :call LanguageClient#textDocument_definition()<CR>
-    "nnoremap <silent> <F2> :call LanguageClient#textDocument_rename()<CR>
-
-    "set completefunc=LanguageClient#complete
-    "set formatexpr=LanguageClient_textDocument_rangeFormatting()
+    nnoremap <silent> <leader>m :call LanguageClient_contextMenu()<CR>
+    nnoremap <silent> <leader>gd :call LanguageClient#textDocument_definition()<CR>
+    nnoremap <silent> <leader>h :call LanguageClient#textDocument_hover()<CR>
+    nnoremap <silent> <leader>r :call LanguageClient#textDocument_rename()<CR>
+    nnoremap <silent> <leader>f :call LanguageClient#textDocument_references()<CR>
 
 " }}}
 
@@ -506,18 +512,21 @@
                 \   'on_ft': ['rust']
                 \ })
 
+    let g:rustfmt_autosave = 1
+
 " }}}
 
-" vim-racer - code completion for Rust {{{
+" (disabled) vim-racer - code completion for Rust {{{
 
-    call dein#add('racer-rust/vim-racer',
-                \ {
-                \   'if': executable('racer'),
-                \   'lazy': 1,
-                \   'on_ft': ['rust']
-                \ })
-
-    let g:racer_no_default_keymappings = 1
+    " call dein#add('racer-rust/vim-racer',
+    "             \ {
+    "             \   'if': executable('racer'),
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['rust']
+    "             \ })
+    " 
+    " let g:racer_experimental_completer = 1
+    " let g:racer_no_default_keymappings = 1
 
 " }}}
 
@@ -755,8 +764,6 @@
         call dein#call_hook('on_source')
     endif
 
-    call s:deoplete_setup()
-
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
     set mouse=a                     " enable mouse
@@ -780,6 +787,14 @@
         set ruler                                           " show ruler
         set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
         set showcmd                                         " show partial commands in status line
+    endif
+
+    " Always display the sign column to avoid flickering with syntastic and
+    " vim-gitgutter
+    if exists('&signcolumn')  " Vim 7.4.2201
+        set signcolumn=yes
+    else
+        let g:gitgutter_sign_column_always = 1
     endif
 
     " Colorscheme highlight overrides
