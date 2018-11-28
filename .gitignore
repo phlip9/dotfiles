@@ -2,3 +2,4 @@
 *~
 bundle.backup
 .*.swp
+tmux-client-*.log

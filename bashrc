@@ -8,14 +8,11 @@
 [ -z "$PS1" ] && return
 
 # Source global definitions
-if [ -f /etc/bashrc ]; then
-  source /etc/bashrc
-fi
+[ -f /etc/bashrc ] && source /etc/bashrc
 
 # Source Facebook definitions
-if [ -f /usr/facebook/ops/rc/master.bashrc ]; then
-  source /usr/facebook/ops/rc/master.bashrc
-fi
+[ -f /usr/facebook/ops/rc/master.bashrc ] \
+    && source /usr/facebook/ops/rc/master.bashrc
 
 # OS detection to make this bashrc *hopefully* cross-compatible
 OS="UNKNOWN"
@@ -29,7 +26,7 @@ case "$OSTYPE" in
 esac
 
 FB_DEVVM_RE="^devvm[0-9]+.*facebook\.com$"
-if [[ $(uname --nodename) =~ $FB_DEVVM_RE ]]; then
+if [[ $(uname -n) =~ $FB_DEVVM_RE ]]; then
     IS_FB_DEVVM=true
 else
     IS_DB_DEVVM=false
@@ -169,7 +166,7 @@ function mcd() {
 
 function mkvenv() {
     echo "Creating new python virtual env at '$PYTHON3_ENV_DIR/$1'"
-    pyvenv "$PYTHON3_ENV_DIR/$1"
+    $PYTHON3_BIN -m venv "$PYTHON3_ENV_DIR/$1"
 }
 
 function lsvenv() {
@@ -227,14 +224,18 @@ IDEA_BIN=$HOME/idea/bin
 ECLIPSE=/opt/eclipse
 
 # Go
-export GOROOT=$HOME/go1.10.3
-GO_BIN=$GOROOT/bin
-export GOPATH=$HOME/dev/go
-GO_HOME_BIN=$GOPATH/bin
 if [ "$OS" == "LINUX" ]; then
+    export GOROOT=$HOME/go1.10.3
     export GOOS=linux
     export GOARCH=amd64
+elif [ "$OS" == "OSX" ]; then
+    export GOROOT=/usr/local/opt/go/libexec
+    export GOOS=darwin
+    export GOARCH=amd64
 fi
+export GOPATH=$HOME/dev/go
+GO_BIN=$GOROOT/bin
+GO_HOME_BIN=$GOPATH/bin
 
 # solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
 if [ "$OS" == "LINUX" ]; then
@@ -310,6 +311,7 @@ fi
 export PYTHON3_VERSION=python3.6
 # pyvenv virtual environments
 export PYTHON3_ENV_DIR=$HOME/virtualenvs
+export ENV_DIR=$PYTHON3_ENV_DIR
 ANACONDA_HOME=$HOME/anaconda3/bin
 if [ "$OS" == "LINUX" ]; then
     # Global python3 install
