@@ -75,7 +75,11 @@ def install_dotfiles(dotfiles_dir, install_dir):
                 (path.join(dotfiles_dir, "config/gtk-3.0"),
                  path.join(install_dir, ".config/gtk-3.0")),
                 (path.join(dotfiles_dir, "irssi"),
-                 path.join(install_dir, ".irssi"))
+                 path.join(install_dir, ".irssi")),
+                (path.join(dotfiles_dir, "ctags.d"),
+                 path.join(install_dir, ".ctags.d")),
+                (path.join(dotfiles_dir, "rusty-tags"),
+                 path.join(install_dir, ".rusty-tags")),
                 ]
 
     force(map(install_dotfile, dotfiles))
