@@ -9,3 +9,6 @@ tmux-client-*.log
 # rusty-tags files
 rusty-tags/cache
 rusty-tags/locks
+
+# htop config
+config/htop/htoprc
