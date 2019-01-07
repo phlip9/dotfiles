@@ -113,13 +113,15 @@ $ make distclean
 ```
 
 
-### Install Plugins ###
-
-Install `dein` plugin manager
+### Install Node and Yarn
 
 ```
-$ cd dotfiles/nvim
-$ git clone git@github.com:Shougo/dein.vim.git plugins/repos/github.com/Shougo/dein.vim
+# (OSX)
+$ brew install node yarn
+
+# (Other)
+$ curl -sL install-node.now.sh/lts | sh
+$ curl --compressed -o- -L https://yarnpkg.com/install.sh | bash 
 ```
 
 

@@ -108,15 +108,15 @@
 
 " NERDCommenter }}}
 
-" Syntastic - syntax and error checking {{{
+" (disabled) Syntastic - syntax and error checking {{{
 
-    call dein#add('scrooloose/syntastic')
-    let syntastic_javascript_checkers = ['jshint', 'jscs']
-
-    let g:syntastic_python_python_exec = g:python3_host_prog
-
-    let g:syntastic_cpp_compiler = 'g++'
-    let g:syntastic_cpp_compiler_options = ' -std=c++11 -stdlib=libc++'
+    " call dein#add('scrooloose/syntastic')
+    " let syntastic_javascript_checkers = ['jshint', 'jscs']
+    " 
+    " let g:syntastic_python_python_exec = g:python3_host_prog
+    " 
+    " let g:syntastic_cpp_compiler = 'g++'
+    " let g:syntastic_cpp_compiler_options = ' -std=c++11 -stdlib=libc++'
 
 " Syntastic }}}
 
@@ -186,110 +186,204 @@
 
 " vim-gitgutter }}}
 
-" deoplete.nvim - neovim autocomplete {{{
-    
-    function! s:deoplete_setup() abort
-        call deoplete#custom#option('sources',
-                    \ {
-                    \   'rust': ['LanguageClient'],
-                    \   'c': ['clang'],
-                    \   'cpp': ['clang'],
-                    \   'go': ['go'],
-                    \   'python': ['jedi'],
-                    \   'python3': ['jedi'],
-                    \   'javascript': ['omni'],
-                    \   'lean': ['LanguageClient'],
-                    \ })
+" (disabled) deoplete.nvim - neovim autocomplete {{{
 
-        " <TAB>: completion.
-        inoremap <silent><expr> <TAB>
-                    \ pumvisible() ? "\<C-n>" :
-                    \ <SID>check_back_space() ? "\<TAB>" :
-                    \ deoplete#manual_complete()
-        function! s:check_back_space() abort
-            let col = col('.') - 1
-            return !col || getline('.')[col - 1]  =~ '\s'
-        endfunction
-
-        " <S-TAB>: completion back.
-        inoremap <expr><S-TAB>  pumvisible() ? "\<C-p>" : "\<C-h>"
-
-        " <BS>: close popup and delete backword char.
-        inoremap <expr><BS> deoplete#smart_close_popup()."\<C-h>"
-
-        " <CR>: close popup and save indent.
-        inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
-        function! s:my_cr_function() abort
-            return deoplete#cancel_popup() . "\<CR>"
-        endfunction
-
-        inoremap <expr> '  pumvisible() ? deoplete#close_popup() : "'"
-        
-        " Disable deoplete while using vim-multiple-cursors
-        function! g:Multiple_cursors_before()
-            call deoplete#custom#buffer_option('auto_complete', v:false)
-        endfunction
-        function! g:Multiple_cursors_after()
-            call deoplete#custom#buffer_option('auto_complete', v:true)
-        endfunction
-
-        " Disable the candidates in Comment/String syntaxes.
-        call deoplete#custom#source('_',
-                    \ 'disabled_syntaxes', ['Comment', 'String'])
-
-        " ignore completions from the current buffer
-        call deoplete#custom#option('ignore_sources', {'_': ['buffer']})
-
-        " Go deoplete configuration
-        " =========================
-        call deoplete#custom#source('go', 'gocode_binary', $GOPATH . '/bin/gocode')
-        call deoplete#custom#source('go', 'sort_class',
-                    \ ['package', 'func', 'type', 'var', 'const'])
-        call deoplete#custom#source('go', 'pointer', 1)
-        " cache the Go stdlib completions
-        call deoplete#custom#source('go', 'use_cache', 1)
-        call deoplete#custom#source('go', 'json_directory',
-                    \ $HOME . '/.cache/deoplete/go/' . $GOOS . '_' . $GOARCH)
-
-        " clang deoplete configuration
-        " ============================
-        if executable('llvm-config-4.0')
-            " `echo -n ...` strips the trailing newline from output
-            let llvm_libdir = system('echo -n $(llvm-config-4.0 --libdir)')
-            call deoplete#custom#source('clang', 'libclang_path',
-                        \ llvm_libdir . '/libclang.so')
-            call deoplete#custom#source('clang', 'clang_header', '/usr/include/clang')
-        endif
-    endfunction
-
-    "" Custom auto completion trigger patterns
-    "call deoplete#custom#option('omni_patterns', 
-                "\ {
-                "\   'c': '[^. *\t](\.|->)\w*',
-                "\   'cpp': '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*',
-                "\   'ruby': '[^. *\t]\.\w*\|\h\w*::',
-                "\ })
-                "\   'lean': '[^. *\t]\.\w*',
-
-    call dein#add('Shougo/deoplete.nvim',
-                \ {
-                \   'if': has('python3'),
-                \   'hook_source': function('s:deoplete_setup'),
-                \ })
-
-    let g:deoplete#enable_at_startup = 1
-
-    " tab complete
-    "inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
-
-    " Do not select a match in the menu, force the user to
-    " select one from the menu.
-    set completeopt+=noselect
-    " Disable the annoying autocomplete window that pops up
-    " on the bottom of the screen.
-    set completeopt-=preview
+    " function! s:deoplete_setup() abort
+    "     call deoplete#custom#option('sources',
+    "                 \ {
+    "                 \   'rust': ['LanguageClient'],
+    "                 \   'c': ['clang'],
+    "                 \   'cpp': ['clang'],
+    "                 \   'go': ['go'],
+    "                 \   'python': ['jedi'],
+    "                 \   'python3': ['jedi'],
+    "                 \   'javascript': ['omni'],
+    "                 \   'lean': ['LanguageClient'],
+    "                 \ })
+    " 
+    "     " <TAB>: completion.
+    "     inoremap <silent><expr> <TAB>
+    "                 \ pumvisible() ? "\<C-n>" :
+    "                 \ <SID>check_back_space() ? "\<TAB>" :
+    "                 \ deoplete#manual_complete()
+    "     function! s:check_back_space() abort
+    "         let col = col('.') - 1
+    "         return !col || getline('.')[col - 1]  =~ '\s'
+    "     endfunction
+    " 
+    "     " <S-TAB>: completion back.
+    "     inoremap <expr><S-TAB>  pumvisible() ? "\<C-p>" : "\<C-h>"
+    " 
+    "     " <BS>: close popup and delete backword char.
+    "     inoremap <expr><BS> deoplete#smart_close_popup()."\<C-h>"
+    " 
+    "     " <CR>: close popup and save indent.
+    "     inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
+    "     function! s:my_cr_function() abort
+    "         return deoplete#cancel_popup() . "\<CR>"
+    "     endfunction
+    " 
+    "     inoremap <expr> '  pumvisible() ? deoplete#close_popup() : "'"
+    "     
+    "     " Disable deoplete while using vim-multiple-cursors
+    "     function! g:Multiple_cursors_before()
+    "         call deoplete#custom#buffer_option('auto_complete', v:false)
+    "     endfunction
+    "     function! g:Multiple_cursors_after()
+    "         call deoplete#custom#buffer_option('auto_complete', v:true)
+    "     endfunction
+    " 
+    "     " Disable the candidates in Comment/String syntaxes.
+    "     call deoplete#custom#source('_',
+    "                 \ 'disabled_syntaxes', ['Comment', 'String'])
+    " 
+    "     " ignore completions from the current buffer
+    "     call deoplete#custom#option('ignore_sources', {'_': ['buffer']})
+    " 
+    "     " Go deoplete configuration
+    "     " =========================
+    "     call deoplete#custom#source('go', 'gocode_binary', $GOPATH . '/bin/gocode')
+    "     call deoplete#custom#source('go', 'sort_class',
+    "                 \ ['package', 'func', 'type', 'var', 'const'])
+    "     call deoplete#custom#source('go', 'pointer', 1)
+    "     " cache the Go stdlib completions
+    "     call deoplete#custom#source('go', 'use_cache', 1)
+    "     call deoplete#custom#source('go', 'json_directory',
+    "                 \ $HOME . '/.cache/deoplete/go/' . $GOOS . '_' . $GOARCH)
+    " 
+    "     " clang deoplete configuration
+    "     " ============================
+    "     if executable('llvm-config-4.0')
+    "         " `echo -n ...` strips the trailing newline from output
+    "         let llvm_libdir = system('echo -n $(llvm-config-4.0 --libdir)')
+    "         call deoplete#custom#source('clang', 'libclang_path',
+    "                     \ llvm_libdir . '/libclang.so')
+    "         call deoplete#custom#source('clang', 'clang_header', '/usr/include/clang')
+    "     endif
+    " endfunction
+    " 
+    " "" Custom auto completion trigger patterns
+    " "call deoplete#custom#option('omni_patterns', 
+    "             "\ {
+    "             "\   'c': '[^. *\t](\.|->)\w*',
+    "             "\   'cpp': '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*',
+    "             "\   'ruby': '[^. *\t]\.\w*\|\h\w*::',
+    "             "\ })
+    "             "\   'lean': '[^. *\t]\.\w*',
+    " 
+    " call dein#add('Shougo/deoplete.nvim',
+    "             \ {
+    "             \   'if': has('python3'),
+    "             \   'hook_source': function('s:deoplete_setup'),
+    "             \ })
+    " 
+    " let g:deoplete#enable_at_startup = 1
+    " 
+    " " tab complete
+    " "inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
+    " 
+    " " Do not select a match in the menu, force the user to
+    " " select one from the menu.
+    " set completeopt+=noselect
+    " " Disable the annoying autocomplete window that pops up
+    " " on the bottom of the screen.
+    " set completeopt-=preview
 
 " }}}
+
+" coc.nvim - Complete engine and Language Server support for neovim {{{
+
+    " Mappings:
+    " <leader>gd - go to definition
+    " <leader>gi - go to implementations
+    " <leader>gt - go to type definition
+    " <leader>r  - rename
+    " <leader>f  - references
+    " <leader>h  - symbol hover
+    " <leader>ac - code action
+    " <leader>al - code lens action
+    " <leader>di - diagnostic info
+    "
+    " ]c, [c     - next/prev linter errors 
+    " <Tab>, <S-Tab> - next/prev completion
+    " <C-Space>  - trigger completion
+
+    let g:coc_need_update = 0
+
+    let g:coc_exts = [
+                \   'coc-json',
+                \   'coc-rls',
+                \ ]
+
+    function! s:coc_check_back_space() abort
+        let col = col('.') - 1
+        return !col || getline('.')[col - 1]  =~# '\s'
+    endfunction
+
+    function! s:coc_update_extensions() abort
+        let coc_exts_str = join(g:coc_exts, ' ')
+
+        echom 'Updating coc.nvim... [' . coc_exts_str . ']'
+
+        call coc#util#install_extension(coc_exts_str)
+        call coc#util#update()
+        UpdateRemotePlugins
+
+        echom "Updated coc.nvim"
+        let g:coc_need_update = 0
+    endfunction
+
+    function! s:coc_post_update() abort
+        let g:coc_need_update = 1
+    endfunction
+
+    function! s:coc_post_source() abort
+        if g:coc_need_update
+            call s:coc_update_extensions()
+        endif
+
+        " call coc#config('section', {
+        "             \ ''
+        " })
+
+        " Use tab for trigger completion with characters ahead and navigate.
+        inoremap <silent><expr> <TAB>
+                    \ pumvisible() ? "\<C-n>" :
+                    \ <SID>coc_check_back_space() ? "\<TAB>" :
+                    \ coc#refresh()
+        inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+
+        " Use <C-Space> to trigger completion.
+        inoremap <silent><expr> <C-Space> coc#refresh()
+
+        " Use <cr> for confirm completion, `<C-g>u` means break undo chain at current position.
+        " Coc only does snippet and additional edit on confirm.
+        inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
+
+        " Use `[c` and `]c` for navigate diagnostics
+        nnoremap <silent> [c :call CocAction('diagnosticPrevious')<CR>
+        nnoremap <silent> ]c :call CocAction('diagnosticNext')<CR>
+
+        nnoremap <silent> <leader>gd :call CocAction('jumpDefinition')<CR>
+        nnoremap <silent> <leader>gi :call CocAction('jumpImplementation')<CR>
+        nnoremap <silent> <leader>gt :call CocAction('jumpTypeDefinition')<CR>
+        nnoremap <silent> <leader>r :call CocAction('rename')<CR>
+        nnoremap <silent> <leader>f :call CocAction('jumpReferences')<CR>
+        nnoremap <silent> <leader>h :call CocAction('doHover')<CR>
+        nnoremap <silent> <leader>ac :call CocAction('codeAction', '')<CR>
+        nnoremap <silent> <leader>al :call CocAction('codeLensAction')<CR>
+        nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
+    endfunction
+
+    call dein#add('neoclide/coc.nvim',
+                \ { 
+                \   'if': executable('node') && executable('yarn'),
+                \   'build': 'yarn install',
+                \   'hook_post_source': function('s:coc_post_source'),
+                \   'hook_post_update': function('s:coc_post_update'),
+                \ })
+
+"  }}}
 
 " SudoEdit.vim - Easily write to protected files {{{
 
@@ -344,50 +438,50 @@
 
 " vim-airline }}}
 
-" LanguageClient-neovim - Language Server Protocol support for neovim {{{
+" (disabled) LanguageClient-neovim - Language Server Protocol support for neovim {{{
 
-    " Mappings:
-    " <leader>m  - show the context menu with all available commands
-    " <leader>gd - go to definition of symbol under cursor
-    " <leader>h  - hover info about symbol under cursor
-    " <leader>r  - rename symbol under cursor
-    " <leader>f  - display references to symbol under cursor
-
-    call dein#add('autozimu/LanguageClient-neovim',
-                \ {
-                \   'rev': 'next',
-                \   'build': 'bash install.sh',
-                \ })
-
-    let g:LanguageClient_autoStart = 1
-
-    let g:LanguageClient_rootMarkers =
-                \ {
-                \   'cpp': ['compile_commands.json', 'build'],
-                \   'c': ['compile_commands.json', 'build'],
-                \   'rust': ['Cargo.toml', 'build'],
-                \ }
-
-    let g:LanguageClient_serverCommands = {}
-    
-    if executable('rls')
-        let g:LanguageClient_serverCommands.rust = ['rls']
-    endif
-
-    if executable('npm')
-        " `echo -n ...` strips the trailing newline from output
-        let npm_bin = system('echo -n `npm bin --global`')
-        let g:LanguageClient_serverCommands.lean =
-                    \ ['node', npm_bin . '/lean-language-server', '--stdio']
-    endif
-
-    "autocmd FileType lean setlocal omnifunc=LanguageClient#complete
-
-    nnoremap <silent> <leader>m :call LanguageClient_contextMenu()<CR>
-    nnoremap <silent> <leader>gd :call LanguageClient#textDocument_definition()<CR>
-    nnoremap <silent> <leader>h :call LanguageClient#textDocument_hover()<CR>
-    nnoremap <silent> <leader>r :call LanguageClient#textDocument_rename()<CR>
-    nnoremap <silent> <leader>f :call LanguageClient#textDocument_references()<CR>
+    " " Mappings:
+    " " <leader>m  - show the context menu with all available commands
+    " " <leader>gd - go to definition of symbol under cursor
+    " " <leader>h  - hover info about symbol under cursor
+    " " <leader>r  - rename symbol under cursor
+    " " <leader>f  - display references to symbol under cursor
+    " 
+    " call dein#add('autozimu/LanguageClient-neovim',
+    "             \ {
+    "             \   'rev': 'next',
+    "             \   'build': 'bash install.sh',
+    "             \ })
+    " 
+    " let g:LanguageClient_autoStart = 1
+    " 
+    " let g:LanguageClient_rootMarkers =
+    "             \ {
+    "             \   'cpp': ['compile_commands.json', 'build'],
+    "             \   'c': ['compile_commands.json', 'build'],
+    "             \   'rust': ['Cargo.toml', 'build'],
+    "             \ }
+    " 
+    " let g:LanguageClient_serverCommands = {}
+    " 
+    " if executable('rls')
+    "     let g:LanguageClient_serverCommands.rust = ['rls']
+    " endif
+    " 
+    " if executable('npm')
+    "     " `echo -n ...` strips the trailing newline from output
+    "     let npm_bin = system('echo -n `npm bin --global`')
+    "     let g:LanguageClient_serverCommands.lean =
+    "                 \ ['node', npm_bin . '/lean-language-server', '--stdio']
+    " endif
+    " 
+    " "autocmd FileType lean setlocal omnifunc=LanguageClient#complete
+    " 
+    " nnoremap <silent> <leader>m :call LanguageClient_contextMenu()<CR>
+    " nnoremap <silent> <leader>gd :call LanguageClient#textDocument_definition()<CR>
+    " nnoremap <silent> <leader>h :call LanguageClient#textDocument_hover()<CR>
+    " nnoremap <silent> <leader>r :call LanguageClient#textDocument_rename()<CR>
+    " nnoremap <silent> <leader>f :call LanguageClient#textDocument_references()<CR>
 
 " }}}
 
@@ -400,37 +494,37 @@
 
 " }}}
 
-" deoplete-go - Go Autocompletion {{{
+" (disabled) deoplete-go - Go Autocompletion {{{
 
-    call dein#add('zchee/deoplete-go', { 'build': 'make' })
-
-" }}}
-
-" deoplete-jedi - Python autocompletion {{{
-
-    call dein#add('zchee/deoplete-jedi')
+    " call dein#add('zchee/deoplete-go', { 'build': 'make' })
 
 " }}}
 
-" vim-tern - Javascript autocompletion {{{
+" (disabled) deoplete-jedi - Python autocompletion {{{
 
-    " ## Commands ##
-    " TernDef: Jump to the definition of the thing under the cursor.
-    " TernDoc: Look up the documentation of something.
-    " TernType: Find the type of the thing under the cursor.
-    " TernRefs: Show all references to the variable or property under the cursor.
-    " TernRename: Rename the variable under the cursor.
+    " call dein#add('zchee/deoplete-jedi')
 
-    call dein#add('marijnh/tern_for_vim',
-                \ { 
-                \   'if': executable('npm'),
-                \   'lazy': 1,
-                \   'build': 'npm install',
-                \   'on_ft': ['javascript'],
-                \ })
+" }}}
 
-    " Display function signatures in the completion menu
-    let g:tern_show_signature_in_pum = 1
+" (disabled) vim-tern - Javascript autocompletion {{{
+
+    " " ## Commands ##
+    " " TernDef: Jump to the definition of the thing under the cursor.
+    " " TernDoc: Look up the documentation of something.
+    " " TernType: Find the type of the thing under the cursor.
+    " " TernRefs: Show all references to the variable or property under the cursor.
+    " " TernRename: Rename the variable under the cursor.
+    " 
+    " call dein#add('marijnh/tern_for_vim',
+    "             \ { 
+    "             \   'if': executable('npm'),
+    "             \   'lazy': 1,
+    "             \   'build': 'npm install',
+    "             \   'on_ft': ['javascript'],
+    "             \ })
+    " 
+    " " Display function signatures in the completion menu
+    " let g:tern_show_signature_in_pum = 1
 
 " }}}
 
@@ -478,15 +572,15 @@
 
 " vim_cpp_indent }}}
 
-" deoplete-clang - C/C++ Autocomplete integrated with deoplete {{{
+" (disabled) deoplete-clang - C/C++ Autocomplete integrated with deoplete {{{
 
-    call dein#add('zchee/deoplete-clang',
-                \ {
-                \   'if': executable('clang'),
-                \   'depends': 'deoplete.nvim',
-                \   'lazy': 1,
-                \   'on_ft': ['c', 'cpp']
-                \ })
+    " call dein#add('zchee/deoplete-clang',
+    "             \ {
+    "             \   'if': executable('clang'),
+    "             \   'depends': 'deoplete.nvim',
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['c', 'cpp']
+    "             \ })
 
 " }}}
 
@@ -673,13 +767,13 @@
 
 " }}}
 
-" html5.vim - html5 autocompletion, syntax, and indentation {{{
+" (disabled) html5.vim - html5 autocompletion, syntax, and indentation {{{
 
-    call dein#add('othree/html5.vim',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['html']
-                \ })
+    " call dein#add('othree/html5.vim',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['html']
+    "             \ })
 
 " }}}
 
