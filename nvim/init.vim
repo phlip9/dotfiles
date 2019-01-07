@@ -9,12 +9,26 @@
         set nocompatible
     endif
 
-    " dein setup
+    let plugins_home = expand('$XDG_CONFIG_HOME/nvim/plugins')
+
+    " dein install and setup
     if has('vim_starting')
-        set runtimepath+=$XDG_CONFIG_HOME/nvim/plugins/repos/github.com/Shougo/dein.vim
+        let dein_home = plugins_home . '/repos/github.com/Shougo/dein.vim'
+
+        " clone dein repo to plugins
+        if empty(glob(dein_home))
+            let cmd_clone_dein = 'git clone https://github.com/Shougo/dein.vim '.dein_home
+            call system(cmd_clone_dein)
+            if v:shell_error
+                finish
+            endif
+        endif
+
+        " add dein to rtp
+        let &runtimepath = &runtimepath . ',' . dein_home
     endif
 
-    call dein#begin(expand('$XDG_CONFIG_HOME/nvim/plugins/'))
+    call dein#begin(plugins_home)
     call dein#add('Shougo/dein.vim')
 
     " Rebind mapleader to something more accessible.
@@ -744,15 +758,13 @@
 
     " Required after all plugins have been declared
     call dein#end()
-    "call dein#remote_plugins()
 
     filetype plugin indent on       " detect filetypes
     syntax on                       " syntax highlighting
 
-    " Call on_source hook when reloading .vimrc.
-    if !has('vim_starting')
-        call dein#call_hook('on_source')
-    endif
+    " Call source and post_source hooks
+    call dein#call_hook('source')
+    call dein#call_hook('post_source')
 
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
@@ -993,7 +1005,7 @@
 
     " If there are uninstalled bundles found on startup,
     " this will conveniently prompt you to install them.
-    if dein#check_install()
+    if !has('vim_starting') && dein#check_install()
         call dein#install()
     endif
 

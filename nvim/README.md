@@ -122,6 +122,9 @@ $ cd dotfiles/nvim
 $ git clone git@github.com:Shougo/dein.vim.git plugins/repos/github.com/Shougo/dein.vim
 ```
 
+
+### Install Plugins ###
+
 Install all plugins
 
 ```
