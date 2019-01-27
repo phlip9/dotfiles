@@ -14,9 +14,6 @@
 [ -f /usr/facebook/ops/rc/master.bashrc ] \
     && source /usr/facebook/ops/rc/master.bashrc
 
-# FZF keybindings and fuzzy autocomplete
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
-
 # OS detection to make this bashrc *hopefully* cross-compatible
 OS="UNKNOWN"
 case "$OSTYPE" in
@@ -34,6 +31,23 @@ if [[ $(uname -n) =~ $FB_DEVVM_RE ]]; then
 else
     IS_DB_DEVVM=false
 fi
+
+# Open tmux automatically
+# If a session exists, just connect to it instead of creating a new one.
+if [[ -z $TMUX ]]; then
+    if [[ $(tmux ls 2>&1) =~ "no server running" ]]; then
+        tmux
+    else
+        tmux attach
+    fi
+fi
+
+## INIT }}}
+
+## SETTINGS {{{
+
+# bash vi editing mode
+set -o vi
 
 # Share history state across terminals
 # Following: https://cdaddr.com/programming/keeping-bash-history-in-sync-on-disk-and-between-multiple-terminals/
@@ -108,7 +122,7 @@ xterm*|urxvt*)
     ;;
 esac
 
-# }}}
+# SETTINGS }}}
 
 ## ALIASES {{{
 
@@ -198,7 +212,7 @@ fi
 
 ## ALIASES }}}
 
-## ENVIRONMENT VARIABLES {{{
+## ENV VARS {{{
 
 export XDG_CONFIG_HOME=$HOME/.config
 
@@ -352,9 +366,9 @@ export PATH=$PATH:$GUROBI_BIN
 export PATH=$PATH:$CARGO_BIN
 export PATH=$PATH:$DEPOT_TOOLS
 
-## SHELL VARIABLES }}}
+## ENV VARS }}}
 
-## MISC {{{
+## COMPLETIONS {{{
 
 # enable programmable completion features (you don't need to enable
 # this, if it's already enabled in /etc/bash.bashrc and /etc/profile
@@ -363,25 +377,10 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     source /etc/bash_completion
 fi
 
-# bash vi editing mode
-set -o vi
-
-# Open tmux automatically
-# If a session exists, just connect to it instead of creating a new one.
-if [[ -z $TMUX ]]; then
-    if [[ $(tmux ls 2>&1) =~ "no server running" ]]; then
-        tmux
-    else
-        tmux attach
-    fi
-fi
-
-## MISC }}}
-
-## NPM COMPLETITON {{{
+# FZF keybindings and fuzzy autocomplete
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
 # npm command completion script
-
 COMP_WORDBREAKS=${COMP_WORDBREAKS/=/}
 COMP_WORDBREAKS=${COMP_WORDBREAKS/@/}
 export COMP_WORDBREAKS
@@ -427,6 +426,6 @@ elif type compctl &>/dev/null; then
   compctl -K _npm_completion npm
 fi
 
-## }}}
+## COMPLETIONS }}}
 
 # vim:foldmethod=marker
