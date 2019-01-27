@@ -380,6 +380,11 @@ fi
 # FZF keybindings and fuzzy autocomplete
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
+# git autocomplete
+# Download git-completion.bash if you don't have it already:
+#     curl https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash -o ~/.git-completion.bash
+[ -f ~/.git-completion.bash ] && source ~/.git-completion.bash
+
 # npm command completion script
 COMP_WORDBREAKS=${COMP_WORDBREAKS/=/}
 COMP_WORDBREAKS=${COMP_WORDBREAKS/@/}
