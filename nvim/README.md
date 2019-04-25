@@ -31,7 +31,7 @@ $ cabal install ghc-mod
 $ curl https://sh.rustup.rs -sSf | sh
 $ rustup update nightly
 $ rustup default nightly
-$ rustup component add rust-src rustfmt-preview rls-preview rust-analysis
+$ rustup component add rust-src rustfmt rls rust-analysis clippy
 $ cargo +nightly install rusty-tags
 
 # Generate tags
@@ -50,12 +50,32 @@ $ sudo apt-get install clang
 ```
 
 
-### _Optional_: Install FZF / Ripgrep ###
+### _Optional_: Install ripgrep ###
 
 ```
 # (OSX)
-$ brew install fzf ripgrep
+$ brew install ripgrep
+
+# (Other)
+$ RUSTFLAGS="-C target-cpu=native" cargo install +nightly --features="simd-accel" ripgrep
+```
+
+
+### _Optional_: Install FZF ###
+
+```
+# (OSX)
+$ brew install fzf
 $ . /usr/local/opt/fzf/install
+
+# (Other)
+$ cd ~/dev
+$ git clone --depth 1 https://github.com/junegunn/fzf.git
+$ cd fzf
+# fuzzy auto-completion (y)
+# key bindings          (y)
+# update shell config   (n)
+$ ./install
 ```
 
 
@@ -64,6 +84,13 @@ $ . /usr/local/opt/fzf/install
 ```
 # (OSX)
 $ brew install --HEAD universal-ctags/universal-ctags/universal-ctags
+
+# (Other)
+$ git clone git@github.com:universal-ctags/ctags.git
+$ cd ctags
+$ ./autogen.sh
+$ ./configure
+$ make && sudo make install
 ```
 
 ## Neovim ##
@@ -77,7 +104,7 @@ $ workon nvim_py
 
 # Make sure the installed pip is up-to-date
 $ pip install --upgrade pip
-$ pip install neovim
+$ pip install pynvim
 $ deactivate
 ```
 
