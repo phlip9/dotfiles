@@ -152,6 +152,12 @@ alias cim='vim'
 alias sl='ls'
 alias shh='ssh'
 
+# git shortcut
+alias g='git'
+
+# cargo shortcut
+alias c='cargo'
+
 # tmux 256 colors
 alias tmux="TERM=screen-256color tmux -2"
 
