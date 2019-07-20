@@ -100,6 +100,13 @@ $ python3.6 install.py
 ```
 
 
+## Install autoconf/automake
+
+```
+sudo yum install autoconf automake
+```
+
+
 ## Upgrade `tmux`
 
 + The default tmux version (2.2) is too old.
@@ -109,7 +116,7 @@ $ cd ~/dev
 $ git clone git@github.com:tmux/tmux.git
 $ cd tmux
 $ git checkout 2.7
-$ sudo yum install libevent-devel ncurses-devel automake
+$ sudo yum install libevent-devel ncurses-devel
 $ ./autogen.sh
 $ ./configure
 $ make && sudo make install
