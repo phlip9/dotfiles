@@ -70,8 +70,6 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".inputrc")),
                 (path.join(dotfiles_dir, "config/git"),
                  path.join(install_dir, ".config/git")),
-                (path.join(dotfiles_dir, "config/htop"),
-                 path.join(install_dir, ".config/htop")),
                 (path.join(dotfiles_dir, "config/gtk-3.0"),
                  path.join(install_dir, ".config/gtk-3.0")),
                 (path.join(dotfiles_dir, "irssi"),
