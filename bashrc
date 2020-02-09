@@ -127,6 +127,10 @@ esac
 ## ALIASES {{{
 
 if [ "$OS" == "LINUX" ]; then
+    # fix background for ls --color
+    # TODO(phlip9): only enable on WSL?
+    export LS_COLORS='ow=01;36;40'
+
     alias ls='ls --color=auto'
 
     alias grep='grep --color=auto'
