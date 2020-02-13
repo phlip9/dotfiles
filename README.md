@@ -18,10 +18,28 @@ Add the key to:
 https://github.com/settings/keys
 
 
-## Debian|Ubuntu ##
+## Debian|Ubuntu|WSL ##
 
 
-TODO
+### Install tmux ###
+
++ Install tmux build dependencies
+
+```
+$ sudo apt install m4 libevent-dev libncurses5-dev autogen automake pkg-config libtool perl bison
+```
+
++ Build tmux from source
+
+```
+$ cd ~/dev
+$ git clone git@github.com:tmux/tmux.git
+$ cd tmux
+$ git checkout 3.0
+$ ./autogen.sh
+$ ./configure
+$ make && sudo make install
+```
 
 
 ## OSX ##
@@ -112,10 +130,9 @@ sudo yum install autoconf automake
 + The default tmux version (2.2) is too old.
 
 ```
-$ cd ~/dev
 $ git clone git@github.com:tmux/tmux.git
 $ cd tmux
-$ git checkout 2.7
+$ git checkout 3.0
 $ sudo yum install libevent-devel ncurses-devel
 $ ./autogen.sh
 $ ./configure
