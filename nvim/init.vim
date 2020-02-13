@@ -407,26 +407,38 @@
 
     set laststatus=2
 
-    let g:airline_powerline_fonts=1
-
-    " powerline symbols
-    " If these look like garbage, then you need to install the patched
-    " powerline fonts: https://github.com/powerline/fonts
     if !exists('g:airline_symbols')
         let g:airline_symbols = {}
     endif
-    let g:airline_symbols.space = ' '
-    let g:airline_symbols.branch = '[br]'
-    let g:airline_symbols.readonly = '[ro]'
-    let g:airline_symbols.linenr = '[nr]'
-    let g:airline_symbols.maxlinenr = '[mx]'
 
-    "let g:airline_left_sep = ''
-    "let g:airline_right_sep = ''
-    let g:airline_left_sep = '>'
-    let g:airline_left_alt_sep = '|'
-    let g:airline_right_sep = '<'
-    let g:airline_right_alt_sep = '|'
+    " Enable Powerline fonts if we're not on WSL
+    if !has('wsl')
+        " If these look like garbage, then you need to install the patched
+        " powerline fonts: https://github.com/powerline/fonts
+
+        let g:airline_powerline_fonts=1
+
+        let g:airline_symbols.branch = ''   
+        let g:airline_symbols.readonly = ''
+        let g:airline_symbols.linenr = ''
+        let g:airline_symbols.maxlinenr = ''
+
+        let g:airline_left_sep = ''
+        let g:airline_left_alt_sep = ''
+        let g:airline_right_sep = ''
+        let g:airline_right_alt_sep = ''
+    else
+        let g:airline_symbols.space = ' '
+        let g:airline_symbols.branch = '[br]'
+        let g:airline_symbols.readonly = '[ro]'
+        let g:airline_symbols.linenr = '[nr]'
+        let g:airline_symbols.maxlinenr = '[mx]'
+
+        let g:airline_left_sep = '>'
+        let g:airline_left_alt_sep = '|'
+        let g:airline_right_sep = '<'
+        let g:airline_right_alt_sep = '|'
+    endif
 
     " airline buffer tab line "
     let g:airline#extensions#tabline#enabled = 1
