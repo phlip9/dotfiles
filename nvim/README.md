@@ -37,6 +37,11 @@ $ cargo +nightly install rusty-tags
 $ cd my_rust_project/
 $ rusty-tags vi
 
+# Install rust-analyzer
+$ git clone https://github.com/rust-analyzer/rust-analyzer
+$ cd rust-analyzer
+$ RUSTFLAGS="-C target-cpu=native" cargo xtask install --server
+
 # (OSX) If rust-lldb doesn't work:
 $ brew unlink python
 $ brew unlink python@2

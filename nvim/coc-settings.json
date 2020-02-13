@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.raLspServerPath": "~/.cargo/bin/ra_lsp_server"
+}

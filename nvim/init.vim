@@ -312,7 +312,7 @@
 
     let g:coc_exts = [
                 \   'coc-json',
-                \   'coc-rls',
+                \   'coc-rust-analyzer',
                 \ ]
 
     function! s:coc_check_back_space() abort
