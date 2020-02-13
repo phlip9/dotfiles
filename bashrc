@@ -206,6 +206,8 @@ function workon() {
     source "$PYTHON3_ENV_DIR/$1/bin/activate"
 }
 
+# Fix some directory permissions when brew complains
+alias brewperm='sudo chown -R $(whoami) /usr/local/bin /usr/local/lib /usr/local/sbin && chmod u+w /usr/local/bin /usr/local/lib /usr/local/sbin'
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like

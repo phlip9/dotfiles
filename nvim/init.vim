@@ -970,9 +970,6 @@
                 \     :call setline(1,map(getline(1,"$"),
                 \         'substitute(v:val,"\\s\\+$","","")'))
 
-    " ethereum serpent contract language
-    autocmd BufNewFile,BufRead *.se set filetype=python
-
     " custom text folding function
     function! NeatFoldText()
         let line = ' ' . substitute(getline(v:foldstart), '^\s*"\?\s*\|\s*"\?\s*{{' . '{\d*\s*', '', 'g') . ' '

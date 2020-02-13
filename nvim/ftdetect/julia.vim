@@ -1,1 +1,1 @@
-au! BufNewFile,BufRead *.jl setfiletype julia
+au BufNewFile,BufRead *.jl setfiletype julia

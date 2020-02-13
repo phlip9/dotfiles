@@ -37,6 +37,10 @@ $ cargo +nightly install rusty-tags
 # Generate tags
 $ cd my_rust_project/
 $ rusty-tags vi
+
+# (OSX) If rust-lldb doesn't work:
+$ brew unlink python
+$ brew unlink python@2
 ```
 
 
@@ -104,6 +108,8 @@ $ workon nvim_py
 
 # Make sure the installed pip is up-to-date
 $ pip install --upgrade pip
+# Ensure that we remove the old neovim python package first
+$ pip uninstall neovim pynvim
 $ pip install pynvim
 $ deactivate
 ```

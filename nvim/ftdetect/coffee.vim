@@ -1,1 +1,1 @@
-au! BufRead,BufNewFile *.coffee	setfiletype coffee
+au BufRead,BufNewFile *.coffee setfiletype coffee
