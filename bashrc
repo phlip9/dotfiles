@@ -34,7 +34,7 @@ fi
 
 # Open tmux automatically
 # If a session exists, just connect to it instead of creating a new one.
-if [[ -z $TMUX ]]; then
+if [[ -z $TMUX ]] && [[ "$TERM_PROGRAM" != "vscode" ]]; then
     if [[ $(tmux ls 2>&1) =~ "no server running" ]]; then
         tmux
     else
