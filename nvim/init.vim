@@ -873,9 +873,10 @@
 
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
-    set mouse=                      " disable mouse
+    set mouse=a                     " enable mouse for all modes
     scriptencoding=utf-8            " set encoding to utf-8
     "set shortmess+=filmnrxoOtT      " abbreviate annoying messages
+
 
 " GENERAL }}}
 
