@@ -28,9 +28,8 @@ $ cabal install ghc-mod
 ### _Optional_: Rust setup ###
 
 ```
-$ curl https://sh.rustup.rs -sSf | sh
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash
 $ rustup update nightly
-$ rustup default nightly
 $ rustup component add rust-src rustfmt rls rust-analysis clippy
 $ cargo +nightly install rusty-tags
 
@@ -61,7 +60,7 @@ $ sudo apt-get install clang
 $ brew install ripgrep
 
 # (Other)
-$ RUSTFLAGS="-C target-cpu=native" cargo install +nightly --features="simd-accel" ripgrep
+$ RUSTFLAGS="-C target-cpu=native" cargo +nightly install --features="simd-accel" ripgrep
 ```
 
 
@@ -73,13 +72,12 @@ $ brew install fzf
 $ . /usr/local/opt/fzf/install
 
 # (Other)
-$ cd ~/dev
-$ git clone --depth 1 https://github.com/junegunn/fzf.git
-$ cd fzf
+$ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+$ ~/.fzf/install
+
 # fuzzy auto-completion (y)
 # key bindings          (y)
 # update shell config   (n)
-$ ./install
 ```
 
 
@@ -103,6 +101,9 @@ $ make && sudo make install
 Setup a Python virtual environment for neovim:
 
 ```
+# (Ubuntu/Debian/WSL) Install venv
+$ sudo apt install python3.6-venv
+
 $ mkvenv nvim_py
 $ workon nvim_py
 
@@ -129,7 +130,7 @@ Install `nvim` build dependencies
 
 ```
 # (Debian|Ubuntu)
-$ sudo apt-get install libtool libtool-bin autoconf automake cmake g++ pkg-config unzip
+$ sudo apt-get install libtool libtool-bin autoconf automake cmake g++ pkg-config unzip gettext
 
 # (RHEL|Fedora|CentOS)
 $ sudo yum install libtool ninja-build cmake
@@ -140,21 +141,26 @@ Compile and install `nvim`
 ```
 $ git clone git@github.com:neovim/neovim.git
 $ cd neovim
+$ git checkout stable
 $ make CMAKE_BUILD_TYPE=Release
 $ sudo make install
 $ make distclean
 ```
 
 
-### Install Node and Yarn
+### Install coc.nvim dependencies (nvm, nodejs, yarn)
 
 ```
 # (OSX)
 $ brew install node yarn
 
-# (Other)
-$ curl -sL install-node.now.sh/lts | sh
-$ curl --compressed -o- -L https://yarnpkg.com/install.sh | bash 
+# (Other) Using nvm
+$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
+$ nvm install --lts
+
+# (Other) Direct install
+$ curl --proto '=https' --tlsv1.2 -sSf https://install-node.now.sh/lts | bash
+$ curl --proto '=https' --tlsv1.2 -sSfL https://yarnpkg.com/install.sh | bash 
 ```
 
 
@@ -165,4 +171,11 @@ Install all plugins
 ```
 $ nvim +":call dein#update()" +qa
 $ nvim +":UpdateRemotePlugins" +qa
+```
+
+If dein.vim complains about git clone key permissions, do this then try again:
+
+```
+$ cd $XDG_CONFIG_HOME/nvim/plugins/repos/github.com/Shougo/dein.vim
+$ git remote set-url origin https://github.com/Shougo/dein.vim.git
 ```

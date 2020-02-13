@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # Install the dotfiles
 
+import argparse
 import errno
 import os
 import os.path as path
+import shutil
 import subprocess
-import argparse
 
 
 def force(generator):
@@ -42,7 +43,7 @@ def install_dotfile(dotfile):
 
     if path.exists(dest):
         if path.isdir(dest) and not path.islink(dest):
-            os.rmdir(dest)
+            shutil.rmtree(dest)
         else:
             os.remove(dest)
     else:

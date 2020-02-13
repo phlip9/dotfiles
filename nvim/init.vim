@@ -321,12 +321,11 @@
     endfunction
 
     function! s:coc_update_extensions() abort
-        let coc_exts_str = join(g:coc_exts, ' ')
+        echom 'Updating coc.nvim... [' . join(g:coc_exts, ' ') . ']'
 
-        echom 'Updating coc.nvim... [' . coc_exts_str . ']'
-
-        call coc#util#install_extension(coc_exts_str)
-        call coc#util#update()
+        call coc#util#install_extension(g:coc_exts)
+        let is_async = 1
+        call coc#util#update_extensions(is_async)
         UpdateRemotePlugins
 
         echom "Updated coc.nvim"
@@ -378,7 +377,7 @@
     call dein#add('neoclide/coc.nvim',
                 \ { 
                 \   'if': executable('node') && executable('yarn'),
-                \   'build': 'yarn install',
+                \   'build': 'yarn install --frozen-lockfile',
                 \   'hook_post_source': function('s:coc_post_source'),
                 \   'hook_post_update': function('s:coc_post_update'),
                 \ })
@@ -983,6 +982,22 @@
     endfunction
 
     set foldtext=NeatFoldText()
+
+    " WSL clipboard hack
+    if has('wsl')
+        let g:clipboard = {
+                    \   'name': 'wsl-clipboard',
+                    \   'copy': {
+                    \      '+': 'clip.exe',
+                    \      '*': 'clip.exe',
+                    \    },
+                    \   'paste': {
+                    \      '+': "sh -c \"powershell.exe Get-Clipboard\" | sed 's/\\r$//'",
+                    \      '*': "sh -c \"powershell.exe Get-Clipboard\" | sed 's/\\r$//'",
+                    \   },
+                    \   'cache_enabled': 1,
+                    \ }
+    endif
 
     " custom math digraphs
     " Directions: type <C-K><digraph-code> to write digraph

@@ -138,3 +138,11 @@ $ ./autogen.sh
 $ ./configure
 $ make && sudo make install
 ```
+
+
+### Windows/WSL-specific
+
+## Install wsltty
+
++ Pretty much the only terminal emulator that supports tmux
++ https://github.com/mintty/wsltty

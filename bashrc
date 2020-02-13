@@ -343,8 +343,12 @@ export PYTHON3_ENV_DIR=$HOME/virtualenvs
 export ENV_DIR=$PYTHON3_ENV_DIR
 ANACONDA_HOME=$HOME/anaconda3/bin
 if [ "$OS" == "LINUX" ]; then
-    # Global python3 install
-    export PYTHON3_BIN="/bin/$PYTHON3_VERSION"
+    # Try global python3 install
+    if [ -f /bin/$PYTHON3_VERSION ]; then
+        export PYTHON3_BIN="/bin/$PYTHON3_VERSION"
+    elif [ -f /usr/bin/$PYTHON3_VERSION ]; then
+        export PYTHON3_BIN="/usr/bin/$PYTHON3_VERSION"
+    fi
 elif [ "$OS" == "OSX" ]; then
     # Use Brew python3 install
     export PYTHON3_BIN="/opt/homebrew/bin/$PYTHON3_VERSION"
@@ -353,6 +357,8 @@ fi
 # FZF
 if [ "$OS" == "OSX" ]; then
     export FZF_HOME=/usr/local/opt/fzf
+else
+    export FZF_HOME=$HOME/.fzf
 fi
 
 # Use ripgrep for fzf filename searching
@@ -361,6 +367,14 @@ if [ -x "$(command -v rg)" ]; then
 '--no-ignore --hidden --follow '\
 '--glob "!.git/*" --glob "!target/*" '
 fi
+
+# NVM
+export NVM_DIR=$XDG_CONFIG_HOME/nvm
+
+# Yarn
+YARN_HOME=$HOME/.yarn
+YARN_BIN=$YARN_HOME/bin
+YARN_NODE_MODULES_BIN=$XDG_CONFIG_HOME/yarn/global/node_modules/.bin
 
 # PATH
 export PATH=$PATH:$JAVA_HOME/bin
@@ -377,6 +391,8 @@ export PATH=$PATH:$NPM_BIN
 export PATH=$PATH:$GUROBI_BIN
 export PATH=$PATH:$CARGO_BIN
 export PATH=$PATH:$DEPOT_TOOLS
+export PATH=$PATH:$YARN_BIN
+export PATH=$PATH:$YARN_NODE_MODULES_BIN
 
 ## ENV VARS }}}
 
@@ -389,6 +405,10 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     source /etc/bash_completion
 fi
 
+# NVM setup and bash completions
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
 # FZF keybindings and fuzzy autocomplete
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
@@ -396,52 +416,6 @@ fi
 # Download git-completion.bash if you don't have it already:
 #     curl https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash -o ~/.git-completion.bash
 [ -f ~/.git-completion.bash ] && source ~/.git-completion.bash
-
-# npm command completion script
-COMP_WORDBREAKS=${COMP_WORDBREAKS/=/}
-COMP_WORDBREAKS=${COMP_WORDBREAKS/@/}
-export COMP_WORDBREAKS
-
-if type complete &>/dev/null; then
-  _npm_completion () {
-    local si="$IFS"
-    IFS=$'\n' COMPREPLY=($(COMP_CWORD="$COMP_CWORD" \
-                           COMP_LINE="$COMP_LINE" \
-                           COMP_POINT="$COMP_POINT" \
-                           npm completion -- "${COMP_WORDS[@]}" \
-                           2>/dev/null)) || return $?
-    IFS="$si"
-  }
-  complete -F _npm_completion npm
-elif type compdef &>/dev/null; then
-  _npm_completion() {
-    si=$IFS
-    compadd -- $(COMP_CWORD=$((CURRENT-1)) \
-                 COMP_LINE=$BUFFER \
-                 COMP_POINT=0 \
-                 npm completion -- "${words[@]}" \
-                 2>/dev/null)
-    IFS=$si
-  }
-  compdef _npm_completion npm
-elif type compctl &>/dev/null; then
-  _npm_completion () {
-    local cword line point words si
-    read -Ac words
-    read -cn cword
-    let cword-=1
-    read -l line
-    read -ln point
-    si="$IFS"
-    IFS=$'\n' reply=($(COMP_CWORD="$cword" \
-                       COMP_LINE="$line" \
-                       COMP_POINT="$point" \
-                       npm completion -- "${words[@]}" \
-                       2>/dev/null)) || return $?
-    IFS="$si"
-  }
-  compctl -K _npm_completion npm
-fi
 
 ## COMPLETIONS }}}
 
