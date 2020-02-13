@@ -16,5 +16,8 @@
     a = add
     d = diff
     p = pull
-    po = pull --ff-only origin master
+    plo = pull --ff-only origin master
+    pso = push --force origin master
     rb = rebase
+    fu = fetch upstream
+    ru = rebase upstream/master
