@@ -219,6 +219,9 @@ function workon() {
 # Fix some directory permissions when brew complains
 alias brewperm='sudo chown -R $(whoami) /usr/local/bin /usr/local/lib /usr/local/sbin && chmod u+w /usr/local/bin /usr/local/lib /usr/local/sbin'
 
+# aws multi-factor auth script
+alias aws-mfa='source $HOME/.local/bin/aws-mfa'
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
