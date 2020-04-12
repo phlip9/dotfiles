@@ -162,6 +162,12 @@ alias g='git'
 # cargo shortcut
 alias c='cargo'
 
+# big money cargo fix + fmt + clippy + lint wombo combo
+alias ccc='echo "Running cargo fix" && cargo fix --allow-staged --allow-dirty --all-targets \
+    && echo "Running cargo fmt" && cargo fmt \
+    && echo "Running cargo xclippy --all-targets" && cargo xclippy --all-targets \
+    && echo "Running cargo x lint" && cargo x lint'
+
 # tmux 256 colors
 alias tmux="TERM=screen-256color tmux -2"
 
