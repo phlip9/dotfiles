@@ -318,11 +318,7 @@ export GRB_LICENSE_FILE=$HOME/gurobi.lic
 GUROBI_BIN=$GUROBI_HOME/bin
 GUROBI_LIB=$GUROBI_HOME/lib
 
-# Rust
-if [ -x "$(command -v rustc)" ]; then
-    RUST_SYSROOT=$(rustc --print sysroot)
-    export RUST_SRC_PATH=$RUST_SYSROOT/lib/rustlib/src/rust/src/
-fi
+# Rust Cargo
 export CARGO_HOME=$HOME/.cargo
 CARGO_BIN=$CARGO_HOME/bin
 
@@ -361,13 +357,6 @@ else
     export FZF_HOME=$HOME/.fzf
 fi
 
-# Use ripgrep for fzf filename searching
-if [ -x "$(command -v rg)" ]; then
-    export FZF_DEFAULT_COMMAND='rg --files --fixed-strings --ignore-case '\
-'--no-ignore --hidden --follow '\
-'--glob "!.git/*" --glob "!target/*" '
-fi
-
 # NVM
 export NVM_DIR=$XDG_CONFIG_HOME/nvm
 
@@ -393,6 +382,19 @@ export PATH=$PATH:$CARGO_BIN
 export PATH=$PATH:$DEPOT_TOOLS
 export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
+
+# set RUST_SRC_PATH based on current rustup version
+if [ -x "$(command -v rustc)" ]; then
+    RUST_SYSROOT=$(rustc --print sysroot)
+    export RUST_SRC_PATH=$RUST_SYSROOT/lib/rustlib/src/rust/src/
+fi
+
+# Use ripgrep for fzf filename searching
+if [ -x "$(command -v rg)" ]; then
+    export FZF_DEFAULT_COMMAND='rg --files --fixed-strings --ignore-case '\
+'--no-ignore --hidden --follow '\
+'--glob "!.git/*" --glob "!target/*" '
+fi
 
 ## ENV VARS }}}
 
