@@ -30,7 +30,7 @@ $ cabal install ghc-mod
 ```
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash
 $ rustup update nightly
-$ rustup component add rust-src rustfmt rls rust-analysis clippy
+$ rustup component add rust-src rustfmt clippy
 $ cargo +nightly install rusty-tags
 
 # Generate tags
