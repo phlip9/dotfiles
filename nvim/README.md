@@ -161,12 +161,14 @@ $ make distclean
 # (OSX)
 $ brew install node yarn
 
-# (Other) Using nvm
-$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
+# (Other) Install node using nvm
+$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
 $ nvm install --lts
 
-# (Other) Direct install
+# (Other) Install node using direct install
 $ curl --proto '=https' --tlsv1.2 -sSf https://install-node.now.sh/lts | bash
+
+# (Other) Install yarn
 $ curl --proto '=https' --tlsv1.2 -sSfL https://yarnpkg.com/install.sh | bash 
 ```
 
