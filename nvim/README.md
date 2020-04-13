@@ -29,9 +29,17 @@ $ cabal install ghc-mod
 
 ```
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash
+
+#  default host triple: default
+#    default toolchain: stable
+#              profile: default
+# modify PATH variable: no
+
 $ rustup update nightly
 $ rustup component add rust-src rustfmt clippy
-$ cargo +nightly install rusty-tags
+
+# Install rusty-tags
+$ cargo install rusty-tags
 
 # Generate tags
 $ cd my_rust_project/
@@ -74,6 +82,9 @@ $ ~/.fzf/install
 # fuzzy auto-completion (y)
 # key bindings          (y)
 # update shell config   (n)
+
+# Install bat and exa
+$ RUSTFLAGS="-C target-cpu=native" cargo install bat exa
 ```
 
 
