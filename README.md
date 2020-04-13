@@ -14,9 +14,21 @@ https://github.com/phlip9/dotfiles/blob/master/nvim/README.md
 $ ssh-keygen -t ed25519
 ```
 
-Add the key to:
-https://github.com/settings/keys
++ Add the key to: https://github.com/settings/keys
 
++ Append the following to `~/.ssh/config`:
+
+```
+Host *
+    UseKeychain yes
+    AddKeysToAgent yes
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+```
+# (OSX) Add private key to keychain
+$ ssh-add -AK ~/.ssh/id_ed25519
+```
 
 ## Debian|Ubuntu|WSL ##
 
