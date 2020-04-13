@@ -61,10 +61,6 @@ $ sudo apt-get install clang
 ### _Optional_: Install ripgrep ###
 
 ```
-# (OSX)
-$ brew install ripgrep
-
-# (Other)
 $ RUSTFLAGS="-C target-cpu=native" cargo +nightly install --features="simd-accel" ripgrep
 ```
 
@@ -72,11 +68,6 @@ $ RUSTFLAGS="-C target-cpu=native" cargo +nightly install --features="simd-accel
 ### _Optional_: Install FZF ###
 
 ```
-# (OSX)
-$ brew install fzf
-$ . /usr/local/opt/fzf/install
-
-# (Other)
 $ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 $ ~/.fzf/install
 

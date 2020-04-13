@@ -60,7 +60,7 @@ $ sudo -H python3.6 -m pip install --upgrade pip
 $ python3.6 install.py
 
 # source our personal bashrc settings
-$ echo ". ~/.bashrc" >> ~/.bash_profile
+$ echo "[ -f ~/.bashrc ] && source ~/.bashrc" >> ~/.bash_profile
 $ source ~/.bash_profile
 ```
 
@@ -68,8 +68,8 @@ $ source ~/.bash_profile
 ### Install Brew ###
 
 ```
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-$ sudo chown -R $(whoami) /usr/local/lib /usr/local/sbin
+$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
+$ brewperm
 ```
 
 

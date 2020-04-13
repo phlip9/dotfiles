@@ -122,6 +122,9 @@ xterm*|urxvt*)
     ;;
 esac
 
+# Tell macOS to stfu when it's using bash
+export BASH_SILENCE_DEPRECATION_WARNING=1
+
 # SETTINGS }}}
 
 ## ALIASES {{{
@@ -360,11 +363,7 @@ elif [ "$OS" == "OSX" ]; then
 fi
 
 # FZF
-if [ "$OS" == "OSX" ]; then
-    export FZF_HOME=/usr/local/opt/fzf
-else
-    export FZF_HOME=$HOME/.fzf
-fi
+export FZF_HOME=$HOME/.fzf
 
 # NVM
 export NVM_DIR=$XDG_CONFIG_HOME/nvm
