@@ -45,6 +45,9 @@ $ cargo install rusty-tags
 $ cd my_rust_project/
 $ rusty-tags vi
 
+# Install cargo watch
+$ RUSTFLAGS="-C target-cpu=native" cargo install cargo-watch
+
 # Install rust-analyzer
 $ git clone https://github.com/rust-analyzer/rust-analyzer
 $ cd rust-analyzer
