@@ -102,7 +102,7 @@ brew install irssi
 ```
 
 
-### Install Karabiner for Caps Lock (tap) -> Escape ###
+### Install Karabiner for Caps Lock -> Escape (tap) + Ctrl (hold) ###
 
 + Download and install from:
   https://pqrs.org/osx/karabiner/index.html
@@ -152,9 +152,109 @@ $ make && sudo make install
 ```
 
 
-### Windows/WSL-specific
+## Windows
 
-## Install wsltty
 
-+ Pretty much the only terminal emulator that supports tmux
-+ https://github.com/mintty/wsltty
+### Install SharpKeys for Caps Lock -> Escape remap that works everywhere
+
++ https://github.com/randyrants/sharpkeys/releases
+
++ Remap "Special: Caps Lock" to "Special: Escape"
+
++ Write to Registry
+
+
+### Install AutoHotKey for Escape -> Escape (tap) + Ctrl (hold) remap
+
++ https://www.autohotkey.com/download/ahk-install.exe
+
++ Compile the following autohotkey script
+
+```
+; key_remaps.ahk
+
+; Remap Escape -> Escape (when pressed alone)
+;              -> Ctrl   (when pressed with other keys)
+
+*Esc::
+    Send {Blind}{Ctrl Down}
+    cDown := A_TickCount
+Return
+
+*Esc up::
+    ; Modify the threshold time (in milliseconds) as necessary
+    If ((A_TickCount-cDown) < 100)
+        Send {Blind}{Ctrl Up}{Esc}
+    Else
+        Send {Blind}{Ctrl Up}
+Return
+
+; Remap desktop switch commands
+
+^Left::^#Left
+^Right::^#Right
+```
+
++ Create a shortcut and add it to the Startup directory: "C:\Users\phlip9\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup"
+
+
+### Install WSL
+
++ https://docs.microsoft.com/en-us/windows/wsl/install-win10
+
++ Restart, enter BIOS, and enable Intel HyperV Virtualization
+
++ Open PowerShell as Admin
+
+```
+> dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+> dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+```
+
++ Restart
+
++ Open PowerShell as Admin
+
+```
+> wsl --set-default-version 2
+```
+
++ Install Ubuntu 20.04 LTS (https://www.microsoft.com/store/apps/9n6svws3rx71)
+
+
+### Install "Cascadia Mono PL" font (https://github.com/microsoft/cascadia-code/releases)
+
++ Install "ttf/Cascadia Mono PL.ttf" in the release zip
+
+
+### Install Windows Terminal Preview
+
++ https://www.microsoft.com/en-us/p/windows-terminal-preview/9n8g5rfz9xk3
+
++ Open settings
+
++ Set "defaultProfile" to Ubuntu WSL profile's uuid
+
+```
+{
+    // ..
+    "confirmCloseAllTabs": false,
+    "alwaysShowTabs": false,
+    "showTabsInTitlebar": true,
+    "showTerminalTitleInTitlebar": true,
+    "theme": "dark",
+    "profiles": {
+        "defaults": {
+            "fontFace": "Cascadia Mode PL",
+            "colorScheme": "One Half Dark",
+            "fontSize": 10,
+            "padding": "16, 16, 16, 16",
+            "scrollbarState": "hidden"
+        },
+        "list": [ /* .. */ ],
+    },
+    // ..
+}
+```
+
++ Inside WSL install, follow "Debian|Ubuntu|WSL" setup
