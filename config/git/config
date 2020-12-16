@@ -7,6 +7,8 @@
     editor = nvim
 [push]
 	default = simple
+[merge]
+	conflictstyle = diff3
 [alias]
     lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
     s = status
@@ -21,3 +23,4 @@
     rb = rebase
     fu = fetch upstream
     ru = rebase upstream/master
+    pr = "!echo \"Checking out PR #$1\" && git fetch -q upstream refs/pull/\"$1\"/head && git checkout FETCH_HEAD #"
