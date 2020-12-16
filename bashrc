@@ -185,6 +185,8 @@ if [ "$OS" == "LINUX" ]; then
     # Add an "alert" alias for long running commands.  Use like so:
     #   sleep 10; alert
     alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+elif [ "$OS" == "OSX" ]; then
+    alias alert='osascript -e "display notification \"Command completed\" with title \"Terminal Alert\""'
 fi
 
 # less with color
@@ -196,6 +198,11 @@ alias lmk='latexmk -pdf -pvc -shell-escape'
 # makes a directory and cd's into it
 function mcd() {
     mkdir "$@" && cd "$_" || exit
+}
+
+# retry a command until it fails
+function retry() {
+    while "$@"; do :; done
 }
 
 # pyvenv helpers
@@ -224,6 +231,12 @@ alias brewperm='sudo chown -R $(whoami) /usr/local/bin /usr/local/lib /usr/local
 
 # aws multi-factor auth script
 alias aws-mfa='source $HOME/.local/bin/aws-mfa'
+
+# delete all ctags "tags" files and remove all empty directories
+function cleantags() {
+    find . -name "tags" -and -not -path "*/.git/*" -print0 | xargs -0 rm -v
+    find . -type d -and -not -path "*/.git/*" -empty -print0 | xargs -0 rmdir
+}
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
