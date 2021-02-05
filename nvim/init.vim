@@ -307,6 +307,13 @@
     " ]c, [c     - next/prev linter errors 
     " <Tab>, <S-Tab> - next/prev completion
     " <C-Space>  - trigger completion
+    " <C-f>      - scroll float window up
+    " <C-b>      - scroll float window down
+    "
+    " <verb>if   - <verb> in function
+    " <verb>af   - <verb> around function
+    " <verb>ic   - <verb> in class
+    " <verb>ac   - <verb> around class
 
     let g:coc_need_update = 0
 
@@ -357,7 +364,8 @@
 
         " Use <cr> for confirm completion, `<C-g>u` means break undo chain at current position.
         " Coc only does snippet and additional edit on confirm.
-        inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
+        inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
+                    \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
         " Use `[c` and `]c` for navigate diagnostics
         nnoremap <silent> [c :call CocAction('diagnosticPrevious')<CR>
@@ -372,6 +380,25 @@
         nnoremap <silent> <leader>ac :call CocAction('codeAction', '')<CR>
         nnoremap <silent> <leader>al :call CocAction('codeLensAction')<CR>
         nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
+
+        " This lets you select or use vim verbs inside/around functions/"classes".
+        " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
+        xmap if <Plug>(coc-funcobj-i)
+        omap if <Plug>(coc-funcobj-i)
+        xmap af <Plug>(coc-funcobj-a)
+        omap af <Plug>(coc-funcobj-a)
+        xmap ic <Plug>(coc-classobj-i)
+        omap ic <Plug>(coc-classobj-i)
+        xmap ac <Plug>(coc-classobj-a)
+        omap ac <Plug>(coc-classobj-a)
+
+        " Remap <C-f> and <C-b> to scroll float windows/popups.
+        nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+        nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
+        inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
+        inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
+        vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+        vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
     endfunction
 
     call dein#add('neoclide/coc.nvim',
@@ -875,6 +902,7 @@
     set hidden                      " change buffers w/o having to write first
     set mouse=a                     " enable mouse for all modes
     scriptencoding=utf-8            " set encoding to utf-8
+    set shortmess+=c                " don't pass messages to |ins-completion-menu|.
     "set shortmess+=filmnrxoOtT      " abbreviate annoying messages
 
 
