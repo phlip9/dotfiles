@@ -57,6 +57,14 @@ $ make && sudo make install
 ## OSX ##
 
 
+### Install iTerm2 ###
+
++ Download and install from:
+  https://iterm2.com/downloads.html
+
++ View > Customize Touch Bar > Remove everything from the touchbar
+
+
 ### Clone phlip9/dotfiles ###
 
 ```

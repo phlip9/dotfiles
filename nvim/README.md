@@ -51,7 +51,7 @@ $ RUSTFLAGS="-C target-cpu=native" cargo install cargo-watch
 # Install rust-analyzer
 $ git clone https://github.com/rust-analyzer/rust-analyzer
 $ cd rust-analyzer
-$ RUSTFLAGS="-C target-cpu=native" cargo xtask install --server
+$ RUSTFLAGS="-C target-cpu=native" cargo xtask install --server --jemalloc
 
 # (OSX) If rust-lldb doesn't work:
 $ brew unlink python
@@ -76,6 +76,13 @@ $ RUSTFLAGS="-C target-cpu=native" cargo +nightly install --features="simd-accel
 ```
 
 
+### _Optional_: Install Other Rust Utilities ###
+
+```
+$ RUSTFLAGS="-C target-cpu=native" cargo install bat exa fastmod
+```
+
+
 ### _Optional_: Install FZF ###
 
 ```
@@ -85,9 +92,6 @@ $ ~/.fzf/install
 # fuzzy auto-completion (y)
 # key bindings          (y)
 # update shell config   (n)
-
-# Install bat and exa
-$ RUSTFLAGS="-C target-cpu=native" cargo install bat exa
 ```
 
 
@@ -104,6 +108,7 @@ $ ./autogen.sh
 $ ./configure
 $ make && sudo make install
 ```
+
 
 ## Neovim ##
 
