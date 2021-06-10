@@ -959,6 +959,10 @@
 
         " Don't underline the fold lines
         hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold 
+
+        " Make LSP inlay hints more subtle vs Comment
+        hi CocRustTypeHint ctermbg=NONE ctermfg=59 cterm=NONE
+        hi CocRustChainingHint ctermbg=NONE ctermfg=59 cterm=NONE
     endfunction
 
     " override colors on colorscheme change
