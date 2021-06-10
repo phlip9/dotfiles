@@ -22,5 +22,5 @@
     pso = push --force origin master
     rb = rebase
     fu = fetch upstream
-    ru = rebase upstream/master
+    ru = rebase upstream/main
     pr = "!echo \"Checking out PR #$1\" && git fetch -q upstream refs/pull/\"$1\"/head && git checkout FETCH_HEAD #"
