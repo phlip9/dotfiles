@@ -386,6 +386,13 @@ YARN_HOME=$HOME/.yarn
 YARN_BIN=$YARN_HOME/bin
 YARN_NODE_MODULES_BIN=$XDG_CONFIG_HOME/yarn/global/node_modules/.bin
 
+# Move Prover Tools
+export DOTNET_ROOT=$HOME/.dotnet
+export DOTNET_BIN=$DOTNET_ROOT/tools
+export BOOGIE_EXE=$DOTNET_BIN/boogie
+export Z3_EXE=$LOCAL_BIN/z3
+export CVC4_EXE=$LOCAL_BIN/cvc4
+
 # PATH
 export PATH=$PATH:$JAVA_HOME/bin
 export PATH=$PATH:$GO_BIN
@@ -403,6 +410,7 @@ export PATH=$PATH:$CARGO_BIN
 export PATH=$PATH:$DEPOT_TOOLS
 export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
+export PATH=$PATH:$DOTNET_BIN
 
 # set RUST_SRC_PATH based on current rustup version
 if [ -x "$(command -v rustc)" ]; then
