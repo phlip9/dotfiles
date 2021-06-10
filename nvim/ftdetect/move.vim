@@ -1,2 +1,2 @@
-" move/move ir looks enough like rust that this is fine for now
-au BufNewFile,BufRead *.mvir setfiletype rust
+au BufRead,BufNewFile *.move set filetype=move
+au BufRead,BufNewFile *.mvir set filetype=move
