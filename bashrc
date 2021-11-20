@@ -131,8 +131,7 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 
 if [ "$OS" == "LINUX" ]; then
     # fix background for ls --color
-    # TODO(phlip9): only enable on WSL?
-    export LS_COLORS='ow=01;36;40'
+    [ $IS_WSL ] && export LS_COLORS='ow=01;36;40'
 
     alias ls='ls --color=auto'
 
@@ -254,7 +253,7 @@ fi
 export XDG_CONFIG_HOME=$HOME/.config
 
 # Facebook devserver proxy
-if [ "$IS_FB_DEVVM" == "true" ]; then
+if [ $IS_FB_DEVVM ]; then
     export no_proxy=".fbcdn.net,.facebook.com,.thefacebook.com,.tfbnw.net,.fb.com,.fburl.com,.facebook.net,.sb.fbsbx.com,localhost"
     export http_proxy=fwdproxy:8080
     export https_proxy=fwdproxy:8080
@@ -393,6 +392,9 @@ export BOOGIE_EXE=$DOTNET_BIN/boogie
 export Z3_EXE=$LOCAL_BIN/z3
 export CVC4_EXE=$LOCAL_BIN/cvc4
 
+# arm-linux-gnueabihf toolchain
+ARM_TOOLCHAIN_BIN=$HOME/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin
+
 # PATH
 export PATH=$PATH:$JAVA_HOME/bin
 export PATH=$PATH:$GO_BIN
@@ -411,6 +413,7 @@ export PATH=$PATH:$DEPOT_TOOLS
 export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
 export PATH=$PATH:$DOTNET_BIN
+export PATH=$PATH:$ARM_TOOLCHAIN_BIN
 
 # set RUST_SRC_PATH based on current rustup version
 if [ -x "$(command -v rustc)" ]; then
