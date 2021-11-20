@@ -25,12 +25,12 @@ case "$OSTYPE" in
     *)       echo "Uknown OS: $OSTYPE" ;;
 esac
 
+# Detect Windows Subsystem for Linux (WSL)
+[ -f /mnt/c/Windows/System32/wsl.exe ] && IS_WSL="true"
+
+# Detect FB devserver
 FB_DEVVM_RE="^devvm[0-9]+.*facebook\.com$"
-if [[ $(uname -n) =~ $FB_DEVVM_RE ]]; then
-    IS_FB_DEVVM=true
-else
-    IS_DB_DEVVM=false
-fi
+[[ $(uname -n) =~ $FB_DEVVM_RE ]] && IS_FB_DEVVM="true"
 
 # Open tmux automatically
 # If a session exists, just connect to it instead of creating a new one.
@@ -426,6 +426,16 @@ if [ -x "$(command -v rg)" ]; then
 fi
 
 ## ENV VARS }}}
+
+## SSH AGENT {{{
+
+# When in WSL, Start the keychain ssh-agent frontend in lazy mode.
+if [[ $IS_WSL && -x "$(command -v keychain)" ]]; then
+    keychain --nogui --noask --quiet
+    source $HOME/.keychain/$HOSTNAME-sh
+fi
+
+## }}}
 
 ## COMPLETIONS {{{
 

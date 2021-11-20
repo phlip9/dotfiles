@@ -267,4 +267,13 @@ Return
 }
 ```
 
++ Inside WSL, install `keychain`, an ssh-agent frontend
+
+```sh
+$ sudo apt-get install keychain
+```
+
+Then add `AddKeysToAgent yes` to `~/.ssh/config`. Make sure it has the right
+permissions too, `chmod 644 ~/.ssh/config`.
+
 + Inside WSL install, follow "Debian|Ubuntu|WSL" setup
