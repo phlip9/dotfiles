@@ -182,16 +182,18 @@ $ make && sudo make install
 ; key_remaps.ahk
 
 ; Remap Escape -> Escape (when pressed alone)
-;              -> Ctrl   (when pressed with other keys)
+;              -> Ctrl (when pressed with other keys)
+
+g_EscDown := 0
 
 *Esc::
     Send {Blind}{Ctrl Down}
-    cDown := A_TickCount
+    g_EscDown := A_TickCount
 Return
 
 *Esc up::
     ; Modify the threshold time (in milliseconds) as necessary
-    If ((A_TickCount-cDown) < 100)
+    If ((A_TickCount - g_EscDown) < 500 and A_PriorKey == "Escape")
         Send {Blind}{Ctrl Up}{Esc}
     Else
         Send {Blind}{Ctrl Up}
