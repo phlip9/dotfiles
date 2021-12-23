@@ -16,6 +16,18 @@ https://github.com/powerline/fonts
 I use the SourceCodePro font, so I would download and install the fonts from:
 https://github.com/powerline/fonts/tree/master/SourceCodePro
 
+To efficiently download and install all patched Source Code Pro fonts:
+
+```bash
+$ cd ~/.local/share/fonts
+$ curl https://github.com/powerline/fonts/tree/master/SourceCodePro \
+    | sed -n -e 's/^.*href="\(.*\.otf\)".*$/https:\/\/github.com\1?raw=true/p' \
+    | xargs wget
+$ ls \
+    | sed -n -e 's/^\(.*\)?raw=true/\1/p' \
+    | xargs -p -I'{}' mv '{}'?raw=true '{}'
+```
+
 
 ### _Optional_: Haskell setup ###
 
@@ -65,7 +77,7 @@ Install clang
 
 ```
 # (Debian|Ubuntu)
-$ sudo apt-get install clang
+$ sudo apt install clang
 ```
 
 
@@ -117,7 +129,7 @@ Setup a Python virtual environment for neovim:
 
 ```
 # (Ubuntu/Debian/WSL) Install venv
-$ sudo apt install python3.6-venv
+$ sudo apt install python3.9-venv
 
 $ mkvenv nvim_py
 $ workon nvim_py
@@ -145,7 +157,8 @@ Install `nvim` build dependencies
 
 ```
 # (Debian|Ubuntu)
-$ sudo apt-get install libtool libtool-bin autoconf automake cmake g++ pkg-config unzip gettext
+$ sudo apt ninja-build gettext libtool libtool-bin autoconf automake cmake g++ pkg-config unzip curl doxygen
+$ 
 
 # (RHEL|Fedora|CentOS)
 $ sudo yum install libtool ninja-build cmake
@@ -170,7 +183,7 @@ $ make distclean
 $ brew install node yarn
 
 # (Other) Install node using nvm
-$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 $ nvm install --lts
 
 # (Other) Install node using direct install
@@ -178,6 +191,10 @@ $ curl --proto '=https' --tlsv1.2 -sSf https://install-node.now.sh/lts | bash
 
 # (Other) Install yarn
 $ curl --proto '=https' --tlsv1.2 -sSfL https://yarnpkg.com/install.sh | bash 
+
+# If dein doesn't auto-build coc.nvim, you may need to invoke yarn manually
+$ cd nvim/plugins/repos/github.com/neoclide/coc.nvim
+$ yarn install --frozen-lockfile
 ```
 
 

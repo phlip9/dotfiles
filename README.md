@@ -11,7 +11,7 @@ https://github.com/phlip9/dotfiles/blob/master/nvim/README.md
 ### Create a new ssh keypair and add to Github ###
 
 ```
-$ ssh-keygen -t ed25519
+$ ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519 -C "phlip9@phliptop"
 ```
 
 + Add the key to: https://github.com/settings/keys
@@ -32,8 +32,17 @@ $ ssh-add -AK ~/.ssh/id_ed25519
 
 ## Debian|Ubuntu|WSL ##
 
+### Install tmux (apt) ###
 
-### Install tmux ###
++ If the installation is recent enough, the `tmux` in the package repos
+  should be new enough (>=3.0).
+
+```bash
+$ sudo apt install tmux
+```
+
+
+### Install tmux (source) ###
 
 + Install tmux build dependencies
 
@@ -53,6 +62,53 @@ $ ./configure
 $ make && sudo make install
 ```
 
+
+### Install URxvt
+
++ Install from apt
+
+```bash
+$ sudo apt install rxvt-unicode xsel
+```
+
+
+### Remap Caps Lock -> Escape (tap) + Ctrl (hold)
+
++ Install `interception-tools` and `interception-caps2esc`
+
+```bash
+$ sudo add-apt-repository ppa:deafmute/interception
+$ sudo apt install interception-tools interception-caps2esc
+```
+
++ Default config
+
+```yaml
+# File: /etc/interception/udevmon.d/deafmute-ppa-caps2esc.yaml
+- JOB: intercept -g $DEVNODE | caps2esc | uinput -d $DEVNODE
+  DEVICE:
+    EVENTS:
+      EV_KEY: [KEY_CAPSLOCK, KEY_ESC]
+```
+
+
+### Install Obsidian.md and sync notes
+
+```bash
+# (flatpak)
+$ flatpak install Obsidian
+
+$ git clone git@github.com:phlip9/notes.git
+```
+
++ Open vault in notes directory.
+
+
+### Install htop
+
+```bash
+$ sudo apt install lm-sensors htop
+```
 
 ## OSX ##
 
@@ -74,10 +130,10 @@ $ git clone https://github.com/phlip9/dotfiles.git
 $ cd dotfiles
 
 # upgrade pip
-$ sudo -H python3.6 -m pip install --upgrade pip
+$ sudo -H python3 -m pip install --upgrade pip
 
 # run dotfiles install
-$ python3.6 install.py
+$ python3 install.py
 
 # source our personal bashrc settings
 $ echo "[ -f ~/.bashrc ] && source ~/.bashrc" >> ~/.bash_profile
@@ -270,7 +326,7 @@ Return
 + Inside WSL, install `keychain`, an ssh-agent frontend
 
 ```sh
-$ sudo apt-get install keychain
+$ sudo apt install keychain
 ```
 
 Then add `AddKeysToAgent yes` to `~/.ssh/config`. Make sure it has the right

@@ -96,7 +96,7 @@ URxvt*scrollWithBuffer:     true
 ! URxvt*cursorUnderline:    boolean
 URxvt*cursorBlink:          true
 ! URxvt*pointerBlank:       boolean
-URxvt*background:           rgba:1000/1100/1200/e000
+URxvt*background:           rgba:1000/1100/1200/ff00
 ! URxvt*foreground:         color
 ! URxvt*color0:             color
 ! URxvt*color1:             color

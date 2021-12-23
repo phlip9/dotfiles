@@ -37,8 +37,8 @@
     " python3 setup
     " Try to use a neovim-specific pyvenv first, otherwise fallback to a global
     " python install.
-    let python3_bin_pyenv = expand('$PYTHON3_ENV_DIR/nvim_py/bin/python3.6')
-    let python3_bin_global = '/bin/python3.6'
+    let python3_bin_pyenv = expand('$PYTHON3_ENV_DIR/nvim_py/bin/python3.9')
+    let python3_bin_global = '/bin/python3.9'
     if executable(python3_bin_pyenv)
         let g:python3_host_prog = python3_bin_pyenv
     elseif executable(python3_bin_global)

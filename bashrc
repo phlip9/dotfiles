@@ -237,6 +237,10 @@ function cleantags() {
     find . -type d -and -not -path "*/.git/*" -empty -print0 | xargs -0 rmdir
 }
 
+function urldecode() {
+    python3 -c "import sys; from urllib.parse import unquote; print(unquote(sys.stdin.read()));"
+}
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
@@ -357,7 +361,7 @@ if [ "$OS" == "LINUX" ]; then
 fi
 
 # python3
-export PYTHON3_VERSION=python3.6
+export PYTHON3_VERSION=python3.9
 # pyvenv virtual environments
 export PYTHON3_ENV_DIR=$HOME/virtualenvs
 export ENV_DIR=$PYTHON3_ENV_DIR
@@ -476,3 +480,5 @@ fi
 ## COMPLETIONS }}}
 
 # vim:foldmethod=marker
+
+export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"

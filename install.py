@@ -65,14 +65,10 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".Xresources")),
                 (path.join(dotfiles_dir, "Xresources"),
                  path.join(install_dir, ".Xdefaults")),
-                (path.join(dotfiles_dir, "Xmodmap"),
-                 path.join(install_dir, ".Xmodmap")),
                 (path.join(dotfiles_dir, "inputrc"),
                  path.join(install_dir, ".inputrc")),
                 (path.join(dotfiles_dir, "config/git"),
                  path.join(install_dir, ".config/git")),
-                (path.join(dotfiles_dir, "config/gtk-3.0"),
-                 path.join(install_dir, ".config/gtk-3.0")),
                 (path.join(dotfiles_dir, "irssi"),
                  path.join(install_dir, ".irssi")),
                 (path.join(dotfiles_dir, "ctags.d"),
@@ -82,25 +78,6 @@ def install_dotfiles(dotfiles_dir, install_dir):
                 ]
 
     force(map(install_dotfile, dotfiles))
-
-
-def install_package(package):
-    install_cmd = 'sudo apt-get install %s' % package
-
-    print(install_cmd)
-    if subprocess.call(install_cmd, shell=True):
-        print('failed to install package ' + package)
-
-
-def install_dependencies():
-    packages = ['git', 'rsync', 'rxvt-unicode-256color', 'xsel']
-    install_cmd = 'sudo apt-get install %s'
-    install_cmd = install_cmd % (' '.join(packages))
-
-    print(install_cmd)
-
-    if subprocess.call(install_cmd, shell=True):
-        print('Failed to install packages')
 
 
 def main():
@@ -113,19 +90,10 @@ def main():
                        default=os.getenv('HOME'), type=str,
                        help="""Where to install the dotfiles (defaults to
                        $HOME).""")
-    parse.add_argument('--install-packages', action='store_true',
-                       dest='install_packages', default=False,
-                       help="""If selected, install dotfile dependencies with
-                       the OS package manager.""")
-
     args = parse.parse_args()
 
     dotfiles_dir = path.abspath(args.dotfiles_dir)
     install_dir = path.abspath(args.install_dir)
-    install_packages = args.install_packages
-
-    if install_packages:
-        install_dependencies()
 
     install_dotfiles(dotfiles_dir, install_dir)
 
