@@ -241,6 +241,39 @@ $ make && sudo make install
 
 ## Windows
 
+### Disable dumb windows services that listen on ports and just cause vulns
+
++ https://www.drivethelife.com/windows-drivers/disable-tcp-port-135-avoid-wannacry-ransomware-windows-10-8-7-vista-xp.html
+
++ Create two new rules in Windows Defender Firewall that block ports 135-139, 445 on TCP and UDP. 
+
+### Install MSYS2
+
++ https://www.msys2.org/
+
++ Enable > Run MSYS2 now
+
+```bash
+$ pacman --sync --refresh --sysupgrade
+```
+
++ Run MSYS2 MSYS from the Start Menu
+
+```bash
+$ pacman --sync --sysupgrade
+```
+
++ Basic `pacman` reference (https://www.msys2.org/docs/package-management/)
+
++ Add `C:\msys64\usr\bin` to System Properties > Environment Variables > User Variables > Path
+
+
+### Install nmap
+
++ https://nmap.org/download.html
+
++ Install the Npcap drivers first, then nmap.
+
 
 ### Install SharpKeys for Caps Lock -> Escape remap that works everywhere
 
