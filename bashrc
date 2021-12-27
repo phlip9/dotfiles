@@ -228,6 +228,9 @@ function workon() {
 # Fix some directory permissions when brew complains
 alias brewperm='sudo chown -R $(whoami) /usr/local/bin /usr/local/lib /usr/local/sbin && chmod u+w /usr/local/bin /usr/local/lib /usr/local/sbin'
 
+# Fix /dev/kvm device permissions in WSL2
+alias kvmperm='sudo chgrp kvm /dev/kvm && sudo chmod g+rw /dev/kvm'
+
 # aws multi-factor auth script
 alias aws-mfa='source $HOME/.local/bin/aws-mfa'
 
@@ -274,15 +277,8 @@ if [ "$OS" == "LINUX" ]; then
     export NO_AT_BRIDGE=1
 fi
 
-# Java
-JVM=/usr/lib/jvm
-IBM_JAVA=$JVM/java-1.7.0-ibm-amd64/jre
-OPENJDK_JAVA=$JVM/java-1.7.0-openjdk-amd64
-ORACLE_JAVA=$JVM/java-1.8.0-oracle-amd64
-export JAVA_HOME=$ORACLE_JAVA
-export CLASSPATH=/usr/local/lib:$JAVA_HOME/lib
-IDEA_BIN=$HOME/idea/bin
-ECLIPSE=/opt/eclipse
+# Java SDKMAN
+export SDKMAN_DIR="$HOME/.sdkman"
 
 # Go
 if [ "$OS" == "LINUX" ]; then
@@ -305,13 +301,15 @@ if [ "$OS" == "LINUX" ]; then
 fi
 
 # Android
-export ANDROID_HOME=$HOME/android
-export ANDROID_NDK=$ANDROID_HOME/ndk
+export ANDROID_SDK_ROOT=$HOME/android
+export ANDROID_NDK=$ANDROID_SDK_ROOT/ndk
 export ANDROID_NDK_HOME=$ANDROID_NDK
 ANDROID_STUDIO=$HOME/android-studio
 ANDROID_ARM_TOOLCHAIN=$HOME/arm-linux-androideabi
 ANDROID_STANDALONE_TOOLCHAIN=$ANDROID_ARM_TOOLCHAIN
-ANDROID_PATH=$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$ANDROID_NDK:$ANDROID_STANDALONE_TOOLCHAIN/bin
+ANDROID_SDK_VERSION=31.0.0
+ANDROID_PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/build-tools/$ANDROID_SDK_VERSION:$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/tools/bin
+ANDROID_PATH=$ANDROID_PATH:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_NDK:$ANDROID_STANDALONE_TOOLCHAIN/bin
 
 ### Added by the Heroku Toolbelt
 export HEROKU_TOOLBELT=/usr/local/heroku/bin
@@ -404,7 +402,6 @@ export CVC4_EXE=$LOCAL_BIN/cvc4
 ARM_TOOLCHAIN_BIN=$HOME/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin
 
 # PATH
-export PATH=$PATH:$JAVA_HOME/bin
 export PATH=$PATH:$GO_BIN
 export PATH=$PATH:$GO_HOME_BIN
 export PATH=$PATH:$ANDROID_PATH
@@ -480,6 +477,9 @@ if [ -x "$(command -v brew)" ]; then
         done
     fi
 fi
+
+# Java SDKMAN
+[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
 # Nix env setup
 [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
