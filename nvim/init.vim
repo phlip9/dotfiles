@@ -935,11 +935,14 @@
 
     " Colorscheme highlight overrides
     function! CustomColors()
-        hi ColorColumn ctermbg=10 ctermfg=15
+        hi ColorColumn ctermbg=8 ctermfg=15
         
         " Make sure text doesn't fill ctermbg so terminal transparency works
         hi Normal ctermbg=NONE ctermfg=15 cterm=NONE
         hi Comment ctermbg=NONE ctermfg=12 cterm=NONE
+
+        " Reduce popup menu brightness
+        hi Pmenu ctermbg=8
 
         " make tabline background clear so terminal transparency isn't blocked
         " out
@@ -949,7 +952,7 @@
         hi CursorLine ctermbg=10 ctermfg=None cterm=NONE
 
         " Make matching text readable
-        hi MatchParen ctermbg=10 ctermfg=NONE cterm=NONE
+        hi MatchParen ctermbg=8 ctermfg=NONE cterm=NONE
 
         " Sign column color should be the same as the line number column
         hi SignColumn ctermbg=NONE
