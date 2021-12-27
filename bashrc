@@ -241,6 +241,10 @@ function urldecode() {
     python3 -c "import sys; from urllib.parse import unquote; print(unquote(sys.stdin.read()));"
 }
 
+function minbright() {
+    sudo su -c "echo 4 > /sys/class/backlight/intel_backlight/brightness"
+}
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
@@ -477,8 +481,9 @@ if [ -x "$(command -v brew)" ]; then
     fi
 fi
 
+# Nix env setup
+[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+
 ## COMPLETIONS }}}
 
 # vim:foldmethod=marker
-
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"

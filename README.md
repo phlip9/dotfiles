@@ -110,6 +110,29 @@ $ git clone git@github.com:phlip9/notes.git
 $ sudo apt install lm-sensors htop
 ```
 
+
+### Firefox touch screen support and smooth scrolling
+
++ Add `MOZ_USE_XINPUT2 DEFAULT=1` to `/etc/security/pam_env.conf` and then relog.
+
+
+### Install nix
+
+```bash
+$ curl --proto '=https' --tlsv1.2 -sSfL https://nixos.org/nix/install | bash
+```
+
++ Remove the line the installer adds in `$HOME/.profile`.
+
++ Upgrade to unstable
+
+```bash
+$ nix-env -f '<nixpkgs>' -iA nixUnstable
+$ mkdir ~/.config/nix
+$ echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+```
+
+
 ## OSX ##
 
 
