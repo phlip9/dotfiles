@@ -14,6 +14,9 @@ https://github.com/phlip9/dotfiles/blob/master/nvim/README.md
 $ ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519 -C "phlip9@phliptop"
 ```
 
++ Note: don't use a password on Windows since the GUI password check doesn't seem
+  to work for tty-less use (Obsidian Git)
+
 + Add the key to: https://github.com/settings/keys
 
 + Append the following to `~/.ssh/config`:
@@ -265,8 +268,46 @@ $ pacman --sync --sysupgrade
 
 + Basic `pacman` reference (https://www.msys2.org/docs/package-management/)
 
-+ Add `C:\msys64\usr\bin` to System Properties > Environment Variables > User Variables > Path
++ Add profile to Windows Terminal `settings.json`
 
+```json
+{
+    // ..
+    "profiles": 
+    {
+        "list": 
+            [
+            // ..
+            {
+                "closeOnExit": "always",
+                    "commandline": "C:/msys64/msys2_shell.cmd -defterm -here -no-start -msys",
+                    "guid": "{71160544-14d8-4194-af25-d05feeac7233}",
+                    "icon": "C:/msys64/msys2.ico",
+                    "name": "MSYS / MSYS2",
+                    "startingDirectory": "C:/msys64/home/%USERNAME%"
+            }
+            ],
+            // ..
+    }
+}
+```
+
+### Install scoop
+
++ In PowerShell
+
+```
+PS> Set-ExecutionPolicy RemoteSigned -scope CurrentUser
+PS> iwr -useb get.scoop.sh | iex
+```
+
++ Install mingit-busybox
+
+```
+PS> scoop install mingit-busybox
+PS> scoop install openssh
+PS> [environment]::setenvironmentvariable('GIT_SSH', (resolve-path (scoop which ssh)), 'USER')
+```
 
 ### Install nmap
 
@@ -357,7 +398,7 @@ Return
 
 + Set "defaultProfile" to Ubuntu WSL profile's uuid
 
-```
+```json
 {
     // ..
     "confirmCloseAllTabs": false,
