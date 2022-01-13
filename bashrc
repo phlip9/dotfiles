@@ -248,6 +248,14 @@ function minbright() {
     sudo su -c "echo 4 > /sys/class/backlight/intel_backlight/brightness"
 }
 
+function aoe4rank() {
+    local JSON='{"region":"7","versus":"players","matchType":"unranked","teamSize":"1v1","searchPlayer":"'
+    local JSON+="$1"
+    local JSON+='","page":1,"count":3}'
+    curl --no-progress-meter -d $JSON -H 'Content-Type: application/json' https://api.ageofempires.com/api/ageiv/Leaderboard \
+        | jq '.items[] | { name: .userName, elo: .elo, rank: .rank, win_rate: .winPercent, wins: .wins, losses: .losses  }'
+}
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
