@@ -256,6 +256,25 @@ function aoe4rank() {
         | jq '.items[] | { name: .userName, elo: .elo, rank: .rank, win_rate: .winPercent, wins: .wins, losses: .losses  }'
 }
 
+[ "$IS_WSL" ] && alias firefox='/mnt/c/Program\ Files/Mozilla\ Firefox/firefox.exe'
+[ "$IS_WSL" ] && alias explorer='/mnt/c/Windows/explorer.exe'
+
+function wsl_open() {
+    local WSL_FS_PREFIX="file://///wsl.localhost/Ubuntu-18.04"
+
+    if [[ "$1" =~ ^(http|https)://.+$ ]]; then
+        firefox "$1"
+    elif [[ -f "$1" ]]; then
+        local ABS_PATH=$(realpath -e "$1")
+        firefox "$WSL_FS_PREFIX$ABS_PATH"
+    else
+        local ABS_PATH=$(realpath -e "$1")
+        explorer "$WSL_FS_PREFIX$ABS_PATH"
+    fi
+}
+
+[ "$IS_WSL" ] && alias open='wsl_open'
+
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
