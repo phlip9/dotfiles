@@ -122,6 +122,13 @@ $ make && sudo make install
 ```
 
 
+### _Optional_: Install picolisp (Scheme auto-formatting) ###
+
+```bash
+# (Ubuntu/Debian/WSL)
+$ sudo apt install picolisp
+```
+
 ## Neovim ##
 
 

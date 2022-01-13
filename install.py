@@ -56,7 +56,7 @@ def install_dotfiles(dotfiles_dir, install_dir):
     dotfiles = [(path.join(dotfiles_dir, "bashrc"),
                  path.join(install_dir, ".bashrc")),
                 (path.join(dotfiles_dir, "nvim"),
-                 path.join(install_dir, ".config/nvim")),
+                 path.join(install_dir, ".config", "nvim")),
                 (path.join(dotfiles_dir, "tmux.conf"),
                  path.join(install_dir, ".tmux.conf")),
                 (path.join(dotfiles_dir, "urxvt"),
@@ -67,8 +67,8 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".Xdefaults")),
                 (path.join(dotfiles_dir, "inputrc"),
                  path.join(install_dir, ".inputrc")),
-                (path.join(dotfiles_dir, "config/git"),
-                 path.join(install_dir, ".config/git")),
+                (path.join(dotfiles_dir, "config", "git"),
+                 path.join(install_dir, ".config", "git")),
                 (path.join(dotfiles_dir, "irssi"),
                  path.join(install_dir, ".irssi")),
                 (path.join(dotfiles_dir, "ctags.d"),
@@ -76,6 +76,15 @@ def install_dotfiles(dotfiles_dir, install_dir):
                 (path.join(dotfiles_dir, "rusty-tags"),
                  path.join(install_dir, ".rusty-tags")),
                 ]
+
+    # instead of linking the whole dotfiles/bin directory, we'll link each
+    # individual script
+    scripts = os.listdir(path.join(dotfiles_dir, "bin"))
+    scripts = filter(lambda script: path.isfile(path.join(dotfiles_dir, "bin", script)), scripts)
+    scripts = ((path.join(dotfiles_dir, "bin", script),
+                path.join(install_dir, ".local", "bin", script))
+               for script in scripts)
+    dotfiles.extend(scripts)
 
     force(map(install_dotfile, dotfiles))
 
