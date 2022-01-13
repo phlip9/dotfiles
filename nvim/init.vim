@@ -841,6 +841,25 @@
 
 " }}}
 
+" idris2-vim - Idris2 syntax highlighting, checking, and interactive editing {{{
+
+    " Mappings:
+    " \t - show type
+    " \r - reload file?
+    " \h - show function documentation
+    " \c - case split
+    " \e - evaluate an expression
+    " \f - refine item
+    " \o - obvious proof search
+    " \p - proof search
+    " \i - open idris response window
+    call dein#add('edwinb/idris2-vim')
+
+    " TODO: check https://github.com/idris-community/idris2-lsp maybe it will
+    " eventually support autocompletion?
+
+" }}}
+
 " julia-vim - Julia syntax highlighting and ftplugin {{{
 
     call dein#add('JuliaLang/julia-vim')
@@ -1054,7 +1073,7 @@
     " N natural numbers
     digraphs na 8469
     " Z integers
-    digraphs in 8484
+    digraphs IN 8484
     " ▸ small black right-pointing triangle
     digraphs tr 9656
     " ⟩ vector right bracket
@@ -1073,6 +1092,10 @@
     digraphs no 172
     " ≠ not equal
     digraphs ne 8800
+    " ∉ not in
+    digraphs ni 8713
+    " ∈ in
+    digraphs in 8712
     " ∧ and
     digraphs an 8743
     " ∨ or
