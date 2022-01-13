@@ -428,6 +428,16 @@ export CVC4_EXE=$LOCAL_BIN/cvc4
 # arm-linux-gnueabihf toolchain
 ARM_TOOLCHAIN_BIN=$HOME/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin
 
+# ATS1
+export ATSHOME=$HOME/dev/ats1
+export ATSHOMERELOC=ATS-0.2.13
+
+# ATS2
+export PATSHOME=$HOME/dev/ats2
+PATSBIN=$PATSHOME/bin
+export PATSCONTRIB=$HOME/dev/ats2-contrib
+export PATSHOMERELOC=$PATSCONTRIB
+
 # PATH
 export PATH=$PATH:$GO_BIN
 export PATH=$PATH:$GO_HOME_BIN
@@ -446,6 +456,7 @@ export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
 export PATH=$PATH:$DOTNET_BIN
 export PATH=$PATH:$ARM_TOOLCHAIN_BIN
+export PATH=$PATH:$PATSBIN
 
 # set RUST_SRC_PATH based on current rustup version
 if [ -x "$(command -v rustc)" ]; then

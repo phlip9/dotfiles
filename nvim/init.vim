@@ -523,6 +523,18 @@
 
 " }}}
 
+" neoformat - Plugin for formatting code {{{
+
+    call dein#add('sbdchd/neoformat')
+
+    autocmd FileType c,cpp
+                \ autocmd BufWritePre <buffer> undojoin | Neoformat
+
+    let g:neoformat_enabled_cpp = ['clangformat']
+    let g:neoformat_enabled_c = ['clangformat']
+
+" }}}
+
 " vim-go - Go linting, highlighting, building, formatting {{{
 
     call dein#add('fatih/vim-go')
@@ -600,13 +612,13 @@
 
 " vim-coffee-script }}}
 
-" vim_cpp_indent - Google C++ indent style {{{
+" (disabled) vim_cpp_indent - Google C++ indent style {{{
 
-    call dein#add('phlip9/google-vim_cpp_indent',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['cpp']
-                \ })
+    " call dein#add('phlip9/google-vim_cpp_indent',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['cpp']
+    "             \ })
 
 " vim_cpp_indent }}}
 
@@ -857,6 +869,15 @@
 
     " TODO: check https://github.com/idris-community/idris2-lsp maybe it will
     " eventually support autocompletion?
+
+" }}}
+
+" ats-vim - ATS2 syntax highlighting and checking {{{
+
+    call dein#add('phlip9/ats-vim')
+
+    let g:ats_use_ctags = 0
+    let g:ats_autoformat = 0
 
 " }}}
 
