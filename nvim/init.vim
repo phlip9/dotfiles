@@ -781,12 +781,16 @@
 " fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
 
     " Mappings:
-    "        O - open file
-    " <space>o - file ctags outline
-    " <space>t - project ctags search
-    "        T - open buffers search
-    " <space>/ - grep with pattern
-    " <space>' - grep using word under cursor
+    "         O - open files search (ignoring files in .gitignore)
+    "  <space>O - open files search (all files)
+    "  <space>o - file ctags outline
+    "  <space>t - project ctags search
+    "         T - open buffers search
+    "  <space>/ - grep with pattern
+    "  <space>' - grep using word under cursor
+    " <space>cm - grep through commits
+    " <space>cb - grep through commits for the current buffer
+    "  <space>h - grep through vim help
 
     let fzf_home = expand('$FZF_HOME')
     let fzf_enabled = isdirectory(fzf_home) && executable('fzf')
@@ -795,24 +799,81 @@
     call dein#add(fzf_home, { 'if': fzf_enabled })
     call dein#add('junegunn/fzf.vim', { 'if': fzf_enabled })
 
-    nnoremap <silent> O :FzfFiles<cr>
     nnoremap <silent> T :FzfBuffers<cr>
     nnoremap <silent> <space>o :FzfBTags<cr>
     nnoremap <silent> <space>t :FzfTags<cr>
+    nnoremap <silent> <space>cm :FzfCommits<cr>
+    nnoremap <silent> <space>cb :FzfBCommits<cr>
+    nnoremap <silent> <space>h :FzfHelptags<cr>
 
+    " build command!'s and mappings for fzf file searching using some external
+    " file listing command `cmd`. creates two variants: (1) search files,
+    " excluding those in .gitignore files and (2) search _all_ files
+    function! s:FzfFilesCommand(cmd, no_ignore_opt)
+        " command! seems to evaluate lazily, so we need to pre-render these
+        let g:phlip9_fzf_files_cmd_ignore = a:cmd
+        let g:phlip9_fzf_files_cmd_noignore = a:cmd . ' ' . a:no_ignore_opt
+
+        " Searching across files, ignoring those in .gitignore.
+        " Unlike stock FzfGFiles, this must work outside git repos (important!).
+        command! -bang -nargs=? -complete=dir FzfGFiles2
+                    \ let $FZF_DEFAULT_COMMAND = g:phlip9_fzf_files_cmd_ignore |
+                    \ call fzf#vim#files(<q-args>, fzf#vim#with_preview('right:50%'), <bang>0)
+
+        " Searching across _all_ files (with some basic ignores)
+        command! -bang -nargs=? -complete=dir FzfFiles2
+                    \ let $FZF_DEFAULT_COMMAND = g:phlip9_fzf_files_cmd_noignore |
+                    \ call fzf#vim#files(<q-args>, fzf#vim#with_preview('right:50%'), <bang>0)
+
+        nnoremap <silent>        O :FzfGFiles2<cr>
+        nnoremap <silent> <space>O :FzfFiles2<cr>
+    endfunction
+
+    " fzf file searching using `fd` or `rg`, preferring `fd` cus it has nicer colors : p
+    if executable('fd')
+        " fd's `--color` option emits ANSI color codes; tell fzf to show them
+        " properly.
+        let g:fzf_files_options = ['--ansi']
+        let fd_command = 'fd ' .
+                    \ '--type f --hidden --follow --color "always" --strip-cwd-prefix ' .
+                    \ '--exclude ".git/*" --exclude "target/*" --exclude "tags" '
+        call s:FzfFilesCommand(fd_command, '--no-ignore')
+    elseif executable('rg')
+        " --color 'never': rg doesn't support meaningful colors when listing
+        "                  files, so let's just turn them off.
+        let rg_command = 'rg ' .
+                    \ '--hidden --follow --color "never" --files ' .
+                    \ '--glob "!.git/*" --glob "!target/*" --glob "!tags" '
+        call s:FzfFilesCommand(rg_command, '--no-ignore')
+    else
+        nnoremap <silent>        O :echoerr "Error: neither `fd` nor `rg` installed"<cr>
+        nnoremap <silent> <space>O :echoerr "Error: neither `fd` nor `rg` installed"<cr>
+    endif
+
+    " fzf grep search using `rg`
     if executable('rg')
-        command! -bang -nargs=* FzfFind call fzf#vim#grep(
+        let has_column = 1
+        command! -bang -nargs=* RgFzfFind call fzf#vim#grep(
                     \ 'rg --column --line-number --no-heading --fixed-strings ' .
-                    \ '--ignore-case --no-ignore --hidden --follow ' .
+                    \ '--ignore-case --hidden --follow --color "always" ' .
                     \ '--glob "!.git/*" --glob "!target/*" --glob "!tags" ' .
-                    \ '--color "always" ' .
                     \ shellescape(<q-args>),
                     \ 1,
                     \ fzf#vim#with_preview('right:50%'),
                     \ <bang>0)
 
-        nnoremap <space>/ :FzfFind<space>
-        nnoremap <silent> <space>' :FzfFind <C-R><C-W><cr>
+        command! -bang -nargs=* RgFzfFindAll call fzf#vim#grep(
+                    \ 'rg --column --line-number --no-heading --fixed-strings ' .
+                    \ '--ignore-case --hidden --follow --color "always" ' .
+                    \ '--no-ignore ' .
+                    \ '--glob "!.git/*" --glob "!target/*" --glob "!tags" ' .
+                    \ shellescape(<q-args>),
+                    \ 1,
+                    \ fzf#vim#with_preview('right:50%'),
+                    \ <bang>0)
+
+        nnoremap <space>/ :RgFzfFind<space>
+        nnoremap <silent> <space>' :RgFzfFind <C-R><C-W><cr>
     endif
 
 " }}}

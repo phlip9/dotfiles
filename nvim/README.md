@@ -91,7 +91,7 @@ $ RUSTFLAGS="-C target-cpu=native" cargo +nightly install --features="simd-accel
 ### _Optional_: Install Other Rust Utilities ###
 
 ```
-$ RUSTFLAGS="-C target-cpu=native" cargo install bat exa fastmod
+$ RUSTFLAGS="-C target-cpu=native" cargo install bat exa fastmod fd-find
 ```
 
 
