@@ -875,8 +875,9 @@
 " ats-vim - ATS2 syntax highlighting and checking {{{
 
     call dein#add('phlip9/ats-vim')
+    " call dein#add(expand('$HOME/dev/ats-vim'))
 
-    let g:ats_use_ctags = 0
+    let g:ats_use_ctags = 1
     let g:ats_autoformat = 0
 
 " }}}
