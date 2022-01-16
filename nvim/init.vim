@@ -110,9 +110,14 @@
 
 " NERDCommenter }}}
 
-" (disabled) Syntastic - syntax and error checking {{{
+" Syntastic - syntax and error checking {{{
 
-    " call dein#add('scrooloose/syntastic')
+    call dein#add('vim-syntastic/syntastic')
+
+    " By default, Syntastic doesn't populate the location list unless you
+    " explicitly call `:Errors`.
+    let g:syntastic_always_populate_loc_list = 1
+
     " let syntastic_javascript_checkers = ['jshint', 'jscs']
     " 
     " let g:syntastic_python_python_exec = g:python3_host_prog
@@ -1260,6 +1265,10 @@
     tnoremap <C-j> <C-\><C-n><C-W>j
     tnoremap <C-k> <C-\><C-n><C-W>k
     tnoremap <C-l> <C-\><C-n><C-W>l
+
+    " Go to the next/previous error (in the same buffer)
+    nnoremap <silent> <leader>en :lbelow<CR>
+    nnoremap <silent> <leader>ep :lafter<CR>
 
 " KEYBINDINGS }}}
 
