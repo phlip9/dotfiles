@@ -90,7 +90,7 @@
     " <leader>c$ - Comment from cursor to end of line
     " <leader>cA - Comment from cursor to end of line and go into insert mode
 
-    call dein#add('scrooloose/nerdcommenter')
+    call dein#add('preservim/nerdcommenter')
 
     " Add spaces after comment delimiters by default
     let g:NERDSpaceDelims = 1
@@ -102,9 +102,11 @@
     let g:NERDCommentEmptyLines = 1
 
     " custom comment formats
-    let g:NERDCustomDelimiters = {
-                \     'lean': { 'left': '--', 'leftAlt': '/-', 'rightAlt': '-/' },
-                \ }
+    " these are now pushed upstream; left as examples:
+    " let g:NERDCustomDelimiters = {
+    "             \ 'lean': { 'left': '--', 'leftAlt': '/-', 'rightAlt': '-/' },
+    "             \ 'ats': { 'left': '//', 'leftAlt': '(*', 'rightAlt': '*)' },
+    "             \ }
 
 " NERDCommenter }}}
 
