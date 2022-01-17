@@ -11,42 +11,15 @@
 --kinddef-ATS=c,constant,constant
 --kinddef-ATS=p,proof,proof
 
-
-# Ignore comments
-# --regex-ATS=/^[[:blank:]]*\/\/.*//{exclusive}
-# Ignore single-line block comments. Unfortunately, it doesn't seem easy to ignore
-# multiline block comments
-# --regex-ATS=/^[[:blank:]]*\(\*[^\*\)]*\*\).*//{exclusive}
-
 # Function definitions
---mline-regex-ATS=/^fun[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\[\{]/\2/f/
---mline-regex-ATS=/^fn[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\[\{]/\2/f/
---mline-regex-ATS=/^castfn[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\[\{]/\2/f/
---mline-regex-ATS=/^prfun[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\[\{]/\2/f/
---mline-regex-ATS=/^prfn[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\[\{]/\2/f/
---mline-regex-ATS=/^fnx[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\[\{]/\2/f/
-# --regex-ATS=/^and *([[:lower:]][[:alnum:]_]+)[[:blank:]]*[\(\[\{)]/\1/f/
---mline-regex-ATS=/^implement[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*(\([^\)]*\))*[[:space:]]*([[:alnum:]\$_]+)[[:space:]]*[\(\[\{\<]/\3/f/
+--mline-regex-ATS=/^(fun|fn|castfn|prfun|prfn|fnx|and|implement)[[:space:]]*(\{[[:space:]]*[^\}]*[[:space:]]*\})*[[:space:]]*(\([^\)]*\))*[[:space:]]*([[:alnum:]\$_]+)[[:space:]]*[\(\[\{\<]/\4/f/{mgroup=4}
 
 # Constant definitions
 # (only trying to parse constant forward declarations)
---mline-regex-ATS=/^val[[:space:]]*([[:alnum:]_]+)[[:space:]]*\:/\1/c/
+--mline-regex-ATS=/^val[[:space:]]*([[:alnum:]_]+)[[:space:]]*\:/\1/c/{mgroup=1}
 
 # Type and constant definitions
---mline-regex-ATS=/^typedef[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
---mline-regex-ATS=/^datatype[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
---mline-regex-ATS=/^sortdef[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
---mline-regex-ATS=/^propdef[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
---mline-regex-ATS=/^viewtypedef[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
---mline-regex-ATS=/^vtypedef[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
---mline-regex-ATS=/^dataviewtype[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
---mline-regex-ATS=/^datavtype[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/t/
+--mline-regex-ATS=/^(typedef|datatype|sortdef|propdef|viewtypedef|vtypedef|dataviewtype|datavtype)[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\2/t/{mgroup=2}
 
 # Proof definitions
---mline-regex-ATS=/^praxi[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\{\=\:]/\1/p/
-# --regex-ATS=/^prval *([[:lower:]][[:alnum:]_]+)[[:blank:]]*[\(\[\{)]/\1/p/
---mline-regex-ATS=/^dataprop[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/p/
---mline-regex-ATS=/^absviewtype[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/p/
---mline-regex-ATS=/^absvtype[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/p/
---mline-regex-ATS=/^abstype[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/p/
---mline-regex-ATS=/^absprop[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\=\:]/\1/p/
+--mline-regex-ATS=/^(praxi|dataprop|absviewtype|absvtype|abstype|absprop)[[:space:]]*([[:alnum:]_]+)[[:space:]]*[\(\{\=\:]/\2/p/{mgroup=2}
