@@ -21,9 +21,15 @@ To efficiently download and install all patched Source Code Pro fonts:
 ```bash
 # (Ubuntu/Debian/Pop!_OS)
 $ cd ~/.local/share/fonts
+
+# (macOS)
+$ cd ~/Downloads && mkdir fonts && cd fonts
+
+# Download fonts (with extra query parameter cruft in filenames)
 $ curl --proto '=https' --tlsv1.3 https://github.com/powerline/fonts/tree/master/SourceCodePro \
     | sed -n -e 's/^.*href="\(.*\.otf\)".*$/https:\/\/github.com\1?raw=true/p' \
     | xargs wget
+# Remove query parameter cruft from the filenames
 $ ls \
     | sed -n -e 's/^\(.*\)?raw=true/\1/p' \
     | xargs -p -I'{}' mv '{}'?raw=true '{}'
@@ -32,6 +38,12 @@ $ ls \
 $ sudo apt install gnome-tweaks
 
 # Set Fonts > Monospace to 'Source Code Pro - Regular'
+
+# (macOS) Manually open each font in finder
+$ open .
+
+# (macOS) Clean up
+$ cd .. && rm -rf fonts
 ```
 
 
@@ -67,7 +79,7 @@ $ rusty-tags vi
 $ RUSTFLAGS="-C target-cpu=native" cargo install cargo-watch
 
 # Install rust-analyzer
-$ git clone https://github.com/rust-lang/rust-analyzer
+$ git clone --depth=1 https://github.com/rust-lang/rust-analyzer
 $ cd rust-analyzer
 $ RUSTFLAGS="-C target-cpu=native" cargo xtask install --server --jemalloc
 
@@ -205,6 +217,7 @@ $ curl --proto '=https' --tlsv1.3 -sSf https://install-node.now.sh/lts | bash
 
 # (Other) Install yarn
 $ curl --proto '=https' --tlsv1.2 -sSfL https://yarnpkg.com/install.sh | bash 
+# make sure you remove the junk yarn adds to our .bashrc
 
 # If dein doesn't auto-build coc.nvim, you may need to invoke yarn manually
 $ cd nvim/plugins/repos/github.com/neoclide/coc.nvim

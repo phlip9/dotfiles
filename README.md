@@ -4,10 +4,36 @@ phlip9's dotfiles
 ## New Machine Setup #
 
 
+### Immediately install all system and package updates
+
+
+### Install and setup Firefox
+
++ Download and install from: <https://www.mozilla.org/en-US/firefox/new/>
+
++ Open Firefox. Add to bar. Set as default browser. Login to FF sync. Hide bookmarks.
+
++ (macOS) disable Esc to exit fullscreen. Go to `about:config`. Toggle
+  `browser.fullscreen.exit_on_escape`.
+
+
+### (macOS) Install Xcode developer CLI tools
+
++ In Terminal.app, just enter
+
+```bash
+$ git --help
+```
+
+A popup will appear asking if you want to install the macOS Xcode developer tools.
+Hit accept and install. This step will install some basic unix CLI tools, among
+other things.
+
+
 ### Create a new ssh keypair and add to Github ###
 
 ```bash
-$ ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519 -C "phlip9@phliptop"
+$ ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519 -C "phlip9@<hostname>"
 ```
 
 + Note: don't use a password on Windows since the GUI password check doesn't seem
@@ -26,11 +52,12 @@ Host *
 
 ```bash
 # (OSX) Add private key to keychain
+#       EDIT: -A and -K are deprecated on macOS. need to do some experimenting here
 $ ssh-add -AK ~/.ssh/id_ed25519
 ```
 
 
-### Clone phlip9/dotfiles ###
+### Install phlip9/dotfiles ###
 
 ```bash
 $ mkdir ~/dev
@@ -177,18 +204,6 @@ $ sudo systemctl enable --now udevmon
 ```
 
 
-### Install Obsidian.md and sync notes
-
-```bash
-# (flatpak)
-$ flatpak install Obsidian
-
-$ git clone git@github.com:phlip9/notes-private.git notes
-```
-
-+ Open vault in notes directory.
-
-
 ### Install htop
 
 ```bash
@@ -293,6 +308,20 @@ $ gh auth login
 ## OSX ##
 
 
+### Install Karabiner for Caps Lock -> Escape (tap) + Ctrl (hold) ###
+
++ Download and install from:
+  https://pqrs.org/osx/karabiner/index.html
+
++ Under "Complex Modifications", hit "+ Add Rule", then "Import more rules from internet"
+
++ Import the "Change caps_lock key (rev. 5)" rules
+
++ Unmap Escape
+
++ Remap Caps Lock -> Control when used as a modifier and Caps Lock -> Escape when hit alone
+
+
 ### Install iTerm2 ###
 
 + Download and install from:
@@ -300,12 +329,30 @@ $ gh auth login
 
 + View > Customize Touch Bar > Remove everything from the touchbar
 
++ Use `/bin/bash` as the default shell over `zsh`.
+
++ Import `onehalfdark.mod.itermcolors`. Go to Preferences > Profiles > Default > Colors > Color Presets > Import. Select the file. Then make sure you actually enable the imported colorscheme in the dropdown.
 
 ### Install Brew ###
 
 ```bash
-$ curl --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
-$ brewperm
+$ /bin/bash -c "$(curl --proto '=https' --tlsv1.3 -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# disable analytics
+$ /opt/homebrew/bin/brew analytics off
+```
+
+
+### Install python via brew
+
+```bash
+$ brew install python3
+
+# ensure your shell is reloaded with the brew python first in $PATH
+
+# update pip stuff
+$ python3 -m pip install --upgrade setuptools
+$ python3 -m pip install --upgrade pip
 ```
 
 
@@ -315,30 +362,27 @@ $ brewperm
 $ brew install tmux
 ```
 
-
-### Install Magnets from the Apple App Store ###
-
-
-### Install Irssi for IRC ###
+### Install wget ###
 
 ```bash
-brew install irssi
+$ brew install wget
+```
+
+### Install htop ###
+
+```bash
+$ brew install htop
 ```
 
 
-### Install Karabiner for Caps Lock -> Escape (tap) + Ctrl (hold) ###
+### (Optional) Install Magnets from the Apple App Store ###
 
-+ Download and install from:
-  https://pqrs.org/osx/karabiner/index.html
 
-+ Under complex rules, hit import from internet
+### (Optional) Install Irssi for IRC ###
 
-+ Import the Caps Lock rev. 2 rules
-
-+ Unmap Escape
-
-+ Remap Caps Lock -> Control when as a modifier and Escape when hit alone
-
+```bash
+$ brew install irssi
+```
 
 
 ## RHEL|Fedora|CentOS ##
@@ -582,3 +626,30 @@ permissions too, `chmod 644 ~/.ssh/config`.
 $ sudo apt install xdg-utils wslview
 $ sudo ln -s "/mnt/c/Program Files/Mozilla Firefox/firefox.exe" /usr/local/bin/firefox
 ```
+
+
+## Setup Obsidian Notes
+
+
+### Pull notes
+
+```bash
+$ git clone git@github.com:phlip9/notes-private.git notes
+```
+
+
+### Install Obsidian
+
++ Use the `flatpak` app
+
+```bash
+# (flatpak)
+$ flatpak install Obsidian
+```
+
++ On other platforms, just download from their site: <https://obsidian.md/>
+
+
+### Open notes vault
+
++ Obsidian > Open folder as vault

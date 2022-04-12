@@ -14,6 +14,10 @@
 [ -f /usr/facebook/ops/rc/master.bashrc ] \
     && source /usr/facebook/ops/rc/master.bashrc
 
+# Source homebrew shell environment
+[ -f /opt/homebrew/bin/brew ] \
+    && eval "$(/opt/homebrew/bin/brew shellenv)"
+
 # OS detection to make this bashrc *hopefully* cross-compatible
 OS="UNKNOWN"
 case "$OSTYPE" in
