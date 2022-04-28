@@ -431,6 +431,8 @@
     " Ctrl-p - Select previous word
     " Ctrl-x - Skip current word
 
+    " says it's deprecated and should be replaced w/
+    " https://github.com/mg979/vim-visual-multi
     call dein#add('terryma/vim-multiple-cursors')
 
 " vim-multiple-cursors }}}
@@ -972,6 +974,8 @@
 
 " Recover.vim - Show a diff when recovering swp files {{{
 
+    " Keep swap file
+    " :FinishRecovery
     call dein#add('chrisbra/Recover.vim')
 
 " }}}
@@ -1208,6 +1212,10 @@
     digraphs eq 8801
     " ↑ up arrow
     digraphs up 8593
+    " ≈ approx
+    digraphs ap 8776
+    " ∑ sum, sigma (upper)
+    digraphs su 8721
 
 " BEHAVIOR }}}
 
@@ -1231,6 +1239,10 @@
 
     vnoremap <silent><Left> <gv
     vnoremap <silent><Right> >gv
+
+    " replace currently selected text w/o clobbering the yank register
+    " note: "_ is the blackhole register
+    vnoremap <silent><leader>p "_dP
 
     " Bind Up and Down keys to add line above and below
     nnoremap <silent><Up> O<Esc>j
@@ -1267,8 +1279,8 @@
     tnoremap <C-l> <C-\><C-n><C-W>l
 
     " Go to the next/previous error (in the same buffer)
-    nnoremap <silent> <leader>en :lbelow<CR>
-    nnoremap <silent> <leader>ep :lafter<CR>
+    nnoremap <silent> <leader>en :lnext<CR>
+    nnoremap <silent> <leader>ep :lprevious<CR>
 
 " KEYBINDINGS }}}
 
