@@ -244,6 +244,17 @@ $ make && sudo make install
 
 ## Windows
 
+### Enable IPv6
+
+1. Open Control Panel > Network and Sharing Center > Change adapter settings
+2. Right click on the WAN-facing adapter ("Ethernet" in my case) and select "Properties"
+3. In the list, check "Internet Protocol Verstion 6 (TCP/IPv6)"
+4. Confirm with OK
+
+### Disable `wpad.lan` DNS spam
+
++ Settings > Network & Internet > Proxy > Automatically detect settings -> Off
+
 ### Disable dumb windows services that listen on ports and just cause vulns
 
 + https://www.drivethelife.com/windows-drivers/disable-tcp-port-135-avoid-wannacry-ransomware-windows-10-8-7-vista-xp.html
@@ -430,3 +441,10 @@ Then add `AddKeysToAgent yes` to `~/.ssh/config`. Make sure it has the right
 permissions too, `chmod 644 ~/.ssh/config`.
 
 + Inside WSL install, follow "Debian|Ubuntu|WSL" setup
+
+### Support opening links in firefox from WSL
+
+```bash
+$ sudo apt install xdg-utils wslview
+$ sudo ln -s "/mnt/c/Program Files/Mozilla Firefox/firefox.exe" /usr/local/bin/firefox
+```
