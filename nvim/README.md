@@ -164,8 +164,8 @@ Install `nvim` build dependencies
 
 ```
 # (Debian|Ubuntu)
-$ sudo apt ninja-build gettext libtool libtool-bin autoconf automake cmake g++ pkg-config unzip curl doxygen
-$ 
+$ sudo apt ninja-build gettext libtool libtool-bin autoconf automake cmake g++ \
+    pkg-config unzip curl doxygen gcc-multilib g++-multilib
 
 # (RHEL|Fedora|CentOS)
 $ sudo yum install libtool ninja-build cmake
@@ -176,7 +176,7 @@ Compile and install `nvim`
 ```
 $ git clone git@github.com:neovim/neovim.git
 $ cd neovim
-$ git checkout v0.6.0
+$ git checkout v0.7.0
 $ make CMAKE_BUILD_TYPE=Release
 $ sudo make install
 $ make distclean
