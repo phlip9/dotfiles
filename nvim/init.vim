@@ -997,6 +997,12 @@
 
 " }}}
 
+" vim-just - Justfile syntax {{{
+
+    call dein#add('NoahTheDuke/vim-just')
+
+" }}}
+
 " BUNDLES }}}
 
 " GENERAL {{{

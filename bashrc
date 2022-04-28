@@ -164,6 +164,9 @@ alias g='git'
 # cargo shortcut
 alias c='cargo'
 
+# just shortcut
+alias j='just'
+
 # big money cargo fix + fmt + clippy + lint wombo combo
 alias ccc='echo "Running cargo fix" && cargo fix --allow-staged --allow-dirty --all-targets \
     && echo "Running cargo fmt" && cargo fmt \
