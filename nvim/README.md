@@ -61,7 +61,7 @@ $ rusty-tags vi
 $ RUSTFLAGS="-C target-cpu=native" cargo install cargo-watch
 
 # Install rust-analyzer
-$ git clone https://github.com/rust-analyzer/rust-analyzer
+$ git clone https://github.com/rust-lang/rust-analyzer
 $ cd rust-analyzer
 $ RUSTFLAGS="-C target-cpu=native" cargo xtask install --server --jemalloc
 

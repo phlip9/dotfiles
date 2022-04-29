@@ -439,7 +439,7 @@
 
 " vim-airline - Lightweight yet fancy status line {{{
 
-    call dein#add('bling/vim-airline')
+    call dein#add('vim-airline/vim-airline')
 
     set laststatus=2
 
