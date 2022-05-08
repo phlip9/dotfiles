@@ -19,7 +19,7 @@ https://github.com/powerline/fonts/tree/master/SourceCodePro
 To efficiently download and install all patched Source Code Pro fonts:
 
 ```bash
-# (Ubuntu/Debian)
+# (Ubuntu/Debian/Pop!_OS)
 $ cd ~/.local/share/fonts
 $ curl --proto '=https' --tlsv1.3 https://github.com/powerline/fonts/tree/master/SourceCodePro \
     | sed -n -e 's/^.*href="\(.*\.otf\)".*$/https:\/\/github.com\1?raw=true/p' \
@@ -27,6 +27,11 @@ $ curl --proto '=https' --tlsv1.3 https://github.com/powerline/fonts/tree/master
 $ ls \
     | sed -n -e 's/^\(.*\)?raw=true/\1/p' \
     | xargs -p -I'{}' mv '{}'?raw=true '{}'
+
+# (Ubuntu/Debian/Pop!_OS - Gnome)
+$ sudo apt install gnome-tweaks
+
+# Set Fonts > Monospace to 'Source Code Pro - Regular'
 ```
 
 

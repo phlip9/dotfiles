@@ -225,6 +225,60 @@ $ echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 ```
 
 
+### Install alacritty
+
++ Install build pre-reqs
+
+```bash
+# (Ubuntu/Debian/Pop!_OS)
+$ sudo apt install cmake pkg-config libfreetype6-dev libfontconfig1-dev \
+    libxcb-xfixes0-dev libxkbcommon-dev python3
+```
+
++ Build and install
+
+```bash
+$ git clone --depth=1 https://github.com/alacritty/alacritty.git
+$ cd alacritty
+
+# (Linux X11)
+$ RUSTFLAGS="-C target-cpu=native" cargo build \
+    --release \
+    --no-default-features \
+    --features=x11
+
+# (Linux Wayland)
+$ RUSTFLAGS="-C target-cpu=native" cargo build \
+    --release
+    --no-default-features \
+    --features=wayland
+
+# Install
+$ sudo cp target/release/alacritty /usr/local/bin/
+```
+
++ Post-build
+
+```bash
+# Install terminfo
+$ sudo tic -xe alacritty,alacritty-direct extra/alacritty.info
+
+# Install desktop entry
+$ sudo cp extra/logo/alacritty-term.svg /usr/share/pixmaps/Alacritty.svg
+$ sudo desktop-file-install extra/linux/Alacritty.desktop
+$ sudo update-desktop-database
+
+# Install man page
+$ sudo mkdir -p /usr/local/share/man/man1
+$ gzip -c extra/alacritty.man | sudo tee /usr/local/share/man/man1/alacritty.1.gz > /dev/null
+$ gzip -c extra/alacritty-msg.man | sudo tee /usr/local/share/man/man1/alacritty-msg.1.gz > /dev/null
+
+# Install bash completions
+$ mkdir -p ~/.local/share/alacritty
+$ cp extra/completions/alacritty.bash ~/.local/share/alacritty/alacritty.bash
+$ chmod a+x ~/.local/share/alacritty/alacritty.bash
+```
+
 ## OSX ##
 
 

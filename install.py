@@ -75,6 +75,8 @@ def install_dotfiles(dotfiles_dir, install_dir):
                  path.join(install_dir, ".ctags.d")),
                 (path.join(dotfiles_dir, "rusty-tags"),
                  path.join(install_dir, ".rusty-tags")),
+                (path.join(dotfiles_dir, "alacritty.yml"),
+                 path.join(install_dir, ".config", "alacritty", "alacritty.yml")),
                 ]
 
     # instead of linking the whole dotfiles/bin directory, we'll link each

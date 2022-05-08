@@ -525,6 +525,9 @@ fi
 # Nix env setup
 [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
+# Alacritty
+[ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"
+
 ## COMPLETIONS }}}
 
 # vim:foldmethod=marker
