@@ -23,6 +23,10 @@
   # available, otherwise `xterm-256color` is used.
   #TERM: alacritty
 
+#####################
+# Window Dimensions #
+#####################
+
 #window:
   # Window dimensions (changes require restart)
   #
@@ -107,45 +111,48 @@
   # Scrolling distance multiplier.
   #multiplier: 3
 
-# Font configuration
-# font:
+######################
+# Font Configuration #
+######################
+
+font:
   # Normal (roman) font face
-  #normal:
+  normal:
     # Font family
     #
     # Default:
     #   - (macOS) Menlo
     #   - (Linux/BSD) monospace
     #   - (Windows) Consolas
-    #family: monospace
+    family: Source Code Pro for Powerline
 
     # The `style` can be specified to pick a specific face.
-    #style: Regular
+    style: Regular
 
   # Bold font face
-  #bold:
+  bold:
     # Font family
     #
     # If the bold family is not specified, it will fall back to the
     # value specified for the normal font.
-    #family: monospace
+    # family: monospace
 
     # The `style` can be specified to pick a specific face.
-    #style: Bold
+    style: Semibold
 
   # Italic font face
-  #italic:
+  italic:
     # Font family
     #
     # If the italic family is not specified, it will fall back to the
     # value specified for the normal font.
-    #family: monospace
+    # family: monospace
 
     # The `style` can be specified to pick a specific face.
-    #style: Italic
+    style: Regular
 
   # Bold italic font face
-  #bold_italic:
+  bold_italic:
     # Font family
     #
     # If the bold italic family is not specified, it will fall back to the
@@ -153,24 +160,24 @@
     #family: monospace
 
     # The `style` can be specified to pick a specific face.
-    #style: Bold Italic
+    style: Semibold
 
   # Point size
-  # size: 11.0
+  size: 11.0
 
   # Offset is the extra space around each character. `offset.y` can be thought
   # of as modifying the line spacing, and `offset.x` as modifying the letter
   # spacing.
-  #offset:
-  #  x: 0
-  #  y: 0
+  offset:
+    x: 0
+    y: 0
 
   # Glyph offset determines the locations of the glyphs within their cells with
   # the default being at the bottom. Increasing `x` moves the glyph to the
   # right, increasing `y` moves the glyph upward.
-  #glyph_offset:
-  #  x: 0
-  #  y: 0
+  glyph_offset:
+    x: 0
+    y: 0
 
   # Thin stroke font rendering (macOS only)
   #
@@ -186,9 +193,84 @@
   #builtin_box_drawing: true
 
 # If `true`, bold text is drawn using the bright color variants.
-#draw_bold_text_with_bright_colors: false
+# draw_bold_text_with_bright_colors: false
 
-# Colors (Tomorrow Night)
+##########
+# Colors #
+##########
+
+# crayon.vim
+# See: <https://github.com/jansenfuller/crayon/blob/master/colors/crayon.vim>
+colors:
+  primary:
+    background: '0x101112'
+    foreground: '0xd8d9da'
+
+  cursor:
+    text: '0xd8d9da'
+    cursor: '0xd8d9da'
+
+  normal:
+    black: '0x101112'
+    # black: '0x586270'
+    red: '0xc48d62'
+    green: '0x99ae63'
+    yellow: '0xd8c27a'
+    blue: '0x7495b6'
+    magenta: '0xb59cd8'
+    cyan: '0x8dc9c3'
+
+  bright:
+    # black: '0xbcc5d1'
+    black: '0x212228'
+    red: '0xb27b78'
+    green: '0x282c33'
+    yellow: '0x383e47'
+    blue: '0x798494'
+    magenta: '0xd8d8d8'
+    cyan: '0xcc99b3'
+    white: '0xd8d9da'
+
+# # Base16 Default Dark
+# # See: <https://github.com/eendroroy/alacritty-theme/blob/master/themes/base16_default_dark.yaml>
+# colors:
+#   # Default colors
+#   primary:
+#     background: '0x181818'
+#     foreground: '0xd8d8d8'
+#
+#   # Colors the cursor will use if `custom_cursor_colors` is true
+#   cursor:
+#     text: '0xd8d8d8'
+#     cursor: '0xd8d8d8'
+#
+#   # Normal colors
+#   normal:
+#     black:   '0x181818'
+#     # red:     '0xab4642'
+#     red:     '0xab5652'
+#     green:   '0xa1b56c'
+#     yellow:  '0xf7ca88'
+#     blue:    '0x7cafc2'
+#     magenta: '0xba8baf'
+#     cyan:    '0x86c1b9'
+#     white:   '0xd8d8d8'
+#
+#   # Bright colors
+#   bright:
+#     # black:   '0x585858'
+#     black:   '0x282828'
+#     # red:     '0xab4642'
+#     red:     '0xbb7672'
+#     green:   '0xa1b56c'
+#     yellow:  '0xf7ca88'
+#     # blue:    '0x7cafc2'
+#     blue:    '0x7cafc2'
+#     magenta: '0xba8baf'
+#     cyan:    '0x86c1b9'
+#     white:   '0xf8f8f8'
+
+# # Tomorrow Night (Default)
 #colors:
   # Default colors
   #primary:
@@ -332,8 +414,10 @@
   # regardless of their background color.
   #transparent_background_colors: false
 
-# Bell
-#
+########
+# Bell #
+########
+
 # The bell is rung every time the BEL control character is received.
 #bell:
   # Visual Bell Animation
@@ -381,16 +465,16 @@
   # When set to `true`, selected text will be copied to the primary clipboard.
   #save_to_clipboard: false
 
-#cursor:
+cursor:
   # Cursor style
-  #style:
+  style:
     # Cursor shape
     #
     # Values for `shape`:
     #   - ▇ Block
     #   - _ Underline
     #   - | Beam
-    #shape: Block
+    shape: Block
 
     # Cursor blinking state
     #
@@ -399,7 +483,7 @@
     #   - Off: Disable blinking by default
     #   - On: Enable blinking by default
     #   - Always: Force the cursor to always blink
-    #blinking: Off
+    blinking: Off
 
   # Vi mode cursor style
   #
@@ -506,8 +590,10 @@
   #     key: U
   #     mods: Control|Shift
 
-# Mouse bindings
-#
+##################
+# Mouse Bindings #
+##################
+
 # Mouse bindings are specified as a list of objects, much like the key
 # bindings further below.
 #
@@ -539,8 +625,10 @@
 #  - { mouse: Right,  mods: Control, action: ExpandSelection }
 #  - { mouse: Middle, mode: ~Vi,     action: PasteSelection  }
 
-# Key bindings
-#
+################
+# Key Bindings #
+################
+
 # Key bindings are specified as a list of objects. For example, this is the
 # default paste binding:
 #
@@ -745,7 +833,8 @@
 #
 # If the same trigger is assigned to multiple actions, all of them are executed
 # in the order they were defined in.
-#key_bindings:
+key_bindings:
+  - { key: V,          mods: Control,                    action: Paste }
   #- { key: Paste,                                       action: Paste          }
   #- { key: Copy,                                        action: Copy           }
   #- { key: L,         mods: Control,                    action: ClearLogNotice }
