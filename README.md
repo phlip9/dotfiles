@@ -1,16 +1,12 @@
 phlip9's dotfiles
 =================
 
-+ Install neovim:
-https://github.com/phlip9/dotfiles/blob/master/nvim/README.md
-
-
-# New Machine Setup #
+## New Machine Setup #
 
 
 ### Create a new ssh keypair and add to Github ###
 
-```
+```bash
 $ ssh-keygen -a 100 -t ed25519 -f ~/.ssh/id_ed25519 -C "phlip9@phliptop"
 ```
 
@@ -28,10 +24,36 @@ Host *
     IdentityFile ~/.ssh/id_ed25519
 ```
 
-```
+```bash
 # (OSX) Add private key to keychain
 $ ssh-add -AK ~/.ssh/id_ed25519
 ```
+
+
+### Clone phlip9/dotfiles ###
+
+```bash
+$ mkdir ~/dev
+$ cd ~/dev
+$ git clone https://github.com/phlip9/dotfiles.git
+$ cd dotfiles
+
+# upgrade pip
+$ sudo -H python3 -m pip install --upgrade pip
+
+# run dotfiles install
+$ python3 install.py
+
+# (OSX) source our personal bashrc settings
+$ echo "[ -f ~/.bashrc ] && source ~/.bashrc" >> ~/.bash_profile
+$ source ~/.bash_profile
+```
+
+
+### Install Neovim and dev tooling
+
+[phlip9/dotfiles > nvim/README.md](https://github.com/phlip9/dotfiles/blob/master/nvim/README.md)
+
 
 ## Debian|Ubuntu|WSL ##
 
@@ -49,13 +71,13 @@ $ sudo apt install tmux
 
 + Install tmux build dependencies
 
-```
+```bash
 $ sudo apt install m4 libevent-dev libncurses5-dev autogen automake pkg-config libtool perl bison
 ```
 
 + Build tmux from source
 
-```
+```bash
 $ cd ~/dev
 $ git clone git@github.com:tmux/tmux.git
 $ cd tmux
@@ -79,10 +101,77 @@ $ sudo apt install rxvt-unicode xsel
 
 + Install `interception-tools` and `interception-caps2esc`
 
+#### Install from ppa on Ubuntu <= 20.04
+
 ```bash
+# These ppa's were out-of-date when I tried installing on a recent Pop!_OS 22.04
 $ sudo add-apt-repository ppa:deafmute/interception
 $ sudo apt install interception-tools interception-caps2esc
 ```
+
+#### Install from source
+
++ Install build pre-reqs
+
+```bash
+$ sudo apt install cmake libudev-dev libyaml-cpp-dev libevdev-dev libboost-dev
+```
+
++ Build and install `interception-tools`
+
+```bash
+$ git clone --depth 1 https://gitlab.com/interception/linux/tools.git \
+    interception-tools
+$ cd interception-tools
+$ cmake -B build -DCMAKE_BUILD_TYPE=Release
+$ cmake --build build
+$ sudo cmake --install build
+```
+
++ Build and install `interception-caps2esc` plugin
+
+```bash
+$ git clone --depth 1 https://gitlab.com/interception/linux/plugins/caps2esc.git \
+    interception-caps2esc
+$ cd interception-caps2esc
+$ cmake -B build -DCMAKE_BUILD_TYPE=Release
+$ cmake --build build
+$ sudo cmake --install build
+```
+
++ Create config dir
+
+```bash
+$ sudo mkdir -p /etc/interception/udevmon.d/
+```
+
++ Create systemd service
+
+```service
+# /etc/systemd/system/udevmon.service
+[Unit]
+Description=interception-tools udevmon service
+Wants=systemd-udev-settle.service
+After=systemd-udev-settle.service
+Documentation=man:udev(7)
+
+[Service]
+ExecStart=/usr/local/bin/udevmon
+Nice=-20
+Restart=on-failure
+OOMScoreAdjust=-1000
+
+[Install]
+WantedBy=multi-user.target
+```
+
++ Enable and start udevmon service
+
+```bash
+$ sudo systemctl enable --now udevmon
+```
+
+#### Default config
 
 + Default config
 
@@ -101,7 +190,7 @@ $ sudo apt install interception-tools interception-caps2esc
 # (flatpak)
 $ flatpak install Obsidian
 
-$ git clone git@github.com:phlip9/notes.git
+$ git clone git@github.com:phlip9/notes-private.git notes
 ```
 
 + Open vault in notes directory.
@@ -122,7 +211,7 @@ $ sudo apt install lm-sensors htop
 ### Install nix
 
 ```bash
-$ curl --proto '=https' --tlsv1.2 -sSfL https://nixos.org/nix/install | bash
+$ curl --proto '=https' --tlsv1.3 -sSfL https://nixos.org/nix/install | bash
 ```
 
 + Remove the line the installer adds in `$HOME/.profile`.
@@ -147,37 +236,17 @@ $ echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 + View > Customize Touch Bar > Remove everything from the touchbar
 
 
-### Clone phlip9/dotfiles ###
-
-```
-$ mkdir ~/dev
-$ cd ~/dev
-$ git clone https://github.com/phlip9/dotfiles.git
-$ cd dotfiles
-
-# upgrade pip
-$ sudo -H python3 -m pip install --upgrade pip
-
-# run dotfiles install
-$ python3 install.py
-
-# source our personal bashrc settings
-$ echo "[ -f ~/.bashrc ] && source ~/.bashrc" >> ~/.bash_profile
-$ source ~/.bash_profile
-```
-
-
 ### Install Brew ###
 
-```
-$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
+```bash
+$ curl --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/Homebrew/install/master/install.sh | bash
 $ brewperm
 ```
 
 
 ### Install tmux ###
 
-```
+```bash
 $ brew install tmux
 ```
 
@@ -187,7 +256,7 @@ $ brew install tmux
 
 ### Install Irssi for IRC ###
 
-```
+```bash
 brew install irssi
 ```
 
@@ -212,17 +281,17 @@ brew install irssi
 
 ## Setup the dotfiles
 
-```
+```bash
 $ mkdir ~/dev
 $ cd ~/dev
 $ git clone git@github.com:phlip9/dotfiles.git
-$ python3.6 install.py
+$ python3 install.py
 ```
 
 
 ## Install autoconf/automake
 
-```
+```bash
 sudo yum install autoconf automake
 ```
 
@@ -231,7 +300,7 @@ sudo yum install autoconf automake
 
 + The default tmux version (2.2) is too old.
 
-```
+```bash
 $ git clone git@github.com:tmux/tmux.git
 $ cd tmux
 $ git checkout 3.0
@@ -307,14 +376,14 @@ $ pacman --sync --sysupgrade
 
 + In PowerShell
 
-```
+```powershell
 PS> Set-ExecutionPolicy RemoteSigned -scope CurrentUser
 PS> iwr -useb get.scoop.sh | iex
 ```
 
 + Install mingit-busybox
 
-```
+```powershell
 PS> scoop install mingit-busybox
 PS> scoop install openssh
 PS> [environment]::setenvironmentvariable('GIT_SSH', (resolve-path (scoop which ssh)), 'USER')
@@ -380,17 +449,17 @@ Return
 
 + Open PowerShell as Admin
 
-```
-> dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
-> dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+```powershell
+PS> dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+PS> dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
 ```
 
 + Restart
 
 + Open PowerShell as Admin
 
-```
-> wsl --set-default-version 2
+```powershell
+PS> wsl --set-default-version 2
 ```
 
 + Install Ubuntu 20.04 LTS (https://www.microsoft.com/store/apps/9n6svws3rx71)
@@ -433,7 +502,7 @@ Return
 
 + Inside WSL, install `keychain`, an ssh-agent frontend
 
-```sh
+```bash
 $ sudo apt install keychain
 ```
 

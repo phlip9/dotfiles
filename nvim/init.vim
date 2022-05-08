@@ -37,8 +37,8 @@
     " python3 setup
     " Try to use a neovim-specific pyvenv first, otherwise fallback to a global
     " python install.
-    let python3_bin_pyenv = expand('$PYTHON3_ENV_DIR/nvim_py/bin/python3.9')
-    let python3_bin_global = '/bin/python3.9'
+    let python3_bin_pyenv = expand('$PYTHON3_ENV_DIR/nvim_py/bin/python3')
+    let python3_bin_global = expand('$PYTHON3_BIN')
     if executable(python3_bin_pyenv)
         let g:python3_host_prog = python3_bin_pyenv
     elseif executable(python3_bin_global)
@@ -421,6 +421,11 @@
 " SudoEdit.vim - Easily write to protected files {{{
 
     call dein#add('chrisbra/SudoEdit.vim', { 'on_cmd': ['SudoWrite', 'SudoRead'] })
+
+    " Use `pkexec` on more recent Ubuntu/Debian/Pop!_OS
+    if executable('pkexec')
+        let g:sudoAuth='pkexec'
+    endif
 
 " SudoEdit.vim }}}
 

@@ -393,16 +393,16 @@ if [ "$OS" == "LINUX" ]; then
 fi
 
 # python3
-export PYTHON3_VERSION=python3.9
+export PYTHON3_VERSION=python3.10
 # pyvenv virtual environments
 export PYTHON3_ENV_DIR=$HOME/virtualenvs
 export ENV_DIR=$PYTHON3_ENV_DIR
 ANACONDA_HOME=$HOME/anaconda3/bin
 if [ "$OS" == "LINUX" ]; then
     # Try global python3 install
-    if [ -f /bin/$PYTHON3_VERSION ]; then
+    if [ -x /bin/$PYTHON3_VERSION ]; then
         export PYTHON3_BIN="/bin/$PYTHON3_VERSION"
-    elif [ -f /usr/bin/$PYTHON3_VERSION ]; then
+    elif [ -x /usr/bin/$PYTHON3_VERSION ]; then
         export PYTHON3_BIN="/usr/bin/$PYTHON3_VERSION"
     fi
 elif [ "$OS" == "OSX" ]; then

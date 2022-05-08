@@ -19,8 +19,9 @@ https://github.com/powerline/fonts/tree/master/SourceCodePro
 To efficiently download and install all patched Source Code Pro fonts:
 
 ```bash
+# (Ubuntu/Debian)
 $ cd ~/.local/share/fonts
-$ curl https://github.com/powerline/fonts/tree/master/SourceCodePro \
+$ curl --proto '=https' --tlsv1.3 https://github.com/powerline/fonts/tree/master/SourceCodePro \
     | sed -n -e 's/^.*href="\(.*\.otf\)".*$/https:\/\/github.com\1?raw=true/p' \
     | xargs wget
 $ ls \
@@ -31,7 +32,7 @@ $ ls \
 
 ### _Optional_: Haskell setup ###
 
-```
+```bash
 $ cabal update
 $ cabal install ghc-mod
 ```
@@ -39,8 +40,8 @@ $ cabal install ghc-mod
 
 ### _Optional_: Rust setup ###
 
-```
-$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash
+```bash
+$ curl --proto '=https' --tlsv1.3 -sSf https://sh.rustup.rs | bash
 
 #  default host triple: default
 #    default toolchain: stable
@@ -75,7 +76,7 @@ $ brew unlink python@2
 
 Install clang
 
-```
+```bash
 # (Debian|Ubuntu)
 $ sudo apt install clang
 ```
@@ -83,21 +84,21 @@ $ sudo apt install clang
 
 ### _Optional_: Install ripgrep ###
 
-```
+```bash
 $ RUSTFLAGS="-C target-cpu=native" cargo +nightly install --features="simd-accel" ripgrep
 ```
 
 
 ### _Optional_: Install Other Rust Utilities ###
 
-```
+```bash
 $ RUSTFLAGS="-C target-cpu=native" cargo install bat exa fastmod fd-find just
 ```
 
 
 ### _Optional_: Install FZF ###
 
-```
+```bash
 $ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 $ ~/.fzf/install
 
@@ -109,12 +110,12 @@ $ ~/.fzf/install
 
 ### _Optional_: Install Universal Ctags ###
 
-```
+```bash
 # (OSX)
 $ brew install --HEAD universal-ctags/universal-ctags/universal-ctags
 
 # (Other)
-$ git clone git@github.com:universal-ctags/ctags.git
+$ git clone --depth 1 git@github.com:universal-ctags/ctags.git
 $ cd ctags
 $ ./autogen.sh
 $ ./configure
@@ -134,9 +135,9 @@ $ sudo apt install picolisp
 
 Setup a Python virtual environment for neovim:
 
-```
+```bash
 # (Ubuntu/Debian/WSL) Install venv
-$ sudo apt install python3.9-venv
+$ sudo apt install python3-venv
 
 $ mkvenv nvim_py
 $ workon nvim_py
@@ -152,7 +153,7 @@ $ deactivate
 
 ### (OSX) Install Neovim using Brew ###
 
-```
+```bash
 $ brew install nvim
 ```
 
@@ -162,9 +163,9 @@ $ brew install nvim
 
 Install `nvim` build dependencies
 
-```
+```bash
 # (Debian|Ubuntu)
-$ sudo apt ninja-build gettext libtool libtool-bin autoconf automake cmake g++ \
+$ sudo apt install ninja-build gettext libtool libtool-bin autoconf automake cmake g++ \
     pkg-config unzip curl doxygen gcc-multilib g++-multilib
 
 # (RHEL|Fedora|CentOS)
@@ -173,7 +174,7 @@ $ sudo yum install libtool ninja-build cmake
 
 Compile and install `nvim`
 
-```
+```bash
 $ git clone git@github.com:neovim/neovim.git
 $ cd neovim
 $ git checkout v0.7.0
@@ -185,16 +186,16 @@ $ make distclean
 
 ### Install coc.nvim dependencies (nvm, nodejs, yarn)
 
-```
+```bash
 # (OSX)
 $ brew install node yarn
 
 # (Other) Install node using nvm
-$ curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+$ curl --proto '=https' --tlsv1.3 -sSf https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
 $ nvm install --lts
 
 # (Other) Install node using direct install
-$ curl --proto '=https' --tlsv1.2 -sSf https://install-node.now.sh/lts | bash
+$ curl --proto '=https' --tlsv1.3 -sSf https://install-node.now.sh/lts | bash
 
 # (Other) Install yarn
 $ curl --proto '=https' --tlsv1.2 -sSfL https://yarnpkg.com/install.sh | bash 
@@ -209,14 +210,14 @@ $ yarn install --frozen-lockfile
 
 Install all plugins
 
-```
+```bash
 $ nvim +":call dein#update()" +qa
 $ nvim +":UpdateRemotePlugins" +qa
 ```
 
 If dein.vim complains about git clone key permissions, do this then try again:
 
-```
+```bash
 $ cd $XDG_CONFIG_HOME/nvim/plugins/repos/github.com/Shougo/dein.vim
 $ git remote set-url origin https://github.com/Shougo/dein.vim.git
 ```
