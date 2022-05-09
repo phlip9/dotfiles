@@ -120,11 +120,12 @@ $ ~/.fzf/install
 $ brew install --HEAD universal-ctags/universal-ctags/universal-ctags
 
 # (Other)
-$ git clone --depth 1 git@github.com:universal-ctags/ctags.git
-$ cd ctags
+$ git clone --depth 1 git@github.com:universal-ctags/ctags.git universal-ctags
+$ cd universal-ctags
 $ ./autogen.sh
 $ ./configure
 $ make && sudo make install
+$ make distclean
 ```
 
 

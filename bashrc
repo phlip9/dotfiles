@@ -125,6 +125,17 @@ esac
 # Tell macOS to stfu when it's using bash
 export BASH_SILENCE_DEPRECATION_WARNING=1
 
+# Set $EDITOR depending on what's installed
+if [ -x "$(command -v nvim)" ]; then
+    export EDITOR=nvim
+elif [ -x "$(command -v vim)" ]; then
+    export EDITOR=vim
+elif [ -x "$(command -v vi)" ]; then
+    export EDITOR=vi
+elif [ -x "$(command -v nano)" ]; then
+    export EDITOR=nano
+fi
+
 # SETTINGS }}}
 
 ## ALIASES {{{
@@ -441,6 +452,9 @@ PATSBIN=$PATSHOME/bin
 export PATSCONTRIB=$HOME/dev/ats2-contrib
 export PATSHOMERELOC=$PATSCONTRIB
 
+# musl toolchain
+MUSL_TOOLCHAIN_BIN=/opt/musl/x86_64-linux-musl-cross-11.2.1/bin
+
 # PATH
 export PATH=$PATH:$GO_BIN
 export PATH=$PATH:$GO_HOME_BIN
@@ -460,6 +474,7 @@ export PATH=$PATH:$YARN_NODE_MODULES_BIN
 export PATH=$PATH:$DOTNET_BIN
 export PATH=$PATH:$ARM_TOOLCHAIN_BIN
 export PATH=$PATH:$PATSBIN
+export PATH=$PATH:$MUSL_TOOLCHAIN_BIN
 
 # set RUST_SRC_PATH based on current rustup version
 if [ -x "$(command -v rustc)" ]; then

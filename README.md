@@ -55,9 +55,11 @@ $ source ~/.bash_profile
 [phlip9/dotfiles > nvim/README.md](https://github.com/phlip9/dotfiles/blob/master/nvim/README.md)
 
 
-## Debian|Ubuntu|WSL ##
+## Debian|Ubuntu|WSL
 
-### Install tmux (apt) ###
+### Install tmux
+
+#### Intall tmux (apt)
 
 + If the installation is recent enough, the `tmux` in the package repos
   should be new enough (>=3.0).
@@ -67,7 +69,7 @@ $ sudo apt install tmux
 ```
 
 
-### Install tmux (source) ###
+#### Install tmux (source)
 
 + Install tmux build dependencies
 
@@ -88,20 +90,11 @@ $ make && sudo make install
 ```
 
 
-### Install URxvt
-
-+ Install from apt
-
-```bash
-$ sudo apt install rxvt-unicode xsel
-```
-
-
 ### Remap Caps Lock -> Escape (tap) + Ctrl (hold)
 
 + Install `interception-tools` and `interception-caps2esc`
 
-#### Install from ppa on Ubuntu <= 20.04
+#### Install interception-tools (ppa on Ubuntu <= 20.04)
 
 ```bash
 # These ppa's were out-of-date when I tried installing on a recent Pop!_OS 22.04
@@ -109,7 +102,7 @@ $ sudo add-apt-repository ppa:deafmute/interception
 $ sudo apt install interception-tools interception-caps2esc
 ```
 
-#### Install from source
+#### Install interception-tools (source)
 
 + Install build pre-reqs
 
@@ -171,7 +164,7 @@ WantedBy=multi-user.target
 $ sudo systemctl enable --now udevmon
 ```
 
-#### Default config
+#### caps2esc default config
 
 + Default config
 
@@ -278,6 +271,24 @@ $ mkdir -p ~/.local/share/alacritty
 $ cp extra/completions/alacritty.bash ~/.local/share/alacritty/alacritty.bash
 $ chmod a+x ~/.local/share/alacritty/alacritty.bash
 ```
+
+
+### Install gh cli
+
+```bash
+# (Ubuntu/Debian/Pop!_OS)
+$ curl --proto '=https' --tlsv1.3 \
+    https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+$ echo "deb [arch=$(dpkg --print-architecture)" \
+    "signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg]" \
+    "https://cli.github.com/packages stable main" \
+    | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+$ sudo apt update
+$ sudo apt install gh
+$ gh auth login
+```
+
 
 ## OSX ##
 
