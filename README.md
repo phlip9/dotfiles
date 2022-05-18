@@ -362,16 +362,10 @@ $ python3 -m pip install --upgrade pip
 $ brew install tmux
 ```
 
-### Install wget ###
+### Install utilities
 
 ```bash
-$ brew install wget
-```
-
-### Install htop ###
-
-```bash
-$ brew install htop
+$ brew install wget htop jq
 ```
 
 
