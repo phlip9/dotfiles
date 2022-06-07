@@ -322,9 +322,7 @@
     " <verb>ic   - <verb> in class
     " <verb>ac   - <verb> around class
 
-    let g:coc_need_update = 0
-
-    let g:coc_exts = [
+    let g:coc_global_extensions = [
                 \   'coc-json',
                 \   'coc-rust-analyzer',
                 \ ]
@@ -334,27 +332,7 @@
         return !col || getline('.')[col - 1]  =~# '\s'
     endfunction
 
-    function! s:coc_update_extensions() abort
-        echom 'Updating coc.nvim... [' . join(g:coc_exts, ' ') . ']'
-
-        call coc#util#install_extension(g:coc_exts)
-        let is_async = 1
-        call coc#util#update_extensions(is_async)
-        UpdateRemotePlugins
-
-        echom "Updated coc.nvim"
-        let g:coc_need_update = 0
-    endfunction
-
-    function! s:coc_post_update() abort
-        let g:coc_need_update = 1
-    endfunction
-
     function! s:coc_post_source() abort
-        if g:coc_need_update
-            call s:coc_update_extensions()
-        endif
-
         " call coc#config('section', {
         "             \ ''
         " })
@@ -413,7 +391,6 @@
                 \   'if': executable('node') && executable('yarn'),
                 \   'build': 'yarn install --frozen-lockfile',
                 \   'hook_post_source': function('s:coc_post_source'),
-                \   'hook_post_update': function('s:coc_post_update'),
                 \ })
 
 "  }}}
