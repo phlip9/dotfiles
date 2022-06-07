@@ -305,6 +305,26 @@ $ gh auth login
 ```
 
 
+### Install Signal
+
+```bash
+# (flatpak)
+$ flatpak install flathub org.signal.Signal
+
+# (Ubuntu/Debian)
+$ curl --proto '=https' --tlsv1.3 -sL \
+    https://updates.signal.org/desktop/apt/keys.asc \
+    | gpg --dearmor \
+    | sudo tee /usr/share/keyrings/signal-desktop-keyring.gpg > /dev/null
+$ echo "deb [arch=$(dpkg --print-architecture)" \
+    "signed-by=/usr/share/keyrings/signal-desktop-keyring.gpg]" \
+    "https://updates.signal.org/desktop/apt $(lsb_release -cs) main" \
+    | sudo tee /etc/apt/sources.list.d/signal-desktop.list
+$ sudo apt update
+$ sudo apt install signal-desktop
+```
+
+
 ## OSX ##
 
 
