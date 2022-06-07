@@ -110,13 +110,13 @@
 
 " NERDCommenter }}}
 
-" Syntastic - syntax and error checking {{{
+" (disabled) Syntastic - syntax and error checking {{{
 
-    call dein#add('vim-syntastic/syntastic')
+    " call dein#add('vim-syntastic/syntastic')
 
     " By default, Syntastic doesn't populate the location list unless you
     " explicitly call `:Errors`.
-    let g:syntastic_always_populate_loc_list = 1
+    " let g:syntastic_always_populate_loc_list = 1
 
     " let syntastic_javascript_checkers = ['jshint', 'jscs']
     " 
@@ -549,12 +549,12 @@
 
 " }}}
 
-" vim-go - Go linting, highlighting, building, formatting {{{
+" (disabled) vim-go - Go linting, highlighting, building, formatting {{{
 
-    call dein#add('fatih/vim-go')
+    " call dein#add('fatih/vim-go')
 
     " don't use <shift>-k to show go docs, since we use it for buffer switching
-    let g:go_doc_keywordprg_enabled = 0
+    " let g:go_doc_keywordprg_enabled = 0
 
 " }}}
 
@@ -1008,6 +1008,12 @@
 
 " }}}
 
+" earthly.vim - Earthfile syntax {{{
+
+    call dein#add('https://github.com/earthly/earthly.vim')
+
+" }}}
+
 " BUNDLES }}}
 
 " GENERAL {{{
@@ -1051,11 +1057,7 @@
 
     " Always display the sign column to avoid flickering with syntastic and
     " vim-gitgutter
-    if exists('&signcolumn')  " Vim 7.4.2201
-        set signcolumn=yes
-    else
-        let g:gitgutter_sign_column_always = 1
-    endif
+    set signcolumn=yes
 
     " Colorscheme highlight overrides
     function! CustomColors()
