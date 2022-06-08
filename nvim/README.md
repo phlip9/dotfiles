@@ -131,8 +131,11 @@ $ ~/.fzf/install
 # (OSX)
 $ brew install --HEAD universal-ctags/universal-ctags/universal-ctags
 
-# (Other)
-$ git clone --depth 1 git@github.com:universal-ctags/ctags.git universal-ctags
+# (Ubuntu/Debian/PopOS!)
+$ git clone --depth 1 https://github.com/universal-ctags/ctags.git universal-ctags
+$ sudo apt install gcc make pkg-config autoconf automake python3-docutils \
+    libseccomp-dev libjansson-dev libyaml-dev libxml2-dev
+
 $ cd universal-ctags
 $ ./autogen.sh
 $ ./configure
@@ -193,7 +196,7 @@ $ sudo yum install libtool ninja-build cmake
 Compile and install `nvim`
 
 ```bash
-$ git clone git@github.com:neovim/neovim.git
+$ git clone --depth=1 https://github.com/neovim/neovim.git
 $ cd neovim
 $ git checkout v0.7.0
 $ make CMAKE_BUILD_TYPE=Release

@@ -66,6 +66,7 @@ $ git clone https://github.com/phlip9/dotfiles.git
 $ cd dotfiles
 
 # upgrade pip
+$ sudo apt install python3-pip
 $ sudo -H python3 -m pip install --upgrade pip
 
 # run dotfiles install
