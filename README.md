@@ -329,6 +329,18 @@ $ sudo apt install signal-desktop
 ## OSX ##
 
 
+### Temporarily use system `bash` as login shell ###
+
++ We'll update to a newer bash in a moment. For now this is nicer that dealing
+  with `zsh`...
+
+```bash
+$ chsh -s /bin/bash
+```
+
++ Then restart for this to take effect.
+
+
 ### Install Karabiner for Caps Lock -> Escape (tap) + Ctrl (hold) ###
 
 + Download and install from:
@@ -343,7 +355,20 @@ $ sudo apt install signal-desktop
 + Remap Caps Lock -> Control when used as a modifier and Caps Lock -> Escape when hit alone
 
 
-### Install iTerm2 ###
+### Install Alacritty ###
+
+```bash
+$ git clone --depth=1 https://github.com/alacritty/alacritty.git
+$ cd alacritty
+$ RUSTFLAGS="-C target-cpu=native" make app
+$ cp -r target/release/osx/Alacritty.app /Applications/
+
+# install terminfo
+$ sudo tic -xe alacritty,alacritty-direct extra/alacritty.info
+```
+
+
+### (Optional) Install iTerm2 ###
 
 + Download and install from:
   https://iterm2.com/downloads.html
@@ -354,6 +379,7 @@ $ sudo apt install signal-desktop
 
 + Import `onehalfdark.mod.itermcolors`. Go to Preferences > Profiles > Default > Colors > Color Presets > Import. Select the file. Then make sure you actually enable the imported colorscheme in the dropdown.
 
+
 ### Install Brew ###
 
 ```bash
@@ -361,6 +387,19 @@ $ /bin/bash -c "$(curl --proto '=https' --tlsv1.3 -fsSL https://raw.githubuserco
 
 # disable analytics
 $ /opt/homebrew/bin/brew analytics off
+```
+
+
+### Install recent `bash` version ###
+
+```bash
+$ brew install bash
+
+# Add the brew-bash to set of acceptable login shells
+$ echo "/opt/homebrew/bin/bash" | sudo tee -a /etc/shells
+
+# Set our login shell
+$ chsh -s /opt/homebrew/bin/bash
 ```
 
 
