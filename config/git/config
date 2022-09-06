@@ -10,6 +10,9 @@
 [merge]
 	conflictstyle = diff3
 [alias]
+    master = !git branch --list --format=\"%(refname)\" \
+        | sed -n -E \"s/^refs\\/heads\\/(master|main)$/\\1/p\" \
+        | head -1
     lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
     s = status
     co = checkout
@@ -19,13 +22,11 @@
     a = add
     d = diff
     p = pull
-    plo = pull --ff-only origin master
-    pfom = push --force origin master
-    pom = push origin master
+    plo = !git pull --ff-only origin $(git master)
+    pfom = !git push --force origin $(git master)
+    pom = !git push origin $(git master)
     rb = rebase
     fu = fetch upstream
     fo = fetch origin
-    ru = rebase upstream/master
-    ro = rebase origin/master
-    pru = "!echo \"Checking out upstream PR #$1\" && git fetch -q upstream refs/pull/\"$1\"/head && git checkout FETCH_HEAD #"
-    pro = "!echo \"Checking out origin PR #$1\" && git fetch -q origin refs/pull/\"$1\"/head && git checkout FETCH_HEAD #"
+    ru = !git rebase upstream/$(git master)
+    ro = !git rebase origin/$(git master)
