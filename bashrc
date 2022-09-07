@@ -402,10 +402,10 @@ DEPOT_TOOLS=$HOME/depot_tools
 
 LOCAL_BIN=$HOME/.local/bin
 
-# LD Path
-if [ "$OS" == "LINUX" ]; then
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_LIB:$GUROBI_LIB
-fi
+# # LD Path
+# if [ "$OS" == "LINUX" ]; then
+#     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INTEL_LIB:$GUROBI_LIB
+# fi
 
 # python3
 export PYTHON3_VERSION=python3.10
