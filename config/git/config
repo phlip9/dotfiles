@@ -43,6 +43,10 @@
     #############
 
     lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
+    ls-nul = !git ls-files -z \
+        | sed -n -z -E \"s/^([^\\/]*)\\/?.*/\\1/p\" \
+        | uniq -z
+    ls = !git ls-nul | tr '\\0' '\\n'
     s = status
     co = checkout
     sw = switch
