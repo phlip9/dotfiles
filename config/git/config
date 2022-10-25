@@ -5,10 +5,19 @@
     signingkey = C5464595
 [core]
     editor = nvim
+[commit]
+    verbose = true
+[fetch]
+    prune = true
+[pull]
+    ff = only
 [push]
 	default = simple
 [merge]
 	conflictstyle = diff3
+[rebase]
+    # Use autosquash by default
+    autosquash = true
 [alias]
     #############
     # Utilities #
@@ -17,11 +26,14 @@
     # Print the current repo's "master" branch name ("master" or "main").
     master = !git branch --list --format=\"%(refname)\" \
         | sed -n -E \"s/^refs\\/heads\\/(master|main)$/\\1/p\" \
-        | head -1
+        | head --lines=1
 
     #############
     # PR Review #
     #############
+
+    # checkout a PR in the current repo
+    pr = !gh pr checkout
 
     # Print the branch point of the current PR branch from the master branch.
     pr-base = !git merge-base HEAD $(git master)
@@ -43,22 +55,26 @@
     #############
 
     lg = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
-    ls-nul = !git ls-files -z \
-        | sed -n -z -E \"s/^([^\\/]*)\\/?.*/\\1/p\" \
-        | uniq -z
-    ls = !git ls-nul | tr '\\0' '\\n'
+    ls = !git ls-files \
+        | sed -n -E \"s/^([^\\/]*)\\/?.*$/\\1/p\" \
+        | uniq
     s = status
+    last = log -1 HEAD
     co = checkout
     sw = switch
     cm = commit
+    cma = commit -v --amend
+    cme = commit -v --amend --no-edit
     b = branch
     a = add
     d = diff
     p = pull
     plo = !git pull --ff-only origin $(git master)
+    pfo = push --force origin
     pfom = !git push --force origin $(git master)
     pom = !git push origin $(git master)
     rb = rebase
+    rbc = rebase --continue
     fu = fetch upstream
     fo = fetch origin
     ru = !git rebase upstream/$(git master)
