@@ -50,6 +50,9 @@
     # Open only one specific changed file just like `git pr-review`
     pr-rvo = !nvim +\"let g:gitgutter_diff_base = '$(git master)'\"
 
+    # Pretty print PR commits for Github PR description
+    pr-desc = !git log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..
+
     #############
     # Shortcuts #
     #############
