@@ -206,6 +206,10 @@ elif [ "$OS" == "OSX" ]; then
     alias alert='osascript -e "display notification \"Command completed\" with title \"Terminal Alert\""'
 fi
 
+# expressvpn shits all over systemd's resolv.conf.
+# unshittify this when stopping the vpn.
+alias expressvpn-unfuck='sudo ln -sf /run/resolveconf/resolv.conf /etc/resolv.conf'
+
 # less with color
 alias less='less -r'
 
@@ -346,15 +350,25 @@ if [ "$OS" == "LINUX" ]; then
 fi
 
 # Android
-export ANDROID_SDK_ROOT=$HOME/android
-export ANDROID_NDK=$ANDROID_SDK_ROOT/ndk
-export ANDROID_NDK_HOME=$ANDROID_NDK
-ANDROID_STUDIO=$HOME/android-studio
-ANDROID_ARM_TOOLCHAIN=$HOME/arm-linux-androideabi
-ANDROID_STANDALONE_TOOLCHAIN=$ANDROID_ARM_TOOLCHAIN
-ANDROID_SDK_VERSION=31.0.0
-ANDROID_PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/build-tools/$ANDROID_SDK_VERSION:$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/tools/bin
-ANDROID_PATH=$ANDROID_PATH:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_NDK:$ANDROID_STANDALONE_TOOLCHAIN/bin
+export ANDROID_HOME=$HOME/.local/android
+ANDROID_SDK_VERSION=33.0.1
+ANDROID_PATH=$ANDROID_HOME/cmdline-tools/latest/bin
+ANDROID_PATH=$ANDROID_PATH:$ANDROID_HOME/build-tools/$ANDROID_SDK_VERSION
+ANDROID_PATH=$ANDROID_PATH:$ANDROID_HOME/platform-tools
+
+# export ANDROID_NDK=$ANDROID_SDK_ROOT/ndk
+# export ANDROID_NDK_HOME=$ANDROID_NDK
+# ANDROID_STUDIO=$HOME/android-studio
+# ANDROID_ARM_TOOLCHAIN=$HOME/arm-linux-androideabi
+# ANDROID_STANDALONE_TOOLCHAIN=$ANDROID_ARM_TOOLCHAIN
+# ANDROID_SDK_VERSION=31.0.0
+# ANDROID_PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/build-tools/$ANDROID_SDK_VERSION:$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/tools/bin
+# ANDROID_PATH=$ANDROID_PATH:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_NDK:$ANDROID_STANDALONE_TOOLCHAIN/bin
+
+# Flutter
+
+FLUTTER_HOME=$HOME/.local/flutter
+FLUTTER_BIN=$FLUTTER_HOME/bin
 
 ### Added by the Heroku Toolbelt
 export HEROKU_TOOLBELT=/usr/local/heroku/bin
@@ -463,6 +477,7 @@ MUSL_TOOLCHAIN_BIN=/opt/musl/x86_64-linux-musl-cross-11.2.1/bin
 export PATH=$PATH:$GOROOT_BIN
 export PATH=$PATH:$GOPATH_BIN
 export PATH=$PATH:$ANDROID_PATH
+export PATH=$PATH:$FLUTTER_BIN
 export PATH=$PATH:$ARDUINO_SDK
 export PATH=$PATH:$GIT_SUBMODULE_TOOLS
 export PATH=$PATH:$CABAL_BIN
