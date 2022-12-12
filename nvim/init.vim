@@ -85,12 +85,15 @@
 " NERDCommenter - Easily comment lines or blocks of text {{{
 
     " Mappings:
-    " <leader>c  - Toggle current line comment
-    " <leader>cm - Block comment
-    " <leader>c$ - Comment from cursor to end of line
-    " <leader>cA - Comment from cursor to end of line and go into insert mode
+    " <leader>c<space> - Toggle current line comment
+    " (disabled) <leader>cm - Block comment
+    " (disabled) <leader>c$ - Comment from cursor to end of line
+    " (disabled) <leader>cA - Comment from cursor to end of line and go into insert mode
 
     call dein#add('preservim/nerdcommenter')
+
+    " disable all default key bindings
+    let g:NERDCreateDefaultMappings = 0
 
     " Add spaces after comment delimiters by default
     let g:NERDSpaceDelims = 1
@@ -102,11 +105,13 @@
     let g:NERDCommentEmptyLines = 1
 
     " custom comment formats
-    " these are now pushed upstream; left as examples:
-    " let g:NERDCustomDelimiters = {
-    "             \ 'lean': { 'left': '--', 'leftAlt': '/-', 'rightAlt': '-/' },
-    "             \ 'ats': { 'left': '//', 'leftAlt': '(*', 'rightAlt': '*)' },
-    "             \ }
+    let g:NERDCustomDelimiters = {
+                \ 'dart': { 'left': '//' },
+                \ }
+
+    " key bindings
+    nnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
+    xnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
 
 " NERDCommenter }}}
 
