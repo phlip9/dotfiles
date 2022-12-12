@@ -323,11 +323,11 @@ if [ "$OS" == "LINUX" ]; then
 fi
 
 # Java SDKMAN
-export SDKMAN_DIR="$HOME/.sdkman"
+export SDKMAN_DIR="$HOME/.local/sdkman"
 
 # Go
 if [ "$OS" == "LINUX" ]; then
-    export GOROOT=$HOME/go1.10.3
+    export GOROOT=$HOME/.local/go1.19.3
     export GOOS=linux
     export GOARCH=amd64
 elif [ "$OS" == "OSX" ]; then
@@ -336,8 +336,8 @@ elif [ "$OS" == "OSX" ]; then
     export GOARCH=amd64
 fi
 export GOPATH=$HOME/dev/go
-GO_BIN=$GOROOT/bin
-GO_HOME_BIN=$GOPATH/bin
+GOROOT_BIN=$GOROOT/bin
+GOPATH_BIN=$GOPATH/bin
 
 # solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
 if [ "$OS" == "LINUX" ]; then
@@ -394,8 +394,8 @@ GUROBI_BIN=$GUROBI_HOME/bin
 GUROBI_LIB=$GUROBI_HOME/lib
 
 # Rust Cargo
-export CARGO_HOME=$HOME/.cargo
-CARGO_BIN=$CARGO_HOME/bin
+export CARGOPATH=$HOME/.cargo
+CARGOROOT_BIN=$CARGOPATH/bin
 
 # Google
 DEPOT_TOOLS=$HOME/depot_tools
@@ -460,8 +460,8 @@ export PATSHOMERELOC=$PATSCONTRIB
 MUSL_TOOLCHAIN_BIN=/opt/musl/x86_64-linux-musl-cross-11.2.1/bin
 
 # PATH
-export PATH=$PATH:$GO_BIN
-export PATH=$PATH:$GO_HOME_BIN
+export PATH=$PATH:$GOROOT_BIN
+export PATH=$PATH:$GOPATH_BIN
 export PATH=$PATH:$ANDROID_PATH
 export PATH=$PATH:$ARDUINO_SDK
 export PATH=$PATH:$GIT_SUBMODULE_TOOLS
@@ -471,7 +471,7 @@ export PATH=$PATH:$LOCAL_BIN
 export PATH=$PATH:$INTEL_BIN
 export PATH=$PATH:$NPM_BIN
 export PATH=$PATH:$GUROBI_BIN
-export PATH=$PATH:$CARGO_BIN
+export PATH=$PATH:$CARGOROOT_BIN
 export PATH=$PATH:$DEPOT_TOOLS
 export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
@@ -539,7 +539,7 @@ if [ -x "$(command -v brew)" ]; then
 fi
 
 # Java SDKMAN
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
 
 # Nix env setup
 [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
