@@ -306,15 +306,23 @@
 " coc.nvim - Complete engine and Language Server support for neovim {{{
 
     " Mappings:
-    " <leader>gd - go to definition
-    " <leader>gi - go to implementations
-    " <leader>gt - go to type definition
-    " <leader>r  - rename
-    " <leader>f  - references
-    " <leader>h  - symbol hover
-    " <leader>ac - code action
-    " <leader>al - code lens action
-    " <leader>di - diagnostic info
+    " <leader>gd  - go to definition
+    " <leader>gi  - go to implementations
+    " <leader>gt  - go to type definition
+    " <leader>ren - rename
+    " <leader>ref - references
+    " <leader>h   - symbol hover
+    " <leader>a   - code action
+    " (disabled) <leader>al - code lens action
+    " <leader>di  - diagnostic info
+    " <leader>cm  - select an LSP command
+    "
+    " Flutter:
+    " <leader>fd - flutter devices
+    " <leader>fr - flutter run
+    " <leader>ft - flutter hot restart
+    " <leader>fs - flutter stop
+    " <leader>fl - flutter dev log
     "
     " ]c, [c     - next/prev linter errors 
     " <Tab>, <S-Tab> - next/prev completion
@@ -330,6 +338,7 @@
     let g:coc_global_extensions = [
                 \   'coc-json',
                 \   'coc-rust-analyzer',
+                \   'coc-flutter',
                 \ ]
 
     function! s:coc_check_back_space() abort
@@ -344,10 +353,10 @@
 
         " Use tab for trigger completion with characters ahead and navigate.
         inoremap <silent><expr> <TAB>
-                    \ pumvisible() ? "\<C-n>" :
+                    \ coc#pum#visible() ? coc#pum#next(1) :
                     \ <SID>coc_check_back_space() ? "\<TAB>" :
                     \ coc#refresh()
-        inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+        inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"
 
         " Use <C-Space> to trigger completion.
         inoremap <silent><expr> <C-Space> coc#refresh()
@@ -362,14 +371,24 @@
         nnoremap <silent> ]c :call CocAction('diagnosticNext')<CR>
 
         nnoremap <silent> <leader>gd :call CocAction('jumpDefinition')<CR>
+        nnoremap <silent> <leader>gc :call CocAction('jumpDeclaration')<CR>
         nnoremap <silent> <leader>gi :call CocAction('jumpImplementation')<CR>
         nnoremap <silent> <leader>gt :call CocAction('jumpTypeDefinition')<CR>
-        nnoremap <silent> <leader>r :call CocAction('rename')<CR>
-        nnoremap <silent> <leader>f :call CocAction('jumpReferences')<CR>
+        nnoremap <silent> <leader>ren :call CocAction('rename')<CR>
+        nnoremap <silent> <leader>ref :call CocAction('jumpReferences')<CR>
         nnoremap <silent> <leader>h :call CocAction('doHover')<CR>
-        nnoremap <silent> <leader>ac :call CocAction('codeAction', '')<CR>
-        nnoremap <silent> <leader>al :call CocAction('codeLensAction')<CR>
+        nnoremap <leader>a <Plug>(coc-codeaction-selected)<CR>
+        xnoremap <leader>a <Plug>(coc-codeaction-selected)
         nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
+        nnoremap <silent> <leader>cm :CocCommand<CR>
+
+        " flutter-specific bindings
+        " TODO(phlip9): make this bind only in dart/flutter file types
+        nnoremap <silent> <leader>fd :CocCommand flutter.devices<CR>
+        nnoremap <silent> <leader>fr :CocCommand flutter.run<CR>
+        nnoremap <silent> <leader>ft :CocCommand flutter.dev.hotRestart<CR>
+        nnoremap <silent> <leader>fs :CocCommand flutter.dev.quit<CR>
+        nnoremap <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
 
         " This lets you select or use vim verbs inside/around functions/"classes".
         " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
@@ -1072,6 +1091,7 @@
         hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold 
 
         " Make LSP inlay hints more subtle vs Comment
+        hi CocInlayHint ctermbg=NONE ctermfg=59 cterm=NONE
         hi CocRustTypeHint ctermbg=NONE ctermfg=59 cterm=NONE
         hi CocRustChainingHint ctermbg=NONE ctermfg=59 cterm=NONE
     endfunction

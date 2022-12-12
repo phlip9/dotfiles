@@ -1,8 +1,5 @@
 {
-    "coc.preferences.formatOnSaveFiletypes": [
-        "rust",
-        "json"
-    ],
+    "coc.preferences.formatOnSave": true,
     "rust-analyzer.cargo.buildScripts.enable": false,
     "rust-analyzer.checkOnSave.enable": false,
     "rust-analyzer.diagnostics.disabled": [
@@ -13,6 +10,7 @@
     "rust-analyzer.inlayHints.chainingHints.enable": true,
     "rust-analyzer.procMacro.enable": true,
     "rust-analyzer.procMacro.attributes.enable": true,
-    "rust-analyzer.server.path": "~/.cargo/bin/rust-analyzer",
-    "rust-analyzer.updates.checkOnStartup": false
+    "rust-analyzer.server.path": "${userHome}/.cargo/bin/rust-analyzer",
+    "rust-analyzer.updates.checkOnStartup": false,
+    "dart.showTodos": false
 }
