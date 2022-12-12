@@ -68,6 +68,7 @@
     d = diff
     p = pull
     plo = !git pull --ff-only origin $(git master)
+    plu = !git pull --ff-only upstream $(git master)
     pfo = push --force origin
     pfom = !git push --force origin $(git master)
     pom = !git push origin $(git master)
@@ -75,5 +76,5 @@
     rbc = rebase --continue
     fu = fetch upstream
     fo = fetch origin
-    ru = !git rebase upstream/$(git master)
     ro = !git rebase origin/$(git master)
+    ru = !git rebase upstream/$(git master)
