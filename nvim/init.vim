@@ -811,7 +811,11 @@
     let fzf_enabled = isdirectory(fzf_home) && executable('fzf')
     let g:fzf_command_prefix = 'Fzf'
 
-    call dein#add(fzf_home, { 'if': fzf_enabled })
+    call dein#add(fzf_home,
+                \ {
+                \   'if': fzf_enabled,
+                \   'build': 'bash install --all',
+                \ })
     call dein#add('junegunn/fzf.vim', { 'if': fzf_enabled })
 
     nnoremap <silent> T :FzfBuffers<cr>
