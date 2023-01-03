@@ -163,6 +163,7 @@ elif [ "$OS" == "OSX" ]; then
     alias ll='ls -alhF'
     alias la='ls -A'
     alias l='ls -CF'
+    alias sha256sum='shasum -a 256'
 fi
 
 # annoying typos
