@@ -331,18 +331,8 @@ fi
 export SDKMAN_DIR="$HOME/.local/sdkman"
 
 # Go
-if [ "$OS" == "LINUX" ]; then
-    export GOROOT=$HOME/.local/go1.19.3
-    export GOOS=linux
-    export GOARCH=amd64
-elif [ "$OS" == "OSX" ]; then
-    export GOROOT=/usr/local/opt/go/libexec
-    export GOOS=darwin
-    export GOARCH=amd64
-fi
-export GOPATH=$HOME/dev/go
+export GOROOT=$HOME/.local/go1.19.3
 GOROOT_BIN=$GOROOT/bin
-GOPATH_BIN=$GOPATH/bin
 
 # solarized .Xresources fix (http://askubuntu.com/questions/302736/solarized-color-name-not-defined)
 if [ "$OS" == "LINUX" ]; then
@@ -458,9 +448,6 @@ export BOOGIE_EXE=$DOTNET_BIN/boogie
 export Z3_EXE=$LOCAL_BIN/z3
 export CVC4_EXE=$LOCAL_BIN/cvc4
 
-# arm-linux-gnueabihf toolchain
-ARM_TOOLCHAIN_BIN=$HOME/gcc-arm-8.3-2019.03-x86_64-arm-linux-gnueabihf/bin
-
 # ATS1
 export ATSHOME=$HOME/dev/ats1
 export ATSHOMERELOC=ATS-0.2.13
@@ -471,12 +458,8 @@ PATSBIN=$PATSHOME/bin
 export PATSCONTRIB=$HOME/dev/ats2-contrib
 export PATSHOMERELOC=$PATSCONTRIB
 
-# musl toolchain
-MUSL_TOOLCHAIN_BIN=/opt/musl/x86_64-linux-musl-cross-11.2.1/bin
-
 # PATH
 export PATH=$PATH:$GOROOT_BIN
-export PATH=$PATH:$GOPATH_BIN
 export PATH=$PATH:$ANDROID_PATH
 export PATH=$PATH:$FLUTTER_BIN
 export PATH=$PATH:$ARDUINO_SDK
@@ -492,9 +475,7 @@ export PATH=$PATH:$DEPOT_TOOLS
 export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
 export PATH=$PATH:$DOTNET_BIN
-export PATH=$PATH:$ARM_TOOLCHAIN_BIN
 export PATH=$PATH:$PATSBIN
-export PATH=$PATH:$MUSL_TOOLCHAIN_BIN
 
 # set RUST_SRC_PATH based on current rustup version
 if [ -x "$(command -v rustc)" ]; then
