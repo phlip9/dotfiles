@@ -316,6 +316,8 @@
     " (disabled) <leader>al - code lens action
     " <leader>di  - diagnostic info
     " <leader>cm  - select an LSP command
+    " <space>o    - fuzzy search file outline
+    " <space>s    - fuzzy search project symbols
     "
     " Flutter:
     " <leader>fd - flutter devices
@@ -377,10 +379,10 @@
         nnoremap <silent> <leader>ren :call CocAction('rename')<CR>
         nnoremap <silent> <leader>ref :call CocAction('jumpReferences')<CR>
         nnoremap <silent> <leader>h :call CocAction('doHover')<CR>
-        nnoremap <leader>a <Plug>(coc-codeaction-selected)<CR>
-        xnoremap <leader>a <Plug>(coc-codeaction-selected)
-        nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
-        nnoremap <silent> <leader>cm :CocCommand<CR>
+        " nnoremap <leader>a <Plug>(coc-codeaction-selected)<CR>
+        " xnoremap <leader>a <Plug>(coc-codeaction-selected)
+        " nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
+        " nnoremap <silent> <leader>cm :CocCommand<CR>
 
         " flutter-specific bindings
         " TODO(phlip9): make this bind only in dart/flutter file types
@@ -410,11 +412,27 @@
         vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
     endfunction
 
+    let g:coc_fzf_preview='right:50%'
+
+    function! s:coc_fzf_post_source() abort
+        nnoremap <silent> <space>o :CocFzfList outline<cr>
+        nnoremap <silent> <space>s :CocFzfList symbols<cr>
+        nnoremap <silent> <leader>a :CocFzfList actions<cr>
+        xnoremap <silent> <leader>a :CocFzfList actions
+        nnoremap <silent> <leader>di :CocFzfList diagnostics<cr>
+        nnoremap <silent> <leader>cm :CocFzfList commands<cr>
+    endfunction
+
     call dein#add('neoclide/coc.nvim',
                 \ { 
                 \   'if': executable('node') && executable('yarn'),
                 \   'build': 'yarn install --frozen-lockfile',
                 \   'hook_post_source': function('s:coc_post_source'),
+                \ })
+    call dein#add('antoinemadec/coc-fzf',
+                \ {
+                \   'depends': ['neoclide/coc.nvim', 'junegunn/fzf.vim'],
+                \   'hook_post_source': function('s:coc_fzf_post_source'),
                 \ })
 
 "  }}}
@@ -798,8 +816,6 @@
     " Mappings:
     "         O - open files search (ignoring files in .gitignore)
     "  <space>O - open files search (all files)
-    "  <space>o - file ctags outline
-    "  <space>t - project ctags search
     "         T - open buffers search
     "  <space>/ - grep with pattern
     "  <space>' - grep using word under cursor
@@ -819,8 +835,6 @@
     call dein#add('junegunn/fzf.vim', { 'if': fzf_enabled })
 
     nnoremap <silent> T :FzfBuffers<cr>
-    nnoremap <silent> <space>o :FzfBTags<cr>
-    nnoremap <silent> <space>t :FzfTags<cr>
     nnoremap <silent> <space>cm :FzfCommits<cr>
     nnoremap <silent> <space>cb :FzfBCommits<cr>
     nnoremap <silent> <space>h :FzfHelptags<cr>
