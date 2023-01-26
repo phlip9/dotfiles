@@ -463,7 +463,11 @@
 
 " vim-airline - Lightweight yet fancy status line {{{
 
-    call dein#add('vim-airline/vim-airline')
+    " current `vim-airline` master dumps lots of warnings : )
+    call dein#add('vim-airline/vim-airline',
+                \ {
+                \   'rev': '1028c6ea12dc70bd3be9abb2bd7abf7d1b6ed17d',
+                \ })
 
     set laststatus=2
 
