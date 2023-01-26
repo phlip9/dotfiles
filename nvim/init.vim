@@ -1033,6 +1033,12 @@
 
 " }}}
 
+" vim-glsl - GLSL shading language syntax {{{
+
+    call dein#add('tikhomirov/vim-glsl')
+
+" }}}
+
 " BUNDLES }}}
 
 " GENERAL {{{
