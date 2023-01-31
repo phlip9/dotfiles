@@ -12,3 +12,6 @@ rusty-tags/locks
 
 # htop config
 config/htop/htoprc
+
+# macOS shit
+.DS_Store

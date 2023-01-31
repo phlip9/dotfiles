@@ -107,6 +107,7 @@
     " custom comment formats
     let g:NERDCustomDelimiters = {
                 \ 'dart': { 'left': '//' },
+                \ 'dtrace': { 'left': '//' },
                 \ }
 
     " key bindings
