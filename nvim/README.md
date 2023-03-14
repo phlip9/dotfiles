@@ -75,9 +75,6 @@ $ cargo install rusty-tags
 $ cd my_rust_project/
 $ rusty-tags vi
 
-# Install cargo watch
-$ RUSTFLAGS="-C target-cpu=native" cargo install cargo-watch
-
 # Install rust-analyzer
 $ git clone --depth=1 https://github.com/rust-lang/rust-analyzer
 $ cd rust-analyzer
@@ -102,14 +99,17 @@ $ sudo apt install clang
 ### _Optional_: Install ripgrep ###
 
 ```bash
-$ RUSTFLAGS="-C target-cpu=native" cargo +nightly install --features="simd-accel" ripgrep
+$ RUSTFLAGS="-C target-cpu=native" cargo +nightly install \
+    --features="simd-accel" ripgrep
 ```
 
 
 ### _Optional_: Install Other Rust Utilities ###
 
 ```bash
-$ RUSTFLAGS="-C target-cpu=native" cargo install bat exa fastmod fd-find just
+$ RUSTFLAGS="-C target-cpu=native" cargo install \
+    bat cargo-watch exa fastmod fd-find just systemfd watchexec-cli
+
 ```
 
 
