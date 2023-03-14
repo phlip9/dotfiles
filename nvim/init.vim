@@ -106,6 +106,7 @@
 
     " custom comment formats
     let g:NERDCustomDelimiters = {
+                \ 'c': { 'left': '//', 'leftAlt': '/*', 'rightAlt': '*/' },
                 \ 'dart': { 'left': '//' },
                 \ 'dtrace': { 'left': '//' },
                 \ }
@@ -568,6 +569,7 @@
     autocmd FileType c,cpp
                 \ autocmd BufWritePre <buffer> undojoin | Neoformat
 
+    let g:neoformat_only_msg_on_error = 1
     let g:neoformat_enabled_cpp = ['clangformat']
     let g:neoformat_enabled_c = ['clangformat']
 
