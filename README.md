@@ -220,15 +220,14 @@ $ sudo apt install lm-sensors htop
 ### Install nix
 
 ```bash
-$ curl --proto '=https' --tlsv1.3 -sSfL https://nixos.org/nix/install | bash
+$ curl --proto '=https' --tlsv1.2 -sSfL https://nixos.org/nix/install | bash
 ```
 
 + Remove the line the installer adds in `$HOME/.profile`.
 
-+ Upgrade to unstable
++ Enable `nix flake` "unstable" feature:
 
 ```bash
-$ nix-env -f '<nixpkgs>' -iA nixUnstable
 $ mkdir ~/.config/nix
 $ echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
 ```
