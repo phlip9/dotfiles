@@ -1046,6 +1046,13 @@
 
 " }}}
 
+
+" vim-nix - Nix syntax {{{
+
+    call dein#add('LnL7/vim-nix')
+
+" }}}
+
 " BUNDLES }}}
 
 " GENERAL {{{
