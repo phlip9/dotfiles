@@ -219,18 +219,14 @@ $ sudo apt install lm-sensors htop
 
 ### Install nix
 
-```bash
-$ curl --proto '=https' --tlsv1.2 -sSfL https://nixos.org/nix/install | bash
-```
-
-+ Remove the line the installer adds in `$HOME/.profile`.
-
-+ Enable `nix flake` "unstable" feature:
+See up-to-date version: <https://github.com/DeterminateSystems/nix-installer/releases>
 
 ```bash
-$ mkdir ~/.config/nix
-$ echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+$ curl --proto '=https' --tlsv1.2 -sSfL https://install.determinate.systems/nix/tag/v0.9.1 \
+    | bash -s -- install --diagnostic-endpoint ""
 ```
+
+NOTE: this is using the unofficial DeterminateSystems nix installer.
 
 
 ### Install alacritty

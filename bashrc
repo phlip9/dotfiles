@@ -477,11 +477,12 @@ export PATH=$PATH:$YARN_NODE_MODULES_BIN
 export PATH=$PATH:$DOTNET_BIN
 export PATH=$PATH:$PATSBIN
 
-# set RUST_SRC_PATH based on current rustup version
-if [ -x "$(command -v rustc)" ]; then
-    RUST_SYSROOT=$(rustc --print sysroot)
-    export RUST_SRC_PATH=$RUST_SYSROOT/lib/rustlib/src/rust/src/
-fi
+# TODO: do we still need this?
+# # set RUST_SRC_PATH based on current rustup version
+# if [ -x "$(command -v rustc)" ]; then
+#     RUST_SYSROOT=$(rustc --print sysroot)
+#     export RUST_SRC_PATH=$RUST_SYSROOT/lib/rustlib/src/rust/src/
+# fi
 
 # Use ripgrep for fzf filename searching
 if [ -x "$(command -v rg)" ]; then
