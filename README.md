@@ -702,3 +702,23 @@ $ flatpak install Obsidian
 ### Open notes vault
 
 + Obsidian > Open folder as vault
+
+
+
+
+## nix
+
+### home-manager
+
+#### one-time initial bootstrapping
+
+```bash
+$ mkdir ./home-manager
+$ nix run home-manager/master -- init --switch ./home-manager
+```
+
+#### active new config
+
+```bash
+$ hm switch
+```
