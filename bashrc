@@ -10,10 +10,6 @@
 # Source global definitions
 [ -f /etc/bashrc ] && source /etc/bashrc
 
-# Source Facebook definitions
-[ -f /usr/facebook/ops/rc/master.bashrc ] \
-    && source /usr/facebook/ops/rc/master.bashrc
-
 # Source homebrew shell environment
 [ -f /opt/homebrew/bin/brew ] \
     && eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -31,10 +27,6 @@ esac
 
 # Detect Windows Subsystem for Linux (WSL)
 [ -f /mnt/c/Windows/System32/wsl.exe ] && IS_WSL="true"
-
-# Detect FB devserver
-FB_DEVVM_RE="^devvm[0-9]+.*facebook\.com$"
-[[ $(uname -n) =~ $FB_DEVVM_RE ]] && IS_FB_DEVVM="true"
 
 # Open tmux automatically
 # If a session exists, just connect to it instead of creating a new one.
@@ -299,7 +291,8 @@ function wsl_open() {
 [ "$IS_WSL" ] && alias open='wsl_open'
 
 # nix home-manager, but with configuration in my dotfiles git repo.
-alias hm='home-manager --flake ~/dev/dotfiles/home#$(hostname)'
+alias hm='home-manager --flake ~/dev/dotfiles/home#$HOSTNAME'
+alias hms='home-manager --flake ~/dev/dotfiles/home#$HOSTNAME switch'
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
@@ -480,6 +473,12 @@ export PATH=$PATH:$YARN_NODE_MODULES_BIN
 export PATH=$PATH:$DOTNET_BIN
 export PATH=$PATH:$PATSBIN
 
+# Java SDKMAN
+[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+
+# Nix env setup
+[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+
 # TODO: do we still need this?
 # # set RUST_SRC_PATH based on current rustup version
 # if [ -x "$(command -v rustc)" ]; then
@@ -508,13 +507,6 @@ fi
 
 ## COMPLETIONS {{{
 
-# enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    source /etc/bash_completion
-fi
-
 # NVM setup and bash completions
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
@@ -538,12 +530,6 @@ if [ -x "$(command -v brew)" ]; then
         done
     fi
 fi
-
-# Java SDKMAN
-[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
-
-# Nix env setup
-[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
 # Alacritty
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"

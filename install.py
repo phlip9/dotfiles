@@ -53,8 +53,9 @@ def install_dotfile(dotfile):
 
 
 def install_dotfiles(dotfiles_dir, install_dir):
-    dotfiles = [(path.join(dotfiles_dir, "bashrc"),
-                 path.join(install_dir, ".bashrc")),
+    dotfiles = [
+                #  (path.join(dotfiles_dir, "bashrc"),
+                #   path.join(install_dir, ".bashrc")),
                 (path.join(dotfiles_dir, "nvim"),
                  path.join(install_dir, ".config", "nvim")),
                 (path.join(dotfiles_dir, "tmux.conf"),
