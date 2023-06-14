@@ -710,14 +710,19 @@ $ flatpak install Obsidian
 
 ### home-manager
 
-#### one-time initial bootstrapping
+#### first time setup
 
 ```bash
-$ mkdir ./home-manager
-$ nix run home-manager/master -- init --switch ./home-manager
+# (if this is a new machine)
+$ cp ./home/phlipdesk.nix ./home/$(hostname)
+$ nvim ./home/flake.nix # copy an existing home-manager config for the new host
+
+$ nix run home-manager/master -- --flake ./home#$(hostname) switch
 ```
 
 #### active new config
+
+If first time setup is already complete, then just:
 
 ```bash
 $ hm switch

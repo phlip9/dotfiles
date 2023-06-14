@@ -1,5 +1,14 @@
-{ config, pkgs, ... }:
-
+{
+  # a reference to the home-manager config object this fn outputs
+  config,
+  # nixpkgs
+  pkgs,
+  # nixpkgs.lib
+  lib,
+  # flake inputs passed in via `extraSpecialArgs`
+  inputs,
+  ...
+}:
 {
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
@@ -63,16 +72,12 @@
   # if you don't want to manage your shell through Home Manager.
   home.sessionVariables = {
     # EDITOR = "emacs";
-
-    # silence weird error:
-    #  ~/.nix-profile/bin/manpath: can't set the locale; make sure $LC_* and $LANG are correct
-    #
-    # see issue: <https://github.com/nix-community/home-manager/issues/432#issuecomment-615841327>
-    LANG = "en_US.UTF-8";
   };
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  # programs.man.enable = false;
+  # silence weird error after opening new shell:
+  #   ~/.nix-profile/bin/manpath: can't set the locale; make sure $LC_* and $LANG are correct
+  programs.man.enable = false;
 }

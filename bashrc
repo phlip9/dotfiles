@@ -299,7 +299,7 @@ function wsl_open() {
 [ "$IS_WSL" ] && alias open='wsl_open'
 
 # nix home-manager, but with configuration in my dotfiles git repo.
-alias hm='home-manager --flake ~/dev/dotfiles/home-manager'
+alias hm='home-manager --flake ~/dev/dotfiles/home#$(hostname)'
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
