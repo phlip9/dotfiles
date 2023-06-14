@@ -28,6 +28,7 @@
   home.stateVersion = "23.05"; # Please read the comment before changing.
 
   imports = [
+    ./mods/alacritty.nix
     ./mods/git.nix
   ];
 
