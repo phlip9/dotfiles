@@ -15,7 +15,7 @@
     homeConfigurations."phlipdesk" = home-manager.lib.homeManagerConfiguration rec {
       pkgs = nixpkgs.legacyPackages."x86_64-linux";
       lib = pkgs.lib;
-      modules = [ ./phlipdesk.nix ];
+      modules = [ ./home/phlipdesk.nix ];
 
       # Use `extraSpecialArgs` to pass through arguments from the flake.nix to
       # the home-manager modules.

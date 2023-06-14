@@ -714,10 +714,10 @@ $ flatpak install Obsidian
 
 ```bash
 # (if this is a new machine)
-$ cp ./home/phlipdesk.nix ./home/$(hostname)
-$ nvim ./home/flake.nix # copy an existing home-manager config for the new host
+$ cp ./home/phlipdesk.nix ./home/$(hostname).nix
+$ nvim ./flake.nix # copy an existing home-manager config for the new host
 
-$ nix run home-manager/master -- --flake ./home#$(hostname) switch
+$ nix run home-manager/master -- --flake ./.#$(hostname) switch
 ```
 
 #### active new config
