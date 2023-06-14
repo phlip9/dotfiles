@@ -1,7 +1,2 @@
-# Ignore bundles/plugins
-bundle/
-plugins/
-
 # Ignore netrwhist
 .netrwhist
-

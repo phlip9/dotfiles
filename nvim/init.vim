@@ -9,7 +9,7 @@
         set nocompatible
     endif
 
-    let plugins_home = expand('$XDG_CONFIG_HOME/nvim/plugins')
+    let plugins_home = expand('$XDG_STATE_HOME/dein')
 
     " dein install and setup
     if has('vim_starting')
