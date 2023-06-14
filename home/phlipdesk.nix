@@ -31,6 +31,7 @@
     ./mods/bash.nix
     ./mods/gh.nix
     ./mods/git.nix
+    ./mods/nvim.nix
   ];
 
   # The home.packages option allows you to install Nix packages into your
