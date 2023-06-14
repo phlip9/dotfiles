@@ -8,8 +8,7 @@
   # flake inputs passed in via `extraSpecialArgs`
   inputs,
   ...
-}:
-{
+}: {
   # Easily search through home-manager options:
   # <https://mipmip.github.io/home-manager-option-search>
 
