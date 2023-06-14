@@ -28,6 +28,7 @@
 
   imports = [
     ./mods/alacritty.nix
+    ./mods/gh.nix
     ./mods/git.nix
   ];
 
