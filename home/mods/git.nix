@@ -4,6 +4,9 @@ let
 in {
   # home-manager options:
   # <https://nix-community.github.io/home-manager/options.html#opt-programs.git.enable>
+  #
+  # git config options:
+  # <https://git-scm.com/docs/git-config#_variables>
 
   programs.git = {
     enable = true;
@@ -13,14 +16,37 @@ in {
 
     extraConfig = {
       core.editor = "nvim";
+      init.defaultBranch = "master";
+
+      # silence annoying "detached head" warning
+      advice.detachedHead = false;
+
+      # show full commit diff when editing commit message
       commit.verbose = true;
+
+      # before fetching, remove any remote-tracking refs that no longer exist
+      # on the remote.
       fetch.prune = true;
-      pull.ff = "only";
-      push.default = "simple";
+
+      # show 3-way diff when resolving merge conflicts.
       merge.conflictstyle = "diff3";
+
+      # when pulling from a remote branch, don't try to make a merge commit
+      # if we can't fast-forward, just fail.
+      pull.ff = "only";
+
+      # allow plain `git push` for new branches w/o any extra work.
+      push.autoSetupRemote = true;
+
+      # push.default defines the action `git push` should take by default.
+      # simple = pushes the current branch w/ the same name on remote
+      push.default = "simple";
 
       # autosquash on rebase by default
       rebase.autosquash = true;
+
+      # show detailed diff by default for `git stash show`
+      stash.showPatch = true;
     };
 
     aliases = {
