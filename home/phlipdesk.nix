@@ -31,6 +31,7 @@
     ./mods/bash.nix
     ./mods/gh.nix
     ./mods/git.nix
+    ./mods/inputrc.nix
     ./mods/nvim.nix
     ./mods/tmux.nix
   ];
