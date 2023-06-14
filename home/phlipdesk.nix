@@ -10,6 +10,9 @@
   ...
 }:
 {
+  # Easily search through home-manager options:
+  # <https://mipmip.github.io/home-manager-option-search>
+
   # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "phlip9";
@@ -23,6 +26,10 @@
   # want to update the value, then make sure to first check the Home Manager
   # release notes.
   home.stateVersion = "23.05"; # Please read the comment before changing.
+
+  imports = [
+    ./mods/git.nix
+  ];
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
