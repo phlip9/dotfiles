@@ -1,5 +1,4 @@
-{ ... }:
-let
+{...}: let
   stripNewlines = str: builtins.replaceStrings ["\n"] [""] str;
 in {
   # home-manager options:
