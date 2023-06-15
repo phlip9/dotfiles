@@ -52,6 +52,12 @@
     #
     # pkgs = nixpkgs.legacyPackages."x86_64-linux";
 
+    # Re-export home-manager package so we can easily reference it on first-time
+    # setup for a new machine.
+    packages = forEachSystem (system: {
+      home-manager = inputs.home-manager.packages.${system}.home-manager;
+    });
+
     # home-manager configurations for different hosts
 
     homeConfigurations."phlipdesk" = home-manager.lib.homeManagerConfiguration rec {

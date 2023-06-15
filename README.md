@@ -65,18 +65,41 @@ $ cd ~/dev
 $ git clone https://github.com/phlip9/dotfiles.git
 $ cd dotfiles
 
-# upgrade pip
-$ sudo apt install python3-pip
-$ sudo -H python3 -m pip install --upgrade pip
-
-# run dotfiles install
-$ python3 install.py
-
 # (OSX) source our personal bashrc settings
 $ echo "[ -f ~/.bashrc ] && source ~/.bashrc" >> ~/.bash_profile
 $ source ~/.bash_profile
 ```
 
+
+### Install nix
+
+See up-to-date version: <https://github.com/DeterminateSystems/nix-installer/releases>
+
+```bash
+$ curl --proto '=https' --tlsv1.2 -sSfL https://install.determinate.systems/nix/tag/v0.9.1 \
+    | bash -s -- install --diagnostic-endpoint ""
+```
+
+NOTE: this is using the unofficial DeterminateSystems nix installer.
+
+First-time home-manager setup for a new machine:
+
+```bash
+# (if this is a new machine configuration)
+$ cp ./home/phlipdesk.nix ./home/$HOSTNAME.nix
+# copy an existing home-manager config for the new host
+$ nvim ./flake.nix
+
+# Switch to the home-manager config for this host
+$ nix run .#home-manager -- --flake .#$HOSTNAME switch
+```
+
+Post initial setup, just use the alias to switch to a new home-manager config
+after changing one of the dotfiles:
+
+```bash
+$ hms
+```
 
 ### Install Neovim and dev tooling
 
@@ -215,18 +238,6 @@ $ sudo apt install lm-sensors htop
 ### Firefox touch screen support and smooth scrolling
 
 + Add `MOZ_USE_XINPUT2 DEFAULT=1` to `/etc/security/pam_env.conf` and then relog.
-
-
-### Install nix
-
-See up-to-date version: <https://github.com/DeterminateSystems/nix-installer/releases>
-
-```bash
-$ curl --proto '=https' --tlsv1.2 -sSfL https://install.determinate.systems/nix/tag/v0.9.1 \
-    | bash -s -- install --diagnostic-endpoint ""
-```
-
-NOTE: this is using the unofficial DeterminateSystems nix installer.
 
 
 ### Install alacritty
@@ -712,13 +723,6 @@ $ flatpak install Obsidian
 
 #### first time setup
 
-```bash
-# (if this is a new machine)
-$ cp ./home/phlipdesk.nix ./home/$(hostname).nix
-$ nvim ./flake.nix # copy an existing home-manager config for the new host
-
-$ nix run home-manager/master -- --flake ./.#$(hostname) switch
-```
 
 #### active new config
 

@@ -398,8 +398,8 @@ GUROBI_BIN=$GUROBI_HOME/bin
 GUROBI_LIB=$GUROBI_HOME/lib
 
 # Rust Cargo
-export CARGOPATH=$HOME/.cargo
-CARGOROOT_BIN=$CARGOPATH/bin
+CARGO_HOME=$HOME/.cargo
+CARGO_BIN=$CARGO_HOME/bin
 
 # Google
 DEPOT_TOOLS=$HOME/depot_tools
@@ -456,7 +456,7 @@ export PATH=$PATH:$LOCAL_BIN
 export PATH=$PATH:$INTEL_BIN
 export PATH=$PATH:$NPM_BIN
 export PATH=$PATH:$GUROBI_BIN
-export PATH=$PATH:$CARGOROOT_BIN
+export PATH=$PATH:$CARGO_BIN
 export PATH=$PATH:$DEPOT_TOOLS
 export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
@@ -465,9 +465,6 @@ export PATH=$PATH:$PATSBIN
 
 # Java SDKMAN
 [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
-
-# Nix env setup
-[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
 
 # TODO: do we still need this?
 # # set RUST_SRC_PATH based on current rustup version
@@ -525,5 +522,12 @@ fi
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"
 
 ## COMPLETIONS }}}
+
+## NIX POSTLUDE {{{
+
+# Nix env setup
+[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+
+## NIX POSTLUJDE }}}
 
 # vim:foldmethod=marker
