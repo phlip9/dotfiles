@@ -33,6 +33,7 @@
     ./mods/gh.nix
     ./mods/git.nix
     ./mods/inputrc.nix
+    ./mods/local-bin.nix
     ./mods/nvim.nix
     ./mods/tmux.nix
   ];

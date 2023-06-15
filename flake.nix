@@ -47,6 +47,11 @@
           builder nixpkgs.legacyPackages.${system}
       );
   in {
+    # TIP: uncomment this line to easily poke through the nixpkgs state in the
+    # `nix repl` (use `:load-flake .` after opening the repl).
+    #
+    # pkgs = nixpkgs.legacyPackages."x86_64-linux";
+
     # home-manager configurations for different hosts
 
     homeConfigurations."phlipdesk" = home-manager.lib.homeManagerConfiguration rec {
