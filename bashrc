@@ -223,7 +223,7 @@ function retry() {
 
 function mkvenv() {
     echo "Creating new python virtual env at '$PYTHON3_ENV_DIR/$1'"
-    $PYTHON3_BIN -m venv "$PYTHON3_ENV_DIR/$1"
+    python3 -m venv "$PYTHON3_ENV_DIR/$1"
 }
 
 function lsvenv() {
@@ -412,22 +412,9 @@ LOCAL_BIN=$HOME/.local/bin
 # fi
 
 # python3
-export PYTHON3_VERSION=python3.10
-# pyvenv virtual environments
-export PYTHON3_ENV_DIR=$HOME/virtualenvs
+# venv virtual environments
+export PYTHON3_ENV_DIR=$HOME/.local/state/venv
 export ENV_DIR=$PYTHON3_ENV_DIR
-ANACONDA_HOME=$HOME/anaconda3/bin
-if [ "$OS" == "LINUX" ]; then
-    # Try global python3 install
-    if [ -x /bin/$PYTHON3_VERSION ]; then
-        export PYTHON3_BIN="/bin/$PYTHON3_VERSION"
-    elif [ -x /usr/bin/$PYTHON3_VERSION ]; then
-        export PYTHON3_BIN="/usr/bin/$PYTHON3_VERSION"
-    fi
-elif [ "$OS" == "OSX" ]; then
-    # Use Brew python3 install
-    export PYTHON3_BIN="/opt/homebrew/bin/$PYTHON3_VERSION"
-fi
 
 # FZF
 export FZF_HOME=$HOME/.fzf

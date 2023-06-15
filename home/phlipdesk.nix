@@ -35,6 +35,7 @@
     ./mods/inputrc.nix
     ./mods/local-bin.nix
     ./mods/nvim.nix
+    ./mods/python.nix
     ./mods/ssh.nix
     ./mods/tmux.nix
   ];
