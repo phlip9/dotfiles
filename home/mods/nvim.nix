@@ -1,4 +1,4 @@
-{config, ...}: {
+{...}: {
   programs.neovim = {
     enable = true;
     defaultEditor = true;
@@ -8,10 +8,6 @@
     withRuby = false;
   };
 
-  # link nvim config
-  home.file."nvim" = {
-    source = ../../nvim;
-    target = "${config.xdg.configHome}/nvim";
-    recursive = false;
-  };
+  # link ~/.config/nvim to dotfiles/nvim
+  xdg.configFile."nvim".source = ../../nvim;
 }

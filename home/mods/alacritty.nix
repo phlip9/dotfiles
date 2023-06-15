@@ -16,7 +16,7 @@
 # Deleted log file at "/tmp/Alacritty-599442.log"
 # Error: "Event loop terminated with code: 1"
 # ```
-{config, ...}: {
+{...}: {
   # programs.alacritty.enable = true;
   # programs.alacritty.settings = {
   #   import = [
@@ -26,8 +26,5 @@
 
   # For now, just link the alacritty config file.
   # TODO: remove this when we figure out how to get the package working
-  home.file."alacritty" = {
-    source = ../../alacritty.yml;
-    target = "${config.xdg.configHome}/alacritty/alacritty.yml";
-  };
+  xdg.configFile."alacritty/alacritty.yml".source = ../../alacritty.yml;
 }
