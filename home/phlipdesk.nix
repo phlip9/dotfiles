@@ -27,6 +27,8 @@
   home.stateVersion = "23.05"; # Please read the comment before changing.
 
   imports = [
+    ./mods/core.nix
+
     ./mods/alacritty.nix
     ./mods/bash.nix
     ./mods/ctags.nix

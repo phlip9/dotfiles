@@ -136,34 +136,13 @@ fi
 
 ## ALIASES {{{
 
-if [ "$OS" == "LINUX" ]; then
-    # fix background for ls --color
-    [ $IS_WSL ] && export LS_COLORS='ow=01;36;40'
-
-    alias ls='ls --color=auto'
-
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
-
-    # some more ls aliases
-    alias ll='ls -alhF --color=auto'
-    alias la='ls -A --color=auto'
-    alias l='ls -CF --color=auto'
-elif [ "$OS" == "OSX" ]; then
-    # some more ls aliases
-    alias ll='ls -alhF'
-    alias la='ls -A'
-    alias l='ls -CF'
-    alias sha256sum='shasum -a 256'
-fi
+# fix background for ls --color
+[ $IS_WSL ] && export LS_COLORS='ow=01;36;40'
 
 # annoying typos
-alias ks='ls'
 alias :q='quit'
 alias cd..='cd ..'
 alias cim='vim'
-alias sl='ls'
 alias shh='ssh'
 
 # git shortcut
@@ -175,16 +154,15 @@ alias c='cargo'
 # just shortcut
 alias j='just'
 
-# big money cargo fix + fmt + clippy + lint wombo combo
-alias ccc='echo "Running cargo fix" && cargo fix --allow-staged --allow-dirty --all-targets \
-    && echo "Running cargo fmt" && cargo fmt \
-    && echo "Running cargo xclippy --all-targets" && cargo xclippy --all-targets \
-    && echo "Running cargo x lint" && cargo x lint'
-
 # tmux 256 colors
 alias tmux="TERM=screen-256color tmux -2"
 
+# OS-specific aliases
 if [ "$OS" == "LINUX" ]; then
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
+
     alias install='sudo apt-get install'
     alias update='sudo apt-get update'
     alias upgrade='sudo apt-get upgrade'
@@ -196,6 +174,8 @@ if [ "$OS" == "LINUX" ]; then
     #   sleep 10; alert
     alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 elif [ "$OS" == "OSX" ]; then
+    # alias sha256sum='shasum -a 256'
+
     alias alert='osascript -e "display notification \"Command completed\" with title \"Terminal Alert\""'
 fi
 
@@ -522,12 +502,5 @@ fi
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"
 
 ## COMPLETIONS }}}
-
-## NIX POSTLUDE {{{
-
-# Nix env setup
-[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
-
-## NIX POSTLUJDE }}}
 
 # vim:foldmethod=marker

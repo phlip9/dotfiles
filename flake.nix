@@ -50,7 +50,7 @@
     # TIP: uncomment this line to easily poke through the nixpkgs state in the
     # `nix repl` (use `:load-flake .` after opening the repl).
     #
-    # pkgs = nixpkgs.legacyPackages."x86_64-linux";
+    pkgs = nixpkgs.legacyPackages."x86_64-linux";
 
     # Re-export home-manager package so we can easily reference it on first-time
     # setup for a new machine.
