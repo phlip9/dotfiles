@@ -1,7 +1,7 @@
 {
     "coc.preferences.formatOnSave": true,
     "rust-analyzer.cargo.buildScripts.enable": false,
-    "rust-analyzer.checkOnSave.enable": false,
+    "rust-analyzer.checkOnSave": true,
     "rust-analyzer.diagnostics.disabled": [
         "macro-error",
         "inactive-code",
@@ -12,5 +12,30 @@
     "rust-analyzer.procMacro.attributes.enable": true,
     "rust-analyzer.server.path": "${userHome}/.cargo/bin/rust-analyzer",
     "rust-analyzer.updates.checkOnStartup": false,
-    "dart.showTodos": false
+    "dart.showTodos": false,
+    "languageserver": {
+        "nix": {
+            "command": "nil",
+            "filetypes": [
+                "nix"
+            ],
+            "rootPatterns": [
+                "flake.nix"
+            ],
+            "settings": {
+                "nil": {
+                    "formatting": {
+                        "command": [
+                            "alejandra"
+                        ]
+                    },
+                    "diagnostics": {
+                        "excludedFiles": [
+                            "generated.nix"
+                        ]
+                    }
+                }
+            }
+        }
+    }
 }
