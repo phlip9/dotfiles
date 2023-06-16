@@ -1,6 +1,5 @@
-# ~/.bashrc: executed by bash(1) for non-login shells.
-# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
-# for examples
+#!/usr/bin/env bash
+# shellcheck source=/dev/null
 
 ## INIT {{{
 
@@ -137,7 +136,7 @@ fi
 ## ALIASES {{{
 
 # fix background for ls --color
-[ $IS_WSL ] && export LS_COLORS='ow=01;36;40'
+[ "$IS_WSL" ] && export LS_COLORS='ow=01;36;40'
 
 # annoying typos
 alias :q='quit'
@@ -247,7 +246,7 @@ function aoe4rank() {
     local JSON='{"region":"7","versus":"players","matchType":"unranked","teamSize":"1v1","searchPlayer":"'
     local JSON+="$1"
     local JSON+='","page":1,"count":3}'
-    curl --no-progress-meter -d $JSON -H 'Content-Type: application/json' https://api.ageofempires.com/api/ageiv/Leaderboard \
+    curl --no-progress-meter -d "$JSON" -H 'Content-Type: application/json' https://api.ageofempires.com/api/ageiv/Leaderboard \
         | jq '.items[] | { name: .userName, elo: .elo, rank: .rank, win_rate: .winPercent, wins: .wins, losses: .losses  }'
 }
 
@@ -260,10 +259,12 @@ function wsl_open() {
     if [[ "$1" =~ ^(http|https)://.+$ ]]; then
         firefox "$1"
     elif [[ -f "$1" ]]; then
-        local ABS_PATH=$(realpath -e "$1")
+        local ABS_PATH
+        ABS_PATH=$(realpath -e "$1")
         firefox "$WSL_FS_PREFIX$ABS_PATH"
     else
-        local ABS_PATH=$(realpath -e "$1")
+        local ABS_PATH
+        ABS_PATH=$(realpath -e "$1")
         explorer "$WSL_FS_PREFIX$ABS_PATH"
     fi
 }
@@ -293,7 +294,7 @@ export XDG_DATA_HOME=$HOME/.local/share
 export XDG_STATE_HOME=$HOME/.local/state
 
 # Facebook devserver proxy
-if [ $IS_FB_DEVVM ]; then
+if [ "$IS_FB_DEVVM" ]; then
     export no_proxy=".fbcdn.net,.facebook.com,.thefacebook.com,.tfbnw.net,.fb.com,.fburl.com,.facebook.net,.sb.fbsbx.com,localhost"
     export http_proxy=fwdproxy:8080
     export https_proxy=fwdproxy:8080
@@ -352,30 +353,30 @@ CABAL_BIN=$HOME/.cabal/bin
 # Git submodule tools
 GIT_SUBMODULE_TOOLS=$HOME/git-submodule-tools
 
-INTEL_HOME=/opt/intel
-INTEL_BIN=$INTEL_HOME/bin
-INTEL_LIB=$INTEL_HOME/lib/intel64
-if [ -f "$INTEL_HOME" ]; then
-    export INTEL_LICENSE_FILE=$INTEL_HOME/licenses/l_CZSTLDHD.lic
-fi
+# INTEL_HOME=/opt/intel
+# INTEL_BIN=$INTEL_HOME/bin
+# INTEL_LIB=$INTEL_HOME/lib/intel64
+# if [ -f "$INTEL_HOME" ]; then
+#     export INTEL_LICENSE_FILE=$INTEL_HOME/licenses/l_CZSTLDHD.lic
+# fi
 
-SPARK_HOME=$HOME/spark
-SPARK_BIN=$SPARK_HOME/bin
+# SPARK_HOME=$HOME/spark
+# SPARK_BIN=$SPARK_HOME/bin
 
 NPM_HOME=$HOME/.npm
 NPM_BIN=$NPM_HOME/bin
 
-# JRuby
-JRUBY_HOME=$HOME/jruby
-JRUBY_BIN=$JRUBY_HOME/bin
+# # JRuby
+# JRUBY_HOME=$HOME/jruby
+# JRUBY_BIN=$JRUBY_HOME/bin
 
-# Gurobi
-if [ "$OS" == "LINUX" ]; then
-    export GUROBI_HOME=$HOME/gurobi651/linux64
-fi
-export GRB_LICENSE_FILE=$HOME/gurobi.lic
-GUROBI_BIN=$GUROBI_HOME/bin
-GUROBI_LIB=$GUROBI_HOME/lib
+# # Gurobi
+# if [ "$OS" == "LINUX" ]; then
+#     export GUROBI_HOME=$HOME/gurobi651/linux64
+# fi
+# export GRB_LICENSE_FILE=$HOME/gurobi.lic
+# GUROBI_BIN=$GUROBI_HOME/bin
+# GUROBI_LIB=$GUROBI_HOME/lib
 
 # Rust Cargo
 CARGO_HOME=$HOME/.cargo
@@ -467,7 +468,7 @@ fi
 # When in WSL, Start the keychain ssh-agent frontend in lazy mode.
 if [[ $IS_WSL && -x "$(command -v keychain)" ]]; then
     keychain --nogui --noask --quiet
-    source $HOME/.keychain/$HOSTNAME-sh
+    source "$HOME/.keychain/$HOSTNAME-sh"
 fi
 
 ## }}}

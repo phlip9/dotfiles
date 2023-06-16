@@ -1,12 +1,12 @@
 {
-  # a reference to the home-manager config object this fn outputs
-  config,
+  # # a reference to the home-manager config object this fn outputs
+  # config,
   # nixpkgs
   pkgs,
-  # nixpkgs.lib
-  lib,
-  # flake inputs passed in via `extraSpecialArgs`
-  inputs,
+  # # nixpkgs.lib
+  # lib,
+  # # flake inputs passed in via `extraSpecialArgs`
+  # inputs,
   ...
 }: {
   # Easily search through home-manager options:

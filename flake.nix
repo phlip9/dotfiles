@@ -116,6 +116,9 @@
       default = pkgs.mkShellNoCC {
         packages = [
           pkgs.alejandra
+
+          # bash script linter
+          pkgs.shellcheck
         ];
       };
     });
