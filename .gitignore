@@ -15,3 +15,6 @@ config/htop/htoprc
 
 # macOS shit
 .DS_Store
+
+# direnv cache
+.direnv/

@@ -78,6 +78,16 @@ See up-to-date version: <https://github.com/DeterminateSystems/nix-installer/rel
 ```bash
 $ curl --proto '=https' --tlsv1.2 -sSfL https://install.determinate.systems/nix/tag/v0.9.1 \
     | bash -s -- install --diagnostic-endpoint ""
+
+# Add these lines to /etc/nix/nix.conf
+# According to <https://github.com/nix-community/nix-direnv#via-home-manager>,
+# this helps protect our `nix develop` shell env from getting GC'd.
+$ sudo cat >> /etc/nix/nix.conf << EOF
+keep-derivations = true
+keep-outputs = true
+EOF
+$ echo -e "keep-derivations = true\nkeep-outputs = true" \
+    | sudo tee --append /etc/nix/nix.conf
 ```
 
 NOTE: this is using the unofficial DeterminateSystems nix installer.

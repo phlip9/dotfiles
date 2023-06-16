@@ -32,6 +32,7 @@
     ./mods/alacritty.nix
     ./mods/bash.nix
     ./mods/ctags.nix
+    ./mods/direnv.nix
     ./mods/gh.nix
     ./mods/git.nix
     ./mods/inputrc.nix
