@@ -115,10 +115,17 @@
     devShells = forEachPkgs (pkgs: {
       default = pkgs.mkShellNoCC {
         packages = [
+          # Uncompromising nix code formatter
+          # <https://github.com/kamadorueda/alejandra>
           pkgs.alejandra
 
-          # bash script linter
+          # Static analysis tool for shell scripts
+          # <https://github.com/koalaman/shellcheck>
           pkgs.shellcheck
+
+          # Just a command runner
+          # <https://github.com/casey/just>
+          pkgs.just
         ];
       };
     });

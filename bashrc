@@ -504,7 +504,6 @@ fi
 
 ## COMPLETIONS }}}
 
-
 ## NIX POSTLUDE {{{
 
 # Nix env setup
