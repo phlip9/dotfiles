@@ -503,4 +503,12 @@ fi
 
 ## COMPLETIONS }}}
 
+
+## NIX POSTLUDE {{{
+
+# Nix env setup
+[ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ] && source "$HOME/.nix-profile/etc/profile.d/nix.sh"
+
+## NIX POSTLUJDE }}}
+
 # vim:foldmethod=marker

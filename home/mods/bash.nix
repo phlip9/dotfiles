@@ -1,4 +1,4 @@
-{...}: {
+{pkgs, ...}: {
   programs.bash = {
     enable = true;
 
@@ -9,4 +9,8 @@
       source ${../../bashrc}
     '';
   };
+
+  home.packages = [
+    pkgs.bashInteractive
+  ];
 }
