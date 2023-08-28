@@ -172,6 +172,9 @@ if [ "$OS" == "LINUX" ]; then
     # Add an "alert" alias for long running commands.  Use like so:
     #   sleep 10; alert
     alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+
+    # Clean out $PATH for steam
+    alias steam='PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games steam'
 elif [ "$OS" == "OSX" ]; then
     # alias sha256sum='shasum -a 256'
 
