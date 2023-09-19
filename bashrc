@@ -131,6 +131,16 @@ elif [ -x "$(command -v nano)" ]; then
     export EDITOR=nano
 fi
 
+if [ "$OS" == "OSX" ]; then
+    # macOS doesn't appear to let you increase ulimit in a configuration file,
+    # so gotta shove it in here...
+
+    # Increase number of allowed open files per process.
+    # -S = soft limit
+    # -n = number of open files
+    ulimit -Sn 1024
+fi
+
 # SETTINGS }}}
 
 ## ALIASES {{{
