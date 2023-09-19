@@ -70,7 +70,7 @@
 
     " Mappings:
     " <leader>c<space> - Toggle current line comment
-    " (disabled) <leader>cm - Block comment
+    " <leader>cm - Block comment
     " (disabled) <leader>c$ - Comment from cursor to end of line
     " (disabled) <leader>cA - Comment from cursor to end of line and go into insert mode
 
@@ -98,6 +98,9 @@
     " key bindings
     nnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
     xnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
+
+    nnoremap <silent> <leader>cm <Plug>NERDCommenterMinimal
+    xnoremap <silent> <leader>cm <Plug>NERDCommenterMinimal
 
 " NERDCommenter }}}
 
