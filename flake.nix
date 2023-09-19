@@ -105,7 +105,20 @@
         inputs = inputs;
       };
 
-      # idk what this option does
+      check = true;
+    };
+
+    homeConfigurations."phliptop-mbp" = home-manager.lib.homeManagerConfiguration rec {
+      pkgs = nixpkgs.legacyPackages."aarch64-darwin";
+      lib = pkgs.lib;
+      modules = [./home/phliptop-mbp.nix];
+
+      # Use `extraSpecialArgs` to pass through arguments from the flake.nix to
+      # the home-manager modules.
+      extraSpecialArgs = {
+        inputs = inputs;
+      };
+
       check = true;
     };
 
