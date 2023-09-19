@@ -354,6 +354,10 @@ ANDROID_PATH=$ANDROID_PATH:$ANDROID_HOME/platform-tools
 FLUTTER_HOME=$HOME/.local/flutter
 FLUTTER_BIN=$FLUTTER_HOME/bin
 
+# Dart
+
+DART_PUB_BIN=$HOME/.pub-cache/bin
+
 ### Added by the Heroku Toolbelt
 export HEROKU_TOOLBELT=/usr/local/heroku/bin
 
@@ -438,10 +442,15 @@ PATSBIN=$PATSHOME/bin
 export PATSCONTRIB=$HOME/dev/ats2-contrib
 export PATSHOMERELOC=$PATSCONTRIB
 
+# Ruby Gems
+export GEM_HOME=$HOME/.local/gem
+GEM_BIN=$GEM_HOME/bin
+
 # PATH
 export PATH=$PATH:$GOROOT_BIN
 export PATH=$PATH:$ANDROID_PATH
 export PATH=$PATH:$FLUTTER_BIN
+export PATH=$PATH:$DART_PUB_BIN
 export PATH=$PATH:$ARDUINO_SDK
 export PATH=$PATH:$GIT_SUBMODULE_TOOLS
 export PATH=$PATH:$CABAL_BIN
@@ -456,6 +465,7 @@ export PATH=$PATH:$YARN_BIN
 export PATH=$PATH:$YARN_NODE_MODULES_BIN
 export PATH=$PATH:$DOTNET_BIN
 export PATH=$PATH:$PATSBIN
+export PATH=$PATH:$GEM_BIN
 
 # Java SDKMAN
 [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
