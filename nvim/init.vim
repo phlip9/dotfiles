@@ -1116,6 +1116,9 @@
         " Don't underline the fold lines
         hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold 
 
+        " Make css readable again
+        hi cssNoise ctermbg=NONE ctermfg=12 cterm=NONE
+
         " Make LSP inlay hints more subtle vs Comment
         hi CocInlayHint ctermbg=NONE ctermfg=59 cterm=NONE
         hi CocRustTypeHint ctermbg=NONE ctermfg=59 cterm=NONE
