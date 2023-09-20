@@ -17,4 +17,7 @@ config/htop/htoprc
 .DS_Store
 
 # direnv cache
-.direnv/
+/.direnv
+
+# nix derivation result link
+/result

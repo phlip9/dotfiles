@@ -96,12 +96,12 @@ First-time home-manager setup for a new machine:
 
 ```bash
 # (if this is a new machine configuration)
-$ cp ./home/phlipdesk.nix ./home/$HOSTNAME.nix
+$ cp ./home/phlipdesk.nix ./home/$(hostname -s).nix
 # copy an existing home-manager config for the new host
 $ nvim ./flake.nix
 
 # Switch to the home-manager config for this host
-$ nix run .#home-manager -- --flake .#$HOSTNAME switch
+$ nix run .#home-manager -- --flake .#$(hostname -s) switch
 ```
 
 Post initial setup, just use the alias to switch to a new home-manager config

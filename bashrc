@@ -285,17 +285,8 @@ function wsl_open() {
 [ "$IS_WSL" ] && alias open='wsl_open'
 
 # nix home-manager, but with configuration in my dotfiles git repo.
-alias hm='home-manager --flake ~/dev/dotfiles#$HOSTNAME'
-alias hms='home-manager --flake ~/dev/dotfiles#$HOSTNAME switch'
-
-# Alias definitions.
-# You may want to put all your additions into a separate file like
-# ~/.bash_aliases, instead of adding them here directly.
-# See /usr/share/doc/bash-doc/examples in the bash-doc package.
-
-if [ -f "$HOME/.bash_aliases" ]; then
-    source "$HOME/.bash_aliases"
-fi
+alias hm='home-manager --flake ~/dev/dotfiles#$(hostname -s)'
+alias hms='home-manager --flake ~/dev/dotfiles#$(hostname -s) switch'
 
 ## ALIASES }}}
 
