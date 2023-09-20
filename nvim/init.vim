@@ -414,8 +414,8 @@
 
     call dein#add('neoclide/coc.nvim',
                 \ { 
-                \   'if': executable('node') && executable('yarn'),
-                \   'build': 'yarn install --frozen-lockfile',
+                \   'if': executable('node'),
+                \   'rev': 'release',
                 \   'hook_post_source': function('s:coc_post_source'),
                 \ })
     call dein#add('antoinemadec/coc-fzf',

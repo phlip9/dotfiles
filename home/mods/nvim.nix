@@ -4,9 +4,10 @@ let
   dotfilesDir = config.home.dotfilesDir;
 
   neovimConfig = (pkgs.neovimUtils.makeNeovimConfig {
-    withPython3 = true;
-    withNodeJs = false; # TODO: get coc.nvim working
-  }) // { # Args passed to `wrapNeovimUnstable`
+    withNodeJs = true; # used by `coc.nvim` LSP client
+    withPython3 = false;
+    withRuby = false;
+  }) // { # Args passed directly to `wrapNeovimUnstable`
     # Don't manage config, we'll just symlink to our `dotfiles/nvim/init.vim`.
     wrapRc = false;
   };
