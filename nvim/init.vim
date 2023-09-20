@@ -48,9 +48,61 @@
 
 " vimproc }}}
 
-" crayon - A colorschemee for *Vim {{{
+" (disabled) crayon - dark colorscheme {{{
 
-    call dein#add('jansenfuller/crayon')
+    " call dein#add('jansenfuller/crayon')
+
+" }}}
+
+" kanagawa - neovim colorscheme {{{
+
+    call dein#add('rebelot/kanagawa.nvim')
+
+lua <<EOF
+require('kanagawa').setup({
+    -- enable terminal text undercurls (underlines, dotted underlines, etc)
+    undercurl = true,
+    commentStyle = { italic = false },
+    functionStyle = {},
+    keywordStyle = { italic = false },
+    statementStyle = { bold = false },
+    typeStyle = {},
+    -- don't set background color
+    transparent = false,
+    -- dim normal text in other, inactive windows
+    dimInactive = false,
+    -- define g:terminal_color_{0,17}
+    terminalColors = true,
+    -- add/modify theme palette colors
+    -- palette colors: <https://github.com/rebelot/kanagawa.nvim/blob/master/lua/kanagawa/colors.lua>
+    colors = {
+        palette = {},
+        theme = {
+            wave = {},
+            lotus = {},
+            dragon = {},
+            all = {
+                ui = {
+                    -- Remove the background highlight for gutter
+                    bg_gutter = "none",
+                },
+            },
+        },
+    },
+    -- add/modify highlights
+    ---@type fun(colors: KanagawaColorsSpec): table<string, table>
+    overrides = function(colors)
+        local _palette = colors.palette
+        local _theme = colors.theme
+        return {}
+    end,
+    -- when `background` is set, use corresponding theme
+    background = { dark = "dragon", light = "lotus" },
+    -- when `background` is not set, use default theme
+    theme = "dragon",
+    compile = false,
+})
+EOF
 
 " }}}
 
@@ -1089,41 +1141,41 @@
 
     " Colorscheme highlight overrides
     function! CustomColors()
-        hi ColorColumn ctermbg=8 ctermfg=15
-        
-        " Make sure text doesn't fill ctermbg so terminal transparency works
-        hi Normal ctermbg=NONE ctermfg=15 cterm=NONE
-        hi Comment ctermbg=NONE ctermfg=12 cterm=NONE
-
-        " Reduce popup menu brightness
-        hi Pmenu ctermbg=8
-
-        " make tabline background clear so terminal transparency isn't blocked
-        " out
-        "hi airline_tabsel cterm=bold ctermfg=7 ctermbg=NONE
-
-        " Highlight CursorLine as lighter background color
-        hi CursorLine ctermbg=10 ctermfg=None cterm=NONE
-
-        " Make matching text readable
-        hi MatchParen ctermbg=8 ctermfg=NONE cterm=NONE
-
-        " Sign column color should be the same as the line number column
-        hi SignColumn ctermbg=NONE
-
-        " Make line number column same as background color
-        hi LineNr ctermbg=NONE
-
-        " Don't underline the fold lines
-        hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold 
-
-        " Make css readable again
-        hi cssNoise ctermbg=NONE ctermfg=12 cterm=NONE
-
-        " Make LSP inlay hints more subtle vs Comment
-        hi CocInlayHint ctermbg=NONE ctermfg=59 cterm=NONE
-        hi CocRustTypeHint ctermbg=NONE ctermfg=59 cterm=NONE
-        hi CocRustChainingHint ctermbg=NONE ctermfg=59 cterm=NONE
+        " hi ColorColumn ctermbg=8 ctermfg=15
+        " 
+        " " Make sure text doesn't fill ctermbg so terminal transparency works
+        " hi Normal ctermbg=NONE ctermfg=15 cterm=NONE
+        " hi Comment ctermbg=NONE ctermfg=12 cterm=NONE
+        " 
+        " " Reduce popup menu brightness
+        " hi Pmenu ctermbg=8
+        " 
+        " " make tabline background clear so terminal transparency isn't blocked
+        " " out
+        " "hi airline_tabsel cterm=bold ctermfg=7 ctermbg=NONE
+        " 
+        " " Highlight CursorLine as lighter background color
+        " hi CursorLine ctermbg=10 ctermfg=None cterm=NONE
+        " 
+        " " Make matching text readable
+        " hi MatchParen ctermbg=8 ctermfg=NONE cterm=NONE
+        " 
+        " " Sign column color should be the same as the line number column
+        " hi SignColumn ctermbg=NONE
+        " 
+        " " Make line number column same as background color
+        " hi LineNr ctermbg=NONE
+        " 
+        " " Don't underline the fold lines
+        " hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold 
+        " 
+        " " Make css readable again
+        " hi cssNoise ctermbg=NONE ctermfg=12 cterm=NONE
+        " 
+        " " Make LSP inlay hints more subtle vs Comment
+        " hi CocInlayHint ctermbg=NONE ctermfg=59 cterm=NONE
+        " hi CocRustTypeHint ctermbg=NONE ctermfg=59 cterm=NONE
+        " hi CocRustChainingHint ctermbg=NONE ctermfg=59 cterm=NONE
     endfunction
 
     " override colors on colorscheme change
@@ -1131,7 +1183,7 @@
 
     " Colorscheme
     set background=dark
-    colorscheme crayon
+    colorscheme kanagawa
 
     "" Light colorscheme
     "set background=light
