@@ -17,6 +17,7 @@ in {
   home.packages = [
     (pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped neovimConfig)
 
+    # TODO: just add this to wrapped `nvim` PATH instead
     pkgs.nil
   ];
 

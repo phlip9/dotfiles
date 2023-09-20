@@ -1069,7 +1069,8 @@
 
     set nu                          " set line numbers
     set showmode                    " show current display mode
-    set t_Co=256                    " number of available terminal colors
+    set termguicolors               " use RGB colors
+    "set t_Co=256                    " number of available terminal colors
     "set cursorline                  " show a line under the cursor
 
     " Highlight the 80+1'th column to help keep text under 80 characters per
