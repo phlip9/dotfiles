@@ -1,17 +1,25 @@
-{pkgs, ...}: {
-  programs.neovim = {
-    enable = true;
-    defaultEditor = true;
+{config, pkgs, ...}:
+let
+  mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
+  dotfilesDir = config.home.dotfilesDir;
 
-    withNodeJs = false;
+  neovimConfig = (pkgs.neovimUtils.makeNeovimConfig {
     withPython3 = true;
-    withRuby = false;
+    withNodeJs = false; # TODO: get coc.nvim working
+  }) // { # Args passed to `wrapNeovimUnstable`
+    # Don't manage config, we'll just symlink to our `dotfiles/nvim/init.vim`.
+    wrapRc = false;
   };
+in {
+  # Using a manually configured neovim w/o home-manager's config so I can get
+  # the nvim config dir symlink working.
 
   home.packages = [
+    (pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped neovimConfig)
+
     pkgs.nil
   ];
 
-  # link ~/.config/nvim to dotfiles/nvim
-  xdg.configFile."nvim".source = ../../nvim;
+  # symlink ~/.config/nvim to `dotfiles/nvim` dir.
+  xdg.configFile."nvim".source = mkOutOfStoreSymlink "${dotfilesDir}/nvim";
 }
