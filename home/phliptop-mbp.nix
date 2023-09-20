@@ -29,7 +29,7 @@
   imports = [
     ./mods/core.nix
 
-    # ./mods/alacritty.nix
+    ./mods/alacritty.nix
     ./mods/bash.nix
     ./mods/ctags.nix
     # ./mods/direnv.nix

@@ -9,9 +9,9 @@
 # Source global definitions
 [ -f /etc/bashrc ] && source /etc/bashrc
 
-# Source homebrew shell environment
-[ -f /opt/homebrew/bin/brew ] \
-    && eval "$(/opt/homebrew/bin/brew shellenv)"
+# # Source homebrew shell environment
+# [ -f /opt/homebrew/bin/brew ] \
+#     && eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # OS detection to make this bashrc *hopefully* cross-compatible
 OS="UNKNOWN"
@@ -458,8 +458,8 @@ export PATH=$PATH:$DOTNET_BIN
 export PATH=$PATH:$PATSBIN
 export PATH=$PATH:$GEM_BIN
 
-# Java SDKMAN
-[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+# # Java SDKMAN
+# [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
 
 # TODO: do we still need this?
 # # set RUST_SRC_PATH based on current rustup version
@@ -489,9 +489,9 @@ fi
 
 ## COMPLETIONS {{{
 
-# NVM setup and bash completions
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+# # NVM setup and bash completions
+# [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+# [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 # FZF keybindings and fuzzy autocomplete
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash

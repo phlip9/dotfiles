@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{config, pkgs, ...}: {
   programs.bash = {
     enable = true;
 
@@ -6,7 +6,7 @@
     enableCompletion = true;
 
     initExtra = ''
-      source ${../../bashrc}
+      source ${config.home.dotfilesDir}/bashrc
     '';
   };
 
