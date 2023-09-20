@@ -1,3 +1,8 @@
+# TODO(phlip9): add a platform-specific alacritty.yml override to install.py
+# 1. get platform name
+# 2. symlink platform-specific alacritty-overrides.yml somewhere in $HOME/
+# 3. add alacritty-overrides.yml to import: block below
+
 # Configuration for Alacritty, the GPU enhanced terminal emulator.
 
 # Import additional configuration files
@@ -163,7 +168,7 @@ font:
     style: Semibold
 
   # Point size
-  size: 11.0
+  size: 12.0
 
   # Offset is the extra space around each character. `offset.y` can be thought
   # of as modifying the line spacing, and `offset.x` as modifying the letter
@@ -199,38 +204,73 @@ font:
 # Colors #
 ##########
 
-# crayon.vim
-# See: <https://github.com/jansenfuller/crayon/blob/master/colors/crayon.vim>
+# Kanagawa Dragon Alacritty Colors
+# See: <https://github.com/rebelot/kanagawa.nvim/blob/master/extras/alacritty_kanagawa_dragon.yml>
 colors:
   primary:
-    background: '0x101112'
-    foreground: '0xd8d9da'
-
-  cursor:
-    text: '0xd8d9da'
-    cursor: '0x717273'
+    background: '#181616'
+    foreground: '#c5c9c5'
 
   normal:
-    black: '0x101112'
-    # black: '0x586270'
-    red: '0xc48d62'
-    green: '0x99ae63'
-    yellow: '0xd8c27a'
-    blue: '0x7495b6'
-    magenta: '0xb59cd8'
-    cyan: '0x8dc9c3'
-    white: '0xd8d9da'
+    black:   '#0d0c0c'
+    red:     '#c4746e'
+    green:   '#8a9a7b'
+    yellow:  '#c4b28a'
+    blue:    '#8ba4b0'
+    magenta: '#a292a3'
+    cyan:    '#8ea4a2'
+    white:   '#c8c093'
 
   bright:
-    # black: '0xbcc5d1'
-    black: '0x212228'
-    red: '0xb27b78'
-    green: '0x282c33'
-    yellow: '0x383e47'
-    blue: '0x798494'
-    magenta: '0xd8d8d8'
-    cyan: '0xcc99b3'
-    white: '0xf8f9fa'
+    black:   '#a6a69c'
+    red:     '#e46876'
+    green:   '#87a987'
+    yellow:  '#e6c384'
+    blue:    '#7fb4ca'
+    magenta: '#938aa9'
+    cyan:    '#7aa89f'
+    white:   '#c5c9c5'
+
+  selection:
+    background: '#2d4f67'
+    foreground: '#c8c093'
+
+  indexed_colors:
+    - { index: 16, color: '#b6927b' }
+    - { index: 17, color: '#b98d7b' }
+
+# # crayon.vim
+# # See: <https://github.com/jansenfuller/crayon/blob/master/colors/crayon.vim>
+# colors:
+#   primary:
+#     background: '0x101112'
+#     foreground: '0xd8d9da'
+# 
+#   cursor:
+#     text: '0xd8d9da'
+#     cursor: '0x717273'
+# 
+#   normal:
+#     black: '0x101112'
+#     # black: '0x586270'
+#     red: '0xc48d62'
+#     green: '0x99ae63'
+#     yellow: '0xd8c27a'
+#     blue: '0x7495b6'
+#     magenta: '0xb59cd8'
+#     cyan: '0x8dc9c3'
+#     white: '0xd8d9da'
+# 
+#   bright:
+#     # black: '0xbcc5d1'
+#     black: '0x212228'
+#     red: '0xb27b78'
+#     green: '0x282c33'
+#     yellow: '0x383e47'
+#     blue: '0x798494'
+#     magenta: '0xd8d8d8'
+#     cyan: '0xcc99b3'
+#     white: '0xf8f9fa'
 
 # # Base16 Default Dark
 # # See: <https://github.com/eendroroy/alacritty-theme/blob/master/themes/base16_default_dark.yaml>

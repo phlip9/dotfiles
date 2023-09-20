@@ -16,7 +16,11 @@
 # Deleted log file at "/tmp/Alacritty-599442.log"
 # Error: "Event loop terminated with code: 1"
 # ```
-{...}: {
+{config, ...}:
+let
+  mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
+  dotfilesDir = config.home.dotfilesDir;
+in {
   # programs.alacritty.enable = true;
   # programs.alacritty.settings = {
   #   import = [
@@ -24,7 +28,7 @@
   #   ];
   # };
 
-  # For now, just link the alacritty config file.
+  # symlink `~/.config/alacritty/alacritty.yml` to `dotfiles/alacritty.yml`.
   # TODO: remove this when we figure out how to get the package working
-  xdg.configFile."alacritty/alacritty.yml".source = ../../alacritty.yml;
+  xdg.configFile."alacritty/alacritty.yml".source = mkOutOfStoreSymlink "${dotfilesDir}/alacritty.yml";
 }
