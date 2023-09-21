@@ -39,7 +39,8 @@
     ./mods/local-bin.nix
     ./mods/nvim.nix
     ./mods/python.nix
-    ./mods/ssh.nix
+    # TODO: get nixpkgs ssh talking to apple keychain (?)
+    # ./mods/ssh.nix
     ./mods/tmux.nix
   ];
 
