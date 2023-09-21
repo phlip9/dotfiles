@@ -1,5 +1,10 @@
 # Core tools that should be installed on every system
-{config, lib, pkgs, ...}: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
   options.home.dotfilesDir = lib.mkOption {
     type = lib.types.str;
     default = "${config.home.homeDirectory}/dev/dotfiles";

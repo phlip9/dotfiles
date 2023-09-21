@@ -16,8 +16,7 @@
 # Deleted log file at "/tmp/Alacritty-599442.log"
 # Error: "Event loop terminated with code: 1"
 # ```
-{config, ...}:
-let
+{config, ...}: let
   mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
   dotfilesDir = config.home.dotfilesDir;
 in {

@@ -1,5 +1,8 @@
-{config, pkgs, ...}:
-let
+{
+  config,
+  pkgs,
+  ...
+}: let
   mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
   dotfilesDir = config.home.dotfilesDir;
 in {
