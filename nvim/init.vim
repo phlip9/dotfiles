@@ -58,7 +58,7 @@
 
     call dein#add('rebelot/kanagawa.nvim')
 
-lua <<EOF
+lua << EOF
 require('kanagawa').setup({
     -- enable terminal text undercurls (underlines, dotted underlines, etc)
     undercurl = true,
@@ -76,7 +76,15 @@ require('kanagawa').setup({
     -- add/modify theme palette colors
     -- palette colors: <https://github.com/rebelot/kanagawa.nvim/blob/master/lua/kanagawa/colors.lua>
     colors = {
-        palette = {},
+        palette = {
+            fujiWhite = "#deddd3", -- desaturated and lightened
+
+            -- darken the darker dragonBlack's
+            dragonBlack0 = "#0d0c0c",
+            dragonBlack1 = "#0d0c0c",
+            dragonBlack2 = "#12120f",
+            dragonBlack3 = "#12120f",
+        },
         theme = {
             wave = {},
             lotus = {},

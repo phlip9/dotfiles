@@ -207,9 +207,15 @@ font:
 # Kanagawa Dragon Alacritty Colors
 # See: <https://github.com/rebelot/kanagawa.nvim/blob/master/extras/alacritty_kanagawa_dragon.yml>
 colors:
+  # # original colors
+  # primary:
+  #   background: '#181616'
+  #   foreground: '#c5c9c5'
+
+  # phlip9: increase bg/fg contrast a bit
   primary:
-    background: '#181616'
-    foreground: '#c5c9c5'
+    background: '#12120f' # dragonBlack1
+    foreground: '#deddd3' # fujiWhite: desaturated and lightened
 
   normal:
     black:   '#0d0c0c'
