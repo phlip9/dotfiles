@@ -231,7 +231,7 @@ $ sudo systemctl enable --now udevmon
 
 ```yaml
 # File: /etc/interception/udevmon.d/deafmute-ppa-caps2esc.yaml
-- JOB: intercept -g $DEVNODE | caps2esc | uinput -d $DEVNODE
+- JOB: intercept -g $DEVNODE | caps2esc -m 1 | uinput -d $DEVNODE
   DEVICE:
     EVENTS:
       EV_KEY: [KEY_CAPSLOCK, KEY_ESC]
