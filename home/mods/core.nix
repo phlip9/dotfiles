@@ -48,7 +48,7 @@
       wget
     ];
 
-    programs.exa = {
+    programs.eza = {
       enable = true;
 
       # In list view, include a column with each file's git status.
@@ -56,14 +56,14 @@
     };
 
     programs.bash.shellAliases = {
-      ks = "exa";
-      sl = "exa";
-      l = "exa";
-      ls = "exa";
-      ll = "exa -l";
-      la = "exa -a";
-      lt = "exa --tree";
-      lla = "exa -la";
+      ks = "eza";
+      sl = "eza";
+      l = "eza";
+      ls = "eza";
+      ll = "eza -l";
+      la = "eza -a";
+      lt = "eza --tree";
+      lla = "eza -la";
     };
   };
 }

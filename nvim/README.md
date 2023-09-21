@@ -108,7 +108,7 @@ $ RUSTFLAGS="-C target-cpu=native" cargo +nightly install \
 
 ```bash
 $ RUSTFLAGS="-C target-cpu=native" cargo install \
-    bat cargo-watch exa fastmod fd-find just systemfd watchexec-cli
+    bat cargo-watch eza fastmod fd-find just systemfd watchexec-cli
 
 ```
 
