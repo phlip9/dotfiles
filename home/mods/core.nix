@@ -3,6 +3,7 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }: {
   options.home.dotfilesDir = lib.mkOption {
@@ -15,6 +16,16 @@
   };
 
   config = {
+    # Normally, when e run a command like `nix run nixpkgs#hello` or
+    # `nix shell nixpkgs#diffoscope`, nix will download the latest nixpkgs repo,
+    # package, and runtime libs for this quick ephemeral bin/shell. This whole
+    # thing is pretty wasteful.
+    #
+    # With this setting, nix will instead use the same `nixpkgs` version as the
+    # one we're using for our home-manager setup, which saves time and disk
+    # space.
+    nix.registry.nixpkgs.flake = inputs.nixpkgs;
+
     home.packages = with pkgs; [
       # GNU core utils
       coreutils
