@@ -47,6 +47,7 @@
       jq
       fd
       fastmod
+      just
       # TODO: figure out fzf setup on new machine
       # fzf
 
