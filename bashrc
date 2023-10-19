@@ -156,14 +156,18 @@ alias cd..='cd ..'
 alias cim='vim'
 alias shh='ssh'
 
+# To find the `complete` fn for a given command (ex: git): `complete -p git`
+
 # git shortcut
 alias g='git'
+complete -o bashdefault -o default -o nospace -F __git_wrap__git_main g
 
 # cargo shortcut
 alias c='cargo'
 
 # just shortcut
 alias j='just'
+complete -o bashdefault -o default -F _just j
 
 # tmux 256 colors
 alias tmux="TERM=screen-256color tmux -2"
@@ -288,6 +292,7 @@ function wsl_open() {
 
 # nix home-manager, but with configuration in my dotfiles git repo.
 alias hm='home-manager --flake ~/dev/dotfiles#$(hostname -s)'
+complete -o default -F _home-manager_completions hm
 alias hms='home-manager --flake ~/dev/dotfiles#$(hostname -s) switch'
 
 ## ALIASES }}}
