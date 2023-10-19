@@ -510,10 +510,17 @@ if [ -x "$(command -v brew)" ]; then
         source "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh"
     else
         for COMPLETION in "${HOMEBREW_PREFIX}/etc/bash_completion.d/"*; do
-            [[ -r "$COMPLETION" ]] && source "$COMPLETION"
+            [[ -r "${COMPLETION}" ]] && source "${COMPLETION}"
         done
     fi
 fi
+
+# Bash completions from nix profiles
+for PROFILE in $NIX_PROFILES; do
+    for COMPLETION in "${PROFILE}/share/bash-completion/completions/"*; do
+        [[ -r "${COMPLETION}" ]] && source "${COMPLETION}"
+    done
+done
 
 # Alacritty
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"
