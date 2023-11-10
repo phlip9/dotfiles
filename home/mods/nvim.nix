@@ -25,7 +25,9 @@
   };
 
   # Need some args passed directly to `wrapNeovimUnstable`
-  neovimConfig = neovimConfigBase // {
+  neovimConfig =
+    neovimConfigBase
+    // {
       # Don't manage config, we'll just symlink to our `dotfiles/nvim/init.vim`.
       wrapRc = false;
       # Inject extra packages into nvim PATH.

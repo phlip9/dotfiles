@@ -102,4 +102,10 @@
   # silence weird error after opening new shell:
   #   ~/.nix-profile/bin/manpath: can't set the locale; make sure $LC_* and $LANG are correct
   programs.man.enable = false;
+
+  #
+  # Misc
+  #
+
+  programs.alacritty.fontSize = 11;
 }

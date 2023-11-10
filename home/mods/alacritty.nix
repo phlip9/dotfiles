@@ -16,8 +16,13 @@
 # Deleted log file at "/tmp/Alacritty-599442.log"
 # Error: "Event loop terminated with code: 1"
 # ```
-{config, ...}: let
-  mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
+{
+  config,
+  lib,
+  ...
+}: let
+  cfg = config.programs.alacritty;
+
   dotfilesDir = config.home.dotfilesDir;
 in {
   # programs.alacritty.enable = true;
@@ -27,7 +32,22 @@ in {
   #   ];
   # };
 
-  # symlink `~/.config/alacritty/alacritty.yml` to `dotfiles/alacritty.yml`.
-  # TODO: remove this when we figure out how to get the package working
-  xdg.configFile."alacritty/alacritty.yml".source = mkOutOfStoreSymlink "${dotfilesDir}/alacritty.yml";
+  options = {
+    programs.alacritty.fontSize = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 12;
+    };
+  };
+
+  config = {
+    # Why do this funky setup? So we get alacritty auto-reload on config file
+    # change, while still overriding settings on different machines.
+    xdg.configFile."alacritty/alacritty.yml".text = ''
+      import:
+        - ${dotfilesDir}/alacritty.yml
+
+      font:
+        size: ${builtins.toString cfg.fontSize}.0
+    '';
+  };
 }
