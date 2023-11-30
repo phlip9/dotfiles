@@ -101,6 +101,7 @@ in {
       cm = "commit";
       cma = "commit -v --amend";
       cme = "commit -v --amend --no-edit";
+      cmf = "commit -v --fixup";
       b = "branch";
       a = "add";
       d = "diff";
