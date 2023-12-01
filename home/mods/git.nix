@@ -105,6 +105,7 @@ in {
       b = "branch";
       a = "add";
       d = "diff";
+      ds = "diff --staged";
       p = "pull";
       plo = "!git pull --ff-only origin $(git master)";
       plu = "!git pull --ff-only upstream $(git master)";
