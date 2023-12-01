@@ -221,11 +221,12 @@ EOF
 " vim-gitgutter - Show git diff in the gutter {{{
 
     " Mappings:
-    " <leader>gg - Toggle git gutter
+    " <leader>ggt - Toggle git gutter
+    " <leader>ggd - open git diff split pane for current file
     " <leader>hs - Stage hunk
     " <leader>hr - Undo hunk
-    " <leader>hn - Next hunk
-    " <leader>hp - Previous hunk
+    " <leader>hf - Move forward one hunk
+    " <leader>hb - Move backward one hunk
 
     " Don't automatically set mappings.
     let g:gitgutter_map_keys = 0
@@ -235,15 +236,16 @@ EOF
                 \   'if': has('signs') && executable('git')
                 \ })
 
-    nmap <leader>gg :GitGutterToggle<CR>
+    nmap <leader>ggt :GitGutterToggle<CR>
+    nmap <leader>ggd :GitGutterDiffOrig<CR>
 
     " Hunk management
     nmap <leader>hs :GitGutterStageHunk<CR>
     nmap <leader>hr :GitGutterUndoHunk<CR>
 
     " Hunk movement
-    nmap <leader>hn :GitGutterNextHunk<CR>
-    nmap <leader>hp :GitGutterPrevHunk<CR>
+    nmap <leader>hf :GitGutterNextHunk<CR>
+    nmap <leader>hb :GitGutterPrevHunk<CR>
 
 " vim-gitgutter }}}
 
