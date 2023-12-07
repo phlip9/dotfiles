@@ -89,35 +89,35 @@ in {
       # # Shortcuts #
       # #############
 
+      a = "add";
+      b = "branch";
+      cm = "commit";
+      cma = "commit -v --amend";
+      cme = "commit -v --amend --no-edit";
+      cmf = "commit -v --fixup";
+      co = "checkout";
+      d = "diff";
+      ds = "diff --staged";
+      fo = "fetch origin";
+      fu = "fetch upstream";
+      last = "log -1 HEAD";
       lg = stripNewlines ''
         log --graph --abbrev-commit --decorate --all
             --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)'
       '';
       ls = "ls-tree --name-only HEAD";
-      s = "status";
-      last = "log -1 HEAD";
-      co = "checkout";
-      sw = "switch";
-      cm = "commit";
-      cma = "commit -v --amend";
-      cme = "commit -v --amend --no-edit";
-      cmf = "commit -v --fixup";
-      b = "branch";
-      a = "add";
-      d = "diff";
-      ds = "diff --staged";
       p = "pull";
-      plo = "!git pull --ff-only origin $(git master)";
-      plu = "!git pull --ff-only upstream $(git master)";
       pfo = "push --force origin";
       pfom = "!git push --force origin $(git master)";
+      plo = "!git pull --ff-only origin $(git master)";
+      plu = "!git pull --ff-only upstream $(git master)";
       pom = "!git push origin $(git master)";
       rb = "rebase";
       rbc = "rebase --continue";
-      fu = "fetch upstream";
-      fo = "fetch origin";
       ro = "!git rebase origin/$(git master)";
       ru = "!git rebase upstream/$(git master)";
+      s = "status";
+      sw = "switch";
     };
 
     ignores = [

@@ -10,7 +10,7 @@
 [ -f /etc/bashrc ] && source /etc/bashrc
 
 # # Source homebrew shell environment
-# [ -f /opt/homebrew/bin/brew ] \
+# [ -x /opt/homebrew/bin/brew ] \
 #     && eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # OS detection to make this bashrc *hopefully* cross-compatible
