@@ -118,6 +118,8 @@ in {
       ru = "!git rebase upstream/$(git master)";
       s = "status";
       sw = "switch";
+      unwip = "!git reset --soft HEAD~1 && git restore --staged .";
+      wip = "!git add . && git commit -m WIP";
     };
 
     ignores = [
