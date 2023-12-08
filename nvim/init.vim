@@ -427,7 +427,7 @@ EOF
         nnoremap <silent> <leader>gc :call CocAction('jumpDeclaration')<CR>
         nnoremap <silent> <leader>gi :call CocAction('jumpImplementation')<CR>
         nnoremap <silent> <leader>gt :call CocAction('jumpTypeDefinition')<CR>
-        nnoremap <silent> <leader>ren :call CocAction('rename')<CR>
+        nnoremap <silent> <leader>ren :call CocActionAsync('rename')<CR>
         nnoremap <silent> <leader>ref :call CocAction('jumpReferences')<CR>
         nnoremap <silent> <leader>h :call CocAction('doHover')<CR>
         " nnoremap <leader>a <Plug>(coc-codeaction-selected)<CR>

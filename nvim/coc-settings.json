@@ -1,9 +1,7 @@
 {
-    "coc.preferences.formatOnSave": true,
-    "coc.preferences.formatOnSaveFiletypes": [
-        "rust",
-        "json"
-    ],
+    "[json][rust][nix][dart]": {
+        "coc.preferences.formatOnSave": true,
+    },
     "rust-analyzer.cargo.buildScripts.enable": false,
     "rust-analyzer.checkOnSave": true,
     "rust-analyzer.diagnostics.disabled": [
