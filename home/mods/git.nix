@@ -65,7 +65,7 @@ in {
       #############
 
       # checkout a PR in the current repo
-      pr = "!gh pr checkout";
+      pr = "!git switch $(git master) && git pull && gh pr checkout";
 
       # Print the branch point of the current PR branch from the master branch.
       pr-base = "!git merge-base HEAD $(git master)";
@@ -73,8 +73,14 @@ in {
       # Print which files have changed on this PR branch since master.
       pr-files = "!git diff --name-only $(git pr-base)";
 
+      # Print which files have changed on this PR branch in the current commit.
+      cm-files = "!git diff --name-only HEAD~1";
+
       # Print the diff stat for the files changed on this PR branch.
       pr-stat = "!git diff --stat $(git pr-base)";
+
+      # Print the diff stat for this commit.
+      cm-stat = "!git diff --stat HEAD~1";
 
       # Open all changed files in `nvim` with gitgutter diff'ed against master.
       pr-rv = "!nvim $(git pr-files) +\"let g:gitgutter_diff_base = '$(git master)'\"";
@@ -82,8 +88,14 @@ in {
       # Open only one specific changed file just like `git pr-review`
       pr-rvo = "!nvim +\"let g:gitgutter_diff_base = '$(git master)'\"";
 
+      # Single commit: open all changed files in `nvim` with gitgutter diff.
+      cm-rv = "!nvim $(git cm-files) +\"let g:gitgutter_diff_base = '$(git rev-parse HEAD~1)'\"";
+
       # Pretty print PR commits for Github PR description
       pr-desc = "!git log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
+
+      # Start rebase to review by commit
+      pr-rv-by-commit = "!git rebase --interactive $(git master)";
 
       # #############
       # # Shortcuts #
@@ -113,6 +125,7 @@ in {
       plu = "!git pull --ff-only upstream $(git master)";
       pom = "!git push origin $(git master)";
       rb = "rebase";
+      rbe = "rebase --edit-todo";
       rbc = "rebase --continue";
       ro = "!git rebase origin/$(git master)";
       ru = "!git rebase upstream/$(git master)";
