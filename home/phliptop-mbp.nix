@@ -31,6 +31,7 @@
 
     ./mods/alacritty.nix
     ./mods/bash.nix
+    ./mods/cdda.nix
     ./mods/ctags.nix
     # ./mods/direnv.nix
     ./mods/gh.nix
