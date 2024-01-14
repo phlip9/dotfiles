@@ -465,8 +465,8 @@ export PATH=$PATH:$DOTNET_BIN
 export PATH=$PATH:$PATSBIN
 export PATH=$PATH:$GEM_BIN
 
-# # Java SDKMAN
-# [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
+# Java SDKMAN
+[[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "$SDKMAN_DIR/bin/sdkman-init.sh"
 
 # TODO: do we still need this?
 # # set RUST_SRC_PATH based on current rustup version

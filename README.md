@@ -115,6 +115,12 @@ $ hms
 
 [phlip9/dotfiles > nvim/README.md](https://github.com/phlip9/dotfiles/blob/master/nvim/README.md)
 
+### Show hidden files by default in Finder
+
+```bash
+$ defaults write com.apple.Finder AppleShowAllFiles true
+```
+
 
 ## Debian|Ubuntu|WSL
 
