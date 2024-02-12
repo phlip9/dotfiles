@@ -667,37 +667,37 @@ EOF
 
 " }}}
 
-" vim-javascript - Javascript syntax and indent file {{{
+" (disabled) vim-javascript - Javascript syntax and indent file {{{
 
-    call dein#add('pangloss/vim-javascript',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['javascript']
-                \ })
-
-" }}}
-
-" vim-node - Tools to make Vim superb for developing with Node.js {{{
-
-    " Mappings:
-    " gj : Use on paths or requires to open file Node would
-
-    call dein#add('moll/vim-node',
-                \ {
-                \   'if': executable('node'),
-                \   'lazy': 1,
-                \   'on_ft': ['javascript']
-                \ })
+    " call dein#add('pangloss/vim-javascript',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['javascript']
+    "             \ })
 
 " }}}
 
-" vim-coffee-script - Coffee script syntax highlighting and indenting {{{
+" (disabled) vim-node - Tools to make Vim superb for developing with Node.js {{{
 
-    call dein#add('kchmck/vim-coffee-script',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['coffee']
-                \ })
+    " " Mappings:
+    " " gj : Use on paths or requires to open file Node would
+    " 
+    " call dein#add('moll/vim-node',
+    "             \ {
+    "             \   'if': executable('node'),
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['javascript']
+    "             \ })
+
+" }}}
+
+" (disabled) vim-coffee-script - Coffee script syntax highlighting and indenting {{{
+
+    " call dein#add('kchmck/vim-coffee-script',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['coffee']
+    "             \ })
 
 " vim-coffee-script }}}
 
@@ -749,20 +749,20 @@ EOF
 
 " }}}
 
-" lean.vim - Lean syntax plugin {{{
+" (disabled) lean.vim - Lean syntax plugin {{{
     
-    call dein#add('leanprover/lean.vim')
+    " call dein#add('leanprover/lean.vim')
 
 " }}}
 
-" ghcmod.vim - Haskell linting and syntax checking {{{
+" (disabled) ghcmod.vim - Haskell linting and syntax checking {{{
 
-    call dein#add('eagletmt/ghcmod-vim',
-                \ {
-                \   'if': executable('ghc-mod'),
-                \   'lazy': 1,
-                \   'on_ft': ['haskell']
-                \ })
+    " call dein#add('eagletmt/ghcmod-vim',
+    "             \ {
+    "             \   'if': executable('ghc-mod'),
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['haskell']
+    "             \ })
 
 " ghcmod.vim }}}
 
@@ -794,19 +794,19 @@ EOF
 
 " }}}
 
-" vim-scala - Scala syntax plugin {{{
+" (disabled) vim-scala - Scala syntax plugin {{{
 
-    call dein#add('derekwyatt/vim-scala',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['scala']
-                \ })
+    " call dein#add('derekwyatt/vim-scala',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['scala']
+    "             \ })
 
 " }}}
 
-" vim-opencl - OpenCL syntax plugin {{{
+" (disabled) vim-opencl - OpenCL syntax plugin {{{
 
-    call dein#add('petRUShka/vim-opencl')
+    " call dein#add('petRUShka/vim-opencl')
 
 " }}}
 
@@ -977,67 +977,67 @@ EOF
 
 " }}}
 
-" vim-jade - Jade template engine syntax and highlighting {{{
+" (disabled) vim-jade - Jade template engine syntax and highlighting {{{
 
-    call dein#add('digitaltoad/vim-jade',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['jade']
-                \ })
-
-" }}}
-
-" vim-mustace-handlebars - Mustache & Handlebars syntax highlighting {{{
-
-    call dein#add('mustache/vim-mustache-handlebars')
+    " call dein#add('digitaltoad/vim-jade',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['jade']
+    "             \ })
 
 " }}}
 
-" scss-syntax.vim - scss syntax and indenting {{{
+" (disabled) vim-mustace-handlebars - Mustache & Handlebars syntax highlighting {{{
 
-    call dein#add('cakebaker/scss-syntax.vim',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['scss']
-                \ })
+    " call dein#add('mustache/vim-mustache-handlebars')
 
 " }}}
 
-" idris2-vim - Idris2 syntax highlighting, checking, and interactive editing {{{
+" (disabled) scss-syntax.vim - scss syntax and indenting {{{
 
-    " Mappings:
-    " \t - show type
-    " \r - reload file?
-    " \h - show function documentation
-    " \c - case split
-    " \e - evaluate an expression
-    " \f - refine item
-    " \o - obvious proof search
-    " \p - proof search
-    " \i - open idris response window
-    call dein#add('edwinb/idris2-vim')
-
-    " TODO: check https://github.com/idris-community/idris2-lsp maybe it will
-    " eventually support autocompletion?
+    " call dein#add('cakebaker/scss-syntax.vim',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['scss']
+    "             \ })
 
 " }}}
 
-" ats-vim - ATS2 syntax highlighting and checking {{{
+" (disabled) idris2-vim - Idris2 syntax highlighting, checking, and interactive editing {{{
 
-    call dein#add('phlip9/ats-vim')
-    " call dein#add(expand('$HOME/dev/ats-vim'))
-
-    let g:ats_use_ctags = 1
-    let g:ats_autoformat = 0
+    " " Mappings:
+    " " \t - show type
+    " " \r - reload file?
+    " " \h - show function documentation
+    " " \c - case split
+    " " \e - evaluate an expression
+    " " \f - refine item
+    " " \o - obvious proof search
+    " " \p - proof search
+    " " \i - open idris response window
+    " call dein#add('edwinb/idris2-vim')
+    " 
+    " " TODO: check https://github.com/idris-community/idris2-lsp maybe it will
+    " " eventually support autocompletion?
 
 " }}}
 
-" julia-vim - Julia syntax highlighting and ftplugin {{{
+" (disabled) ats-vim - ATS2 syntax highlighting and checking {{{
 
-    call dein#add('JuliaLang/julia-vim')
-    
-    " Turn off the Latex symbol to unicode key mapping
-    let g:latex_to_unicode_tab = 0
+    " call dein#add('phlip9/ats-vim')
+    " " call dein#add(expand('$HOME/dev/ats-vim'))
+    " 
+    " let g:ats_use_ctags = 1
+    " let g:ats_autoformat = 0
+
+" }}}
+
+" (disabled) julia-vim - Julia syntax highlighting and ftplugin {{{
+
+    " call dein#add('JuliaLang/julia-vim')
+    " 
+    " " Turn off the Latex symbol to unicode key mapping
+    " let g:latex_to_unicode_tab = 0
 
 " }}}
 
@@ -1070,10 +1070,10 @@ EOF
 
 " }}}
 
-" cup.vim - JavaCUP syntax {{{
+" (disabled) cup.vim - JavaCUP syntax {{{
 
-    call dein#add('vim-scripts/cup.vim')
-    au BufNewFile,BufRead *.cup set filetype=cup
+    " call dein#add('vim-scripts/cup.vim')
+    " au BufNewFile,BufRead *.cup set filetype=cup
 
 " }}}
 
@@ -1083,23 +1083,22 @@ EOF
 
 " }}}
 
-" earthly.vim - Earthfile syntax {{{
+" (disabled) earthly.vim - Earthfile syntax {{{
 
-    call dein#add('https://github.com/earthly/earthly.vim')
-
-" }}}
-
-" vim-glsl - GLSL shading language syntax {{{
-
-    call dein#add('tikhomirov/vim-glsl')
+    " call dein#add('https://github.com/earthly/earthly.vim')
 
 " }}}
 
+" (disabled) vim-glsl - GLSL shading language syntax {{{
 
-" vim-nix - Nix syntax {{{
+    " call dein#add('tikhomirov/vim-glsl')
 
-    call dein#add('LnL7/vim-nix')
-    let g:nix_recommended_style = 1
+" }}}
+
+" (disabled) vim-nix - Nix syntax {{{
+
+    " call dein#add('LnL7/vim-nix')
+    " let g:nix_recommended_style = 1
 
 " }}}
 
