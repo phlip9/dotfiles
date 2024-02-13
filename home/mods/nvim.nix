@@ -26,6 +26,9 @@
     plugins = let
       p = pkgs.vimPlugins;
     in [
+      # kanagawa colorscheme
+      { plugin = p.kanagawa-nvim; }
+
       # treesitter syntax highlighting etc
       { plugin = p.nvim-treesitter.withPlugins (q: [
         # available language plugins:

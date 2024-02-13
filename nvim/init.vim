@@ -56,8 +56,6 @@
 
 " kanagawa - neovim colorscheme {{{
 
-    call dein#add('rebelot/kanagawa.nvim')
-
 lua << EOF
 require('kanagawa').setup({
     -- enable terminal text undercurls (underlines, dotted underlines, etc)
