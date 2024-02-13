@@ -388,99 +388,79 @@ EOF
     " <verb>ic   - <verb> in class
     " <verb>ac   - <verb> around class
 
-    let g:coc_global_extensions = [
-                \   'coc-json',
-                \   'coc-rust-analyzer',
-                \   'coc-flutter',
-                \ ]
-
     function! s:coc_check_back_space() abort
         let col = col('.') - 1
         return !col || getline('.')[col - 1]  =~# '\s'
     endfunction
 
-    function! s:coc_post_source() abort
-        " Use tab for trigger completion with characters ahead and navigate.
-        inoremap <silent><expr> <TAB>
-                    \ coc#pum#visible() ? coc#pum#next(1) :
-                    \ <SID>coc_check_back_space() ? "\<TAB>" :
-                    \ coc#refresh()
-        inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"
+    " Use tab for trigger completion with characters ahead and navigate.
+    inoremap <silent><expr> <TAB>
+                \ coc#pum#visible() ? coc#pum#next(1) :
+                \ <SID>coc_check_back_space() ? "\<TAB>" :
+                \ coc#refresh()
+    inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"
 
-        " Use <C-Space> to trigger completion.
-        inoremap <silent><expr> <C-Space> coc#refresh()
+    " Use <C-Space> to trigger completion.
+    inoremap <silent><expr> <C-Space> coc#refresh()
 
-        " Use <cr> for confirm completion, `<C-g>u` means break undo chain at current position.
-        " Coc only does snippet and additional edit on confirm.
-        inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
-                    \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+    " Use <cr> for confirm completion, `<C-g>u` means break undo chain at current position.
+    " Coc only does snippet and additional edit on confirm.
+    inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
+                \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
-        " Use `[c` and `]c` for navigate diagnostics
-        nnoremap <silent> [c :call CocAction('diagnosticPrevious')<CR>
-        nnoremap <silent> ]c :call CocAction('diagnosticNext')<CR>
+    " Use `[c` and `]c` for navigate diagnostics
+    nnoremap <silent> [c :call CocAction('diagnosticPrevious')<CR>
+    nnoremap <silent> ]c :call CocAction('diagnosticNext')<CR>
 
-        nnoremap <silent> <leader>gd :call CocAction('jumpDefinition')<CR>
-        nnoremap <silent> <leader>gc :call CocAction('jumpDeclaration')<CR>
-        nnoremap <silent> <leader>gi :call CocAction('jumpImplementation')<CR>
-        nnoremap <silent> <leader>gt :call CocAction('jumpTypeDefinition')<CR>
-        nnoremap <silent> <leader>ren :call CocActionAsync('rename')<CR>
-        nnoremap <silent> <leader>ref :call CocAction('jumpReferences')<CR>
-        nnoremap <silent> <leader>h :call CocAction('doHover')<CR>
-        " nnoremap <leader>a <Plug>(coc-codeaction-selected)<CR>
-        " xnoremap <leader>a <Plug>(coc-codeaction-selected)
-        " nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
-        " nnoremap <silent> <leader>cm :CocCommand<CR>
+    nnoremap <silent> <leader>gd :call CocAction('jumpDefinition')<CR>
+    nnoremap <silent> <leader>gc :call CocAction('jumpDeclaration')<CR>
+    nnoremap <silent> <leader>gi :call CocAction('jumpImplementation')<CR>
+    nnoremap <silent> <leader>gt :call CocAction('jumpTypeDefinition')<CR>
+    nnoremap <silent> <leader>ren :call CocActionAsync('rename')<CR>
+    nnoremap <silent> <leader>ref :call CocAction('jumpReferences')<CR>
+    nnoremap <silent> <leader>h :call CocAction('doHover')<CR>
+    " nnoremap <leader>a <Plug>(coc-codeaction-selected)<CR>
+    " xnoremap <leader>a <Plug>(coc-codeaction-selected)
+    " nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
+    " nnoremap <silent> <leader>cm :CocCommand<CR>
 
-        " flutter-specific bindings
-        " TODO(phlip9): make this bind only in dart/flutter file types
-        nnoremap <silent> <leader>fd :CocCommand flutter.devices<CR>
-        nnoremap <silent> <leader>fr :CocCommand flutter.run<CR>
-        nnoremap <silent> <leader>ft :CocCommand flutter.dev.hotRestart<CR>
-        nnoremap <silent> <leader>fs :CocCommand flutter.dev.quit<CR>
-        nnoremap <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
+    " flutter-specific bindings
+    " TODO(phlip9): make this bind only in dart/flutter file types
+    nnoremap <silent> <leader>fd :CocCommand flutter.devices<CR>
+    nnoremap <silent> <leader>fr :CocCommand flutter.run<CR>
+    nnoremap <silent> <leader>ft :CocCommand flutter.dev.hotRestart<CR>
+    nnoremap <silent> <leader>fs :CocCommand flutter.dev.quit<CR>
+    nnoremap <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
 
-        " This lets you select or use vim verbs inside/around functions/"classes".
-        " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
-        xmap if <Plug>(coc-funcobj-i)
-        omap if <Plug>(coc-funcobj-i)
-        xmap af <Plug>(coc-funcobj-a)
-        omap af <Plug>(coc-funcobj-a)
-        xmap ic <Plug>(coc-classobj-i)
-        omap ic <Plug>(coc-classobj-i)
-        xmap ac <Plug>(coc-classobj-a)
-        omap ac <Plug>(coc-classobj-a)
+    " This lets you select or use vim verbs inside/around functions/"classes".
+    " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
+    xmap if <Plug>(coc-funcobj-i)
+    omap if <Plug>(coc-funcobj-i)
+    xmap af <Plug>(coc-funcobj-a)
+    omap af <Plug>(coc-funcobj-a)
+    xmap ic <Plug>(coc-classobj-i)
+    omap ic <Plug>(coc-classobj-i)
+    xmap ac <Plug>(coc-classobj-a)
+    omap ac <Plug>(coc-classobj-a)
 
-        " Remap <C-f> and <C-b> to scroll float windows/popups.
-        nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-        nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-        inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
-        inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
-        vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-        vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-    endfunction
+    " Remap <C-f> and <C-b> to scroll float windows/popups.
+    nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+    nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
+    inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
+    inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
+    vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
+    vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
 
+    "
+    " coc-fzf
+    "
     let g:coc_fzf_preview='right:50%'
-
-    function! s:coc_fzf_post_source() abort
-        nnoremap <silent> <space>o :CocFzfList outline<cr>
-        nnoremap <silent> <space>s :CocFzfList symbols<cr>
-        nnoremap <silent> <leader>a :CocFzfList actions<cr>
-        xnoremap <silent> <leader>a :CocFzfList actions
-        nnoremap <silent> <leader>di :CocFzfList diagnostics<cr>
-        nnoremap <silent> <leader>cm :CocFzfList commands<cr>
-    endfunction
-
-    call dein#add('neoclide/coc.nvim',
-                \ {
-                \   'if': executable('node'),
-                \   'rev': 'release',
-                \   'hook_post_source': function('s:coc_post_source'),
-                \ })
-    call dein#add('antoinemadec/coc-fzf',
-                \ {
-                \   'depends': ['neoclide/coc.nvim', 'junegunn/fzf.vim'],
-                \   'hook_post_source': function('s:coc_fzf_post_source'),
-                \ })
+    nnoremap <silent> <space>o :CocFzfList outline<cr>
+    nnoremap <silent> <space>s :CocFzfList symbols<cr>
+    nnoremap <silent> <leader>a :CocFzfList actions<cr>
+    xnoremap <silent> <leader>a :CocFzfList actions
+    nnoremap <silent> <leader>di :CocFzfList diagnostics<cr>
+    nnoremap <silent> <leader>cm :CocFzfList commands<cr>
 
 "  }}}
 
@@ -863,16 +843,7 @@ EOF
     " <space>cb - grep through commits for the current buffer
     "  <space>h - grep through vim help
 
-    let fzf_home = expand('$FZF_HOME')
-    let fzf_enabled = isdirectory(fzf_home) && executable('fzf')
     let g:fzf_command_prefix = 'Fzf'
-
-    call dein#add(fzf_home,
-                \ {
-                \   'if': fzf_enabled,
-                \   'build': 'bash install --all',
-                \ })
-    call dein#add('junegunn/fzf.vim', { 'if': fzf_enabled })
 
     nnoremap <silent> T :FzfBuffers<cr>
     nnoremap <silent> <space>cm :FzfCommits<cr>
@@ -902,22 +873,14 @@ EOF
         nnoremap <silent> <space>O :FzfFiles2<cr>
     endfunction
 
-    " fzf file searching using `fd` or `rg`, preferring `fd` cus it has nicer colors : p
+    " fzf file searching using `fd`
     if executable('fd')
-        " fd's `--color` option emits ANSI color codes; tell fzf to show them
-        " properly.
+        " fd's `--color` option emits ANSI color codes; tell fzf to show them.
         let g:fzf_files_options = ['--ansi']
         let fd_command = 'fd ' .
                     \ '--type f --hidden --follow --color "always" --strip-cwd-prefix ' .
                     \ '--exclude ".git/*" --exclude "target/*" --exclude "tags" '
         call s:FzfFilesCommand(fd_command, '--no-ignore')
-    elseif executable('rg')
-        " --color 'never': rg doesn't support meaningful colors when listing
-        "                  files, so let's just turn them off.
-        let rg_command = 'rg ' .
-                    \ '--hidden --follow --color "never" --files ' .
-                    \ '--glob "!.git/*" --glob "!target/*" --glob "!tags" '
-        call s:FzfFilesCommand(rg_command, '--no-ignore')
     else
         nnoremap <silent>        O :echoerr "Error: neither `fd` nor `rg` installed"<cr>
         nnoremap <silent> <space>O :echoerr "Error: neither `fd` nor `rg` installed"<cr>

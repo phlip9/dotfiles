@@ -14,7 +14,7 @@
     # Use `fd` filename search for plain `fzf` invocation and `CTRL-T` keybind.
     defaultCommand = "${lib.getBin pkgs.fd}/bin/fd \
       --type file --fixed-strings --ignore-case --follow --hidden \
-      --exclude \".git/*\" --exclude \"target/*\""; 
+      --exclude \".git/*\" --exclude \"target/*\" --exclude tags";
 
     fileWidgetCommand = defaultCommand + " --color=always";
     fileWidgetOptions = ["--ansi"];

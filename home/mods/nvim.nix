@@ -80,6 +80,18 @@
 
       # SudoEdit.vim - Easily write to protected files
       {plugin = p.SudoEdit-vim;}
+
+      # fzf.vim - fuzzy file matching, grepping, and tag searching using fzf
+      {plugin = p.fzf-vim;}
+
+      # coc.nvim - Complete engine and Language Server support for neovim
+      {plugin = p.coc-nvim;}
+      {plugin = p.coc-fzf;}
+
+      # coc.nvim - LSP integrations
+      {plugin = p.coc-json;}
+      {plugin = p.coc-rust-analyzer;}
+      {plugin = p.coc-flutter;}
     ];
   };
 
