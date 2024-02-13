@@ -38,25 +38,11 @@
 
 " BUNDLES {{{
 
-" vimproc - Interactive command execution in Vim {{{
-
-    call dein#add('Shougo/vimproc.vim',
-                \ {
-                \   'if': executable('make'),
-                \   'build': 'make'
-                \ })
-
-" vimproc }}}
-
-" (disabled) crayon - dark colorscheme {{{
-
-    " call dein#add('jansenfuller/crayon')
-
-" }}}
-
-" kanagawa - neovim colorscheme {{{
-
+" lua plugins section
 lua << EOF
+
+-- kanagawa - neovim colorscheme {{{
+
 require('kanagawa').setup({
     -- enable terminal text undercurls (underlines, dotted underlines, etc)
     undercurl = true,
@@ -108,7 +94,46 @@ require('kanagawa').setup({
     theme = "dragon",
     compile = false,
 })
+
+-- }}}
+
+-- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
+
+require('nvim-treesitter.configs').setup({
+    -- we're managing parser installation via nix, so don't auto install
+    auto_install = false,
+    ensure_installed = {},
+
+    highlight = {
+        -- enable tree-sitter highlighting
+        enable = true,
+        -- don't use tree-sitter highlighting and vim regex highlighting at
+        -- the same time
+        additional_vim_regex_highlighting = false,
+    },
+    indent = {
+        enable = true,
+    },
+})
+
+-- }}}
+
 EOF
+" lua plugins section end
+
+" vimproc - Interactive command execution in Vim {{{
+
+    call dein#add('Shougo/vimproc.vim',
+                \ {
+                \   'if': executable('make'),
+                \   'build': 'make'
+                \ })
+
+" vimproc }}}
+
+" (disabled) crayon - dark colorscheme {{{
+
+    " call dein#add('jansenfuller/crayon')
 
 " }}}
 
@@ -619,30 +644,6 @@ EOF
     let g:neoformat_only_msg_on_error = 1
     let g:neoformat_enabled_cpp = ['clangformat']
     let g:neoformat_enabled_c = ['clangformat']
-
-" }}}
-
-" nvim-treesitter - tree-sitter interface and syntax highlighting {{{
-
-lua << EOF
--- installed via nix
-require('nvim-treesitter.configs').setup({
-    -- we're managing parser installation via nix, so don't auto install
-    auto_install = false,
-    ensure_installed = {},
-
-    highlight = {
-        -- enable tree-sitter highlighting
-        enable = true,
-        -- don't use tree-sitter highlighting and vim regex highlighting at
-        -- the same time
-        additional_vim_regex_highlighting = false,
-    },
-    indent = {
-        enable = true,
-    },
-})
-EOF
 
 " }}}
 
