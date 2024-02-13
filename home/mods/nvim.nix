@@ -91,9 +91,12 @@
       {plugin = p.coc-fzf;}
 
       # coc.nvim - LSP integrations
+      {plugin = p.coc-flutter;}
       {plugin = p.coc-json;}
       {plugin = p.coc-rust-analyzer;}
-      {plugin = p.coc-flutter;}
+      {plugin = p.coc-toml;}
+      {plugin = p.coc-vimlsp;}
+      {plugin = p.coc-yaml;}
 
       # goyo.vim - distraction free editing
       {plugin = p.goyo-vim;}
