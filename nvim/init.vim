@@ -624,6 +624,30 @@ EOF
 
 " }}}
 
+" nvim-treesitter - tree-sitter interface and syntax highlighting {{{
+
+lua << EOF
+-- installed via nix
+require('nvim-treesitter.configs').setup({
+    -- we're managing parser installation via nix, so don't auto install
+    auto_install = false,
+    ensure_installed = {},
+
+    highlight = {
+        -- enable tree-sitter highlighting
+        enable = true,
+        -- don't use tree-sitter highlighting and vim regex highlighting at
+        -- the same time
+        additional_vim_regex_highlighting = false,
+    },
+    indent = {
+        enable = true,
+    },
+})
+EOF
+
+" }}}
+
 " (disabled) vim-go - Go linting, highlighting, building, formatting {{{
 
     " call dein#add('fatih/vim-go')

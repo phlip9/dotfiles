@@ -22,6 +22,42 @@
     withNodeJs = true; # used by `coc.nvim` LSP client
     withPython3 = false;
     withRuby = false;
+
+    plugins = let
+      p = pkgs.vimPlugins;
+    in [
+      # treesitter syntax highlighting etc
+      { plugin = p.nvim-treesitter.withPlugins (q: [
+        # available language plugins:
+        # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/nvim-treesitter/generated.nix>
+        q.bash
+        q.c
+        q.cmake
+        q.cpp
+        q.css
+        q.diff
+        q.dockerfile
+        q.git_rebase
+        q.gitcommit
+        q.gitignore
+        q.html
+        q.ini
+        q.javascript
+        q.json
+        q.jsonc
+        q.lua
+        q.make
+        q.markdown
+        q.nix
+        q.python
+        q.query
+        q.rust
+        q.toml
+        q.vim
+        q.vimdoc
+        q.yaml
+      ]); }
+    ];
   };
 
   # Need some args passed directly to `wrapNeovimUnstable`
