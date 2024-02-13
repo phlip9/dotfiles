@@ -425,12 +425,12 @@ EOF
     " nnoremap <silent> <leader>cm :CocCommand<CR>
 
     " flutter-specific bindings
-    " TODO(phlip9): make this bind only in dart/flutter file types
-    nnoremap <silent> <leader>fd :CocCommand flutter.devices<CR>
-    nnoremap <silent> <leader>fr :CocCommand flutter.run<CR>
-    nnoremap <silent> <leader>ft :CocCommand flutter.dev.hotRestart<CR>
-    nnoremap <silent> <leader>fs :CocCommand flutter.dev.quit<CR>
-    nnoremap <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
+    autocmd FileType dart
+                \ nnoremap <buffer> <silent> <leader>fd :CocCommand flutter.devices<CR> |
+                \ nnoremap <buffer> <silent> <leader>fr :CocCommand flutter.run<CR> |
+                \ nnoremap <buffer> <silent> <leader>ft :CocCommand flutter.dev.hotRestart<CR> |
+                \ nnoremap <buffer> <silent> <leader>fs :CocCommand flutter.dev.quit<CR> |
+                \ nnoremap <buffer> <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
 
     " This lets you select or use vim verbs inside/around functions/"classes".
     " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
