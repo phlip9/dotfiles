@@ -15,6 +15,7 @@
     # semi-functioning nix language server.
     # maybe someday nix users won't have to live in fucking squalor...
     pkgs.nil
+    pkgs.alejandra
   ];
   extraPkgsPath = lib.makeBinPath extraPkgs;
 
