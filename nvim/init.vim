@@ -1129,6 +1129,10 @@ EOF
 
 " GENERAL {{{
 
+    " Without this, deleting plugins doesn't actually remove them from the
+    " cache, which means they continue persisting...
+    let g:dein#auto_recache = 1
+
     " Required after all plugins have been declared
     call dein#end()
 
