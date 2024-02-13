@@ -95,7 +95,7 @@ require("kanagawa").setup({
     compile = false,
 })
 
--- }}}
+-- kanagawa }}}
 
 -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
 
@@ -116,7 +116,7 @@ require("nvim-treesitter.configs").setup({
     },
 })
 
--- }}}
+-- nvim-treesitter }}}
 
 EOF
 " lua plugins section end
@@ -400,10 +400,6 @@ EOF
     endfunction
 
     function! s:coc_post_source() abort
-        " call coc#config('section', {
-        "             \ ''
-        " })
-
         " Use tab for trigger completion with characters ahead and navigate.
         inoremap <silent><expr> <TAB>
                     \ coc#pum#visible() ? coc#pum#next(1) :
@@ -490,8 +486,6 @@ EOF
 
 " SudoEdit.vim - Easily write to protected files {{{
 
-    call dein#add('chrisbra/SudoEdit.vim', { 'on_cmd': ['SudoWrite', 'SudoRead'] })
-
     " Use `pkexec` on more recent Ubuntu/Debian/Pop!_OS
     if executable('pkexec')
         let g:sudoAuth='pkexec'
@@ -499,16 +493,16 @@ EOF
 
 " SudoEdit.vim }}}
 
-" vim-multiple-cursors - Emulate Sublime Text's multiple cursors feature {{{
+" (disabled) vim-multiple-cursors - Emulate Sublime Text's multiple cursors feature {{{
 
-    " Mappings:
-    " Ctrl-n - Select current/next word
-    " Ctrl-p - Select previous word
-    " Ctrl-x - Skip current word
-
-    " says it's deprecated and should be replaced w/
-    " https://github.com/mg979/vim-visual-multi
-    call dein#add('terryma/vim-multiple-cursors')
+    " " Mappings:
+    " " Ctrl-n - Select current/next word
+    " " Ctrl-p - Select previous word
+    " " Ctrl-x - Skip current word
+    "
+    " " says it's deprecated and should be replaced w/
+    " " https://github.com/mg979/vim-visual-multi
+    " call dein#add('terryma/vim-multiple-cursors')
 
 " vim-multiple-cursors }}}
 
@@ -605,16 +599,16 @@ EOF
 
 " }}}
 
-" neoformat - Plugin for formatting code {{{
+" (disabled) neoformat - Plugin for formatting code {{{
 
-    call dein#add('sbdchd/neoformat')
-
-    autocmd FileType c,cpp
-                \ autocmd BufWritePre <buffer> undojoin | Neoformat
-
-    let g:neoformat_only_msg_on_error = 1
-    let g:neoformat_enabled_cpp = ['clangformat']
-    let g:neoformat_enabled_c = ['clangformat']
+    " call dein#add('sbdchd/neoformat')
+    "
+    " autocmd FileType c,cpp
+    "             \ autocmd BufWritePre <buffer> undojoin | Neoformat
+    "
+    " let g:neoformat_only_msg_on_error = 1
+    " let g:neoformat_enabled_cpp = ['clangformat']
+    " let g:neoformat_enabled_c = ['clangformat']
 
 " }}}
 
@@ -717,15 +711,11 @@ EOF
 
 " }}}
 
-" rust.vim - Rust file detection and syntax highlighting {{{
+" (disabled) rust.vim - Rust file detection and syntax highlighting {{{
 
-    call dein#add('rust-lang/rust.vim',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['rust']
-                \ })
-
-    let g:rustfmt_autosave = 0
+    " call dein#add('rust-lang/rust.vim', #{ lazy: 1, on_ft: ['rust'] })
+    "
+    " let g:rustfmt_autosave = 0
 
 " }}}
 
@@ -804,13 +794,13 @@ EOF
 
 " }}}
 
-" pep8-indent - Python indenting {{{
+" (disabled) pep8-indent - Python indenting {{{
 
-    call dein#add('hynek/vim-python-pep8-indent',
-                \ {
-                \   'lazy': 1,
-                \   'on_ft': ['python']
-                \ })
+    " call dein#add('hynek/vim-python-pep8-indent',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_ft': ['python']
+    "             \ })
 
 " pep8-indent }}}
 

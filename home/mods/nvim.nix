@@ -75,6 +75,9 @@
 
       # delimitMate - Autocompletion for delimiters
       { plugin = p.delimitMate; }
+
+      # SudoEdit.vim - Easily write to protected files
+      { plugin = p.SudoEdit-vim; }
     ];
   };
 
