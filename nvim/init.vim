@@ -1372,6 +1372,12 @@ EOF
     nnoremap <C-k> <C-w>k
     nnoremap <C-l> <C-w>l
 
+    " re-center screen on C-d, C-u, search next/prev
+    nnoremap <C-d> <C-d>zz
+    nnoremap <C-u> <C-u>zz
+    nnoremap n nzzzv
+    nnoremap N Nzzzv
+
     " Reload nvimrc
     nnoremap <silent> <leader>V :source $XDG_CONFIG_HOME/nvim/init.vim<CR>:filetype detect<CR>:exe ":echo 'nvimrc reloaded'"<CR>
 
