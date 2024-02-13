@@ -27,57 +27,59 @@
       p = pkgs.vimPlugins;
     in [
       # kanagawa - neovim colorscheme
-      { plugin = p.kanagawa-nvim; }
+      {plugin = p.kanagawa-nvim;}
 
       # nvim-treesitter - tree-sitter interface and syntax highlighting
-      { plugin = p.nvim-treesitter.withPlugins (q: [
-        # available language plugins:
-        # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/nvim-treesitter/generated.nix>
-        q.bash
-        q.c
-        q.cmake
-        q.cpp
-        q.css
-        q.diff
-        q.dockerfile
-        q.git_rebase
-        q.gitcommit
-        q.gitignore
-        q.html
-        q.ini
-        q.javascript
-        q.json
-        q.jsonc
-        q.lua
-        q.make
-        q.markdown
-        q.nix
-        q.python
-        q.query
-        q.rust
-        q.toml
-        q.vim
-        q.vimdoc
-        q.yaml
-      ]); }
+      {
+        plugin = p.nvim-treesitter.withPlugins (q: [
+          # available language plugins:
+          # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/nvim-treesitter/generated.nix>
+          q.bash
+          q.c
+          q.cmake
+          q.cpp
+          q.css
+          q.diff
+          q.dockerfile
+          q.git_rebase
+          q.gitcommit
+          q.gitignore
+          q.html
+          q.ini
+          q.javascript
+          q.json
+          q.jsonc
+          q.lua
+          q.make
+          q.markdown
+          q.nix
+          q.python
+          q.query
+          q.rust
+          q.toml
+          q.vim
+          q.vimdoc
+          q.yaml
+        ]);
+      }
 
       # vim-airline - Lightweight yet fancy status line
-      { plugin = p.vim-airline; }
+      {plugin = p.vim-airline;}
 
       # vim-fugitive - Vim Git integration
-      { plugin = p.vim-fugitive; }
+      {plugin = p.vim-fugitive;}
 
       # vim-gitgutter - Show git diff in the gutter
-      { plugin = p.vim-gitgutter; }
+      {plugin = p.vim-gitgutter;}
 
       # NERDCommenter - Easily comment lines or blocks of text
-      { plugin = p.nerdcommenter; }
+      {plugin = p.nerdcommenter;}
 
       # delimitMate - Autocompletion for delimiters
-      { plugin = p.delimitMate; }
+      {plugin = p.delimitMate;}
 
       # SudoEdit.vim - Easily write to protected files
-      { plugin = p.SudoEdit-vim; }
+      {plugin = p.SudoEdit-vim;}
     ];
   };
 
