@@ -113,18 +113,6 @@ $ RUSTFLAGS="-C target-cpu=native" cargo install \
 ```
 
 
-### _Optional_: Install FZF ###
-
-```bash
-$ git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-$ ~/.fzf/install
-
-# fuzzy auto-completion (y)
-# key bindings          (y)
-# update shell config   (n)
-```
-
-
 ### _Optional_: Install Universal Ctags ###
 
 ```bash

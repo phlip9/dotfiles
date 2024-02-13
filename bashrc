@@ -412,9 +412,6 @@ LOCAL_BIN=$HOME/.local/bin
 export PYTHON3_ENV_DIR=$HOME/.local/state/venv
 export ENV_DIR=$PYTHON3_ENV_DIR
 
-# FZF
-export FZF_HOME=$HOME/.fzf
-
 # # NVM
 # export NVM_DIR=$XDG_CONFIG_HOME/nvm
 
@@ -475,13 +472,6 @@ export PATH=$PATH:$GEM_BIN
 #     export RUST_SRC_PATH=$RUST_SYSROOT/lib/rustlib/src/rust/src/
 # fi
 
-# Use ripgrep for fzf filename searching
-if [ -x "$(command -v rg)" ]; then
-    export FZF_DEFAULT_COMMAND='rg --files --fixed-strings --ignore-case '\
-'--no-ignore --hidden --follow '\
-'--glob "!.git/*" --glob "!target/*" '
-fi
-
 ## ENV VARS }}}
 
 ## SSH AGENT {{{
@@ -499,9 +489,6 @@ fi
 # # NVM setup and bash completions
 # [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 # [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-# FZF keybindings and fuzzy autocomplete
-[ -f ~/.fzf.bash ] && source ~/.fzf.bash
 
 # git autocomplete
 # Download git-completion.bash if you don't have it already:
