@@ -9,28 +9,6 @@
         set nocompatible
     endif
 
-    let plugins_home = expand('$XDG_STATE_HOME/dein')
-
-    " dein install and setup
-    if has('vim_starting')
-        let dein_home = plugins_home . '/repos/github.com/Shougo/dein.vim'
-
-        " clone dein repo to plugins
-        if empty(glob(dein_home))
-            let cmd_clone_dein = 'git clone https://github.com/Shougo/dein.vim '.dein_home
-            call system(cmd_clone_dein)
-            if v:shell_error
-                finish
-            endif
-        endif
-
-        " add dein to rtp
-        let &runtimepath = &runtimepath . ',' . dein_home
-    endif
-
-    call dein#begin(plugins_home)
-    call dein#add('Shougo/dein.vim')
-
     " Rebind mapleader to something more accessible.
     let mapleader = ','
 
@@ -121,28 +99,6 @@ require("nvim-treesitter.configs").setup({
 EOF
 " lua plugins section end
 
-" (disabled) vimproc - Interactive command execution in Vim {{{
-
-    " call dein#add('Shougo/vimproc.vim',
-    "             \ {
-    "             \   'if': executable('make'),
-    "             \   'build': 'make'
-    "             \ })
-
-" vimproc }}}
-
-" (disabled) crayon - dark colorscheme {{{
-
-    " call dein#add('jansenfuller/crayon')
-
-" }}}
-
-" (disabled) vim-rooter - Change vim root directory to project root {{{
-
-    " call dein#add('airblade/vim-rooter')
-
-" }}}
-
 " NERDCommenter - Easily comment lines or blocks of text {{{
 
     " Mappings:
@@ -179,50 +135,6 @@ EOF
 
 " NERDCommenter }}}
 
-" (disabled) Syntastic - syntax and error checking {{{
-
-    " call dein#add('vim-syntastic/syntastic')
-
-    " By default, Syntastic doesn't populate the location list unless you
-    " explicitly call `:Errors`.
-    " let g:syntastic_always_populate_loc_list = 1
-
-    " let syntastic_javascript_checkers = ['jshint', 'jscs']
-    "
-    " let g:syntastic_python_python_exec = g:python3_host_prog
-    "
-    " let g:syntastic_cpp_compiler = 'g++'
-    " let g:syntastic_cpp_compiler_options = ' -std=c++11 -stdlib=libc++'
-
-" Syntastic }}}
-
-" (disabled) vim-test - Run tests at the speed of thought {{{
-
-    " " Mappings:
-    " " <leader>t<Space> Run the test nearest to the cursor
-    " " <leader>tf Test the current file
-    " " <leader>ts Test the current suite
-    " " <leader>tl Run the last test
-    " " <leader>tv Open the test file for the last run tests
-    "
-    " call dein#add('janko-m/vim-test',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_cmd': [
-    "             \     'TestNearest', 'TestFile', 'TestSuite', 'TestLast', 'TestVisit'
-    "             \   ]
-    "             \ })
-    "
-    " nnoremap <silent> <leader>t<Space> :TestNearest<CR>
-    " nnoremap <silent> <leader>tf :TestFile<CR>
-    " nnoremap <silent> <leader>ts :TestSuite<CR>
-    " nnoremap <silent> <leader>tl :TestLast<CR>
-    " nnoremap <silent> <leader>tv :TestVisit<CR>
-    "
-    " let test#strategy = "neovim"
-
-" }}}
-
 " vim-gitgutter - Show git diff in the gutter {{{
 
     " Mappings:
@@ -248,111 +160,6 @@ EOF
     nmap <leader>hb :GitGutterPrevHunk<CR>
 
 " vim-gitgutter }}}
-
-" (disabled) deoplete.nvim - neovim autocomplete {{{
-
-    " function! s:deoplete_setup() abort
-    "     call deoplete#custom#option('sources',
-    "                 \ {
-    "                 \   'rust': ['LanguageClient'],
-    "                 \   'c': ['clang'],
-    "                 \   'cpp': ['clang'],
-    "                 \   'go': ['go'],
-    "                 \   'python': ['jedi'],
-    "                 \   'python3': ['jedi'],
-    "                 \   'javascript': ['omni'],
-    "                 \   'lean': ['LanguageClient'],
-    "                 \ })
-    "
-    "     " <TAB>: completion.
-    "     inoremap <silent><expr> <TAB>
-    "                 \ pumvisible() ? "\<C-n>" :
-    "                 \ <SID>check_back_space() ? "\<TAB>" :
-    "                 \ deoplete#manual_complete()
-    "     function! s:check_back_space() abort
-    "         let col = col('.') - 1
-    "         return !col || getline('.')[col - 1]  =~ '\s'
-    "     endfunction
-    "
-    "     " <S-TAB>: completion back.
-    "     inoremap <expr><S-TAB>  pumvisible() ? "\<C-p>" : "\<C-h>"
-    "
-    "     " <BS>: close popup and delete backword char.
-    "     inoremap <expr><BS> deoplete#smart_close_popup()."\<C-h>"
-    "
-    "     " <CR>: close popup and save indent.
-    "     inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
-    "     function! s:my_cr_function() abort
-    "         return deoplete#cancel_popup() . "\<CR>"
-    "     endfunction
-    "
-    "     inoremap <expr> '  pumvisible() ? deoplete#close_popup() : "'"
-    "
-    "     " Disable deoplete while using vim-multiple-cursors
-    "     function! g:Multiple_cursors_before()
-    "         call deoplete#custom#buffer_option('auto_complete', v:false)
-    "     endfunction
-    "     function! g:Multiple_cursors_after()
-    "         call deoplete#custom#buffer_option('auto_complete', v:true)
-    "     endfunction
-    "
-    "     " Disable the candidates in Comment/String syntaxes.
-    "     call deoplete#custom#source('_',
-    "                 \ 'disabled_syntaxes', ['Comment', 'String'])
-    "
-    "     " ignore completions from the current buffer
-    "     call deoplete#custom#option('ignore_sources', {'_': ['buffer']})
-    "
-    "     " Go deoplete configuration
-    "     " =========================
-    "     call deoplete#custom#source('go', 'gocode_binary', $GOPATH . '/bin/gocode')
-    "     call deoplete#custom#source('go', 'sort_class',
-    "                 \ ['package', 'func', 'type', 'var', 'const'])
-    "     call deoplete#custom#source('go', 'pointer', 1)
-    "     " cache the Go stdlib completions
-    "     call deoplete#custom#source('go', 'use_cache', 1)
-    "     call deoplete#custom#source('go', 'json_directory',
-    "                 \ $HOME . '/.cache/deoplete/go/' . $GOOS . '_' . $GOARCH)
-    "
-    "     " clang deoplete configuration
-    "     " ============================
-    "     if executable('llvm-config-4.0')
-    "         " `echo -n ...` strips the trailing newline from output
-    "         let llvm_libdir = system('echo -n $(llvm-config-4.0 --libdir)')
-    "         call deoplete#custom#source('clang', 'libclang_path',
-    "                     \ llvm_libdir . '/libclang.so')
-    "         call deoplete#custom#source('clang', 'clang_header', '/usr/include/clang')
-    "     endif
-    " endfunction
-    "
-    " "" Custom auto completion trigger patterns
-    " "call deoplete#custom#option('omni_patterns',
-    "             "\ {
-    "             "\   'c': '[^. *\t](\.|->)\w*',
-    "             "\   'cpp': '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*',
-    "             "\   'ruby': '[^. *\t]\.\w*\|\h\w*::',
-    "             "\ })
-    "             "\   'lean': '[^. *\t]\.\w*',
-    "
-    " call dein#add('Shougo/deoplete.nvim',
-    "             \ {
-    "             \   'if': has('python3'),
-    "             \   'hook_source': function('s:deoplete_setup'),
-    "             \ })
-    "
-    " let g:deoplete#enable_at_startup = 1
-    "
-    " " tab complete
-    " "inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
-    "
-    " " Do not select a match in the menu, force the user to
-    " " select one from the menu.
-    " set completeopt+=noselect
-    " " Disable the annoying autocomplete window that pops up
-    " " on the bottom of the screen.
-    " set completeopt-=preview
-
-" }}}
 
 " coc.nvim - Complete engine and Language Server support for neovim {{{
 
@@ -473,19 +280,6 @@ EOF
 
 " SudoEdit.vim }}}
 
-" (disabled) vim-multiple-cursors - Emulate Sublime Text's multiple cursors feature {{{
-
-    " " Mappings:
-    " " Ctrl-n - Select current/next word
-    " " Ctrl-p - Select previous word
-    " " Ctrl-x - Skip current word
-    "
-    " " says it's deprecated and should be replaced w/
-    " " https://github.com/mg979/vim-visual-multi
-    " call dein#add('terryma/vim-multiple-cursors')
-
-" vim-multiple-cursors }}}
-
 " vim-airline - Lightweight yet fancy status line {{{
 
     set laststatus=2
@@ -531,305 +325,6 @@ EOF
     let g:airline#extensions#tabline#left_alt_sep = '|'
 
 " vim-airline }}}
-
-" (disabled) LanguageClient-neovim - Language Server Protocol support for neovim {{{
-
-    " " Mappings:
-    " " <leader>m  - show the context menu with all available commands
-    " " <leader>gd - go to definition of symbol under cursor
-    " " <leader>h  - hover info about symbol under cursor
-    " " <leader>r  - rename symbol under cursor
-    " " <leader>f  - display references to symbol under cursor
-    "
-    " call dein#add('autozimu/LanguageClient-neovim',
-    "             \ {
-    "             \   'rev': 'next',
-    "             \   'build': 'bash install.sh',
-    "             \ })
-    "
-    " let g:LanguageClient_autoStart = 1
-    "
-    " let g:LanguageClient_rootMarkers =
-    "             \ {
-    "             \   'cpp': ['compile_commands.json', 'build'],
-    "             \   'c': ['compile_commands.json', 'build'],
-    "             \   'rust': ['Cargo.toml', 'build'],
-    "             \ }
-    "
-    " let g:LanguageClient_serverCommands = {}
-    "
-    " if executable('rls')
-    "     let g:LanguageClient_serverCommands.rust = ['rls']
-    " endif
-    "
-    " if executable('npm')
-    "     " `echo -n ...` strips the trailing newline from output
-    "     let npm_bin = system('echo -n `npm bin --global`')
-    "     let g:LanguageClient_serverCommands.lean =
-    "                 \ ['node', npm_bin . '/lean-language-server', '--stdio']
-    " endif
-    "
-    " "autocmd FileType lean setlocal omnifunc=LanguageClient#complete
-    "
-    " nnoremap <silent> <leader>m :call LanguageClient_contextMenu()<CR>
-    " nnoremap <silent> <leader>gd :call LanguageClient#textDocument_definition()<CR>
-    " nnoremap <silent> <leader>h :call LanguageClient#textDocument_hover()<CR>
-    " nnoremap <silent> <leader>r :call LanguageClient#textDocument_rename()<CR>
-    " nnoremap <silent> <leader>f :call LanguageClient#textDocument_references()<CR>
-
-" }}}
-
-" (disabled) neoformat - Plugin for formatting code {{{
-
-    " call dein#add('sbdchd/neoformat')
-    "
-    " autocmd FileType c,cpp
-    "             \ autocmd BufWritePre <buffer> undojoin | Neoformat
-    "
-    " let g:neoformat_only_msg_on_error = 1
-    " let g:neoformat_enabled_cpp = ['clangformat']
-    " let g:neoformat_enabled_c = ['clangformat']
-
-" }}}
-
-" (disabled) vim-go - Go linting, highlighting, building, formatting {{{
-
-    " call dein#add('fatih/vim-go')
-
-    " don't use <shift>-k to show go docs, since we use it for buffer switching
-    " let g:go_doc_keywordprg_enabled = 0
-
-" }}}
-
-" (disabled) deoplete-go - Go Autocompletion {{{
-
-    " call dein#add('zchee/deoplete-go', { 'build': 'make' })
-
-" }}}
-
-" (disabled) deoplete-jedi - Python autocompletion {{{
-
-    " call dein#add('zchee/deoplete-jedi')
-
-" }}}
-
-" (disabled) vim-tern - Javascript autocompletion {{{
-
-    " " ## Commands ##
-    " " TernDef: Jump to the definition of the thing under the cursor.
-    " " TernDoc: Look up the documentation of something.
-    " " TernType: Find the type of the thing under the cursor.
-    " " TernRefs: Show all references to the variable or property under the cursor.
-    " " TernRename: Rename the variable under the cursor.
-    "
-    " call dein#add('marijnh/tern_for_vim',
-    "             \ {
-    "             \   'if': executable('npm'),
-    "             \   'lazy': 1,
-    "             \   'build': 'npm install',
-    "             \   'on_ft': ['javascript'],
-    "             \ })
-    "
-    " " Display function signatures in the completion menu
-    " let g:tern_show_signature_in_pum = 1
-
-" }}}
-
-" (disabled) vim-javascript - Javascript syntax and indent file {{{
-
-    " call dein#add('pangloss/vim-javascript',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['javascript']
-    "             \ })
-
-" }}}
-
-" (disabled) vim-node - Tools to make Vim superb for developing with Node.js {{{
-
-    " " Mappings:
-    " " gj : Use on paths or requires to open file Node would
-    "
-    " call dein#add('moll/vim-node',
-    "             \ {
-    "             \   'if': executable('node'),
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['javascript']
-    "             \ })
-
-" }}}
-
-" (disabled) vim-coffee-script - Coffee script syntax highlighting and indenting {{{
-
-    " call dein#add('kchmck/vim-coffee-script',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['coffee']
-    "             \ })
-
-" vim-coffee-script }}}
-
-" (disabled) vim_cpp_indent - Google C++ indent style {{{
-
-    " call dein#add('phlip9/google-vim_cpp_indent',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['cpp']
-    "             \ })
-
-" vim_cpp_indent }}}
-
-" (disabled) deoplete-clang - C/C++ Autocomplete integrated with deoplete {{{
-
-    " call dein#add('zchee/deoplete-clang',
-    "             \ {
-    "             \   'if': executable('clang'),
-    "             \   'depends': 'deoplete.nvim',
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['c', 'cpp']
-    "             \ })
-
-" }}}
-
-" (disabled) rust.vim - Rust file detection and syntax highlighting {{{
-
-    " call dein#add('rust-lang/rust.vim', #{ lazy: 1, on_ft: ['rust'] })
-    "
-    " let g:rustfmt_autosave = 0
-
-" }}}
-
-" (disabled) vim-racer - code completion for Rust {{{
-
-    " call dein#add('racer-rust/vim-racer',
-    "             \ {
-    "             \   'if': executable('racer'),
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['rust']
-    "             \ })
-    "
-    " let g:racer_experimental_completer = 1
-    " let g:racer_no_default_keymappings = 1
-
-" }}}
-
-" (disabled) lean.vim - Lean syntax plugin {{{
-
-    " call dein#add('leanprover/lean.vim')
-
-" }}}
-
-" (disabled) ghcmod.vim - Haskell linting and syntax checking {{{
-
-    " call dein#add('eagletmt/ghcmod-vim',
-    "             \ {
-    "             \   'if': executable('ghc-mod'),
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['haskell']
-    "             \ })
-
-" ghcmod.vim }}}
-
-" (disabled) javacomplete - Java omnicomplete {{{
-
-    "NeoBundleLazy 'Shougo/javacomplete',
-                "\ {
-                "\   'autoload': { 'filetypes': ['java'] },
-                "\   'build_commands': 'javac',
-                "\   'build': {
-                "\     'unix': 'javac ./autoload/Reflection.java',
-                "\   }
-                "\ }
-
-" }}}
-
-" (disabled) vim-monster - Ruby omnicomplete {{{
-
-    "call dein#add('osyo-manga/vim-monster',
-                "\ {
-                "\   'if': executable('rct-complete'),
-                "\   'depends': 'vimproc.vim',
-                "\   'lazy': 1,
-                "\   'on_ft': 'ruby'
-                "\ })
-
-    ""let g:monster#debug#enable = 1
-    "let g:monster#completion#rcodetools#backend = "async_rct_complete"
-
-" }}}
-
-" (disabled) vim-scala - Scala syntax plugin {{{
-
-    " call dein#add('derekwyatt/vim-scala',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['scala']
-    "             \ })
-
-" }}}
-
-" (disabled) vim-opencl - OpenCL syntax plugin {{{
-
-    " call dein#add('petRUShka/vim-opencl')
-
-" }}}
-
-" (disabled) pep8-indent - Python indenting {{{
-
-    " call dein#add('hynek/vim-python-pep8-indent',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['python']
-    "             \ })
-
-" pep8-indent }}}
-
-" (disabled) Unite.vim - fuzzy file matching and buffer searching {{{
-
-    " Mappings:
-    " <space>f - find files
-    " <space>/ - grep with pattern (search)
-    " <space>o - file outline
-
-    " call dein#add('Shougo/unite.vim', { 'depends': 'vimproc.vim' })
-    "
-    " " File outline plugin
-    " call dein#add('Shougo/unite-outline', { 'depends': 'unite.vim' })
-    "
-    " " use ripgrep or ag to for searching
-    " if executable('rg')
-    "     let g:unite_source_grep_command = 'rg'
-    "     let g:unite_source_grep_default_opts = '--ignore-case --vimgrep'
-    "     let g:unite_source_grep_recursive_opt = ''
-    "     " TODO: use rg?
-    "     let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
-	"     let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
-    " elseif executable('ag')
-    "     let g:unite_source_grep_command = 'ag'
-    "     let g:unite_source_grep_default_opts = '--follow --noheading --nocolor --column'
-    "     let g:unite_source_grep_recursive_opt = ''
-    "     let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
-	"     let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
-    " endif
-    "
-    " " ctrlp-like functionality: fuzzy file searching
-    " nmap <space>f :Unite -buffer-name=files file_rec/async<CR>
-    "
-    " nmap <space>/ :Unite -buffer-name=search grep:.<CR>
-    "
-    " " Show file outline
-    " nmap <space>o :Unite -buffer-name=outline outline<CR>
-    "
-    " " Start in insert mode
-    " let g:unite_enable_start_insert = 1
-    "
-    " " mru (most-recently-used) file list limit
-    " let g:unite_source_file_mru_long_limit = 1000
-    "
-    " let g:unite_winheight = 10
-    " let g:unite_split_rule = 'botright'
-
-" unite.vim }}}
 
 " fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
 
@@ -914,80 +409,6 @@ EOF
 
 " }}}
 
-" (disabled) html5.vim - html5 autocompletion, syntax, and indentation {{{
-
-    " call dein#add('othree/html5.vim',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['html']
-    "             \ })
-
-" }}}
-
-" (disabled) vim-jade - Jade template engine syntax and highlighting {{{
-
-    " call dein#add('digitaltoad/vim-jade',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['jade']
-    "             \ })
-
-" }}}
-
-" (disabled) vim-mustace-handlebars - Mustache & Handlebars syntax highlighting {{{
-
-    " call dein#add('mustache/vim-mustache-handlebars')
-
-" }}}
-
-" (disabled) scss-syntax.vim - scss syntax and indenting {{{
-
-    " call dein#add('cakebaker/scss-syntax.vim',
-    "             \ {
-    "             \   'lazy': 1,
-    "             \   'on_ft': ['scss']
-    "             \ })
-
-" }}}
-
-" (disabled) idris2-vim - Idris2 syntax highlighting, checking, and interactive editing {{{
-
-    " " Mappings:
-    " " \t - show type
-    " " \r - reload file?
-    " " \h - show function documentation
-    " " \c - case split
-    " " \e - evaluate an expression
-    " " \f - refine item
-    " " \o - obvious proof search
-    " " \p - proof search
-    " " \i - open idris response window
-    " call dein#add('edwinb/idris2-vim')
-    "
-    " " TODO: check https://github.com/idris-community/idris2-lsp maybe it will
-    " " eventually support autocompletion?
-
-" }}}
-
-" (disabled) ats-vim - ATS2 syntax highlighting and checking {{{
-
-    " call dein#add('phlip9/ats-vim')
-    " " call dein#add(expand('$HOME/dev/ats-vim'))
-    "
-    " let g:ats_use_ctags = 1
-    " let g:ats_autoformat = 0
-
-" }}}
-
-" (disabled) julia-vim - Julia syntax highlighting and ftplugin {{{
-
-    " call dein#add('JuliaLang/julia-vim')
-    "
-    " " Turn off the Latex symbol to unicode key mapping
-    " let g:latex_to_unicode_tab = 0
-
-" }}}
-
 " Recover.vim - Show a diff when recovering swp files {{{
 
     " Keep swap file
@@ -995,57 +416,18 @@ EOF
 
 " }}}
 
-" (disabled) cup.vim - JavaCUP syntax {{{
-
-    " call dein#add('vim-scripts/cup.vim')
-    " au BufNewFile,BufRead *.cup set filetype=cup
-
-" }}}
-
-" (disabled) earthly.vim - Earthfile syntax {{{
-
-    " call dein#add('https://github.com/earthly/earthly.vim')
-
-" }}}
-
-" (disabled) vim-glsl - GLSL shading language syntax {{{
-
-    " call dein#add('tikhomirov/vim-glsl')
-
-" }}}
-
-" (disabled) vim-nix - Nix syntax {{{
-
-    " call dein#add('LnL7/vim-nix')
-    " let g:nix_recommended_style = 1
-
-" }}}
-
 " BUNDLES }}}
 
 " GENERAL {{{
 
-    " Without this, deleting plugins doesn't actually remove them from the
-    " cache, which means they continue persisting...
-    let g:dein#auto_recache = 1
-
-    " Required after all plugins have been declared
-    call dein#end()
-
     filetype plugin indent on       " detect filetypes
     syntax on                       " syntax highlighting
-
-    " Call source and post_source hooks
-    call dein#call_hook('source')
-    call dein#call_hook('post_source')
 
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
     set mouse=a                     " enable mouse for all modes
     scriptencoding=utf-8            " set encoding to utf-8
     set shortmess+=c                " don't pass messages to |ins-completion-menu|.
-    "set shortmess+=filmnrxoOtT      " abbreviate annoying messages
-
 
 " GENERAL }}}
 
@@ -1054,8 +436,6 @@ EOF
     set nu                          " set line numbers
     set showmode                    " show current display mode
     set termguicolors               " use RGB colors
-    "set t_Co=256                    " number of available terminal colors
-    "set cursorline                  " show a line under the cursor
 
     " Highlight the 80+1'th column to help keep text under 80 characters per
     " line
@@ -1071,55 +451,9 @@ EOF
     " vim-gitgutter
     set signcolumn=yes
 
-    " Colorscheme highlight overrides
-    function! CustomColors()
-        " hi ColorColumn ctermbg=8 ctermfg=15
-        "
-        " " Make sure text doesn't fill ctermbg so terminal transparency works
-        " hi Normal ctermbg=NONE ctermfg=15 cterm=NONE
-        " hi Comment ctermbg=NONE ctermfg=12 cterm=NONE
-        "
-        " " Reduce popup menu brightness
-        " hi Pmenu ctermbg=8
-        "
-        " " make tabline background clear so terminal transparency isn't blocked
-        " " out
-        " "hi airline_tabsel cterm=bold ctermfg=7 ctermbg=NONE
-        "
-        " " Highlight CursorLine as lighter background color
-        " hi CursorLine ctermbg=10 ctermfg=None cterm=NONE
-        "
-        " " Make matching text readable
-        " hi MatchParen ctermbg=8 ctermfg=NONE cterm=NONE
-        "
-        " " Sign column color should be the same as the line number column
-        " hi SignColumn ctermbg=NONE
-        "
-        " " Make line number column same as background color
-        " hi LineNr ctermbg=NONE
-        "
-        " " Don't underline the fold lines
-        " hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold
-        "
-        " " Make css readable again
-        " hi cssNoise ctermbg=NONE ctermfg=12 cterm=NONE
-        "
-        " " Make LSP inlay hints more subtle vs Comment
-        " hi CocInlayHint ctermbg=NONE ctermfg=59 cterm=NONE
-        " hi CocRustTypeHint ctermbg=NONE ctermfg=59 cterm=NONE
-        " hi CocRustChainingHint ctermbg=NONE ctermfg=59 cterm=NONE
-    endfunction
-
-    " override colors on colorscheme change
-    autocmd ColorScheme * :call CustomColors()
-
     " Colorscheme
     set background=dark
     colorscheme kanagawa
-
-    "" Light colorscheme
-    "set background=light
-    "colorscheme morning
 
     " Minimalistic Airline theme with fixed backgrounds for terminal
     " transparency
@@ -1154,7 +488,7 @@ EOF
     set clipboard+=unnamedplus      " place yanked text into the clipboard
 
     " Remove trailing whitespaces and ^M chars
-    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml
+    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml,vim,nix,dart
                 \ autocmd BufWritePre <buffer>
                 \     :call setline(1,map(getline(1,"$"),
                 \         'substitute(v:val,"\\s\\+$","","")'))
@@ -1318,15 +652,5 @@ EOF
     nnoremap <silent> <leader>ep :lprevious<CR>
 
 " KEYBINDINGS }}}
-
-" POSTLUDE {{{
-
-    " If there are uninstalled bundles found on startup,
-    " this will conveniently prompt you to install them.
-    if !has('vim_starting') && dein#check_install()
-        call dein#install()
-    endif
-
-" POSTLUDE }}}
 
 " vim: foldmethod=marker
