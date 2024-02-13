@@ -988,32 +988,10 @@ EOF
 
 " }}}
 
-" goyo.vim - distraction free editing {{{
-
-    " ':Goyo' to toggle distraction free mode
-    call dein#add('junegunn/goyo.vim',
-                \ {
-                \   'lazy': 1,
-                \   'on_cmd': ['Goyo']
-                \ })
-
-" }}}
-
 " Recover.vim - Show a diff when recovering swp files {{{
 
     " Keep swap file
     " :FinishRecovery
-    call dein#add('chrisbra/Recover.vim')
-
-" }}}
-
-" vim-bbye - Close a buffer without messing up your layout {{{
-
-    call dein#add('moll/vim-bbye',
-                \ {
-                \   'lazy': 1,
-                \   'on_cmd': ['Bdelete']
-                \ })
 
 " }}}
 
@@ -1021,12 +999,6 @@ EOF
 
     " call dein#add('vim-scripts/cup.vim')
     " au BufNewFile,BufRead *.cup set filetype=cup
-
-" }}}
-
-" vim-just - Justfile syntax {{{
-
-    call dein#add('NoahTheDuke/vim-just')
 
 " }}}
 

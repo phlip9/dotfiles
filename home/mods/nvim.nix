@@ -23,6 +23,8 @@
     withPython3 = false;
     withRuby = false;
 
+    # Full list of plugins in nixpkgs:
+    # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/generated.nix>
     plugins = let
       p = pkgs.vimPlugins;
     in [
@@ -92,6 +94,18 @@
       {plugin = p.coc-json;}
       {plugin = p.coc-rust-analyzer;}
       {plugin = p.coc-flutter;}
+
+      # goyo.vim - distraction free editing
+      {plugin = p.goyo-vim;}
+
+      # Recover.vim - Show a diff when recovering swp files
+      {plugin = p.Recover-vim;}
+
+      # vim-bbye - Close a buffer without messing up your layout
+      {plugin = p.vim-bbye;}
+
+      # vim-just - Justfile syntax
+      {plugin = p.vim-just;}
     ];
   };
 
