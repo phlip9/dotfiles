@@ -26,10 +26,10 @@
     plugins = let
       p = pkgs.vimPlugins;
     in [
-      # kanagawa colorscheme
+      # kanagawa - neovim colorscheme
       { plugin = p.kanagawa-nvim; }
 
-      # treesitter syntax highlighting etc
+      # nvim-treesitter - tree-sitter interface and syntax highlighting
       { plugin = p.nvim-treesitter.withPlugins (q: [
         # available language plugins:
         # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/nvim-treesitter/generated.nix>
@@ -60,6 +60,21 @@
         q.vimdoc
         q.yaml
       ]); }
+
+      # vim-airline - Lightweight yet fancy status line
+      { plugin = p.vim-airline; }
+
+      # vim-fugitive - Vim Git integration
+      { plugin = p.vim-fugitive; }
+
+      # vim-gitgutter - Show git diff in the gutter
+      { plugin = p.vim-gitgutter; }
+
+      # NERDCommenter - Easily comment lines or blocks of text
+      { plugin = p.nerdcommenter; }
+
+      # delimitMate - Autocompletion for delimiters
+      { plugin = p.delimitMate; }
     ];
   };
 

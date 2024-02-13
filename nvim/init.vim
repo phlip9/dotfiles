@@ -43,7 +43,7 @@ lua << EOF
 
 -- kanagawa - neovim colorscheme {{{
 
-require('kanagawa').setup({
+require("kanagawa").setup({
     -- enable terminal text undercurls (underlines, dotted underlines, etc)
     undercurl = true,
     commentStyle = { italic = false },
@@ -99,7 +99,7 @@ require('kanagawa').setup({
 
 -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
 
-require('nvim-treesitter.configs').setup({
+require("nvim-treesitter.configs").setup({
     -- we're managing parser installation via nix, so don't auto install
     auto_install = false,
     ensure_installed = {},
@@ -121,13 +121,13 @@ require('nvim-treesitter.configs').setup({
 EOF
 " lua plugins section end
 
-" vimproc - Interactive command execution in Vim {{{
+" (disabled) vimproc - Interactive command execution in Vim {{{
 
-    call dein#add('Shougo/vimproc.vim',
-                \ {
-                \   'if': executable('make'),
-                \   'build': 'make'
-                \ })
+    " call dein#add('Shougo/vimproc.vim',
+    "             \ {
+    "             \   'if': executable('make'),
+    "             \   'build': 'make'
+    "             \ })
 
 " vimproc }}}
 
@@ -143,12 +143,6 @@ EOF
 
 " }}}
 
-" delimitMate - Autocompletion for delimiters {{{
-
-    call dein#add('Raimondi/delimitMate')
-
-" delimitMate }}}
-
 " NERDCommenter - Easily comment lines or blocks of text {{{
 
     " Mappings:
@@ -156,8 +150,6 @@ EOF
     " <leader>cm - Block comment
     " (disabled) <leader>c$ - Comment from cursor to end of line
     " (disabled) <leader>cA - Comment from cursor to end of line and go into insert mode
-
-    call dein#add('preservim/nerdcommenter')
 
     " disable all default key bindings
     let g:NERDCreateDefaultMappings = 0
@@ -196,50 +188,40 @@ EOF
     " let g:syntastic_always_populate_loc_list = 1
 
     " let syntastic_javascript_checkers = ['jshint', 'jscs']
-    " 
+    "
     " let g:syntastic_python_python_exec = g:python3_host_prog
-    " 
+    "
     " let g:syntastic_cpp_compiler = 'g++'
     " let g:syntastic_cpp_compiler_options = ' -std=c++11 -stdlib=libc++'
 
 " Syntastic }}}
 
-" vim-test - Run tests at the speed of thought {{{
+" (disabled) vim-test - Run tests at the speed of thought {{{
 
-    " Mappings:
-    " <leader>t<Space> Run the test nearest to the cursor
-    " <leader>tf Test the current file
-    " <leader>ts Test the current suite
-    " <leader>tl Run the last test
-    " <leader>tv Open the test file for the last run tests
-
-    call dein#add('janko-m/vim-test',
-                \ {
-                \   'lazy': 1,
-                \   'on_cmd': [
-                \     'TestNearest', 'TestFile', 'TestSuite', 'TestLast', 'TestVisit'
-                \   ]
-                \ })
-
-    nnoremap <silent> <leader>t<Space> :TestNearest<CR>
-    nnoremap <silent> <leader>tf :TestFile<CR>
-    nnoremap <silent> <leader>ts :TestSuite<CR>
-    nnoremap <silent> <leader>tl :TestLast<CR>
-    nnoremap <silent> <leader>tv :TestVisit<CR>
-
-    let test#strategy = "neovim"
+    " " Mappings:
+    " " <leader>t<Space> Run the test nearest to the cursor
+    " " <leader>tf Test the current file
+    " " <leader>ts Test the current suite
+    " " <leader>tl Run the last test
+    " " <leader>tv Open the test file for the last run tests
+    "
+    " call dein#add('janko-m/vim-test',
+    "             \ {
+    "             \   'lazy': 1,
+    "             \   'on_cmd': [
+    "             \     'TestNearest', 'TestFile', 'TestSuite', 'TestLast', 'TestVisit'
+    "             \   ]
+    "             \ })
+    "
+    " nnoremap <silent> <leader>t<Space> :TestNearest<CR>
+    " nnoremap <silent> <leader>tf :TestFile<CR>
+    " nnoremap <silent> <leader>ts :TestSuite<CR>
+    " nnoremap <silent> <leader>tl :TestLast<CR>
+    " nnoremap <silent> <leader>tv :TestVisit<CR>
+    "
+    " let test#strategy = "neovim"
 
 " }}}
-
-" vim-fugitive - Vim Git integration {{{
-
-    call dein#add('tpope/vim-fugitive',
-                \ {
-                \   'if': executable('git'),
-                \   'augroup' : 'fugitive'
-                \ })
-
-" vim-fugitive }}}
 
 " vim-gitgutter - Show git diff in the gutter {{{
 
@@ -253,11 +235,6 @@ EOF
 
     " Don't automatically set mappings.
     let g:gitgutter_map_keys = 0
-
-    call dein#add('airblade/vim-gitgutter',
-                \ {
-                \   'if': has('signs') && executable('git')
-                \ })
 
     nmap <leader>ggt :GitGutterToggle<CR>
     nmap <leader>ggd :GitGutterDiffOrig<CR>
@@ -286,7 +263,7 @@ EOF
     "                 \   'javascript': ['omni'],
     "                 \   'lean': ['LanguageClient'],
     "                 \ })
-    " 
+    "
     "     " <TAB>: completion.
     "     inoremap <silent><expr> <TAB>
     "                 \ pumvisible() ? "\<C-n>" :
@@ -296,21 +273,21 @@ EOF
     "         let col = col('.') - 1
     "         return !col || getline('.')[col - 1]  =~ '\s'
     "     endfunction
-    " 
+    "
     "     " <S-TAB>: completion back.
     "     inoremap <expr><S-TAB>  pumvisible() ? "\<C-p>" : "\<C-h>"
-    " 
+    "
     "     " <BS>: close popup and delete backword char.
     "     inoremap <expr><BS> deoplete#smart_close_popup()."\<C-h>"
-    " 
+    "
     "     " <CR>: close popup and save indent.
     "     inoremap <silent> <CR> <C-r>=<SID>my_cr_function()<CR>
     "     function! s:my_cr_function() abort
     "         return deoplete#cancel_popup() . "\<CR>"
     "     endfunction
-    " 
+    "
     "     inoremap <expr> '  pumvisible() ? deoplete#close_popup() : "'"
-    "     
+    "
     "     " Disable deoplete while using vim-multiple-cursors
     "     function! g:Multiple_cursors_before()
     "         call deoplete#custom#buffer_option('auto_complete', v:false)
@@ -318,14 +295,14 @@ EOF
     "     function! g:Multiple_cursors_after()
     "         call deoplete#custom#buffer_option('auto_complete', v:true)
     "     endfunction
-    " 
+    "
     "     " Disable the candidates in Comment/String syntaxes.
     "     call deoplete#custom#source('_',
     "                 \ 'disabled_syntaxes', ['Comment', 'String'])
-    " 
+    "
     "     " ignore completions from the current buffer
     "     call deoplete#custom#option('ignore_sources', {'_': ['buffer']})
-    " 
+    "
     "     " Go deoplete configuration
     "     " =========================
     "     call deoplete#custom#source('go', 'gocode_binary', $GOPATH . '/bin/gocode')
@@ -336,7 +313,7 @@ EOF
     "     call deoplete#custom#source('go', 'use_cache', 1)
     "     call deoplete#custom#source('go', 'json_directory',
     "                 \ $HOME . '/.cache/deoplete/go/' . $GOOS . '_' . $GOARCH)
-    " 
+    "
     "     " clang deoplete configuration
     "     " ============================
     "     if executable('llvm-config-4.0')
@@ -347,27 +324,27 @@ EOF
     "         call deoplete#custom#source('clang', 'clang_header', '/usr/include/clang')
     "     endif
     " endfunction
-    " 
+    "
     " "" Custom auto completion trigger patterns
-    " "call deoplete#custom#option('omni_patterns', 
+    " "call deoplete#custom#option('omni_patterns',
     "             "\ {
     "             "\   'c': '[^. *\t](\.|->)\w*',
     "             "\   'cpp': '[^.[:digit:] *\t]\%(\.\|->\)\w*\|\h\w*::\w*',
     "             "\   'ruby': '[^. *\t]\.\w*\|\h\w*::',
     "             "\ })
     "             "\   'lean': '[^. *\t]\.\w*',
-    " 
+    "
     " call dein#add('Shougo/deoplete.nvim',
     "             \ {
     "             \   'if': has('python3'),
     "             \   'hook_source': function('s:deoplete_setup'),
     "             \ })
-    " 
+    "
     " let g:deoplete#enable_at_startup = 1
-    " 
+    "
     " " tab complete
     " "inoremap <expr><tab> pumvisible() ? "\<c-n>" : "\<tab>"
-    " 
+    "
     " " Do not select a match in the menu, force the user to
     " " select one from the menu.
     " set completeopt+=noselect
@@ -400,7 +377,7 @@ EOF
     " <leader>fs - flutter stop
     " <leader>fl - flutter dev log
     "
-    " ]c, [c     - next/prev linter errors 
+    " ]c, [c     - next/prev linter errors
     " <Tab>, <S-Tab> - next/prev completion
     " <C-Space>  - trigger completion
     " <C-f>      - scroll float window up
@@ -498,7 +475,7 @@ EOF
     endfunction
 
     call dein#add('neoclide/coc.nvim',
-                \ { 
+                \ {
                 \   'if': executable('node'),
                 \   'rev': 'release',
                 \   'hook_post_source': function('s:coc_post_source'),
@@ -537,12 +514,6 @@ EOF
 
 " vim-airline - Lightweight yet fancy status line {{{
 
-    " current `vim-airline` master dumps lots of warnings : )
-    call dein#add('vim-airline/vim-airline',
-                \ {
-                \   'rev': '1028c6ea12dc70bd3be9abb2bd7abf7d1b6ed17d',
-                \ })
-
     set laststatus=2
 
     if !exists('g:airline_symbols')
@@ -556,7 +527,7 @@ EOF
 
         let g:airline_powerline_fonts=1
 
-        let g:airline_symbols.branch = ''   
+        let g:airline_symbols.branch = ''
         let g:airline_symbols.readonly = ''
         let g:airline_symbols.linenr = ''
         let g:airline_symbols.maxlinenr = ''
@@ -580,7 +551,7 @@ EOF
 
     " airline buffer tab line "
     let g:airline#extensions#tabline#enabled = 1
-    
+
     " straight separators for tabline
     let g:airline#extensions#tabline#left_sep = ''
     let g:airline#extensions#tabline#left_alt_sep = '|'
@@ -595,37 +566,37 @@ EOF
     " " <leader>h  - hover info about symbol under cursor
     " " <leader>r  - rename symbol under cursor
     " " <leader>f  - display references to symbol under cursor
-    " 
+    "
     " call dein#add('autozimu/LanguageClient-neovim',
     "             \ {
     "             \   'rev': 'next',
     "             \   'build': 'bash install.sh',
     "             \ })
-    " 
+    "
     " let g:LanguageClient_autoStart = 1
-    " 
+    "
     " let g:LanguageClient_rootMarkers =
     "             \ {
     "             \   'cpp': ['compile_commands.json', 'build'],
     "             \   'c': ['compile_commands.json', 'build'],
     "             \   'rust': ['Cargo.toml', 'build'],
     "             \ }
-    " 
+    "
     " let g:LanguageClient_serverCommands = {}
-    " 
+    "
     " if executable('rls')
     "     let g:LanguageClient_serverCommands.rust = ['rls']
     " endif
-    " 
+    "
     " if executable('npm')
     "     " `echo -n ...` strips the trailing newline from output
     "     let npm_bin = system('echo -n `npm bin --global`')
     "     let g:LanguageClient_serverCommands.lean =
     "                 \ ['node', npm_bin . '/lean-language-server', '--stdio']
     " endif
-    " 
+    "
     " "autocmd FileType lean setlocal omnifunc=LanguageClient#complete
-    " 
+    "
     " nnoremap <silent> <leader>m :call LanguageClient_contextMenu()<CR>
     " nnoremap <silent> <leader>gd :call LanguageClient#textDocument_definition()<CR>
     " nnoremap <silent> <leader>h :call LanguageClient#textDocument_hover()<CR>
@@ -676,15 +647,15 @@ EOF
     " " TernType: Find the type of the thing under the cursor.
     " " TernRefs: Show all references to the variable or property under the cursor.
     " " TernRename: Rename the variable under the cursor.
-    " 
+    "
     " call dein#add('marijnh/tern_for_vim',
-    "             \ { 
+    "             \ {
     "             \   'if': executable('npm'),
     "             \   'lazy': 1,
     "             \   'build': 'npm install',
     "             \   'on_ft': ['javascript'],
     "             \ })
-    " 
+    "
     " " Display function signatures in the completion menu
     " let g:tern_show_signature_in_pum = 1
 
@@ -704,7 +675,7 @@ EOF
 
     " " Mappings:
     " " gj : Use on paths or requires to open file Node would
-    " 
+    "
     " call dein#add('moll/vim-node',
     "             \ {
     "             \   'if': executable('node'),
@@ -766,14 +737,14 @@ EOF
     "             \   'lazy': 1,
     "             \   'on_ft': ['rust']
     "             \ })
-    " 
+    "
     " let g:racer_experimental_completer = 1
     " let g:racer_no_default_keymappings = 1
 
 " }}}
 
 " (disabled) lean.vim - Lean syntax plugin {{{
-    
+
     " call dein#add('leanprover/lean.vim')
 
 " }}}
@@ -844,17 +815,17 @@ EOF
 " pep8-indent }}}
 
 " (disabled) Unite.vim - fuzzy file matching and buffer searching {{{
-    
+
     " Mappings:
     " <space>f - find files
     " <space>/ - grep with pattern (search)
     " <space>o - file outline
 
     " call dein#add('Shougo/unite.vim', { 'depends': 'vimproc.vim' })
-    " 
+    "
     " " File outline plugin
     " call dein#add('Shougo/unite-outline', { 'depends': 'unite.vim' })
-    " 
+    "
     " " use ripgrep or ag to for searching
     " if executable('rg')
     "     let g:unite_source_grep_command = 'rg'
@@ -870,21 +841,21 @@ EOF
     "     let g:unite_source_file_rec_command = 'ag --files-with-matches --follow --nocolor --noheading --column'
 	"     let g:unite_source_rec_async_command = 'ag --files-with-matches --follow --nocolor --nogroup --column -g ""'
     " endif
-    " 
+    "
     " " ctrlp-like functionality: fuzzy file searching
     " nmap <space>f :Unite -buffer-name=files file_rec/async<CR>
-    " 
+    "
     " nmap <space>/ :Unite -buffer-name=search grep:.<CR>
-    " 
+    "
     " " Show file outline
     " nmap <space>o :Unite -buffer-name=outline outline<CR>
-    " 
+    "
     " " Start in insert mode
     " let g:unite_enable_start_insert = 1
-    " 
+    "
     " " mru (most-recently-used) file list limit
     " let g:unite_source_file_mru_long_limit = 1000
-    " 
+    "
     " let g:unite_winheight = 10
     " let g:unite_split_rule = 'botright'
 
@@ -1039,7 +1010,7 @@ EOF
     " " \p - proof search
     " " \i - open idris response window
     " call dein#add('edwinb/idris2-vim')
-    " 
+    "
     " " TODO: check https://github.com/idris-community/idris2-lsp maybe it will
     " " eventually support autocompletion?
 
@@ -1049,7 +1020,7 @@ EOF
 
     " call dein#add('phlip9/ats-vim')
     " " call dein#add(expand('$HOME/dev/ats-vim'))
-    " 
+    "
     " let g:ats_use_ctags = 1
     " let g:ats_autoformat = 0
 
@@ -1058,7 +1029,7 @@ EOF
 " (disabled) julia-vim - Julia syntax highlighting and ftplugin {{{
 
     " call dein#add('JuliaLang/julia-vim')
-    " 
+    "
     " " Turn off the Latex symbol to unicode key mapping
     " let g:latex_to_unicode_tab = 0
 
@@ -1178,36 +1149,36 @@ EOF
     " Colorscheme highlight overrides
     function! CustomColors()
         " hi ColorColumn ctermbg=8 ctermfg=15
-        " 
+        "
         " " Make sure text doesn't fill ctermbg so terminal transparency works
         " hi Normal ctermbg=NONE ctermfg=15 cterm=NONE
         " hi Comment ctermbg=NONE ctermfg=12 cterm=NONE
-        " 
+        "
         " " Reduce popup menu brightness
         " hi Pmenu ctermbg=8
-        " 
+        "
         " " make tabline background clear so terminal transparency isn't blocked
         " " out
         " "hi airline_tabsel cterm=bold ctermfg=7 ctermbg=NONE
-        " 
+        "
         " " Highlight CursorLine as lighter background color
         " hi CursorLine ctermbg=10 ctermfg=None cterm=NONE
-        " 
+        "
         " " Make matching text readable
         " hi MatchParen ctermbg=8 ctermfg=NONE cterm=NONE
-        " 
+        "
         " " Sign column color should be the same as the line number column
         " hi SignColumn ctermbg=NONE
-        " 
+        "
         " " Make line number column same as background color
         " hi LineNr ctermbg=NONE
-        " 
+        "
         " " Don't underline the fold lines
-        " hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold 
-        " 
+        " hi Folded ctermbg=NONE ctermfg=12 term=bold cterm=bold
+        "
         " " Make css readable again
         " hi cssNoise ctermbg=NONE ctermfg=12 cterm=NONE
-        " 
+        "
         " " Make LSP inlay hints more subtle vs Comment
         " hi CocInlayHint ctermbg=NONE ctermfg=59 cterm=NONE
         " hi CocRustTypeHint ctermbg=NONE ctermfg=59 cterm=NONE
@@ -1254,11 +1225,11 @@ EOF
     set gdefault                    " always use /g on :s substitution
 
     set nowrap                      " don't wrap long lines
-    
+
     set clipboard+=unnamedplus      " place yanked text into the clipboard
 
     " Remove trailing whitespaces and ^M chars
-    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml 
+    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml
                 \ autocmd BufWritePre <buffer>
                 \     :call setline(1,map(getline(1,"$"),
                 \         'substitute(v:val,"\\s\\+$","","")'))
