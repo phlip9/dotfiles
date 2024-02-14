@@ -15,22 +15,10 @@ vim.g.mapleader = ","
 -- Pretty-print any lua value and display it in a temp buffer
 function dbg(value)
     local str = vim.inspect(value)
-    local lines = vim.split(str, "\n", {plain=true})
+end
 
-    -- open a new temporary, unnamed buffer filled with the `vim.inspect` output
-    vim.cmd("enew")
-    local bufnr = vim.api.nvim_get_current_buf()
-    -- don't list this buffer in the buffer list
-    vim.api.nvim_buf_set_option(bufnr, "buflisted", false)
-    -- unload this buffer when it's no longer displayed in a window
-    vim.api.nvim_buf_set_option(bufnr, "bufhidden", "unload")
-    -- not a real file, don't try to write or swap
-    vim.api.nvim_buf_set_option(bufnr, "buftype", "nofile")
-    vim.api.nvim_buf_set_option(bufnr, "filetype", "lua")
-
-    -- note: we can't set the buffer contents to a string with newlines, so we
-    -- have to split first.
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+_G.dbg = function(...)
+  return require("util").dbg(...)
 end
 
 -- lua utils }}}
