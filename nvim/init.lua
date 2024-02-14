@@ -1,13 +1,6 @@
+vim.cmd([[
+
 " PRELUDE {{{
-
-    " Note: Skip initialization for vim-tiny or vim-small.
-    if !1 | finish | endif
-
-    " No vi compatibility
-    " Also needed for cool vim stuff
-    if &compatible
-        set nocompatible
-    endif
 
     " Rebind mapleader to something more accessible.
     let mapleader = ','
@@ -18,6 +11,31 @@
 
 " lua plugins section
 lua << EOF
+
+-- lua utils {{{
+
+-- Pretty-print any lua value and display it in a temp buffer
+function dbg(value)
+    local str = vim.inspect(value)
+    local lines = vim.split(str, "\n", {plain=true})
+
+    -- open a new temporary, unnamed buffer filled with the `vim.inspect` output
+    vim.cmd("enew")
+    local bufnr = vim.api.nvim_get_current_buf()
+    -- don't list this buffer in the buffer list
+    vim.api.nvim_buf_set_option(bufnr, "buflisted", false)
+    -- unload this buffer when it's no longer displayed in a window
+    vim.api.nvim_buf_set_option(bufnr, "bufhidden", "unload")
+    -- not a real file, don't try to write or swap
+    vim.api.nvim_buf_set_option(bufnr, "buftype", "nofile")
+    vim.api.nvim_buf_set_option(bufnr, "filetype", "lua")
+
+    -- note: we can't set the buffer contents to a string with newlines, so we
+    -- have to split first.
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+end
+
+-- lua utils }}}
 
 -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
 
@@ -93,27 +111,6 @@ require("kanagawa").setup({
     theme = "dragon",
     compile = false,
 })
-
--- Pretty-print any lua value and display it in a temp buffer
-function dbg(value)
-    local str = vim.inspect(value)
-    local lines = vim.split(str, "\n", {plain=true})
-
-    -- open a new temporary, unnamed buffer filled with the `vim.inspect` output
-    vim.cmd("enew")
-    local bufnr = vim.api.nvim_get_current_buf()
-    -- don't list this buffer in the buffer list
-    vim.api.nvim_buf_set_option(bufnr, "buflisted", false)
-    -- unload this buffer when it's no longer displayed in a window
-    vim.api.nvim_buf_set_option(bufnr, "bufhidden", "unload")
-    -- not a real file, don't try to write or swap
-    vim.api.nvim_buf_set_option(bufnr, "buftype", "nofile")
-    vim.api.nvim_buf_set_option(bufnr, "filetype", "lua")
-
-    -- note: we can't set the buffer contents to a string with newlines, so we
-    -- have to split first.
-    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
-end
 
 -- Dump the current kanagawa colors
 -- :lua dbg(kanagawa_dump_colors())
@@ -277,16 +274,16 @@ EOF
                 \ nnoremap <buffer> <silent> <leader>fs :CocCommand flutter.dev.quit<CR> |
                 \ nnoremap <buffer> <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
 
-    " This lets you select or use vim verbs inside/around functions/"classes".
-    " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
-    xmap if <Plug>(coc-funcobj-i)
-    omap if <Plug>(coc-funcobj-i)
-    xmap af <Plug>(coc-funcobj-a)
-    omap af <Plug>(coc-funcobj-a)
-    xmap ic <Plug>(coc-classobj-i)
-    omap ic <Plug>(coc-classobj-i)
-    xmap ac <Plug>(coc-classobj-a)
-    omap ac <Plug>(coc-classobj-a)
+    " " This lets you select or use vim verbs inside/around functions/"classes".
+    " " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
+    " xmap if <Plug>(coc-funcobj-i)
+    " omap if <Plug>(coc-funcobj-i)
+    " xmap af <Plug>(coc-funcobj-a)
+    " omap af <Plug>(coc-funcobj-a)
+    " xmap ic <Plug>(coc-classobj-i)
+    " omap ic <Plug>(coc-classobj-i)
+    " xmap ac <Plug>(coc-classobj-a)
+    " omap ac <Plug>(coc-classobj-a)
 
     " Remap <C-f> and <C-b> to scroll float windows/popups.
     nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
@@ -464,7 +461,7 @@ EOF
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
     set mouse=a                     " enable mouse for all modes
-    scriptencoding=utf-8            " set encoding to utf-8
+    " scriptencoding=utf-8            " set encoding to utf-8
     set shortmess+=c                " don't pass messages to |ins-completion-menu|.
 
 " GENERAL }}}
@@ -691,4 +688,6 @@ EOF
 
 " KEYBINDINGS }}}
 
-" vim: foldmethod=marker
+]])
+
+--  vim: foldmethod=marker
