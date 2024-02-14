@@ -1,5 +1,8 @@
 -- PRELUDE {{{
 
+-- enable experimental lua module loader w/ byte-code cache
+vim.loader.enable()
+
 -- Rebind mapleader to something more accessible.
 vim.g.mapleader = ","
 
