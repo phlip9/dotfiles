@@ -19,6 +19,27 @@
 " lua plugins section
 lua << EOF
 
+-- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
+
+require("nvim-treesitter.configs").setup({
+    -- we're managing parser installation via nix, so don't auto install
+    auto_install = false,
+    ensure_installed = {},
+
+    highlight = {
+        -- enable tree-sitter highlighting
+        enable = true,
+        -- don't use tree-sitter highlighting and vim regex highlighting at
+        -- the same time
+        additional_vim_regex_highlighting = false,
+    },
+    indent = {
+        enable = true,
+    },
+})
+
+-- nvim-treesitter }}}
+
 -- kanagawa - neovim colorscheme {{{
 
 require("kanagawa").setup({
@@ -73,28 +94,45 @@ require("kanagawa").setup({
     compile = false,
 })
 
+-- Pretty-print any lua value and display it in a temp buffer
+function dbg(value)
+    local str = vim.inspect(value)
+    local lines = vim.split(str, "\n", {plain=true})
+
+    -- open a new temporary, unnamed buffer filled with the `vim.inspect` output
+    vim.cmd("enew")
+    local bufnr = vim.api.nvim_get_current_buf()
+    -- don't list this buffer in the buffer list
+    vim.api.nvim_buf_set_option(bufnr, "buflisted", false)
+    -- unload this buffer when it's no longer displayed in a window
+    vim.api.nvim_buf_set_option(bufnr, "bufhidden", "unload")
+    -- not a real file, don't try to write or swap
+    vim.api.nvim_buf_set_option(bufnr, "buftype", "nofile")
+    vim.api.nvim_buf_set_option(bufnr, "filetype", "lua")
+
+    -- note: we can't set the buffer contents to a string with newlines, so we
+    -- have to split first.
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
+end
+
+-- Dump the current kanagawa colors
+-- :lua dbg(kanagawa_dump_colors())
+function kanagawa_dump_colors()
+    local config = require("kanagawa").config
+    local colors = require("kanagawa.colors").setup({ theme = config.theme, colors = config.colors })
+    return colors
+end
+
+-- Dump the current kanagawa highlights
+-- :lua dbg(kanagawa_dump_highlights())
+function kanagawa_dump_highlights()
+    local config = require("kanagawa").config
+    local colors = kanagawa_dump_colors()
+    local highlights = require("kanagawa.highlights").setup(colors, config)
+    return highlights
+end
+
 -- kanagawa }}}
-
--- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
-
-require("nvim-treesitter.configs").setup({
-    -- we're managing parser installation via nix, so don't auto install
-    auto_install = false,
-    ensure_installed = {},
-
-    highlight = {
-        -- enable tree-sitter highlighting
-        enable = true,
-        -- don't use tree-sitter highlighting and vim regex highlighting at
-        -- the same time
-        additional_vim_regex_highlighting = false,
-    },
-    indent = {
-        enable = true,
-    },
-})
-
--- nvim-treesitter }}}
 
 EOF
 " lua plugins section end
@@ -212,7 +250,7 @@ EOF
 
     " Use <cr> for confirm completion, `<C-g>u` means break undo chain at current position.
     " Coc only does snippet and additional edit on confirm.
-    inoremap <silent><expr> <cr> pumvisible() ? coc#_select_confirm()
+    inoremap <silent><expr> <CR> pumvisible() ? coc#_select_confirm()
                 \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
     " Use `[c` and `]c` for navigate diagnostics

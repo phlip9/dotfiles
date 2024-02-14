@@ -1,1 +1,1 @@
-au BufRead,BufNewFile flake.lock setf json
+au BufRead,BufNewFile flake.lock set filetype=json

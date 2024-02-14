@@ -6,7 +6,7 @@
   lib,
   ...
 }: let
-  mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
+  mkOutOfStoreSymlink = lib.file.mkOutOfStoreSymlink;
   dotfilesDir = config.home.dotfilesDir;
 
   # packages to add to the nvim PATH w/o infecting whole env
