@@ -27,9 +27,24 @@
     # Full list of plugins in nixpkgs:
     # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/generated.nix>
     plugins = let
-      p = pkgs.vimPlugins;
+      # Our non-nixpkgs plugins. Use these to either track a plugin off a
+      # different branch/rev or temporarily use a plugin before it's added to
+      # nixpkgs.
+      #
+      # To update:
+      #
+      # ```bash
+      # just update-nvim-extra-plugins
+      # ```
+      extraPlugins = pkgs.callPackage ./nvim-extra-plugins.generated.nix {
+        buildVimPlugin = pkgs.vimUtils.buildVimPlugin;
+        buildNeovimPlugin = pkgs.neovimUtils.buildNeovimPlugin;
+      };
+
+      p = pkgs.vimPlugins.extend extraPlugins;
     in [
       # kanagawa - neovim colorscheme
+      # TODO(phlip9): use nixpkgs master after next update
       {plugin = p.kanagawa-nvim;}
 
       # nvim-treesitter - tree-sitter interface and syntax highlighting
@@ -42,6 +57,7 @@
           q.cmake
           q.cpp
           q.css
+          q.csv
           q.diff
           q.dockerfile
           q.git_rebase

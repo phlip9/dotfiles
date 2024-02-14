@@ -19,4 +19,15 @@ flake-lint:
     nix flake check
 
 nix-lint:
-    fd --extension "nix" . | xargs --replace=FILE nil diagnostics FILE
+    fd --extension "nix" --exec nil diagnostics
+
+update-nvim-extra-plugins:
+    nix shell nixpkgs#vimPluginsUpdater --command \
+      vim-plugins-updater \
+        --input-names ./home/mods/nvim/nvim-extra-plugins.csv \
+        --out ./home/mods/nvim/nvim-extra-plugins.generated.nix \
+        --no-commit \
+        --debug DEBUG \
+        --nixpkgs ../nixpkgs \
+        update
+    nix fmt
