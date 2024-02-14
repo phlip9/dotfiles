@@ -1,16 +1,11 @@
-vim.cmd([[
+-- PRELUDE {{{
 
-" PRELUDE {{{
+-- Rebind mapleader to something more accessible.
+vim.g.mapleader = ","
 
-    " Rebind mapleader to something more accessible.
-    let mapleader = ','
+-- PRELUDE }}}
 
-" PRELUDE }}}
-
-" BUNDLES {{{
-
-" lua plugins section
-lua << EOF
+-- LUA PLUGINS {{{
 
 -- lua utils {{{
 
@@ -131,8 +126,11 @@ end
 
 -- kanagawa }}}
 
-EOF
-" lua plugins section end
+-- LUA PLUGINS }}}
+
+vim.cmd([[
+
+" VIM PLUGINS {{{
 
 " NERDCommenter - Easily comment lines or blocks of text {{{
 
@@ -451,7 +449,7 @@ EOF
 
 " }}}
 
-" BUNDLES }}}
+" VIM PLUGINS }}}
 
 " GENERAL {{{
 
@@ -461,7 +459,6 @@ EOF
     set history=1000                " make the history larger
     set hidden                      " change buffers w/o having to write first
     set mouse=a                     " enable mouse for all modes
-    " scriptencoding=utf-8            " set encoding to utf-8
     set shortmess+=c                " don't pass messages to |ins-completion-menu|.
 
 " GENERAL }}}
@@ -671,7 +668,7 @@ EOF
     nnoremap N Nzzzv
 
     " Reload nvimrc
-    nnoremap <silent> <leader>V :source $XDG_CONFIG_HOME/nvim/init.vim<CR>:filetype detect<CR>:exe ":echo 'nvimrc reloaded'"<CR>
+    nnoremap <silent> <leader>V :source $MYVIMRC<CR>:filetype detect<CR>:echo 'nvim config reloaded'<CR>
 
     " Terminal Mode
     " Use escape to go back to normal mode
