@@ -39,7 +39,7 @@
     ./mods/git.nix
     ./mods/inputrc.nix
     ./mods/local-bin.nix
-    ./mods/nvim.nix
+    ./mods/nvim/default.nix
     ./mods/python.nix
     ./mods/ssh.nix
     ./mods/tmux.nix
