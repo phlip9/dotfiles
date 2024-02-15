@@ -111,6 +111,7 @@
       {plugin = p.coc-flutter;}
       {plugin = p.coc-json;}
       {plugin = p.coc-rust-analyzer;}
+      {plugin = p.coc-sumneko-lua;}
       {plugin = p.coc-toml;}
       {plugin = p.coc-vimlsp;}
       {plugin = p.coc-yaml;}
@@ -145,4 +146,14 @@ in {
 
   # symlink ~/.config/nvim to `dotfiles/nvim` dir.
   xdg.configFile."nvim".source = mkOutOfStoreSymlink "${dotfilesDir}/nvim";
+
+  # symlink `~/.local/share/lua-language-server` to `${pkgs.lua-language-server}/share/lua-language-server`.
+  #
+  # ## Why:
+  #
+  # (1) I don't want to manage the `coc-settings.json` via nix, since then I lose
+  #     the extremely nice auto-complete for all the random settings.
+  # (2) `coc-sumneko-lua` can't seem to locate the lua LSP when it's in the
+  #     $PATH, so we need to place it somewhere fixed, like in ~/.local/...
+  xdg.dataFile."lua-language-server".source = "${pkgs.lua-language-server}/share/lua-language-server";
 }

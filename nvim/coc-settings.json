@@ -1,7 +1,23 @@
 {
-    "[json][rust][nix][dart]": {
+    "[json][rust][nix][dart][lua]": {
         "coc.preferences.formatOnSave": true,
     },
+    "Lua.misc.parameters": [
+        "--metapath",
+        "~/.cache/lua-language-server/meta",
+        "--logpath",
+        "~/.cache/lua-language-server/log",
+    ],
+    "Lua.workspace.checkThirdParty": false,
+    "Lua.format.enable": true,
+    "Lua.format.defaultConfig": {
+        "indent_style": "space",
+        "indent_size": "4",
+    },
+    "sumneko-lua.checkUpdate": false,
+    "sumneko-lua.logPath": "${userHome}/.cache/lua-language-server/log",
+    "sumneko-lua.serverDir": "${userHome}/.local/share/lua-language-server",
+    "sumneko-lua.enableNvimLuaDev": true,
     "rust-analyzer.cargo.buildScripts.enable": false,
     "rust-analyzer.checkOnSave": true,
     "rust-analyzer.diagnostics.disabled": [

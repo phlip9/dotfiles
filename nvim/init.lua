@@ -13,10 +13,6 @@ vim.g.mapleader = ","
 -- lua utils {{{
 
 -- Pretty-print any lua value and display it in a temp buffer
-function dbg(value)
-    local str = vim.inspect(value)
-end
-
 _G.dbg = function(...)
   return require("util").dbg(...)
 end
@@ -98,22 +94,24 @@ require("kanagawa").setup({
     compile = false,
 })
 
--- Dump the current kanagawa colors
--- :lua dbg(kanagawa_dump_colors())
-function kanagawa_dump_colors()
-    local config = require("kanagawa").config
-    local colors = require("kanagawa.colors").setup({ theme = config.theme, colors = config.colors })
-    return colors
-end
-
--- Dump the current kanagawa highlights
--- :lua dbg(kanagawa_dump_highlights())
-function kanagawa_dump_highlights()
-    local config = require("kanagawa").config
-    local colors = kanagawa_dump_colors()
-    local highlights = require("kanagawa.highlights").setup(colors, config)
-    return highlights
-end
+-- Uncomment these to inspect kanagawa's exact generated colors/highlights
+--
+-- -- Dump the current kanagawa colors
+-- -- :lua dbg(kanagawa_dump_colors())
+-- _G.kanagawa_dump_colors = function()
+--     local config = require("kanagawa").config
+--     local colors = require("kanagawa.colors").setup({ theme = config.theme, colors = config.colors })
+--     return colors
+-- end
+--
+-- -- Dump the current kanagawa highlights
+-- -- :lua dbg(kanagawa_dump_highlights())
+-- _G.kanagawa_dump_highlights = function()
+--     local config = require("kanagawa").config
+--     local colors = kanagawa_dump_colors()
+--     local highlights = require("kanagawa.highlights").setup(colors, config)
+--     return highlights
+-- end
 
 -- kanagawa }}}
 
