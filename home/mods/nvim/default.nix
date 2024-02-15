@@ -6,6 +6,8 @@
   lib,
   ...
 }: let
+  inherit (builtins) map;
+
   mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
   dotfilesDir = config.home.dotfilesDir;
 
@@ -19,69 +21,72 @@
   ];
   extraPkgsPath = lib.makeBinPath extraPkgs;
 
-  neovimConfigBase = pkgs.neovimUtils.makeNeovimConfig {
-    withNodeJs = true; # used by `coc.nvim` LSP client
-    withPython3 = false;
-    withRuby = false;
+  # Our non-nixpkgs plugins. Use these to either track a plugin off a
+  # different branch/rev or temporarily use a plugin before it's added to
+  # nixpkgs.
+  #
+  # To update:
+  #
+  # ```bash
+  # just update-nvim-extra-plugins
+  # ```
+  extraPluginsGenerated = pkgs.callPackage ./nvim-extra-plugins.generated.nix {
+    buildVimPlugin = pkgs.vimUtils.buildVimPlugin;
+    buildNeovimPlugin = pkgs.neovimUtils.buildNeovimPlugin;
+  };
 
-    # Full list of plugins in nixpkgs:
-    # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/generated.nix>
-    plugins = let
-      # Our non-nixpkgs plugins. Use these to either track a plugin off a
-      # different branch/rev or temporarily use a plugin before it's added to
-      # nixpkgs.
-      #
-      # To update:
-      #
-      # ```bash
-      # just update-nvim-extra-plugins
-      # ```
-      extraPlugins = pkgs.callPackage ./nvim-extra-plugins.generated.nix {
-        buildVimPlugin = pkgs.vimUtils.buildVimPlugin;
-        buildNeovimPlugin = pkgs.neovimUtils.buildNeovimPlugin;
-      };
+  # All vim/nvim plugins + a few non-nixpkgs plugins overlayed
+  p = pkgs.vimPlugins.extend extraPluginsGenerated;
 
-      p = pkgs.vimPlugins.extend extraPlugins;
-    in [
-      # kanagawa - neovim colorscheme
-      # TODO(phlip9): use nixpkgs master after next update
-      {plugin = p.kanagawa-nvim;}
+  # The _lua_ plugins we're actually using. These are separated out so we can
+  # add these the lua LSP config when we're working on our nvim config.
+  luaPlugins = [
+    # kanagawa - neovim colorscheme
+    # TODO(phlip9): use nixpkgs master after next update
+    {plugin = p.kanagawa-nvim;}
 
-      # nvim-treesitter - tree-sitter interface and syntax highlighting
-      {
-        plugin = p.nvim-treesitter.withPlugins (q: [
-          # available language plugins:
-          # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/nvim-treesitter/generated.nix>
-          q.bash
-          q.c
-          q.cmake
-          q.cpp
-          q.css
-          q.csv
-          q.diff
-          q.dockerfile
-          q.git_rebase
-          q.gitcommit
-          q.gitignore
-          q.html
-          q.ini
-          q.javascript
-          q.json
-          q.jsonc
-          q.lua
-          q.make
-          q.markdown
-          q.nix
-          q.python
-          q.query
-          q.rust
-          q.toml
-          q.vim
-          q.vimdoc
-          q.yaml
-        ]);
-      }
+    # nvim-treesitter - tree-sitter interface and syntax highlighting
+    {
+      plugin = p.nvim-treesitter.withPlugins (q: [
+        # available language plugins:
+        # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/nvim-treesitter/generated.nix>
+        q.bash
+        q.c
+        q.cmake
+        q.cpp
+        q.css
+        q.csv
+        q.diff
+        q.dockerfile
+        q.git_rebase
+        q.gitcommit
+        q.gitignore
+        q.html
+        q.ini
+        q.javascript
+        q.json
+        q.jsonc
+        q.lua
+        q.make
+        q.markdown
+        q.nix
+        q.python
+        q.query
+        q.rust
+        q.toml
+        q.vim
+        q.vimdoc
+        q.yaml
+      ]);
+    }
+    # nvim-treesitter-textobjects - syntax aware text objs + motions
+    {plugin = p.nvim-treesitter-textobjects;}
+  ];
 
+  # All plugins we're actually using.
+  plugins =
+    luaPlugins
+    ++ [
       # vim-airline - Lightweight yet fancy status line
       {plugin = p.vim-airline;}
 
@@ -128,6 +133,16 @@
       # vim-just - Justfile syntax
       {plugin = p.vim-just;}
     ];
+
+  # Using the nixpkgs helper fn as a base, with some manual overrides added after.
+  neovimConfigBase = pkgs.neovimUtils.makeNeovimConfig {
+    withNodeJs = true; # used by `coc.nvim` LSP client
+    withPython3 = false;
+    withRuby = false;
+
+    # Full list of plugins in nixpkgs:
+    # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/generated.nix>
+    plugins = plugins;
   };
 
   # Need some args passed directly to `wrapNeovimUnstable`
@@ -139,6 +154,17 @@
       # Inject extra packages into nvim PATH.
       wrapperArgs = neovimConfigBase.wrapperArgs ++ ["--suffix" "PATH" ":" extraPkgsPath];
     };
+
+  # Need a coc-settings.json specific to our dotfiles directory for good
+  # autocompletion that includes all our plugins.
+  myDotfilesSpecificCocSettings = {
+    "Lua.runtime.version" = "LuaJIT";
+    "Lua.workspace.library" = map (x: "${x.plugin.outPath}/lua") luaPlugins;
+  };
+  myDotfilesSpecificCocSettingsFile =
+    pkgs.writers.writeJSON
+    "coc-settings.json"
+    myDotfilesSpecificCocSettings;
 in {
   home.packages = [
     (pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped neovimConfig)
@@ -156,4 +182,7 @@ in {
   # (2) `coc-sumneko-lua` can't seem to locate the lua LSP when it's in the
   #     $PATH, so we need to place it somewhere fixed, like in ~/.local/...
   xdg.dataFile."lua-language-server".source = "${pkgs.lua-language-server}/share/lua-language-server";
+
+  # Configure the lua LSP for local nvim plugin development.
+  home.file."dev/dotfiles/.vim/coc-settings.json".source = "${myDotfilesSpecificCocSettingsFile}";
 }

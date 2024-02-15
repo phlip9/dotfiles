@@ -2,18 +2,22 @@
     "[json][rust][nix][dart][lua]": {
         "coc.preferences.formatOnSave": true,
     },
+    "Lua.format.enable": true,
+    "Lua.format.defaultConfig": {
+        "indent_style": "space",
+        "indent_size": "4",
+    },
     "Lua.misc.parameters": [
         "--metapath",
         "~/.cache/lua-language-server/meta",
         "--logpath",
         "~/.cache/lua-language-server/log",
     ],
+    "Lua.runtime.pathStrict": true,
+    "Lua.runtime.version": "LuaJIT",
+    "Lua.workspace.ignoreSubmodules": true,
     "Lua.workspace.checkThirdParty": false,
-    "Lua.format.enable": true,
-    "Lua.format.defaultConfig": {
-        "indent_style": "space",
-        "indent_size": "4",
-    },
+    "Lua.diagnostics.libraryFiles": "Disable",
     "sumneko-lua.checkUpdate": false,
     "sumneko-lua.logPath": "${userHome}/.cache/lua-language-server/log",
     "sumneko-lua.serverDir": "${userHome}/.local/share/lua-language-server",

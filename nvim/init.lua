@@ -14,13 +14,14 @@ vim.g.mapleader = ","
 
 -- Pretty-print any lua value and display it in a temp buffer
 _G.dbg = function(...)
-  return require("util").dbg(...)
+    return require("util").dbg(...)
 end
 
 -- lua utils }}}
 
 -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
 
+---@diagnostic disable-next-line: missing-fields
 require("nvim-treesitter.configs").setup({
     -- we're managing parser installation via nix, so don't auto install
     auto_install = false,
@@ -80,13 +81,15 @@ require("kanagawa").setup({
             },
         },
     },
-    -- add/modify highlights
-    ---@type fun(colors: KanagawaColorsSpec): table<string, table>
-    overrides = function(colors)
-        local _palette = colors.palette
-        local _theme = colors.theme
-        return {}
-    end,
+
+    -- -- add/modify highlights
+    -- ---@type fun(colors: KanagawaColorsSpec): table<string, table>
+    -- overrides = function(colors)
+    --     local _palette = colors.palette
+    --     local _theme = colors.theme
+    --     return {}
+    -- end,
+
     -- when `background` is set, use corresponding theme
     background = { dark = "dragon", light = "lotus" },
     -- when `background` is not set, use default theme
