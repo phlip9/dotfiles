@@ -52,6 +52,7 @@ require("nvim-treesitter.configs").setup({
         enable = true,
     },
 
+    -- nvim-treesitter-textobjects - syntax aware text objs + motions
     textobjects = {
         -- <action><in/around><textobject>
         -- e.g. cif = change in function
@@ -250,12 +251,16 @@ require("kanagawa").setup({
 -- <leader>hr - Undo hunk
 -- ]h - Move forward one hunk
 -- [h - Move backward one hunk
+-- <motion>ih - <motion> in hunk
+-- <motion>ah - <motion> around hunk (includes trailing empty lines)
 
 -- Don't automatically set mappings.
 vim.g.gitgutter_map_keys = false
 
 vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, { remap = false })
 vim.keymap.set("n", "<leader>ggd", vim.cmd.GitGutterDiffOrig, { remap = false })
+vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, { remap = false })
+vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, { remap = false })
 
 -- Make GitGutter(Next|Prev)Hunk repeatable
 local move_hunk_next, move_hunk_prev = ts_repeat_move.make_repeatable_move_pair(
@@ -264,6 +269,11 @@ local move_hunk_next, move_hunk_prev = ts_repeat_move.make_repeatable_move_pair(
 )
 vim.keymap.set({ "n", "x", "o" }, "]h", move_hunk_next)
 vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev)
+
+vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)")
+vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)")
+vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)")
+vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)")
 
 -- vim-gitgutter }}}
 
@@ -482,7 +492,6 @@ local function coc_buffer_maybe_init()
     -- only set buffer generation when we actually init the buffer
 
     coc_buf_lsp_is_attached_async(function(err, is_attached)
-        vim.print("is_attached: " .. vim.inspect(is_attached) .. ", err: " .. vim.inspect(err))
         if err ~= vim.NIL then return end
         if not is_attached then return end
         coc_buffer_init()
