@@ -17,6 +17,12 @@ _G.dbg = function(...)
     return require("util").dbg(...)
 end
 
+-- Unload and then `require` a module
+---@param modname string
+_G.rerequire = function(modname)
+    return require("util").rerequire(modname)
+end
+
 -- lua utils }}}
 
 -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
@@ -37,7 +43,107 @@ require("nvim-treesitter.configs").setup({
     indent = {
         enable = true,
     },
+
+    textobjects = {
+        -- <action><in/around><textobject>
+        -- e.g. cif = change in function
+        --      vac = visual-select around class
+        select = {
+            enable = true,
+            -- jump for to next textobj if not currently in a matching one
+            lookahead = true,
+            keymaps = {
+                ["af"] = "@function.outer",
+                ["if"] = "@function.inner",
+                ["ac"] = "@class.outer",
+                ["ic"] = "@class.inner",
+                ["ap"] = "@parameter.outer",
+                ["ip"] = "@parameter.inner",
+                ["ai"] = "@call.outer",
+                ["ii"] = "@call.inner",
+                ["as"] = { query = "@local.scope", query_group = "locals" },
+                ["is"] = { query = "@local.scope", query_group = "locals" },
+            },
+        },
+
+        -- vim motions with treesitter textobjects
+        move = {
+            enable = true,
+            -- add movements to jumplist
+            set_jumps = true,
+
+            -- Notes:
+            --
+            -- `query`: by default, can only use items defined in the
+            -- nvim-treesitter-textobjects textobjects.scm query file for each
+            -- language.
+            -- Ex: <https://github.com/nvim-treesitter/nvim-treesitter-textobjects/blob/master/queries/rust/textobjects.scm>
+            --
+            -- `query_group`: use a query defined in one of the other *.scm
+            -- query files. the parameter is the filename w/o the .scm extension.
+            -- Ex (locals): <https://github.com/nvim-treesitter/nvim-treesitter/blob/master/queries/rust/locals.scm>
+
+            goto_next_start = {
+                ["]f"] = { query = "@function.outer", desc = "goto next function start" },
+                ["]c"] = { query = "@class.outer", desc = "goto next class start" },
+                ["]p"] = { query = "@parameter.outer", desc = "goto next parameter start" },
+                ["]i"] = { query = "@call.outer", desc = "goto next function invocation start" },
+                ["]s"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope start" },
+            },
+            goto_next_end = {
+                ["]F"] = { query = "@function.outer", desc = "goto next function end" },
+                ["]C"] = { query = "@class.outer", desc = "goto next class end" },
+                ["]P"] = { query = "@class.outer", desc = "goto next parameter end" },
+                ["]I"] = { query = "@call.outer", desc = "goto next function invocation end" },
+                ["]S"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope end" },
+            },
+            goto_previous_start = {
+                ["[f"] = { query = "@function.outer", desc = "goto prev function start" },
+                ["[c"] = { query = "@class.outer", desc = "goto prev class start" },
+                ["[p"] = { query = "@parameter.outer", desc = "goto prev parameter start" },
+                ["[i"] = { query = "@call.outer", desc = "goto prev function invocation start" },
+                ["[s"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope start" },
+            },
+            goto_previous_end = {
+                ["[F"] = { query = "@function.outer", desc = "goto prev function end" },
+                ["[C"] = { query = "@class.outer", desc = "goto prev class end" },
+                ["[P"] = { query = "@parameter.outer", desc = "goto prev parameter end" },
+                ["[I"] = { query = "@call.outer", desc = "goto prev function invocation end" },
+                ["[S"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope end" },
+            },
+        },
+
+        -- swap textobjects under the cursor
+        swap = {
+            enable = true,
+            swap_next = {
+                [">f"] = { query = "@function.outer", desc = "swap w/ next function" },
+                [">c"] = { query = "@class.outer", desc = "swap w/ next class" },
+                [">p"] = { query = "@parameter.inner", desc = "swap w/ next parameter" },
+            },
+            swap_previous = {
+                ["<f"] = { query = "@function.outer", desc = "swap w/ prev function" },
+                ["<c"] = { query = "@class.outer", desc = "swap w/ prev class" },
+                ["<p"] = { query = "@parameter.inner", desc = "swap w/ prev parameter" },
+            },
+        },
+    },
 })
+
+-- Repeatable Move
+--
+-- Press ';' to repeat the last move kind, in forward direction
+-- Press '+' to repeat the last move kind, in reverse direction
+local ts_repeat_move = require("nvim-treesitter.textobjects.repeatable_move")
+
+vim.keymap.set({ "n", "x", "o" }, ";", ts_repeat_move.repeat_last_move_next, { remap = true })
+vim.keymap.set({ "n", "x", "o" }, "+", ts_repeat_move.repeat_last_move_previous, { remap = true })
+
+-- Make builtin f, F, t, T also repeatable
+vim.keymap.set({ "n", "x", "o" }, "f", ts_repeat_move.builtin_f)
+vim.keymap.set({ "n", "x", "o" }, "F", ts_repeat_move.builtin_F)
+vim.keymap.set({ "n", "x", "o" }, "t", ts_repeat_move.builtin_t)
+vim.keymap.set({ "n", "x", "o" }, "T", ts_repeat_move.builtin_T)
 
 -- nvim-treesitter }}}
 
@@ -120,9 +226,35 @@ require("kanagawa").setup({
 
 -- LUA PLUGINS }}}
 
-vim.cmd([[
+-- VIM PLUGINS {{{
 
-" VIM PLUGINS {{{
+-- vim-gitgutter - Show git diff in the gutter {{{
+
+-- Mappings:
+-- <leader>ggt - Toggle git gutter
+-- <leader>ggd - open git diff split pane for current file
+-- <leader>hs - Stage hunk
+-- <leader>hr - Undo hunk
+-- ]h - Move forward one hunk
+-- [h - Move backward one hunk
+
+-- Don't automatically set mappings.
+vim.g.gitgutter_map_keys = false
+
+vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, { remap = false })
+vim.keymap.set("n", "<leader>ggd", vim.cmd.GitGutterDiffOrig, { remap = false })
+
+-- Make GitGutter(Next|Prev)Hunk repeatable
+local move_hunk_next, move_hunk_prev = ts_repeat_move.make_repeatable_move_pair(
+    vim.cmd.GitGutterNextHunk,
+    vim.cmd.GitGutterPrevHunk
+)
+vim.keymap.set({ "n", "x", "o" }, "]h", move_hunk_next)
+vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev)
+
+-- vim-gitgutter }}}
+
+vim.cmd([[
 
 " NERDCommenter - Easily comment lines or blocks of text {{{
 
@@ -160,32 +292,6 @@ vim.cmd([[
 
 " NERDCommenter }}}
 
-" vim-gitgutter - Show git diff in the gutter {{{
-
-    " Mappings:
-    " <leader>ggt - Toggle git gutter
-    " <leader>ggd - open git diff split pane for current file
-    " <leader>hs - Stage hunk
-    " <leader>hr - Undo hunk
-    " <leader>hf - Move forward one hunk
-    " <leader>hb - Move backward one hunk
-
-    " Don't automatically set mappings.
-    let g:gitgutter_map_keys = 0
-
-    nmap <leader>ggt :GitGutterToggle<CR>
-    nmap <leader>ggd :GitGutterDiffOrig<CR>
-
-    " Hunk management
-    nmap <leader>hs :GitGutterStageHunk<CR>
-    nmap <leader>hr :GitGutterUndoHunk<CR>
-
-    " Hunk movement
-    nmap <leader>hf :GitGutterNextHunk<CR>
-    nmap <leader>hb :GitGutterPrevHunk<CR>
-
-" vim-gitgutter }}}
-
 " coc.nvim - Complete engine and Language Server support for neovim {{{
 
     " Mappings:
@@ -209,16 +315,11 @@ vim.cmd([[
     " <leader>fs - flutter stop
     " <leader>fl - flutter dev log
     "
-    " ]c, [c     - next/prev linter errors
+    " ]d, [d     - next/prev linter errors
     " <Tab>, <S-Tab> - next/prev completion
     " <C-Space>  - trigger completion
     " <C-f>      - scroll float window up
     " <C-b>      - scroll float window down
-    "
-    " <verb>if   - <verb> in function
-    " <verb>af   - <verb> around function
-    " <verb>ic   - <verb> in class
-    " <verb>ac   - <verb> around class
 
     function! s:coc_check_back_space() abort
         let col = col('.') - 1
@@ -237,12 +338,12 @@ vim.cmd([[
 
     " Use <cr> for confirm completion, `<C-g>u` means break undo chain at current position.
     " Coc only does snippet and additional edit on confirm.
-    inoremap <silent><expr> <CR> pumvisible() ? coc#_select_confirm()
+    inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
                 \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
 
-    " Use `[c` and `]c` for navigate diagnostics
-    nnoremap <silent> [c :call CocAction('diagnosticPrevious')<CR>
-    nnoremap <silent> ]c :call CocAction('diagnosticNext')<CR>
+    " Use `[d` and `]d` for navigate diagnostics
+    nnoremap <silent> [d :call CocAction('diagnosticPrevious')<CR>
+    nnoremap <silent> ]d :call CocAction('diagnosticNext')<CR>
 
     nnoremap <silent> <leader>gd :call CocAction('jumpDefinition')<CR>
     nnoremap <silent> <leader>gc :call CocAction('jumpDeclaration')<CR>
@@ -263,17 +364,6 @@ vim.cmd([[
                 \ nnoremap <buffer> <silent> <leader>ft :CocCommand flutter.dev.hotRestart<CR> |
                 \ nnoremap <buffer> <silent> <leader>fs :CocCommand flutter.dev.quit<CR> |
                 \ nnoremap <buffer> <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
-
-    " " This lets you select or use vim verbs inside/around functions/"classes".
-    " " NOTE: Requires 'textDocument.documentSymbol' support from the language server.
-    " xmap if <Plug>(coc-funcobj-i)
-    " omap if <Plug>(coc-funcobj-i)
-    " xmap af <Plug>(coc-funcobj-a)
-    " omap af <Plug>(coc-funcobj-a)
-    " xmap ic <Plug>(coc-classobj-i)
-    " omap ic <Plug>(coc-classobj-i)
-    " xmap ac <Plug>(coc-classobj-a)
-    " omap ac <Plug>(coc-classobj-a)
 
     " Remap <C-f> and <C-b> to scroll float windows/popups.
     nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
