@@ -136,6 +136,11 @@ require("nvim-treesitter.configs").setup({
             },
         },
     },
+
+    -- nvim-treesitter-endwise - auto-add `end` block to lua, bash, ruby, etc...
+    endwise = {
+        enable = true,
+    }
 })
 
 -- Repeatable Move

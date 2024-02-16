@@ -79,6 +79,8 @@
         q.yaml
       ]);
     }
+    # nvim-treesitter-endwise - auto-add `end` block to lua, bash, ruby, etc...
+    {plugin = p.nvim-treesitter-endwise;}
     # nvim-treesitter-textobjects - syntax aware text objs + motions
     {plugin = p.nvim-treesitter-textobjects;}
   ];
