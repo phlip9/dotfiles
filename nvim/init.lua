@@ -144,7 +144,7 @@ require("nvim-treesitter.configs").setup({
     }
 })
 
--- Repeatable Move
+-- nvim-treesitter-textobjects - repeatable movements
 --
 -- Press ';' to repeat the last move kind, in forward direction
 -- Press '+' to repeat the last move kind, in reverse direction
@@ -158,6 +158,19 @@ vim.keymap.set({ "n", "x", "o" }, "f", ts_repeat_move.builtin_f)
 vim.keymap.set({ "n", "x", "o" }, "F", ts_repeat_move.builtin_F)
 vim.keymap.set({ "n", "x", "o" }, "t", ts_repeat_move.builtin_t)
 vim.keymap.set({ "n", "x", "o" }, "T", ts_repeat_move.builtin_T)
+
+-- nvim-treesitter-context - show the context that's past the scroll height
+require("treesitter-context").setup({
+    enable = true,
+    -- max size of the context window
+    max_lines = 10,
+    -- don't show on small height windows
+    min_window_height = 50,
+    -- max size for any single context in the stack
+    multiline_threshold = 5,
+    -- no separator (background color is enough)
+    separator = "",
+})
 
 -- nvim-treesitter }}}
 
