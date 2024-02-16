@@ -13,6 +13,9 @@
         "--logpath",
         "~/.cache/lua-language-server/log",
     ],
+    "Lua.diagnostics.disable": [
+        "redefined-local"
+    ],
     "Lua.runtime.pathStrict": true,
     "Lua.runtime.version": "LuaJIT",
     "Lua.workspace.ignoreSubmodules": true,

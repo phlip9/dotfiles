@@ -137,7 +137,7 @@
   # Using the nixpkgs helper fn as a base, with some manual overrides added after.
   neovimConfigBase = pkgs.neovimUtils.makeNeovimConfig {
     withNodeJs = true; # used by `coc.nvim` LSP client
-    withPython3 = false;
+    withPython3 = true; # used by `coc-fzf` symbols
     withRuby = false;
 
     # Full list of plugins in nixpkgs:

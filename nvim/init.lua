@@ -6,6 +6,14 @@ vim.loader.enable()
 -- Rebind mapleader to something more accessible.
 vim.g.mapleader = ","
 
+-- Track the "generation" number for sourcing `init.lua`.
+-- Used to ensure re-sourcing will re-run "one-time" init in various places.
+if _G.my_init_generation == nil then
+    _G.my_init_generation = 0
+else
+    _G.my_init_generation = _G.my_init_generation + 1
+end
+
 -- PRELUDE }}}
 
 -- LUA PLUGINS {{{
@@ -93,7 +101,7 @@ require("nvim-treesitter.configs").setup({
             goto_next_end = {
                 ["]F"] = { query = "@function.outer", desc = "goto next function end" },
                 ["]C"] = { query = "@class.outer", desc = "goto next class end" },
-                ["]P"] = { query = "@class.outer", desc = "goto next parameter end" },
+                ["]P"] = { query = "@parameter.outer", desc = "goto next parameter end" },
                 ["]I"] = { query = "@call.outer", desc = "goto next function invocation end" },
                 ["]S"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope end" },
             },
@@ -254,15 +262,289 @@ vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev)
 
 -- vim-gitgutter }}}
 
+-- coc.nvim - Complete engine and Language Server support for neovim {{{
+
+-- Mappings:
+--         gd  - goto definition
+--         gc  - goto declaration
+--         gi  - goto implementations
+--         gt  - goto type definition
+--         gr  - goto references
+-- <leader>rn  - rename
+-- <leader>rf  - refactor
+-- <leader>doc - show docs / symbol hover
+-- <leader>a   - code action
+-- <leader>di  - diagnostic info
+-- <leader>cm  - select an LSP command
+-- <space>o    - fuzzy search file outline
+-- <space>s    - fuzzy search project symbols
+--
+-- Flutter:
+-- <leader>fd - flutter devices
+-- <leader>fr - flutter run
+-- <leader>ft - flutter hot restart
+-- <leader>fs - flutter stop
+-- <leader>fl - flutter dev log
+--
+-- ]d, [d     - next/prev linter errors
+-- <Tab>, <S-Tab> - next/prev completion
+-- <C-Space>  - trigger completion
+-- <C-f>      - scroll float window up
+-- <C-b>      - scroll float window down
+
+---@param cb function(err: string, is_attached: boolean)
+local function coc_buf_lsp_is_attached_async(cb)
+    local success, result = pcall(vim.fn.CocActionAsync, "ensureDocument", cb)
+    if success then return end
+
+    local errmsg
+    if type(result) == string then
+        errmsg = result
+    else
+        errmsg = "Error: " .. vim.inspect(result)
+    end
+    cb(errmsg, nil)
+end
+
+-- ---@return boolean
+-- local function coc_buf_lsp_is_attached()
+--     return vim.fn.CocAction("ensureDocument")
+-- end
+
+local function coc_rpc_ready()
+    return vim.fn["coc#rpc#ready()"] ~= 0
+end
+
+local function coc_pum_visible()
+    return vim.fn["coc#pum#visible"]() ~= 0
+end
+
+local function coc_pum_confirm()
+    return vim.fn["coc#pum#confirm"]()
+end
+
+local function coc_pum_next(amount)
+    return vim.fn["coc#pum#next"](amount)
+end
+
+local function coc_pum_prev(amount)
+    return vim.fn["coc#pum#prev"](amount)
+end
+
+local function coc_refresh()
+    return vim.fn["coc#refresh"]()
+end
+
+local function coc_float_has_scroll()
+    return vim.fn["coc#float#has_scroll"]() ~= 0
+end
+
+local function coc_float_scroll(amount)
+    return vim.fn["coc#float#scroll"](amount)
+end
+
+local function check_back_space()
+    local col = vim.fn.col(".") - 1
+    return col == 0 or vim.fn.getline("."):sub(col, col):match("%s") ~= nil
+end
+
+-- autocmd group for all coc.nvim autocmds
+vim.api.nvim_create_augroup("CocGroup", {})
+
+-- If the autocomplete window is open, use <Tab>/<S-Tab> to goto the next/prev entry.
+-- If there's no preceeding whitespace, use <Tab> to start autocomplete.
+-- Else normal <Tab>/<S-Tab> behavior.
+local opts = { silent = true, noremap = true, expr = true }
+vim.keymap.set("i", "<Tab>", function()
+    if coc_pum_visible() then
+        return coc_pum_next(1)
+    elseif check_back_space() then
+        return "<Tab>"
+    else
+        return coc_refresh()
+    end
+end, opts)
+vim.keymap.set("i", "<S-Tab>", function()
+    if coc_pum_visible() then
+        return coc_pum_prev(1)
+    else
+        return "<S-Tab>"
+    end
+end, opts)
+
+-- Use <CR> to confirm completion. `<C-g>u` means break undo chain at current position.
+vim.keymap.set("i", "<CR>", function()
+    if coc_pum_visible() then
+        return coc_pum_confirm()
+    else
+        return "<C-g>u<CR><c-r>=coc#on_enter()<CR>"
+    end
+end, opts)
+
+-- Use <C-Space> to trigger autocomplete.
+vim.keymap.set("i", "<C-Space>", "coc#refresh()", opts)
+
+-- code navigation
+local opts = { silent = true }
+vim.keymap.set("n", "gd", "<Plug>(coc-definition)", opts)
+vim.keymap.set("n", "gc", "<Plug>(coc-declaration)", opts)
+vim.keymap.set("n", "gi", "<Plug>(coc-implementation)", opts)
+vim.keymap.set("n", "gt", "<Plug>(coc-type-definition)", opts)
+vim.keymap.set("n", "gr", "<Plug>(coc-references)", opts)
+
+-- code actions
+vim.keymap.set("n", "<leader>rn", "<Plug>(coc-rename)", opts)
+vim.keymap.set("n", "<leader>rf", "<Plug>(coc-refactor)", opts)
+
+-- Use <leader>doc to show docs for current symbol under cursor.
+vim.keymap.set("n", "<leader>doc", function()
+    local cw = vim.fn.expand("<cword>")
+    if vim.fn.index({ "vim", "help" }, vim.bo.filetype) >= 0 then
+        vim.api.nvim_command("help " .. cw)
+    elseif coc_rpc_ready() then
+        vim.fn.CocActionAsync("doHover")
+    else
+        -- `keywordprg` can be a vim command or a binary
+        local cmd = vim.o.keywordprg .. " " .. cw
+
+        -- if it's a binary and not vim command
+        if cmd:sub(1, 1) ~= ":" then
+            -- do nothing if this `keywordprg` is not installed
+            local bin = cmd:match("^%S+")
+            if not bin or not vim.fn.executable(bin) then return end
+
+            -- bin exists, just need to prefix w/ "!" to execute as shell cmd
+            cmd = "!" .. cmd
+        end
+        vim.api.nvim_command(cmd)
+    end
+end, { silent = true })
+
+-- Remap <C-f> and <C-b> to scroll float windows/popups.
+local opts = { silent = true, expr = true, nowait = true, remap = false }
+vim.keymap.set({ "n", "v" }, "<C-f>", function()
+    if coc_float_has_scroll() then
+        return coc_float_scroll(1)
+    else
+        return "<C-f>"
+    end
+end, opts)
+vim.keymap.set("i", "<C-f>", function()
+    if coc_float_has_scroll() then
+        return "<C-r>=coc#float#scroll(1)<CR>"
+    else
+        return "<Right>"
+    end
+end, opts)
+vim.keymap.set({ "n", "v" }, "<C-b>", function()
+    if coc_float_has_scroll() then
+        return coc_float_scroll(0)
+    else
+        return "<C-b>"
+    end
+end, opts)
+vim.keymap.set("i", "<C-b>", function()
+    if coc_float_has_scroll() then
+        return "<C-r>=coc#float#scroll(0)<CR>"
+    else
+        return "<Left>"
+    end
+end, opts)
+
+-- Use `[d` + `]d` to navigate code "diagnostics", i.e., lint warnings + errors.
+local move_diagnostic_next, move_diagnostic_prev = ts_repeat_move.make_repeatable_move_pair(
+    function() return vim.fn.CocActionAsync("diagnosticNext") end,
+    function() return vim.fn.CocActionAsync("diagnosticPrevious") end
+)
+local opts = { silent = true, remap = false }
+vim.keymap.set("n", "]d", move_diagnostic_next, opts)
+vim.keymap.set("n", "[d", move_diagnostic_prev, opts)
+
+-- Run in a buffer when it's safe to assume a coc.nvim LSP is attached.
+local function coc_buffer_init()
+    -- Early exit if buffer was init'd in this generation
+    local gen = vim.b.coc_buffer_init_generation or -1
+    if gen >= _G.my_init_generation then return end
+    vim.b.coc_buffer_init_generation = _G.my_init_generation
+
+    -- Setup formatexpr for supportted languages
+    vim.opt_local.formatexpr = "CocAction('formatSelected')"
+end
+local function coc_buffer_maybe_init()
+    -- Early exit if buffer was init'd in this generation
+    local gen = vim.b.coc_buffer_init_generation or -1
+    if gen >= _G.my_init_generation then return end
+    -- only set buffer generation when we actually init the buffer
+
+    coc_buf_lsp_is_attached_async(function(err, is_attached)
+        vim.print("is_attached: " .. vim.inspect(is_attached) .. ", err: " .. vim.inspect(err))
+        if err ~= vim.NIL then return end
+        if not is_attached then return end
+        coc_buffer_init()
+    end)
+end
+vim.api.nvim_create_autocmd("User", {
+    group = "CocGroup",
+    pattern = "CocNvimInit",
+    desc = "Coc LSP post-init setup",
+    callback = coc_buffer_maybe_init,
+})
+vim.api.nvim_create_autocmd("BufEnter", {
+    group = "CocGroup",
+    pattern = "*",
+    desc = "Coc LSP buffer setup",
+    callback = coc_buffer_maybe_init,
+})
+vim.api.nvim_create_autocmd("SourcePost", {
+    group = "CocGroup",
+    pattern = "*/nvim/init.lua",
+    desc = "Coc LSP post-source setup",
+    callback = coc_buffer_maybe_init,
+})
+
+-- When filling out parameters in a function after autocomplete, this shows the
+-- param docs.
+vim.api.nvim_create_autocmd("User", {
+    group = "CocGroup",
+    pattern = "CocJumpPlaceholder",
+    desc = "Update signature help on jump placeholder",
+    callback = function() vim.fn.CocActionAsync("showSignatureHelp") end,
+})
+
+-- coc-fzf
+vim.g.coc_fzf_preview = "right:50%"
+local opts = { silent = true, remap = false }
+vim.keymap.set("n", "<space>o", ":CocFzfList outline<cr>", opts)
+vim.keymap.set("n", "<space>s", ":CocFzfList symbols<cr>", opts)
+vim.keymap.set("n", "<leader>a", ":CocFzfList actions<cr>", opts)
+vim.keymap.set("n", "<leader>di", ":CocFzfList diagnostics<cr>", opts)
+vim.keymap.set("n", "<leader>cm", ":CocFzfList commands<cr>", opts)
+vim.keymap.set("x", "<leader>a", ":CocFzfList actions", opts)
+
+-- ft: flutter
+vim.api.nvim_create_autocmd("FileType", {
+    group = "CocGroup",
+    pattern = "dart",
+    desc = "coc.nvim + dart keybinds",
+    callback = function()
+        local opts = { buffer = true, silent = true, remap = false }
+        vim.keymap.set("n", "<leader>fd", ":CocCommand flutter.devices<CR>", opts)
+        vim.keymap.set("n", "<leader>fr", ":CocCommand flutter.run<CR>", opts)
+        vim.keymap.set("n", "<leader>ft", ":CocCommand flutter.dev.hotRestart<CR>", opts)
+        vim.keymap.set("n", "<leader>fs", ":CocCommand flutter.dev.quit<CR>", opts)
+        vim.keymap.set("n", "<leader>fl", ":CocCommand flutter.dev.openDevLog<CR>", opts)
+    end
+})
+
+-- coc.nvim }}}
+
 vim.cmd([[
 
 " NERDCommenter - Easily comment lines or blocks of text {{{
 
     " Mappings:
     " <leader>c<space> - Toggle current line comment
-    " <leader>cm - Block comment
-    " (disabled) <leader>c$ - Comment from cursor to end of line
-    " (disabled) <leader>cA - Comment from cursor to end of line and go into insert mode
+    " <leader>cb - Block comment
 
     " disable all default key bindings
     let g:NERDCreateDefaultMappings = 0
@@ -287,104 +569,10 @@ vim.cmd([[
     nnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
     xnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
 
-    nnoremap <silent> <leader>cm <Plug>NERDCommenterMinimal
-    xnoremap <silent> <leader>cm <Plug>NERDCommenterMinimal
+    nnoremap <silent> <leader>cb <Plug>NERDCommenterMinimal
+    xnoremap <silent> <leader>cb <Plug>NERDCommenterMinimal
 
 " NERDCommenter }}}
-
-" coc.nvim - Complete engine and Language Server support for neovim {{{
-
-    " Mappings:
-    " <leader>gd  - go to definition
-    " <leader>gi  - go to implementations
-    " <leader>gt  - go to type definition
-    " <leader>ren - rename
-    " <leader>ref - references
-    " <leader>h   - symbol hover
-    " <leader>a   - code action
-    " (disabled) <leader>al - code lens action
-    " <leader>di  - diagnostic info
-    " <leader>cm  - select an LSP command
-    " <space>o    - fuzzy search file outline
-    " <space>s    - fuzzy search project symbols
-    "
-    " Flutter:
-    " <leader>fd - flutter devices
-    " <leader>fr - flutter run
-    " <leader>ft - flutter hot restart
-    " <leader>fs - flutter stop
-    " <leader>fl - flutter dev log
-    "
-    " ]d, [d     - next/prev linter errors
-    " <Tab>, <S-Tab> - next/prev completion
-    " <C-Space>  - trigger completion
-    " <C-f>      - scroll float window up
-    " <C-b>      - scroll float window down
-
-    function! s:coc_check_back_space() abort
-        let col = col('.') - 1
-        return !col || getline('.')[col - 1]  =~# '\s'
-    endfunction
-
-    " Use tab for trigger completion with characters ahead and navigate.
-    inoremap <silent><expr> <TAB>
-                \ coc#pum#visible() ? coc#pum#next(1) :
-                \ <SID>coc_check_back_space() ? "\<TAB>" :
-                \ coc#refresh()
-    inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<S-Tab>"
-
-    " Use <C-Space> to trigger completion.
-    inoremap <silent><expr> <C-Space> coc#refresh()
-
-    " Use <cr> for confirm completion, `<C-g>u` means break undo chain at current position.
-    " Coc only does snippet and additional edit on confirm.
-    inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
-                \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
-
-    " Use `[d` and `]d` for navigate diagnostics
-    nnoremap <silent> [d :call CocAction('diagnosticPrevious')<CR>
-    nnoremap <silent> ]d :call CocAction('diagnosticNext')<CR>
-
-    nnoremap <silent> <leader>gd :call CocAction('jumpDefinition')<CR>
-    nnoremap <silent> <leader>gc :call CocAction('jumpDeclaration')<CR>
-    nnoremap <silent> <leader>gi :call CocAction('jumpImplementation')<CR>
-    nnoremap <silent> <leader>gt :call CocAction('jumpTypeDefinition')<CR>
-    nnoremap <silent> <leader>ren :call CocActionAsync('rename')<CR>
-    nnoremap <silent> <leader>ref :call CocAction('jumpReferences')<CR>
-    nnoremap <silent> <leader>h :call CocAction('doHover')<CR>
-    " nnoremap <leader>a <Plug>(coc-codeaction-selected)<CR>
-    " xnoremap <leader>a <Plug>(coc-codeaction-selected)
-    " nnoremap <silent> <leader>di :call CocAction('diagnosticInfo')<CR>
-    " nnoremap <silent> <leader>cm :CocCommand<CR>
-
-    " flutter-specific bindings
-    autocmd FileType dart
-                \ nnoremap <buffer> <silent> <leader>fd :CocCommand flutter.devices<CR> |
-                \ nnoremap <buffer> <silent> <leader>fr :CocCommand flutter.run<CR> |
-                \ nnoremap <buffer> <silent> <leader>ft :CocCommand flutter.dev.hotRestart<CR> |
-                \ nnoremap <buffer> <silent> <leader>fs :CocCommand flutter.dev.quit<CR> |
-                \ nnoremap <buffer> <silent> <leader>fl :CocCommand flutter.dev.openDevLog<CR>
-
-    " Remap <C-f> and <C-b> to scroll float windows/popups.
-    nnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-    nnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-    inoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(1)\<cr>" : "\<Right>"
-    inoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? "\<c-r>=coc#float#scroll(0)\<cr>" : "\<Left>"
-    vnoremap <silent><nowait><expr> <C-f> coc#float#has_scroll() ? coc#float#scroll(1) : "\<C-f>"
-    vnoremap <silent><nowait><expr> <C-b> coc#float#has_scroll() ? coc#float#scroll(0) : "\<C-b>"
-
-    "
-    " coc-fzf
-    "
-    let g:coc_fzf_preview='right:50%'
-    nnoremap <silent> <space>o :CocFzfList outline<cr>
-    nnoremap <silent> <space>s :CocFzfList symbols<cr>
-    nnoremap <silent> <leader>a :CocFzfList actions<cr>
-    xnoremap <silent> <leader>a :CocFzfList actions
-    nnoremap <silent> <leader>di :CocFzfList diagnostics<cr>
-    nnoremap <silent> <leader>cm :CocFzfList commands<cr>
-
-"  }}}
 
 " SudoEdit.vim - Easily write to protected files {{{
 
@@ -451,14 +639,16 @@ vim.cmd([[
     "  <space>' - grep using word under cursor
     " <space>cm - grep through commits
     " <space>cb - grep through commits for the current buffer
-    "  <space>h - grep through vim help
+    " <space>vh - grep through nvim help
+    " <space>vm - grep through nvim mappings
 
     let g:fzf_command_prefix = 'Fzf'
 
     nnoremap <silent> T :FzfBuffers<cr>
     nnoremap <silent> <space>cm :FzfCommits<cr>
     nnoremap <silent> <space>cb :FzfBCommits<cr>
-    nnoremap <silent> <space>h :FzfHelptags<cr>
+    nnoremap <silent> <space>vh :FzfHelptags<cr>
+    nnoremap <silent> <space>vm :FzfMaps<cr>
 
     " build command!'s and mappings for fzf file searching using some external
     " file listing command `cmd`. creates two variants: (1) search files,
@@ -600,6 +790,8 @@ vim.cmd([[
     set nowrap                      " don't wrap long lines
 
     set clipboard+=unnamedplus      " place yanked text into the clipboard
+
+    set keywordprg=:Man             " use vim built-in man viewer
 
     " Remove trailing whitespaces and ^M chars
     autocmd FileType c,cpp,java,php,js,python,twig,xml,yml,vim,nix,dart
