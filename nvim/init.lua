@@ -33,6 +33,18 @@ end
 
 -- lua utils }}}
 
+-- help split - open vim :help in current window {{{
+
+local group = vim.api.nvim_create_augroup("HelpSplit", {})
+vim.api.nvim_create_autocmd("BufNew", {
+    pattern = "*",
+    group = group,
+    desc = "Force :help to open in current buffer",
+    callback = function(opts) require("helpsplit").on_buf_new(opts) end,
+})
+
+-- help split }}}
+
 -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
 
 ---@diagnostic disable-next-line: missing-fields
