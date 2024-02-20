@@ -14,6 +14,10 @@
   # packages to add to the nvim PATH w/o infecting whole env
   # TODO: mkOption
   extraPkgs = [
+    # tools
+    pkgs.fd
+    pkgs.ripgrep
+
     # semi-functioning nix language server.
     # maybe someday nix users won't have to live in fucking squalor...
     pkgs.nil
