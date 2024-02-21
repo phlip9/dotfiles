@@ -60,6 +60,10 @@
       wget
     ];
 
+    home.sessionVariables = {
+      "MANPAGER" = "${pkgs.bat}/bin/bat --language=man --plain";
+    };
+
     programs.eza = {
       enable = true;
 

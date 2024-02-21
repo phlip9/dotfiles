@@ -15,6 +15,7 @@
   # TODO: mkOption
   extraPkgs = [
     # tools
+    pkgs.bat
     pkgs.fd
     pkgs.ripgrep
 

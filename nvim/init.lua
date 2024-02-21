@@ -602,6 +602,14 @@ local rg_cmd = "rg " ..
     "--ignore-case --hidden --follow --color \"always\" " ..
     "--glob \"!.git/*\" --glob \"!target/*\" --glob \"!tags\" "
 
+local function fzf_run(spec)
+    return vim.fn["fzf#run"](spec)
+end
+
+local function fzf_wrap(name, spec, fullscreen)
+    return vim.fn["fzf#wrap"](name, spec, fullscreen or false)
+end
+
 local function fzf_vim_files(dir, spec, bang)
     return vim.fn["fzf#vim#files"](dir, spec, bang)
 end
@@ -613,6 +621,7 @@ end
 local function fzf_vim_with_preview(spec_str)
     return vim.fn["fzf#vim#with_preview"](spec_str)
 end
+
 
 local function fzf_git_files(cmd)
     local spec = fzf_vim_with_preview("right:50%")
@@ -638,6 +647,24 @@ local function fzf_grep(cmd)
     fzf_vim_grep(cmd_str, spec, cmd.bang)
 end
 
+local function fzf_man_pages(cmd)
+    local spec = {
+        source = ("man -k '%s.*\\(\\d\\)'"):format(vim.fn.shellescape(cmd.args)),
+        sink = function(out)
+            local space_idx = out:find(" ", 0, true) or -1
+            local man_page = out:sub(0, space_idx)
+            vim.cmd(":Man " .. man_page)
+        end,
+        options = {
+            "--delimiter", "[\\(\\)]",
+            "--preview", "MANPAGER=cat MANWIDTH=80 man {2} {1}",
+            "--preview-window", "right:50%",
+        },
+    }
+    fzf_run(fzf_wrap("man", spec, cmd.bang))
+end
+
+
 vim.api.nvim_create_user_command("FzfGitFiles2", fzf_git_files,
     { bang = true, nargs = "?", complete = "dir", desc = "fd through all git files" })
 vim.api.nvim_create_user_command("FzfFiles2", fzf_files,
@@ -646,6 +673,8 @@ vim.api.nvim_create_user_command("FzfGRg2", fzf_git_grep,
     { bang = true, nargs = "*", desc = "rg through all git files" })
 vim.api.nvim_create_user_command("FzfRg2", fzf_grep,
     { bang = true, nargs = "*", desc = "rg through all files" })
+vim.api.nvim_create_user_command("FzfMan", fzf_man_pages,
+    { bang = true, nargs = "*", desc = "grep through all man page titles" })
 
 local opts = { silent = true, remap = false }
 vim.keymap.set("n", "O", vim.cmd.FzfGitFiles2, opts)
@@ -657,6 +686,7 @@ vim.keymap.set("n", "<space>cm", vim.cmd.FzfCommits, opts)
 vim.keymap.set("n", "<space>cb", vim.cmd.FzfBCommits, opts)
 vim.keymap.set("n", "<space>vh", vim.cmd.FzfHelptags, opts)
 vim.keymap.set("n", "<space>vm", vim.cmd.FzfMaps, opts)
+vim.keymap.set("n", "<space>man", vim.cmd.FzfMan, opts)
 
 -- }}}
 
