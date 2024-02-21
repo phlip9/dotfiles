@@ -35,13 +35,15 @@ end
 
 -- help split - open vim :help in current window {{{
 
-local group = vim.api.nvim_create_augroup("HelpSplit", {})
-vim.api.nvim_create_autocmd("BufNew", {
-    pattern = "*",
-    group = group,
-    desc = "Force :help to open in current buffer",
-    callback = function(opts) require("helpsplit").on_buf_new(opts) end,
-})
+do
+    local group = vim.api.nvim_create_augroup("HelpSplit", {})
+    vim.api.nvim_create_autocmd("BufNew", {
+        pattern = "*",
+        group = group,
+        desc = "Force :help to open in current buffer",
+        callback = function(opts) require("helpsplit").on_buf_new(opts) end,
+    })
+end
 
 -- help split }}}
 
@@ -153,23 +155,8 @@ require("nvim-treesitter.configs").setup({
     -- nvim-treesitter-endwise - auto-add `end` block to lua, bash, ruby, etc...
     endwise = {
         enable = true,
-    }
+    },
 })
-
--- nvim-treesitter-textobjects - repeatable movements
---
--- Press ';' to repeat the last move kind, in forward direction
--- Press '+' to repeat the last move kind, in reverse direction
-local ts_repeat_move = require("nvim-treesitter.textobjects.repeatable_move")
-
-vim.keymap.set({ "n", "x", "o" }, ";", ts_repeat_move.repeat_last_move_next, { remap = true })
-vim.keymap.set({ "n", "x", "o" }, "+", ts_repeat_move.repeat_last_move_previous, { remap = true })
-
--- Make builtin f, F, t, T also repeatable
-vim.keymap.set({ "n", "x", "o" }, "f", ts_repeat_move.builtin_f)
-vim.keymap.set({ "n", "x", "o" }, "F", ts_repeat_move.builtin_F)
-vim.keymap.set({ "n", "x", "o" }, "t", ts_repeat_move.builtin_t)
-vim.keymap.set({ "n", "x", "o" }, "T", ts_repeat_move.builtin_T)
 
 -- nvim-treesitter-context - show the context that's past the scroll height
 require("treesitter-context").setup({
@@ -183,6 +170,23 @@ require("treesitter-context").setup({
     -- no separator (background color is enough)
     separator = "",
 })
+
+-- nvim-treesitter-textobjects - repeatable movements
+--
+-- Press ';' to repeat the last move kind, in forward direction
+-- Press '+' to repeat the last move kind, in reverse direction
+do
+    local mod = require("nvim-treesitter.textobjects.repeatable_move")
+
+    vim.keymap.set({ "n", "x", "o" }, ";", mod.repeat_last_move_next, { remap = true })
+    vim.keymap.set({ "n", "x", "o" }, "+", mod.repeat_last_move_previous, { remap = true })
+
+    -- Make builtin f, F, t, T also repeatable
+    vim.keymap.set({ "n", "x", "o" }, "f", mod.builtin_f)
+    vim.keymap.set({ "n", "x", "o" }, "F", mod.builtin_F)
+    vim.keymap.set({ "n", "x", "o" }, "t", mod.builtin_t)
+    vim.keymap.set({ "n", "x", "o" }, "T", mod.builtin_T)
+end
 
 -- nvim-treesitter }}}
 
@@ -279,26 +283,30 @@ require("kanagawa").setup({
 -- <motion>ih - <motion> in hunk
 -- <motion>ah - <motion> around hunk (includes trailing empty lines)
 
--- Don't automatically set mappings.
-vim.g.gitgutter_map_keys = false
+do
+    local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
-vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, { remap = false })
-vim.keymap.set("n", "<leader>ggd", vim.cmd.GitGutterDiffOrig, { remap = false })
-vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, { remap = false })
-vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, { remap = false })
+    -- Don't automatically set mappings.
+    vim.g.gitgutter_map_keys = false
 
--- Make GitGutter(Next|Prev)Hunk repeatable
-local move_hunk_next, move_hunk_prev = ts_repeat_move.make_repeatable_move_pair(
-    vim.cmd.GitGutterNextHunk,
-    vim.cmd.GitGutterPrevHunk
-)
-vim.keymap.set({ "n", "x", "o" }, "]h", move_hunk_next)
-vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev)
+    vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, { remap = false })
+    vim.keymap.set("n", "<leader>ggd", vim.cmd.GitGutterDiffOrig, { remap = false })
+    vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, { remap = false })
+    vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, { remap = false })
 
-vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)")
-vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)")
-vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)")
-vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)")
+    -- Make GitGutter(Next|Prev)Hunk repeatable
+    local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
+        vim.cmd.GitGutterNextHunk,
+        vim.cmd.GitGutterPrevHunk
+    )
+    vim.keymap.set({ "n", "x", "o" }, "]h", move_hunk_next)
+    vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev)
+
+    vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)")
+    vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)")
+    vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)")
+    vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)")
+end
 
 -- vim-gitgutter }}}
 
@@ -332,248 +340,249 @@ vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)")
 -- <C-f>      - scroll float window up
 -- <C-b>      - scroll float window down
 
----@param cb function(err: string, is_attached: boolean)
-local function coc_buf_lsp_is_attached_async(cb)
-    local success, result = pcall(vim.fn.CocActionAsync, "ensureDocument", cb)
-    if success then return end
+do
+    local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
-    local errmsg
-    if type(result) == string then
-        errmsg = result
-    else
-        errmsg = "Error: " .. vim.inspect(result)
+    local function coc_rpc_ready()
+        return vim.fn["coc#rpc#ready()"] ~= 0
     end
-    cb(errmsg, nil)
-end
 
--- ---@return boolean
--- local function coc_buf_lsp_is_attached()
---     return vim.fn.CocAction("ensureDocument")
--- end
-
-local function coc_rpc_ready()
-    return vim.fn["coc#rpc#ready()"] ~= 0
-end
-
-local function coc_pum_visible()
-    return vim.fn["coc#pum#visible"]() ~= 0
-end
-
-local function coc_pum_confirm()
-    return vim.fn["coc#pum#confirm"]()
-end
-
-local function coc_pum_next(amount)
-    return vim.fn["coc#pum#next"](amount)
-end
-
-local function coc_pum_prev(amount)
-    return vim.fn["coc#pum#prev"](amount)
-end
-
-local function coc_refresh()
-    return vim.fn["coc#refresh"]()
-end
-
-local function coc_float_has_scroll()
-    return vim.fn["coc#float#has_scroll"]() ~= 0
-end
-
-local function coc_float_scroll(amount)
-    return vim.fn["coc#float#scroll"](amount)
-end
-
-local function check_back_space()
-    local col = vim.fn.col(".") - 1
-    return col == 0 or vim.fn.getline("."):sub(col, col):match("%s") ~= nil
-end
-
--- autocmd group for all coc.nvim autocmds
-vim.api.nvim_create_augroup("CocGroup", {})
-
--- If the autocomplete window is open, use <Tab>/<S-Tab> to goto the next/prev entry.
--- If there's no preceeding whitespace, use <Tab> to start autocomplete.
--- Else normal <Tab>/<S-Tab> behavior.
-local opts = { silent = true, noremap = true, expr = true }
-vim.keymap.set("i", "<Tab>", function()
-    if coc_pum_visible() then
-        return coc_pum_next(1)
-    elseif check_back_space() then
-        return "<Tab>"
-    else
-        return coc_refresh()
+    local function coc_pum_visible()
+        return vim.fn["coc#pum#visible"]() ~= 0
     end
-end, opts)
-vim.keymap.set("i", "<S-Tab>", function()
-    if coc_pum_visible() then
-        return coc_pum_prev(1)
-    else
-        return "<S-Tab>"
+
+    local function coc_pum_confirm()
+        return vim.fn["coc#pum#confirm"]()
     end
-end, opts)
 
--- Use <CR> to confirm completion. `<C-g>u` means break undo chain at current position.
-vim.keymap.set("i", "<CR>", function()
-    if coc_pum_visible() then
-        return coc_pum_confirm()
-    else
-        return "<C-g>u<CR><c-r>=coc#on_enter()<CR>"
+    local function coc_pum_next(amount)
+        return vim.fn["coc#pum#next"](amount)
     end
-end, opts)
 
--- Use <C-Space> to trigger autocomplete.
-vim.keymap.set("i", "<C-Space>", "coc#refresh()", opts)
+    local function coc_pum_prev(amount)
+        return vim.fn["coc#pum#prev"](amount)
+    end
 
--- code navigation
-local opts = { silent = true }
-vim.keymap.set("n", "gd", "<Plug>(coc-definition)", opts)
-vim.keymap.set("n", "gc", "<Plug>(coc-declaration)", opts)
-vim.keymap.set("n", "gi", "<Plug>(coc-implementation)", opts)
-vim.keymap.set("n", "gt", "<Plug>(coc-type-definition)", opts)
-vim.keymap.set("n", "gr", "<Plug>(coc-references)", opts)
+    local function coc_refresh()
+        return vim.fn["coc#refresh"]()
+    end
 
--- code actions
-vim.keymap.set("n", "<leader>rn", "<Plug>(coc-rename)", opts)
-vim.keymap.set("n", "<leader>rf", "<Plug>(coc-refactor)", opts)
+    local function coc_float_has_scroll()
+        return vim.fn["coc#float#has_scroll"]() ~= 0
+    end
 
--- Use <leader>doc to show docs for current symbol under cursor.
-vim.keymap.set("n", "<leader>doc", function()
-    local cw = vim.fn.expand("<cword>")
-    if vim.fn.index({ "vim", "help" }, vim.bo.filetype) >= 0 then
-        vim.api.nvim_command("help " .. cw)
-    elseif coc_rpc_ready() then
-        vim.fn.CocActionAsync("doHover")
-    else
-        -- `keywordprg` can be a vim command or a binary
-        local cmd = vim.o.keywordprg .. " " .. cw
+    local function coc_float_scroll(amount)
+        return vim.fn["coc#float#scroll"](amount)
+    end
 
-        -- if it's a binary and not vim command
-        if cmd:sub(1, 1) ~= ":" then
-            -- do nothing if this `keywordprg` is not installed
-            local bin = cmd:match("^%S+")
-            if not bin or not vim.fn.executable(bin) then return end
 
-            -- bin exists, just need to prefix w/ "!" to execute as shell cmd
-            cmd = "!" .. cmd
+    ---@param cb function(err: string, is_attached: boolean)
+    local function coc_buf_lsp_is_attached_async(cb)
+        local success, result = pcall(vim.fn.CocActionAsync, "ensureDocument", cb)
+        if success then return end
+
+        local errmsg
+        if type(result) == string then
+            errmsg = result
+        else
+            errmsg = "Error: " .. vim.inspect(result)
         end
-        vim.api.nvim_command(cmd)
+        cb(errmsg, nil)
     end
-end, { silent = true })
 
--- Remap <C-f> and <C-b> to scroll float windows/popups.
-local opts = { silent = true, expr = true, nowait = true, remap = false }
-vim.keymap.set({ "n", "v" }, "<C-f>", function()
-    if coc_float_has_scroll() then
-        return coc_float_scroll(1)
-    else
-        return "<C-f>"
+    local function check_back_space()
+        local col = vim.fn.col(".") - 1
+        return col == 0 or vim.fn.getline("."):sub(col, col):match("%s") ~= nil
     end
-end, opts)
-vim.keymap.set("i", "<C-f>", function()
-    if coc_float_has_scroll() then
-        return "<C-r>=coc#float#scroll(1)<CR>"
-    else
-        return "<Right>"
-    end
-end, opts)
-vim.keymap.set({ "n", "v" }, "<C-b>", function()
-    if coc_float_has_scroll() then
-        return coc_float_scroll(0)
-    else
-        return "<C-b>"
-    end
-end, opts)
-vim.keymap.set("i", "<C-b>", function()
-    if coc_float_has_scroll() then
-        return "<C-r>=coc#float#scroll(0)<CR>"
-    else
-        return "<Left>"
-    end
-end, opts)
 
--- Use `[d` + `]d` to navigate code "diagnostics", i.e., lint warnings + errors.
-local move_diagnostic_next, move_diagnostic_prev = ts_repeat_move.make_repeatable_move_pair(
-    function() return vim.fn.CocActionAsync("diagnosticNext") end,
-    function() return vim.fn.CocActionAsync("diagnosticPrevious") end
-)
-local opts = { silent = true, remap = false }
-vim.keymap.set("n", "]d", move_diagnostic_next, opts)
-vim.keymap.set("n", "[d", move_diagnostic_prev, opts)
 
--- Run in a buffer when it's safe to assume a coc.nvim LSP is attached.
-local function coc_buffer_init()
-    -- Early exit if buffer was init'd in this generation
-    local gen = vim.b.coc_buffer_init_generation or -1
-    if gen >= _G.my_init_generation then return end
-    vim.b.coc_buffer_init_generation = _G.my_init_generation
+    -- autocmd group for all coc.nvim autocmds
+    vim.api.nvim_create_augroup("CocGroup", {})
 
-    -- Setup formatexpr for supportted languages
-    vim.opt_local.formatexpr = "CocAction('formatSelected')"
+    -- If the autocomplete window is open, use <Tab>/<S-Tab> to goto the next/prev entry.
+    -- If there's no preceeding whitespace, use <Tab> to start autocomplete.
+    -- Else normal <Tab>/<S-Tab> behavior.
+    local opts = { silent = true, noremap = true, expr = true }
+    vim.keymap.set("i", "<Tab>", function()
+        if coc_pum_visible() then
+            return coc_pum_next(1)
+        elseif check_back_space() then
+            return "<Tab>"
+        else
+            return coc_refresh()
+        end
+    end, opts)
+    vim.keymap.set("i", "<S-Tab>", function()
+        if coc_pum_visible() then
+            return coc_pum_prev(1)
+        else
+            return "<S-Tab>"
+        end
+    end, opts)
+
+    -- Use <CR> to confirm completion. `<C-g>u` means break undo chain at current position.
+    vim.keymap.set("i", "<CR>", function()
+        if coc_pum_visible() then
+            return coc_pum_confirm()
+        else
+            return "<C-g>u<CR><c-r>=coc#on_enter()<CR>"
+        end
+    end, opts)
+
+    -- Use <C-Space> to trigger autocomplete.
+    vim.keymap.set("i", "<C-Space>", "coc#refresh()", opts)
+
+    -- code navigation
+    local opts = { silent = true }
+    vim.keymap.set("n", "gd", "<Plug>(coc-definition)", opts)
+    vim.keymap.set("n", "gc", "<Plug>(coc-declaration)", opts)
+    vim.keymap.set("n", "gi", "<Plug>(coc-implementation)", opts)
+    vim.keymap.set("n", "gt", "<Plug>(coc-type-definition)", opts)
+    vim.keymap.set("n", "gr", "<Plug>(coc-references)", opts)
+
+    -- code actions
+    vim.keymap.set("n", "<leader>rn", "<Plug>(coc-rename)", opts)
+    vim.keymap.set("n", "<leader>rf", "<Plug>(coc-refactor)", opts)
+
+    -- Use <leader>doc to show docs for current symbol under cursor.
+    vim.keymap.set("n", "<leader>doc", function()
+        local cw = vim.fn.expand("<cword>")
+        if vim.fn.index({ "vim", "help" }, vim.bo.filetype) >= 0 then
+            vim.api.nvim_command("help " .. cw)
+        elseif coc_rpc_ready() then
+            vim.fn.CocActionAsync("doHover")
+        else
+            -- `keywordprg` can be a vim command or a binary
+            local cmd = vim.o.keywordprg .. " " .. cw
+
+            -- if it's a binary and not vim command
+            if cmd:sub(1, 1) ~= ":" then
+                -- do nothing if this `keywordprg` is not installed
+                local bin = cmd:match("^%S+")
+                if not bin or not vim.fn.executable(bin) then return end
+
+                -- bin exists, just need to prefix w/ "!" to execute as shell cmd
+                cmd = "!" .. cmd
+            end
+            vim.api.nvim_command(cmd)
+        end
+    end, { silent = true })
+
+    -- Remap <C-f> and <C-b> to scroll float windows/popups.
+    local opts = { silent = true, expr = true, nowait = true, remap = false }
+    vim.keymap.set({ "n", "v" }, "<C-f>", function()
+        if coc_float_has_scroll() then
+            return coc_float_scroll(1)
+        else
+            return "<C-f>"
+        end
+    end, opts)
+    vim.keymap.set("i", "<C-f>", function()
+        if coc_float_has_scroll() then
+            return "<C-r>=coc#float#scroll(1)<CR>"
+        else
+            return "<Right>"
+        end
+    end, opts)
+    vim.keymap.set({ "n", "v" }, "<C-b>", function()
+        if coc_float_has_scroll() then
+            return coc_float_scroll(0)
+        else
+            return "<C-b>"
+        end
+    end, opts)
+    vim.keymap.set("i", "<C-b>", function()
+        if coc_float_has_scroll() then
+            return "<C-r>=coc#float#scroll(0)<CR>"
+        else
+            return "<Left>"
+        end
+    end, opts)
+
+    -- Use `[d` + `]d` to navigate code "diagnostics", i.e., lint warnings + errors.
+    local move_diagnostic_next, move_diagnostic_prev = repeatable_move.make_repeatable_move_pair(
+        function() return vim.fn.CocActionAsync("diagnosticNext") end,
+        function() return vim.fn.CocActionAsync("diagnosticPrevious") end
+    )
+    local opts = { silent = true, remap = false }
+    vim.keymap.set("n", "]d", move_diagnostic_next, opts)
+    vim.keymap.set("n", "[d", move_diagnostic_prev, opts)
+
+    -- Run in a buffer when it's safe to assume a coc.nvim LSP is attached.
+    local function coc_buffer_init()
+        -- Early exit if buffer was init'd in this generation
+        local gen = vim.b.coc_buffer_init_generation or -1
+        if gen >= _G.my_init_generation then return end
+        vim.b.coc_buffer_init_generation = _G.my_init_generation
+
+        -- Setup formatexpr for supportted languages
+        vim.opt_local.formatexpr = "CocAction('formatSelected')"
+    end
+    local function coc_buffer_maybe_init()
+        -- Early exit if buffer was init'd in this generation
+        local gen = vim.b.coc_buffer_init_generation or -1
+        if gen >= _G.my_init_generation then return end
+        -- only set buffer generation when we actually init the buffer
+
+        coc_buf_lsp_is_attached_async(function(err, is_attached)
+            if err ~= vim.NIL then return end
+            if not is_attached then return end
+            coc_buffer_init()
+        end)
+    end
+    vim.api.nvim_create_autocmd("User", {
+        group = "CocGroup",
+        pattern = "CocNvimInit",
+        desc = "Coc LSP post-init setup",
+        callback = coc_buffer_maybe_init,
+    })
+    vim.api.nvim_create_autocmd("BufEnter", {
+        group = "CocGroup",
+        pattern = "*",
+        desc = "Coc LSP buffer setup",
+        callback = coc_buffer_maybe_init,
+    })
+    vim.api.nvim_create_autocmd("SourcePost", {
+        group = "CocGroup",
+        pattern = "*/nvim/init.lua",
+        desc = "Coc LSP post-source setup",
+        callback = coc_buffer_maybe_init,
+    })
+
+    -- When filling out parameters in a function after autocomplete, this shows the
+    -- param docs.
+    vim.api.nvim_create_autocmd("User", {
+        group = "CocGroup",
+        pattern = "CocJumpPlaceholder",
+        desc = "Update signature help on jump placeholder",
+        callback = function() vim.fn.CocActionAsync("showSignatureHelp") end,
+    })
+
+    -- coc-fzf
+    vim.g.coc_fzf_preview = "right:50%"
+    local opts = { silent = true, remap = false }
+    vim.keymap.set("n", "<space>o", ":CocFzfList outline<cr>", opts)
+    vim.keymap.set("n", "<space>s", ":CocFzfList symbols<cr>", opts)
+    vim.keymap.set("n", "<leader>a", ":CocFzfList actions<cr>", opts)
+    vim.keymap.set("n", "<leader>di", ":CocFzfList diagnostics<cr>", opts)
+    vim.keymap.set("n", "<leader>cm", ":CocFzfList commands<cr>", opts)
+    vim.keymap.set("x", "<leader>a", ":CocFzfList actions", opts)
+
+    -- ft: flutter
+    vim.api.nvim_create_autocmd("FileType", {
+        group = "CocGroup",
+        pattern = "dart",
+        desc = "coc.nvim + dart keybinds",
+        callback = function()
+            local opts = { buffer = true, silent = true, remap = false }
+            vim.keymap.set("n", "<leader>fd", ":CocCommand flutter.devices<CR>", opts)
+            vim.keymap.set("n", "<leader>fr", ":CocCommand flutter.run<CR>", opts)
+            vim.keymap.set("n", "<leader>ft", ":CocCommand flutter.dev.hotRestart<CR>", opts)
+            vim.keymap.set("n", "<leader>fs", ":CocCommand flutter.dev.quit<CR>", opts)
+            vim.keymap.set("n", "<leader>fl", ":CocCommand flutter.dev.openDevLog<CR>", opts)
+        end
+    })
 end
-local function coc_buffer_maybe_init()
-    -- Early exit if buffer was init'd in this generation
-    local gen = vim.b.coc_buffer_init_generation or -1
-    if gen >= _G.my_init_generation then return end
-    -- only set buffer generation when we actually init the buffer
-
-    coc_buf_lsp_is_attached_async(function(err, is_attached)
-        if err ~= vim.NIL then return end
-        if not is_attached then return end
-        coc_buffer_init()
-    end)
-end
-vim.api.nvim_create_autocmd("User", {
-    group = "CocGroup",
-    pattern = "CocNvimInit",
-    desc = "Coc LSP post-init setup",
-    callback = coc_buffer_maybe_init,
-})
-vim.api.nvim_create_autocmd("BufEnter", {
-    group = "CocGroup",
-    pattern = "*",
-    desc = "Coc LSP buffer setup",
-    callback = coc_buffer_maybe_init,
-})
-vim.api.nvim_create_autocmd("SourcePost", {
-    group = "CocGroup",
-    pattern = "*/nvim/init.lua",
-    desc = "Coc LSP post-source setup",
-    callback = coc_buffer_maybe_init,
-})
-
--- When filling out parameters in a function after autocomplete, this shows the
--- param docs.
-vim.api.nvim_create_autocmd("User", {
-    group = "CocGroup",
-    pattern = "CocJumpPlaceholder",
-    desc = "Update signature help on jump placeholder",
-    callback = function() vim.fn.CocActionAsync("showSignatureHelp") end,
-})
-
--- coc-fzf
-vim.g.coc_fzf_preview = "right:50%"
-local opts = { silent = true, remap = false }
-vim.keymap.set("n", "<space>o", ":CocFzfList outline<cr>", opts)
-vim.keymap.set("n", "<space>s", ":CocFzfList symbols<cr>", opts)
-vim.keymap.set("n", "<leader>a", ":CocFzfList actions<cr>", opts)
-vim.keymap.set("n", "<leader>di", ":CocFzfList diagnostics<cr>", opts)
-vim.keymap.set("n", "<leader>cm", ":CocFzfList commands<cr>", opts)
-vim.keymap.set("x", "<leader>a", ":CocFzfList actions", opts)
-
--- ft: flutter
-vim.api.nvim_create_autocmd("FileType", {
-    group = "CocGroup",
-    pattern = "dart",
-    desc = "coc.nvim + dart keybinds",
-    callback = function()
-        local opts = { buffer = true, silent = true, remap = false }
-        vim.keymap.set("n", "<leader>fd", ":CocCommand flutter.devices<CR>", opts)
-        vim.keymap.set("n", "<leader>fr", ":CocCommand flutter.run<CR>", opts)
-        vim.keymap.set("n", "<leader>ft", ":CocCommand flutter.dev.hotRestart<CR>", opts)
-        vim.keymap.set("n", "<leader>fs", ":CocCommand flutter.dev.quit<CR>", opts)
-        vim.keymap.set("n", "<leader>fl", ":CocCommand flutter.dev.openDevLog<CR>", opts)
-    end
-})
 
 -- coc.nvim }}}
 
@@ -590,103 +599,105 @@ vim.api.nvim_create_autocmd("FileType", {
 -- <space>vh - grep through nvim help
 -- <space>vm - grep through nvim mappings
 
-vim.g.fzf_command_prefix = "Fzf"
-vim.g.fzf_files_options = { "--ansi" }
+do
+    vim.g.fzf_command_prefix = "Fzf"
+    vim.g.fzf_files_options = { "--ansi" }
 
-local fd_cmd = "fd " ..
-    "--type f --hidden --follow --color \"always\" --strip-cwd-prefix " ..
-    "--exclude \".git/*\" --exclude \"target/*\" --exclude \"tags\" "
+    local fd_cmd = "fd " ..
+        "--type f --hidden --follow --color \"always\" --strip-cwd-prefix " ..
+        "--exclude \".git/*\" --exclude \"target/*\" --exclude \"tags\" "
 
-local rg_cmd = "rg " ..
-    "--column --line-number --no-heading --fixed-strings " ..
-    "--ignore-case --hidden --follow --color \"always\" " ..
-    "--glob \"!.git/*\" --glob \"!target/*\" --glob \"!tags\" "
+    local rg_cmd = "rg " ..
+        "--column --line-number --no-heading --fixed-strings " ..
+        "--ignore-case --hidden --follow --color \"always\" " ..
+        "--glob \"!.git/*\" --glob \"!target/*\" --glob \"!tags\" "
 
-local function fzf_run(spec)
-    return vim.fn["fzf#run"](spec)
+    local function fzf_run(spec)
+        return vim.fn["fzf#run"](spec)
+    end
+
+    local function fzf_wrap(name, spec, fullscreen)
+        return vim.fn["fzf#wrap"](name, spec, fullscreen or false)
+    end
+
+    local function fzf_vim_files(dir, spec, bang)
+        return vim.fn["fzf#vim#files"](dir, spec, bang)
+    end
+
+    local function fzf_vim_grep(cmd, spec, bang)
+        return vim.fn["fzf#vim#grep"](cmd, spec, bang)
+    end
+
+    local function fzf_vim_with_preview(spec_str)
+        return vim.fn["fzf#vim#with_preview"](spec_str)
+    end
+
+
+    local function fzf_git_files(cmd)
+        local spec = fzf_vim_with_preview("right:50%")
+        vim.env.FZF_DEFAULT_COMMAND = fd_cmd
+        fzf_vim_files(cmd.args, spec, cmd.bang)
+    end
+
+    local function fzf_files(cmd)
+        local spec = fzf_vim_with_preview("right:50%")
+        vim.env.FZF_DEFAULT_COMMAND = fd_cmd .. "--no-ignore "
+        fzf_vim_files(cmd.args, spec, cmd.bang)
+    end
+
+    local function fzf_git_grep(cmd)
+        local spec = fzf_vim_with_preview("right:50%")
+        local cmd_str = rg_cmd .. " -- " .. vim.fn.shellescape(cmd.args)
+        fzf_vim_grep(cmd_str, spec, cmd.bang)
+    end
+
+    local function fzf_grep(cmd)
+        local spec = fzf_vim_with_preview("right:50%")
+        local cmd_str = rg_cmd .. " --no-ignore -- " .. vim.fn.shellescape(cmd.args)
+        fzf_vim_grep(cmd_str, spec, cmd.bang)
+    end
+
+    local function fzf_man_pages(cmd)
+        local spec = {
+            source = ("man -k '%s.*\\(\\d\\)'"):format(vim.fn.shellescape(cmd.args)),
+            sink = function(out)
+                local space_idx = out:find(" ", 0, true) or -1
+                local man_page = out:sub(0, space_idx)
+                vim.cmd(":Man " .. man_page)
+            end,
+            options = {
+                "--delimiter", "[\\(\\)]",
+                "--preview", "MANPAGER=cat MANWIDTH=80 man {2} {1}",
+                "--preview-window", "right:50%",
+            },
+        }
+        fzf_run(fzf_wrap("man", spec, cmd.bang))
+    end
+
+
+    vim.api.nvim_create_user_command("FzfGitFiles2", fzf_git_files,
+        { bang = true, nargs = "?", complete = "dir", desc = "fd through all git files" })
+    vim.api.nvim_create_user_command("FzfFiles2", fzf_files,
+        { bang = true, nargs = "?", complete = "dir", desc = "fd through all files" })
+    vim.api.nvim_create_user_command("FzfGRg2", fzf_git_grep,
+        { bang = true, nargs = "*", desc = "rg through all git files" })
+    vim.api.nvim_create_user_command("FzfRg2", fzf_grep,
+        { bang = true, nargs = "*", desc = "rg through all files" })
+    vim.api.nvim_create_user_command("FzfMan", fzf_man_pages,
+        { bang = true, nargs = "*", desc = "grep through all man page titles" })
+
+    local opts = { silent = true, remap = false }
+    vim.keymap.set("n", "O", vim.cmd.FzfGitFiles2, opts)
+    vim.keymap.set("n", "<space>O", vim.cmd.FzfFiles2, opts)
+    vim.keymap.set("n", "<space>'", ":FzfGRg2 <C-R><C-W><CR>", opts)
+    vim.keymap.set("n", "<space>/", ":FzfGRg2 ", { remap = false })
+    vim.keymap.set("n", "T", vim.cmd.FzfBuffers, opts)
+    vim.keymap.set("n", "<space>cm", vim.cmd.FzfCommits, opts)
+    vim.keymap.set("n", "<space>cb", vim.cmd.FzfBCommits, opts)
+    vim.keymap.set("n", "<space>vh", vim.cmd.FzfHelptags, opts)
+    vim.keymap.set("n", "<space>vm", vim.cmd.FzfMaps, opts)
+    vim.keymap.set("n", "<space>man", vim.cmd.FzfMan, opts)
 end
-
-local function fzf_wrap(name, spec, fullscreen)
-    return vim.fn["fzf#wrap"](name, spec, fullscreen or false)
-end
-
-local function fzf_vim_files(dir, spec, bang)
-    return vim.fn["fzf#vim#files"](dir, spec, bang)
-end
-
-local function fzf_vim_grep(cmd, spec, bang)
-    return vim.fn["fzf#vim#grep"](cmd, spec, bang)
-end
-
-local function fzf_vim_with_preview(spec_str)
-    return vim.fn["fzf#vim#with_preview"](spec_str)
-end
-
-
-local function fzf_git_files(cmd)
-    local spec = fzf_vim_with_preview("right:50%")
-    vim.env.FZF_DEFAULT_COMMAND = fd_cmd
-    fzf_vim_files(cmd.args, spec, cmd.bang)
-end
-
-local function fzf_files(cmd)
-    local spec = fzf_vim_with_preview("right:50%")
-    vim.env.FZF_DEFAULT_COMMAND = fd_cmd .. "--no-ignore "
-    fzf_vim_files(cmd.args, spec, cmd.bang)
-end
-
-local function fzf_git_grep(cmd)
-    local spec = fzf_vim_with_preview("right:50%")
-    local cmd_str = rg_cmd .. " -- " .. vim.fn.shellescape(cmd.args)
-    fzf_vim_grep(cmd_str, spec, cmd.bang)
-end
-
-local function fzf_grep(cmd)
-    local spec = fzf_vim_with_preview("right:50%")
-    local cmd_str = rg_cmd .. " --no-ignore -- " .. vim.fn.shellescape(cmd.args)
-    fzf_vim_grep(cmd_str, spec, cmd.bang)
-end
-
-local function fzf_man_pages(cmd)
-    local spec = {
-        source = ("man -k '%s.*\\(\\d\\)'"):format(vim.fn.shellescape(cmd.args)),
-        sink = function(out)
-            local space_idx = out:find(" ", 0, true) or -1
-            local man_page = out:sub(0, space_idx)
-            vim.cmd(":Man " .. man_page)
-        end,
-        options = {
-            "--delimiter", "[\\(\\)]",
-            "--preview", "MANPAGER=cat MANWIDTH=80 man {2} {1}",
-            "--preview-window", "right:50%",
-        },
-    }
-    fzf_run(fzf_wrap("man", spec, cmd.bang))
-end
-
-
-vim.api.nvim_create_user_command("FzfGitFiles2", fzf_git_files,
-    { bang = true, nargs = "?", complete = "dir", desc = "fd through all git files" })
-vim.api.nvim_create_user_command("FzfFiles2", fzf_files,
-    { bang = true, nargs = "?", complete = "dir", desc = "fd through all files" })
-vim.api.nvim_create_user_command("FzfGRg2", fzf_git_grep,
-    { bang = true, nargs = "*", desc = "rg through all git files" })
-vim.api.nvim_create_user_command("FzfRg2", fzf_grep,
-    { bang = true, nargs = "*", desc = "rg through all files" })
-vim.api.nvim_create_user_command("FzfMan", fzf_man_pages,
-    { bang = true, nargs = "*", desc = "grep through all man page titles" })
-
-local opts = { silent = true, remap = false }
-vim.keymap.set("n", "O", vim.cmd.FzfGitFiles2, opts)
-vim.keymap.set("n", "<space>O", vim.cmd.FzfFiles2, opts)
-vim.keymap.set("n", "<space>'", ":FzfGRg2 <C-R><C-W><CR>", opts)
-vim.keymap.set("n", "<space>/", ":FzfGRg2 ", { remap = false })
-vim.keymap.set("n", "T", vim.cmd.FzfBuffers, opts)
-vim.keymap.set("n", "<space>cm", vim.cmd.FzfCommits, opts)
-vim.keymap.set("n", "<space>cb", vim.cmd.FzfBCommits, opts)
-vim.keymap.set("n", "<space>vh", vim.cmd.FzfHelptags, opts)
-vim.keymap.set("n", "<space>vm", vim.cmd.FzfMaps, opts)
-vim.keymap.set("n", "<space>man", vim.cmd.FzfMan, opts)
 
 -- }}}
 

@@ -34,7 +34,7 @@ end
 function M.on_buf_new(opts)
     vim.api.nvim_create_autocmd("BufEnter", {
         buffer = opts.buf,
-        group = "HelpSplit",
+        group = opts.group,
         once = true,
         callback = on_buf_enter,
     })
