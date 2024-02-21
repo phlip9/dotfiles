@@ -20,15 +20,24 @@ in {
       # silence annoying "detached head" warning
       advice.detachedHead = false;
 
+      # make `git branch` sort branches by last commit date. much easier to find
+      # recent, non-stale branches this way.
+      branch.sort = "-committerdate";
+
       # show full commit diff when editing commit message
       commit.verbose = true;
+
+      # better quality diffs
+      # see: <https://jvns.ca/blog/2024/02/16/popular-git-config-options/#diff-algorithm-histogram>
+      diff.algorithm = "histogram";
 
       # before fetching, remove any remote-tracking refs that no longer exist
       # on the remote.
       fetch.prune = true;
 
-      # show 3-way diff when resolving merge conflicts.
-      merge.conflictstyle = "diff3";
+      # show 3-way diff when resolving merge conflicts. `z-` also removes
+      # duplicate lines from both sides of the conflict.
+      merge.conflictstyle = "zdiff3";
 
       # when pulling from a remote branch, don't try to make a merge commit
       # if we can't fast-forward, just fail.
@@ -43,6 +52,10 @@ in {
 
       # autosquash on rebase by default
       rebase.autosquash = true;
+
+      # enables `git-rerere(1)` which saves and reuses merge conflicts. Reduce
+      # duplicate work on long rebases.
+      rerere.enabled = true;
 
       # show detailed diff by default for `git stash show`
       stash.showPatch = true;
@@ -104,9 +117,9 @@ in {
       a = "add";
       b = "branch";
       cm = "commit";
-      cma = "commit -v --amend";
-      cme = "commit -v --amend --no-edit";
-      cmf = "commit -v --fixup";
+      cma = "commit --amend";
+      cme = "commit --amend --no-edit";
+      cmf = "commit --fixup";
       co = "checkout";
       d = "diff";
       ds = "diff --staged";
