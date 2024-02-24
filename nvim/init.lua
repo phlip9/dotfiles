@@ -18,24 +18,20 @@ end
 
 -- PLUGINS {{{
 
--- lua utils {{{
+do -- lua utils {{{
+    -- Pretty-print any lua value and display it in a temp buffer
+    _G.dbg = function(...)
+        return require("util").dbg(...)
+    end
 
--- Pretty-print any lua value and display it in a temp buffer
-_G.dbg = function(...)
-    return require("util").dbg(...)
-end
+    -- Unload and then `require` a module
+    ---@param modname string
+    _G.rerequire = function(modname)
+        return require("util").rerequire(modname)
+    end
+end -- lua utils }}}
 
--- Unload and then `require` a module
----@param modname string
-_G.rerequire = function(modname)
-    return require("util").rerequire(modname)
-end
-
--- lua utils }}}
-
--- help split - open vim :help in current window {{{
-
-do
+do  -- help split - open vim :help in current window {{{
     local group = vim.api.nvim_create_augroup("HelpSplit", {})
     vim.api.nvim_create_autocmd("BufNew", {
         pattern = "*",
@@ -43,139 +39,135 @@ do
         desc = "Force :help to open in current buffer",
         callback = function(opts) require("helpsplit").on_buf_new(opts) end,
     })
-end
+end -- help split }}}
 
--- help split }}}
+do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
+    ---@diagnostic disable-next-line: missing-fields
+    require("nvim-treesitter.configs").setup({
+        -- we're managing parser installation via nix, so don't auto install
+        auto_install = false,
+        ensure_installed = {},
 
--- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
-
----@diagnostic disable-next-line: missing-fields
-require("nvim-treesitter.configs").setup({
-    -- we're managing parser installation via nix, so don't auto install
-    auto_install = false,
-    ensure_installed = {},
-
-    highlight = {
-        -- enable tree-sitter highlighting
-        enable = true,
-        -- don't use tree-sitter highlighting and vim regex highlighting at
-        -- the same time
-        additional_vim_regex_highlighting = false,
-    },
-    indent = {
-        enable = true,
-    },
-
-    -- nvim-treesitter-textobjects - syntax aware text objs + motions
-    textobjects = {
-        -- <action><in/around><textobject>
-        -- e.g. cif = change in function
-        --      vac = visual-select around class
-        select = {
+        highlight = {
+            -- enable tree-sitter highlighting
             enable = true,
-            -- jump for to next textobj if not currently in a matching one
-            lookahead = true,
-            keymaps = {
-                ["af"] = "@function.outer",
-                ["if"] = "@function.inner",
-                ["ac"] = "@class.outer",
-                ["ic"] = "@class.inner",
-                ["ap"] = "@parameter.outer",
-                ["ip"] = "@parameter.inner",
-                ["ai"] = "@call.outer",
-                ["ii"] = "@call.inner",
-                ["as"] = { query = "@local.scope", query_group = "locals" },
-                ["is"] = { query = "@local.scope", query_group = "locals" },
+            -- don't use tree-sitter highlighting and vim regex highlighting at
+            -- the same time
+            additional_vim_regex_highlighting = false,
+        },
+        indent = {
+            enable = true,
+        },
+
+        -- nvim-treesitter-textobjects - syntax aware text objs + motions
+        textobjects = {
+            -- <action><in/around><textobject>
+            -- e.g. cif = change in function
+            --      vac = visual-select around class
+            select = {
+                enable = true,
+                -- jump for to next textobj if not currently in a matching one
+                lookahead = true,
+                keymaps = {
+                    ["af"] = "@function.outer",
+                    ["if"] = "@function.inner",
+                    ["ac"] = "@class.outer",
+                    ["ic"] = "@class.inner",
+                    ["ap"] = "@parameter.outer",
+                    ["ip"] = "@parameter.inner",
+                    ["ai"] = "@call.outer",
+                    ["ii"] = "@call.inner",
+                    ["as"] = { query = "@local.scope", query_group = "locals" },
+                    ["is"] = { query = "@local.scope", query_group = "locals" },
+                },
+            },
+
+            -- vim motions with treesitter textobjects
+            move = {
+                enable = true,
+                -- add movements to jumplist
+                set_jumps = true,
+
+                -- Notes:
+                --
+                -- `query`: by default, can only use items defined in the
+                -- nvim-treesitter-textobjects textobjects.scm query file for each
+                -- language.
+                -- Ex: <https://github.com/nvim-treesitter/nvim-treesitter-textobjects/blob/master/queries/rust/textobjects.scm>
+                --
+                -- `query_group`: use a query defined in one of the other *.scm
+                -- query files. the parameter is the filename w/o the .scm extension.
+                -- Ex (locals): <https://github.com/nvim-treesitter/nvim-treesitter/blob/master/queries/rust/locals.scm>
+
+                goto_next_start = {
+                    ["]f"] = { query = "@function.outer", desc = "goto next function start" },
+                    ["]c"] = { query = "@class.outer", desc = "goto next class start" },
+                    ["]p"] = { query = "@parameter.outer", desc = "goto next parameter start" },
+                    ["]i"] = { query = "@call.outer", desc = "goto next function invocation start" },
+                    ["]s"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope start" },
+                },
+                goto_next_end = {
+                    ["]F"] = { query = "@function.outer", desc = "goto next function end" },
+                    ["]C"] = { query = "@class.outer", desc = "goto next class end" },
+                    ["]P"] = { query = "@parameter.outer", desc = "goto next parameter end" },
+                    ["]I"] = { query = "@call.outer", desc = "goto next function invocation end" },
+                    ["]S"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope end" },
+                },
+                goto_previous_start = {
+                    ["[f"] = { query = "@function.outer", desc = "goto prev function start" },
+                    ["[c"] = { query = "@class.outer", desc = "goto prev class start" },
+                    ["[p"] = { query = "@parameter.outer", desc = "goto prev parameter start" },
+                    ["[i"] = { query = "@call.outer", desc = "goto prev function invocation start" },
+                    ["[s"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope start" },
+                },
+                goto_previous_end = {
+                    ["[F"] = { query = "@function.outer", desc = "goto prev function end" },
+                    ["[C"] = { query = "@class.outer", desc = "goto prev class end" },
+                    ["[P"] = { query = "@parameter.outer", desc = "goto prev parameter end" },
+                    ["[I"] = { query = "@call.outer", desc = "goto prev function invocation end" },
+                    ["[S"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope end" },
+                },
+            },
+
+            -- swap textobjects under the cursor
+            swap = {
+                enable = true,
+                swap_next = {
+                    [">f"] = { query = "@function.outer", desc = "swap w/ next function" },
+                    [">c"] = { query = "@class.outer", desc = "swap w/ next class" },
+                    [">p"] = { query = "@parameter.inner", desc = "swap w/ next parameter" },
+                },
+                swap_previous = {
+                    ["<f"] = { query = "@function.outer", desc = "swap w/ prev function" },
+                    ["<c"] = { query = "@class.outer", desc = "swap w/ prev class" },
+                    ["<p"] = { query = "@parameter.inner", desc = "swap w/ prev parameter" },
+                },
             },
         },
 
-        -- vim motions with treesitter textobjects
-        move = {
+        -- nvim-treesitter-endwise - auto-add `end` block to lua, bash, ruby, etc...
+        endwise = {
             enable = true,
-            -- add movements to jumplist
-            set_jumps = true,
-
-            -- Notes:
-            --
-            -- `query`: by default, can only use items defined in the
-            -- nvim-treesitter-textobjects textobjects.scm query file for each
-            -- language.
-            -- Ex: <https://github.com/nvim-treesitter/nvim-treesitter-textobjects/blob/master/queries/rust/textobjects.scm>
-            --
-            -- `query_group`: use a query defined in one of the other *.scm
-            -- query files. the parameter is the filename w/o the .scm extension.
-            -- Ex (locals): <https://github.com/nvim-treesitter/nvim-treesitter/blob/master/queries/rust/locals.scm>
-
-            goto_next_start = {
-                ["]f"] = { query = "@function.outer", desc = "goto next function start" },
-                ["]c"] = { query = "@class.outer", desc = "goto next class start" },
-                ["]p"] = { query = "@parameter.outer", desc = "goto next parameter start" },
-                ["]i"] = { query = "@call.outer", desc = "goto next function invocation start" },
-                ["]s"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope start" },
-            },
-            goto_next_end = {
-                ["]F"] = { query = "@function.outer", desc = "goto next function end" },
-                ["]C"] = { query = "@class.outer", desc = "goto next class end" },
-                ["]P"] = { query = "@parameter.outer", desc = "goto next parameter end" },
-                ["]I"] = { query = "@call.outer", desc = "goto next function invocation end" },
-                ["]S"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope end" },
-            },
-            goto_previous_start = {
-                ["[f"] = { query = "@function.outer", desc = "goto prev function start" },
-                ["[c"] = { query = "@class.outer", desc = "goto prev class start" },
-                ["[p"] = { query = "@parameter.outer", desc = "goto prev parameter start" },
-                ["[i"] = { query = "@call.outer", desc = "goto prev function invocation start" },
-                ["[s"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope start" },
-            },
-            goto_previous_end = {
-                ["[F"] = { query = "@function.outer", desc = "goto prev function end" },
-                ["[C"] = { query = "@class.outer", desc = "goto prev class end" },
-                ["[P"] = { query = "@parameter.outer", desc = "goto prev parameter end" },
-                ["[I"] = { query = "@call.outer", desc = "goto prev function invocation end" },
-                ["[S"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope end" },
-            },
         },
+    })
 
-        -- swap textobjects under the cursor
-        swap = {
-            enable = true,
-            swap_next = {
-                [">f"] = { query = "@function.outer", desc = "swap w/ next function" },
-                [">c"] = { query = "@class.outer", desc = "swap w/ next class" },
-                [">p"] = { query = "@parameter.inner", desc = "swap w/ next parameter" },
-            },
-            swap_previous = {
-                ["<f"] = { query = "@function.outer", desc = "swap w/ prev function" },
-                ["<c"] = { query = "@class.outer", desc = "swap w/ prev class" },
-                ["<p"] = { query = "@parameter.inner", desc = "swap w/ prev parameter" },
-            },
-        },
-    },
-
-    -- nvim-treesitter-endwise - auto-add `end` block to lua, bash, ruby, etc...
-    endwise = {
+    -- nvim-treesitter-context - show the context that's past the scroll height
+    require("treesitter-context").setup({
         enable = true,
-    },
-})
+        -- max size of the context window
+        max_lines = 10,
+        -- don't show on small height windows
+        min_window_height = 50,
+        -- max size for any single context in the stack
+        multiline_threshold = 5,
+        -- no separator (background color is enough)
+        separator = "",
+    })
 
--- nvim-treesitter-context - show the context that's past the scroll height
-require("treesitter-context").setup({
-    enable = true,
-    -- max size of the context window
-    max_lines = 10,
-    -- don't show on small height windows
-    min_window_height = 50,
-    -- max size for any single context in the stack
-    multiline_threshold = 5,
-    -- no separator (background color is enough)
-    separator = "",
-})
-
--- nvim-treesitter-textobjects - repeatable movements
---
--- Press ';' to repeat the last move kind, in forward direction
--- Press '+' to repeat the last move kind, in reverse direction
-do
+    -- nvim-treesitter-textobjects - repeatable movements
+    --
+    -- Press ';' to repeat the last move kind, in forward direction
+    -- Press '+' to repeat the last move kind, in reverse direction
     local mod = require("nvim-treesitter.textobjects.repeatable_move")
 
     vim.keymap.set({ "n", "x", "o" }, ";", mod.repeat_last_move_next, { remap = true })
@@ -190,96 +182,90 @@ end
 
 -- nvim-treesitter }}}
 
--- kanagawa - neovim colorscheme {{{
+do -- kanagawa - neovim colorscheme {{{
+    require("kanagawa").setup({
+        -- enable terminal text undercurls (underlines, dotted underlines, etc)
+        undercurl = true,
+        commentStyle = { italic = false },
+        functionStyle = {},
+        keywordStyle = { italic = false },
+        statementStyle = { bold = false },
+        typeStyle = {},
+        -- don't set background color
+        transparent = false,
+        -- dim normal text in other, inactive windows
+        dimInactive = false,
+        -- define g:terminal_color_{0,17}
+        terminalColors = true,
+        -- add/modify theme palette colors
+        -- palette colors: <https://github.com/rebelot/kanagawa.nvim/blob/master/lua/kanagawa/colors.lua>
+        colors = {
+            palette = {
+                fujiWhite = "#deddd3", -- desaturated and lightened
 
-require("kanagawa").setup({
-    -- enable terminal text undercurls (underlines, dotted underlines, etc)
-    undercurl = true,
-    commentStyle = { italic = false },
-    functionStyle = {},
-    keywordStyle = { italic = false },
-    statementStyle = { bold = false },
-    typeStyle = {},
-    -- don't set background color
-    transparent = false,
-    -- dim normal text in other, inactive windows
-    dimInactive = false,
-    -- define g:terminal_color_{0,17}
-    terminalColors = true,
-    -- add/modify theme palette colors
-    -- palette colors: <https://github.com/rebelot/kanagawa.nvim/blob/master/lua/kanagawa/colors.lua>
-    colors = {
-        palette = {
-            fujiWhite = "#deddd3", -- desaturated and lightened
-
-            -- darken the darker dragonBlack's
-            dragonBlack0 = "#0d0c0c",
-            dragonBlack1 = "#0d0c0c",
-            dragonBlack2 = "#12120f",
-            dragonBlack3 = "#12120f",
-        },
-        theme = {
-            wave = {},
-            lotus = {},
-            dragon = {},
-            all = {
-                ui = {
-                    -- Remove the background highlight for gutter
-                    bg_gutter = "none",
+                -- darken the darker dragonBlack's
+                dragonBlack0 = "#0d0c0c",
+                dragonBlack1 = "#0d0c0c",
+                dragonBlack2 = "#12120f",
+                dragonBlack3 = "#12120f",
+            },
+            theme = {
+                wave = {},
+                lotus = {},
+                dragon = {},
+                all = {
+                    ui = {
+                        -- Remove the background highlight for gutter
+                        bg_gutter = "none",
+                    },
                 },
             },
         },
-    },
 
-    -- -- add/modify highlights
-    -- ---@type fun(colors: KanagawaColorsSpec): table<string, table>
-    -- overrides = function(colors)
-    --     local _palette = colors.palette
-    --     local _theme = colors.theme
-    --     return {}
-    -- end,
+        -- -- add/modify highlights
+        -- ---@type fun(colors: KanagawaColorsSpec): table<string, table>
+        -- overrides = function(colors)
+        --     local _palette = colors.palette
+        --     local _theme = colors.theme
+        --     return {}
+        -- end,
 
-    -- when `background` is set, use corresponding theme
-    background = { dark = "dragon", light = "lotus" },
-    -- when `background` is not set, use default theme
-    theme = "dragon",
-    compile = false,
-})
+        -- when `background` is set, use corresponding theme
+        background = { dark = "dragon", light = "lotus" },
+        -- when `background` is not set, use default theme
+        theme = "dragon",
+        compile = false,
+    })
 
--- Uncomment these to inspect kanagawa's exact generated colors/highlights
---
--- -- Dump the current kanagawa colors
--- -- :lua dbg(kanagawa_dump_colors())
--- _G.kanagawa_dump_colors = function()
---     local config = require("kanagawa").config
---     local colors = require("kanagawa.colors").setup({ theme = config.theme, colors = config.colors })
---     return colors
--- end
---
--- -- Dump the current kanagawa highlights
--- -- :lua dbg(kanagawa_dump_highlights())
--- _G.kanagawa_dump_highlights = function()
---     local config = require("kanagawa").config
---     local colors = kanagawa_dump_colors()
---     local highlights = require("kanagawa.highlights").setup(colors, config)
---     return highlights
--- end
+    -- Dump the current kanagawa colors
+    -- :lua dbg(kanagawa_dump_colors())
+    _G.kanagawa_dump_colors = function()
+        local config = require("kanagawa").config
+        local colors = require("kanagawa.colors").setup({ theme = config.theme, colors = config.colors })
+        return colors
+    end
 
--- kanagawa }}}
+    -- Dump the current kanagawa highlights
+    -- :lua dbg(kanagawa_dump_highlights())
+    _G.kanagawa_dump_highlights = function()
+        local config = require("kanagawa").config
+        local colors = kanagawa_dump_colors()
+        local highlights = require("kanagawa.highlights").setup(colors, config)
+        return highlights
+    end
+end -- kanagawa }}}
 
--- vim-gitgutter - Show git diff in the gutter {{{
+do  -- vim-gitgutter - Show git diff in the gutter {{{
+    -- Mappings:
+    -- <leader>ggt - Toggle git gutter
+    -- <leader>ggd - open git diff split pane for current file
+    -- <leader>hs - Stage hunk
+    -- <leader>hr - Undo hunk
+    -- ]h - Move forward one hunk
+    -- [h - Move backward one hunk
+    -- <motion>ih - <motion> in hunk
+    -- <motion>ah - <motion> around hunk (includes trailing empty lines)
 
--- Mappings:
--- <leader>ggt - Toggle git gutter
--- <leader>ggd - open git diff split pane for current file
--- <leader>hs - Stage hunk
--- <leader>hr - Undo hunk
--- ]h - Move forward one hunk
--- [h - Move backward one hunk
--- <motion>ih - <motion> in hunk
--- <motion>ah - <motion> around hunk (includes trailing empty lines)
-
-do
     local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
     -- Don't automatically set mappings.
@@ -302,41 +288,37 @@ do
     vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)")
     vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)")
     vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)")
-end
+end -- vim-gitgutter }}}
 
--- vim-gitgutter }}}
+do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
+    -- Mappings:
+    --         gd  - goto definition
+    --         gc  - goto declaration
+    --         gi  - goto implementations
+    --         gt  - goto type definition
+    --         gr  - goto references
+    -- <leader>rn  - rename
+    -- <leader>rf  - refactor
+    -- <leader>doc - show docs / symbol hover
+    -- <leader>a   - code action
+    -- <leader>di  - diagnostic info
+    -- <leader>cm  - select an LSP command
+    -- <space>o    - fuzzy search file outline
+    -- <space>s    - fuzzy search project symbols
+    --
+    -- Flutter:
+    -- <leader>fd - flutter devices
+    -- <leader>fr - flutter run
+    -- <leader>ft - flutter hot restart
+    -- <leader>fs - flutter stop
+    -- <leader>fl - flutter dev log
+    --
+    -- ]d, [d     - next/prev linter errors
+    -- <Tab>, <S-Tab> - next/prev completion
+    -- <C-Space>  - trigger completion
+    -- <C-f>      - scroll float window up
+    -- <C-b>      - scroll float window down
 
--- coc.nvim - Complete engine and Language Server support for neovim {{{
-
--- Mappings:
---         gd  - goto definition
---         gc  - goto declaration
---         gi  - goto implementations
---         gt  - goto type definition
---         gr  - goto references
--- <leader>rn  - rename
--- <leader>rf  - refactor
--- <leader>doc - show docs / symbol hover
--- <leader>a   - code action
--- <leader>di  - diagnostic info
--- <leader>cm  - select an LSP command
--- <space>o    - fuzzy search file outline
--- <space>s    - fuzzy search project symbols
---
--- Flutter:
--- <leader>fd - flutter devices
--- <leader>fr - flutter run
--- <leader>ft - flutter hot restart
--- <leader>fs - flutter stop
--- <leader>fl - flutter dev log
---
--- ]d, [d     - next/prev linter errors
--- <Tab>, <S-Tab> - next/prev completion
--- <C-Space>  - trigger completion
--- <C-f>      - scroll float window up
--- <C-b>      - scroll float window down
-
-do
     local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
     local function coc_rpc_ready()
@@ -578,24 +560,20 @@ do
             vim.keymap.set("n", "<leader>fl", ":CocCommand flutter.dev.openDevLog<CR>", opts)
         end
     })
-end
+end -- coc.nvim }}}
 
--- coc.nvim }}}
+do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
+    -- Mappings:
+    --         O - open files search (ignoring files in .gitignore)
+    --  <space>O - open files search (all files)
+    --  <space>/ - grep with pattern
+    --  <space>' - grep using word under cursor
+    --         T - open buffers search
+    -- <space>cm - grep through commits
+    -- <space>cb - grep through commits for the current buffer
+    -- <space>vh - grep through nvim help
+    -- <space>vm - grep through nvim mappings
 
--- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
-
--- Mappings:
---         O - open files search (ignoring files in .gitignore)
---  <space>O - open files search (all files)
---  <space>/ - grep with pattern
---  <space>' - grep using word under cursor
---         T - open buffers search
--- <space>cm - grep through commits
--- <space>cb - grep through commits for the current buffer
--- <space>vh - grep through nvim help
--- <space>vm - grep through nvim mappings
-
-do
     vim.g.fzf_command_prefix = "Fzf"
     vim.g.fzf_files_options = { "--ansi" }
 
@@ -693,13 +671,9 @@ do
     vim.keymap.set("n", "<space>vh", vim.cmd.FzfHelptags, opts)
     vim.keymap.set("n", "<space>vm", vim.cmd.FzfMaps, opts)
     vim.keymap.set("n", "<space>man", vim.cmd.FzfMan, opts)
-end
+end -- fzf.vim }}}
 
--- }}}
-
--- NERDCommenter - Easily comment lines or blocks of text {{{
-
-do
+do  -- NERDCommenter - Easily comment lines or blocks of text {{{
     -- Mappings:
     -- <leader>c<space> - Toggle current line comment
     -- <leader>cb - Block comment
@@ -727,24 +701,16 @@ do
     local opts = { silent = true, remap = false }
     vim.keymap.set({ "n", "x" }, "<leader>c<Space>", "<Plug>NERDCommenterToggle", opts)
     vim.keymap.set({ "n", "x" }, "<leader>cb", "<Plug>NERDCommenterMinimal", opts)
-end
+end -- NERDCommenter }}}
 
--- }}}
-
--- SudoEdit.vim - Easily write to protected files {{{
-
-do
+do  -- SudoEdit.vim - Easily write to protected files {{{
     -- Use `pkexec` on more recent Ubuntu/Debian/Pop!_OS
     if vim.fn.executable("pkexec") then
         vim.g.sudoAuth = "pkexec"
     end
-end
+end -- SudoEdit.vim }}}
 
--- SudoEdit.vim }}}
-
--- vim-airline - Lightweight yet fancy status line {{{
-
-do
+do  -- vim-airline - Lightweight yet fancy status line {{{
     vim.go.laststatus = 2
 
     -- enable powerline font symbols
@@ -768,16 +734,12 @@ do
     -- straight separators for tabline
     vim.g["airline#extensions#tabline#left_sep"] = ""
     vim.g["airline#extensions#tabline#left_alt_sep"] = "|"
-end
+end -- vim-airline }}}
 
--- vim-airline }}}
-
--- Recover.vim - Show a diff when recovering swp files {{{
-
--- Keep swap file
--- :FinishRecovery
-
--- }}}
+do  -- Recover.vim - Show a diff when recovering swp files {{{
+    -- Keep swap file
+    -- :FinishRecovery
+end -- Recover.vim }}}
 
 -- PLUGINS }}}
 
