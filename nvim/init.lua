@@ -16,7 +16,7 @@ end
 
 -- PRELUDE }}}
 
--- LUA PLUGINS {{{
+-- PLUGINS {{{
 
 -- lua utils {{{
 
@@ -266,10 +266,6 @@ require("kanagawa").setup({
 -- end
 
 -- kanagawa }}}
-
--- LUA PLUGINS }}}
-
--- VIM PLUGINS {{{
 
 -- vim-gitgutter - Show git diff in the gutter {{{
 
@@ -701,105 +697,91 @@ end
 
 -- }}}
 
+-- NERDCommenter - Easily comment lines or blocks of text {{{
+
+do
+    -- Mappings:
+    -- <leader>c<space> - Toggle current line comment
+    -- <leader>cb - Block comment
+
+    -- disable all default key bindings
+    vim.g.NERDCreateDefaultMappings = 0
+
+    -- Add spaces after comment delimiters by default
+    vim.g.NERDSpaceDelims = 1
+
+    -- Align line-wise comment delimiters flush left instead of following code indentation
+    vim.g.NERDDefaultAlign = "left"
+
+    -- Allow commenting and inverting empty lines (useful when commenting a region)
+    vim.g.NERDCommentEmptyLines = 1
+
+    -- custom comment formats
+    vim.g.NERDCustomDelimiters = {
+        c = { left = "//", leftAlt = "/*", rightAlt = "*/", },
+        dart = { left = '//', },
+        dtrace = { left = '//', },
+    }
+
+    -- key bindings
+    local opts = { silent = true, remap = false }
+    vim.keymap.set({ "n", "x" }, "<leader>c<Space>", "<Plug>NERDCommenterToggle", opts)
+    vim.keymap.set({ "n", "x" }, "<leader>cb", "<Plug>NERDCommenterMinimal", opts)
+end
+
+-- }}}
+
+-- SudoEdit.vim - Easily write to protected files {{{
+
+do
+    -- Use `pkexec` on more recent Ubuntu/Debian/Pop!_OS
+    if vim.fn.executable("pkexec") then
+        vim.g.sudoAuth = "pkexec"
+    end
+end
+
+-- SudoEdit.vim }}}
+
+-- vim-airline - Lightweight yet fancy status line {{{
+
+do
+    vim.go.laststatus = 2
+
+    -- enable powerline font symbols
+    vim.g.airline_powerline_fonts = 1
+
+    vim.g.airline_symbols = vim.tbl_deep_extend("force", vim.g.airline_symbols or {}, {
+        branch = "",
+        readonly = "",
+        linenr = "",
+        maxlinenr = "",
+    })
+
+    vim.g.airline_left_sep = ""
+    vim.g.airline_left_alt_sep = ""
+    vim.g.airline_right_sep = ""
+    vim.g.airline_right_alt_sep = ""
+
+    -- airline buffer tab line "
+    vim.g["airline#extensions#tabline#enabled"] = 1
+
+    -- straight separators for tabline
+    vim.g["airline#extensions#tabline#left_sep"] = ""
+    vim.g["airline#extensions#tabline#left_alt_sep"] = "|"
+end
+
+-- vim-airline }}}
+
+-- Recover.vim - Show a diff when recovering swp files {{{
+
+-- Keep swap file
+-- :FinishRecovery
+
+-- }}}
+
+-- PLUGINS }}}
+
 vim.cmd([[
-
-" NERDCommenter - Easily comment lines or blocks of text {{{
-
-    " Mappings:
-    " <leader>c<space> - Toggle current line comment
-    " <leader>cb - Block comment
-
-    " disable all default key bindings
-    let g:NERDCreateDefaultMappings = 0
-
-    " Add spaces after comment delimiters by default
-    let g:NERDSpaceDelims = 1
-
-    " Align line-wise comment delimiters flush left instead of following code indentation
-    let g:NERDDefaultAlign = 'left'
-
-    " Allow commenting and inverting empty lines (useful when commenting a region)
-    let g:NERDCommentEmptyLines = 1
-
-    " custom comment formats
-    let g:NERDCustomDelimiters = {
-                \ 'c': { 'left': '//', 'leftAlt': '/*', 'rightAlt': '*/' },
-                \ 'dart': { 'left': '//' },
-                \ 'dtrace': { 'left': '//' },
-                \ }
-
-    " key bindings
-    nnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
-    xnoremap <silent> <leader>c<Space> <Plug>NERDCommenterToggle
-
-    nnoremap <silent> <leader>cb <Plug>NERDCommenterMinimal
-    xnoremap <silent> <leader>cb <Plug>NERDCommenterMinimal
-
-" NERDCommenter }}}
-
-" SudoEdit.vim - Easily write to protected files {{{
-
-    " Use `pkexec` on more recent Ubuntu/Debian/Pop!_OS
-    if executable('pkexec')
-        let g:sudoAuth='pkexec'
-    endif
-
-" SudoEdit.vim }}}
-
-" vim-airline - Lightweight yet fancy status line {{{
-
-    set laststatus=2
-
-    if !exists('g:airline_symbols')
-        let g:airline_symbols = {}
-    endif
-
-    " Enable Powerline fonts if we're not on WSL
-    if !has('wsl')
-        " If these look like garbage, then you need to install the patched
-        " powerline fonts: https://github.com/powerline/fonts
-
-        let g:airline_powerline_fonts=1
-
-        let g:airline_symbols.branch = ''
-        let g:airline_symbols.readonly = ''
-        let g:airline_symbols.linenr = ''
-        let g:airline_symbols.maxlinenr = ''
-
-        let g:airline_left_sep = ''
-        let g:airline_left_alt_sep = ''
-        let g:airline_right_sep = ''
-        let g:airline_right_alt_sep = ''
-    else
-        let g:airline_symbols.space = ' '
-        let g:airline_symbols.branch = '[br]'
-        let g:airline_symbols.readonly = '[ro]'
-        let g:airline_symbols.linenr = '[nr]'
-        let g:airline_symbols.maxlinenr = '[mx]'
-
-        let g:airline_left_sep = '>'
-        let g:airline_left_alt_sep = '|'
-        let g:airline_right_sep = '<'
-        let g:airline_right_alt_sep = '|'
-    endif
-
-    " airline buffer tab line "
-    let g:airline#extensions#tabline#enabled = 1
-
-    " straight separators for tabline
-    let g:airline#extensions#tabline#left_sep = ''
-    let g:airline#extensions#tabline#left_alt_sep = '|'
-
-" vim-airline }}}
-
-" Recover.vim - Show a diff when recovering swp files {{{
-
-    " Keep swap file
-    " :FinishRecovery
-
-" }}}
-
-" VIM PLUGINS }}}
 
 " GENERAL {{{
 
