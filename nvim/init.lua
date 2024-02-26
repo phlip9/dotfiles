@@ -1,32 +1,33 @@
--- PRELUDE {{{
+do -- PRELUDE {{{
+    -- enable experimental lua module loader w/ byte-code cache
+    vim.loader.enable()
 
--- enable experimental lua module loader w/ byte-code cache
-vim.loader.enable()
+    -- Track the "generation" number for sourcing `init.lua`.
+    -- Used to ensure re-sourcing will re-run "one-time" init in various places.
+    if _G.my_init_generation == nil then
+        _G.my_init_generation = 0
+    else
+        _G.my_init_generation = _G.my_init_generation + 1
+    end
 
--- Rebind mapleader to something more accessible.
-vim.g.mapleader = ","
+    -- Rebind mapleader to something more accessible.
+    vim.g.mapleader = ","
 
--- Track the "generation" number for sourcing `init.lua`.
--- Used to ensure re-sourcing will re-run "one-time" init in various places.
-if _G.my_init_generation == nil then
-    _G.my_init_generation = 0
-else
-    _G.my_init_generation = _G.my_init_generation + 1
-end
-
--- PRELUDE }}}
+    -- `string` extension methods
+    require("util.stringext")
+end -- PRELUDE }}}
 
 -- PLUGINS {{{
 
 do -- lua utils {{{
     -- Pretty-print any lua value and display it in a temp buffer
-    _G.dbg = function(...)
+    function _G.dbg(...)
         return require("util").dbg(...)
     end
 
     -- Unload and then `require` a module
     ---@param modname string
-    _G.rerequire = function(modname)
+    function _G.rerequire(modname)
         return require("util").rerequire(modname)
     end
 end -- lua utils }}}
@@ -374,9 +375,6 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
     end
 
 
-    -- autocmd group for all coc.nvim autocmds
-    vim.api.nvim_create_augroup("CocGroup", {})
-
     -- If the autocomplete window is open, use <Tab>/<S-Tab> to goto the next/prev entry.
     -- If there's no preceeding whitespace, use <Tab> to start autocomplete.
     -- Else normal <Tab>/<S-Tab> behavior.
@@ -508,20 +506,21 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
             coc_buffer_init()
         end)
     end
+    local group = vim.api.nvim_create_augroup("CocGroup", {})
     vim.api.nvim_create_autocmd("User", {
-        group = "CocGroup",
+        group = group,
         pattern = "CocNvimInit",
         desc = "Coc LSP post-init setup",
         callback = coc_buffer_maybe_init,
     })
     vim.api.nvim_create_autocmd("BufEnter", {
-        group = "CocGroup",
+        group = group,
         pattern = "*",
         desc = "Coc LSP buffer setup",
         callback = coc_buffer_maybe_init,
     })
     vim.api.nvim_create_autocmd("SourcePost", {
-        group = "CocGroup",
+        group = group,
         pattern = "*/nvim/init.lua",
         desc = "Coc LSP post-source setup",
         callback = coc_buffer_maybe_init,
@@ -530,7 +529,7 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
     -- When filling out parameters in a function after autocomplete, this shows the
     -- param docs.
     vim.api.nvim_create_autocmd("User", {
-        group = "CocGroup",
+        group = group,
         pattern = "CocJumpPlaceholder",
         desc = "Update signature help on jump placeholder",
         callback = function() vim.fn.CocActionAsync("showSignatureHelp") end,
@@ -548,7 +547,7 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
 
     -- ft: flutter
     vim.api.nvim_create_autocmd("FileType", {
-        group = "CocGroup",
+        group = group,
         pattern = "dart",
         desc = "coc.nvim + dart keybinds",
         callback = function()
@@ -633,6 +632,8 @@ do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
 
     local function fzf_man_pages(cmd)
         local spec = {
+            -- man -k '.*<args>(<page-number>)'
+            -- this searches all man page "headlines" with the given regex
             source = ("man -k '%s.*\\(\\d\\)'"):format(vim.fn.shellescape(cmd.args)),
             sink = function(out)
                 local space_idx = out:find(" ", 0, true) or -1
@@ -711,7 +712,7 @@ do  -- SudoEdit.vim - Easily write to protected files {{{
 end -- SudoEdit.vim }}}
 
 do  -- vim-airline - Lightweight yet fancy status line {{{
-    vim.go.laststatus = 2
+    vim.o.laststatus = 2
 
     -- enable powerline font symbols
     vim.g.airline_powerline_fonts = 1
@@ -734,6 +735,9 @@ do  -- vim-airline - Lightweight yet fancy status line {{{
     -- straight separators for tabline
     vim.g["airline#extensions#tabline#left_sep"] = ""
     vim.g["airline#extensions#tabline#left_alt_sep"] = "|"
+
+    -- Minimalistic Airline theme with fixed backgrounds for terminal transparency
+    vim.g.airline_theme = "crayon3"
 end -- vim-airline }}}
 
 do  -- Recover.vim - Show a diff when recovering swp files {{{
@@ -743,244 +747,198 @@ end -- Recover.vim }}}
 
 -- PLUGINS }}}
 
-vim.cmd([[
+do -- GENERAL {{{
+    -- don't pass messages to |ins-completion-menu|.
+    vim.o.shortmess = vim.o.shortmess:append_once("c")
+end -- GENERAL }}}
 
-" GENERAL {{{
+do  -- VISUAL {{{
+    -- Show line numbers
+    vim.o.number = true
+    -- Display the current vim mode
+    vim.o.showmode = true
+    -- use RGB colors
+    vim.o.termguicolors = true
+    -- Highlight the 80+1'th column to help keep text under 80 characters per line
+    vim.o.colorcolumn = "81"
+    -- Always display the sign column to avoid flickering w/ gitgutter
+    vim.o.signcolumn = "yes"
+    -- show matching delimiters
+    vim.o.showmatch = true
+    -- -- uber ruler
+    -- vim.o.rulerformat = "%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)"
 
-    filetype plugin indent on       " detect filetypes
-    syntax on                       " syntax highlighting
+    -- colorscheme
+    vim.o.background = "dark"
+    vim.cmd("colorscheme kanagawa")
+end -- VISUAL }}}
 
-    set history=1000                " make the history larger
-    set hidden                      " change buffers w/o having to write first
-    set mouse=a                     " enable mouse for all modes
-    set shortmess+=c                " don't pass messages to |ins-completion-menu|.
+do  -- BEHAVIOR {{{
+    -- ignore case by default when searching
+    vim.o.ignorecase = true
+    -- case sensitive when search includes uppercase characters
+    vim.o.smartcase = true
+    -- command completion mode
+    vim.o.wildmode = "list:longest,full"
+    -- don't wrap lines by default
+    vim.o.wrap = false
+    -- backspace and cursor keys also wrap
+    vim.o.whichwrap = "b,s,h,l,<,>,[,]"
+    -- lines to scroll when cursor leaves screen
+    vim.o.scrolljump = 5
+    -- min # of lines to keep below cursor
+    vim.o.scrolloff = 3
+    -- always use /g on :s substitution
+    vim.o.gdefault = true
+    -- place yanked text into the clipboard
+    vim.o.clipboard = vim.o.clipboard:append_once("unnamedplus")
+    -- use nvim built-in man viewer
+    vim.o.keywordprg = ":Man"
 
-" GENERAL }}}
+    -- " Remove trailing whitespaces and ^M chars
+    -- autocmd FileType c,cpp,java,php,js,python,twig,xml,yml,vim,nix,dart
+    --             \ autocmd BufWritePre <buffer>
+    --             \     :call setline(1,map(getline(1,"$"),
+    --             \         'substitute(v:val,"\\s\\+$","","")'))
 
-" VISUAL {{{
+    ---@diagnostic disable-next-line: unused-local
+    function _G.MyFoldText(foldstart, foldend, foldlevel)
+        local line = vim.api.nvim_buf_get_lines(0, foldstart - 1, foldstart, true)[1]
+        return line .. " "
+    end
 
-    set nu                          " set line numbers
-    set showmode                    " show current display mode
-    set termguicolors               " use RGB colors
+    vim.o.foldtext = "v:lua.MyFoldText(v:foldstart, v:foldend, v:foldlevel)"
 
-    " Highlight the 80+1'th column to help keep text under 80 characters per
-    " line
-    set cc=81
+    -- custom math digraphs
+    -- Directions: type <C-K><digraph-code> to write digraph
+    -- Example: <C-K>na => ℕ
+    vim.fn.digraph_setlist({
+        -- natural numbers
+        { "na", "ℕ" },
+        -- integers
+        { "IN", "ℤ" },
+        -- small black right-pointing triangle
+        { "tr", "▸" },
+        -- vector left bracket
+        { "bl", "⟨" },
+        -- vector right bracket
+        { "br", "⟩" },
+        -- french quote left
+        { "<<", "‹" },
+        -- french quote right
+        { ">>", "›" },
+        -- forall
+        { "fa", "∀" },
+        -- there exists
+        { "te", "∃" },
+        -- not
+        { "no", "¬" },
+        -- not equal
+        { "ne", "≠" },
+        -- not in set
+        { "ni", "∉" },
+        -- in set
+        { "in", "∈" },
+        -- and
+        { "an", "∧" },
+        -- or
+        { "or", "∨" },
+        -- multiplication
+        { "xx", "×" },
+        -- o-plus
+        { "op", "⊕" },
+        -- superscript minus
+        { "s-", "⁻" },
+        -- superscript one
+        { "s1", "¹" },
+        -- divides
+        { "di", "∣" },
+        -- curly bracket left
+        { "cl", "⦃" },
+        -- curly bracket right
+        { "cl", "⦄" },
+        -- equivalence
+        { "eq", "≡" },
+        -- approx
+        { "ap", "≈" },
+        -- up arrow
+        { "up", "↑" },
+        -- sum, sigma (upper)
+        { "su", "∑" },
+    })
+end -- BEHAVIOR }}}
 
-    if has('cmdline_info')
-        set ruler                                           " show ruler
-        set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " uber ruler
-        set showcmd                                         " show partial commands in status line
-    endif
+do  -- TAB SETTINGS {{{
+    -- spaces not tabs
+    vim.o.expandtab = true
+    -- 4 spaces per tab
+    vim.o.shiftwidth = 4
+    -- backspace deletes pseudo-tab
+    vim.o.softtabstop = 4
+    -- tab characters display as 4 spaces
+    vim.o.tabstop = 4
+end -- TAB SETTINGS }}}
 
-    " Always display the sign column to avoid flickering with syntastic and
-    " vim-gitgutter
-    set signcolumn=yes
+do  -- KEYBINDINGS {{{
+    local opts = { silent = true, remap = false }
 
-    " Colorscheme
-    set background=dark
-    colorscheme kanagawa
+    -- Delete `keyworkprg`/man-page keybind
+    vim.keymap.set("v", "K", "<Nop>", opts)
 
-    " Minimalistic Airline theme with fixed backgrounds for terminal
-    " transparency
-    let g:airline_theme = 'crayon3'
+    -- map arrow keys to something more useful (indent/unindent)
+    vim.keymap.set("n", "<Left>", "<<", opts)
+    vim.keymap.set("n", "<Right>", ">>", opts)
 
-" VISUAL }}}
+    vim.keymap.set("v", "<Left>", "<gv", opts)
+    vim.keymap.set("v", "<Right>", ">gv", opts)
 
-" BEHAVIOR {{{
+    -- up/down adds line above/below
+    vim.keymap.set("n", "<Up>", "O<Esc>j", opts)
+    vim.keymap.set("n", "<Down>", "o<Esc>k", opts)
 
-    set backspace=indent,eol,start  " easy backspace
-    set linespace=0                 " reduce space between lines
+    -- replace currently selected text w/o clobbering the yank register
+    -- note: "_ is the blackhole register
+    vim.keymap.set("v", "<leader>p", "\"_dP", opts)
 
-    set showmatch                   " show matching brackets/parenthesis
-    set incsearch                   " find as you search
-    set hlsearch                    " highlight search
-    set ignorecase                  " ignore case
-    set smartcase                   " case sensitive when uc
+    -- " Reload nvimrc
+    vim.keymap.set("n", "<leader>V", ":source $MYVIMRC<CR>:filetype detect<CR>:echo 'nvim config reloaded'<CR>", opts)
 
-    set wildmenu                    " show list instead of just completing
-    set wildmode=list:longest,full  " command completion
-    set whichwrap=b,s,h,l,<,>,[,]   " backspace and cursor keys also wrap
+    -- remap Visual Block selection to something that doesn't conflict with
+    -- system copy/paste
+    vim.keymap.set("n", "<leader>v", "<C-v>", opts)
 
-    set scrolljump=5                " lines to scroll when cursor leaves screen
-    set scrolloff=3                 " min # of lines to keep below cursor
+    -- map S-J and S-K to next and prev buffer
+    vim.keymap.set("n", "J", ":bp<CR>", opts)
+    vim.keymap.set("n", "K", ":bn<CR>", opts)
 
-    set foldenable                  " auto fold code
+    -- map S-H and S-L to undo and redo
+    vim.keymap.set("n", "H", "u", opts)
+    vim.keymap.set("n", "L", "<C-R>", opts)
 
-    set gdefault                    " always use /g on :s substitution
+    -- Window movement w/ CTRL + h,j,k,l
+    vim.keymap.set("n", "<C-h>", "<C-w>h", opts)
+    vim.keymap.set("n", "<C-j>", "<C-w>j", opts)
+    vim.keymap.set("n", "<C-k>", "<C-w>k", opts)
+    vim.keymap.set("n", "<C-l>", "<C-w>l", opts)
 
-    set nowrap                      " don't wrap long lines
+    -- -- re-center screen on C-d, C-u, search next/prev
+    -- vim.keymap.set("n", "<C-d>", "<C-d>zz", opts)
+    -- vim.keymap.set("n", "<C-u>", "<C-u>zz", opts)
+    -- vim.keymap.set("n", "n", "nzzzv", opts)
+    -- vim.keymap.set("n", "N", "Nzzzv", opts)
 
-    set clipboard+=unnamedplus      " place yanked text into the clipboard
+    --
+    -- Terminal Mode
+    --
 
-    set keywordprg=:Man             " use vim built-in man viewer
+    -- Use escape to go back to normal mode
+    vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", opts)
 
-    " Remove trailing whitespaces and ^M chars
-    autocmd FileType c,cpp,java,php,js,python,twig,xml,yml,vim,nix,dart
-                \ autocmd BufWritePre <buffer>
-                \     :call setline(1,map(getline(1,"$"),
-                \         'substitute(v:val,"\\s\\+$","","")'))
-
-    " custom text folding function
-    function! NeatFoldText()
-        let line = ' ' . substitute(getline(v:foldstart), '^\s*"\?\s*\|\s*"\?\s*{{' . '{\d*\s*', '', 'g') . ' '
-        let lines_count = v:foldend - v:foldstart + 1
-        let lines_count_text = '| ' . printf("%10s", lines_count . ' lines') . ' |'
-        let foldchar = matchstr(&fillchars, 'fold:\zs.')
-        let foldtextstart = strpart(repeat(foldchar, v:foldlevel*2) . '|' . line, 0, (winwidth(0)*2)/3)
-        let foldtextend = lines_count_text . repeat(foldchar, 8)
-        let foldtextlength = strlen(substitute(foldtextstart . foldtextend, '.', 'x', 'g')) + &foldcolumn
-        return foldtextstart . repeat(foldchar, winwidth(0)-foldtextlength) . foldtextend
-    endfunction
-
-    set foldtext=NeatFoldText()
-
-    " WSL clipboard hack
-    if has('wsl')
-        let g:clipboard = {
-                    \   'name': 'wsl-clipboard',
-                    \   'copy': {
-                    \      '+': 'clip.exe',
-                    \      '*': 'clip.exe',
-                    \    },
-                    \   'paste': {
-                    \      '+': "sh -c \"powershell.exe Get-Clipboard\" | sed 's/\\r$//'",
-                    \      '*': "sh -c \"powershell.exe Get-Clipboard\" | sed 's/\\r$//'",
-                    \   },
-                    \   'cache_enabled': 1,
-                    \ }
-    endif
-
-    " custom math digraphs
-    " Directions: type <C-K><digraph-code> to write digraph
-    " Example: <C-K>na => ℕ
-
-    " N natural numbers
-    digraphs na 8469
-    " Z integers
-    digraphs IN 8484
-    " ▸ small black right-pointing triangle
-    digraphs tr 9656
-    " ⟩ vector right bracket
-    digraphs br 10217
-    " ⟨ vector left bracket
-    digraphs bl 10216
-    " ‹ french quote left
-    digraphs << 8249
-    " › french quote left
-    digraphs >> 8250
-    " ∀ for all
-    digraphs fa 8704
-    " ∃ there exists
-    digraphs te 8707
-    " ¬ not
-    digraphs no 172
-    " ≠ not equal
-    digraphs ne 8800
-    " ∉ not in
-    digraphs ni 8713
-    " ∈ in
-    digraphs in 8712
-    " ∧ and
-    digraphs an 8743
-    " ∨ or
-    digraphs or 8744
-    " × multiplication
-    digraphs xx 215
-    " ⊕ o-plus
-    digraphs op 8853
-    " ⁻ superscript minus
-    digraphs s- 8315
-    " ¹ superscript one
-    digraphs s1 185
-    " ∣ divides
-    digraphs di 8739
-    " ⦃ left curly bracket
-    digraphs cl 10627
-    " ⦄ right curly bracket
-    digraphs cr 10628
-    " ≡ equivalence
-    digraphs eq 8801
-    " ↑ up arrow
-    digraphs up 8593
-    " ≈ approx
-    digraphs ap 8776
-    " ∑ sum, sigma (upper)
-    digraphs su 8721
-
-" BEHAVIOR }}}
-
-" TAB SETTINGS {{{
-
-    set tabpagemax=15               " max # of tabs per page
-    set autoindent                  " indent at same level as previous line
-    set expandtab                   " space tabs
-    set shiftwidth=4                " 4 spaces per tab
-    set softtabstop=4               " backspace deletes pseudo-tab
-    set tabstop=4                   " indent every 4 columns
-
-" TAB SETTINGS }}}
-
-" KEYBINDINGS {{{
-
-    " Rebind Arrow keys to something more useful
-    " Left and Right indent and un-indent the current line/selection
-    nnoremap <silent><Left> <<
-    nnoremap <silent><Right> >>
-
-    vnoremap <silent><Left> <gv
-    vnoremap <silent><Right> >gv
-
-    " replace currently selected text w/o clobbering the yank register
-    " note: "_ is the blackhole register
-    vnoremap <silent><leader>p "_dP
-
-    " Bind Up and Down keys to add line above and below
-    nnoremap <silent><Up> O<Esc>j
-    nnoremap <silent><Down> o<Esc>k
-
-    " remap Visual Block selection to something that doesn't conflict with
-    " system copy/paste
-    nnoremap <leader>v <C-v>
-
-    " map S-J and S-K to next and prev buffer
-    nnoremap J :bp<CR>
-    nnoremap K :bn<CR>
-
-    " map S-H and S-L to undo and redo
-    nnoremap H u
-    nnoremap L <C-R>
-
-    " Window movement w/ CTRL + h,j,k,l
-    nnoremap <C-h> <C-w>h
-    nnoremap <C-j> <C-w>j
-    nnoremap <C-k> <C-w>k
-    nnoremap <C-l> <C-w>l
-
-    " re-center screen on C-d, C-u, search next/prev
-    nnoremap <C-d> <C-d>zz
-    nnoremap <C-u> <C-u>zz
-    nnoremap n nzzzv
-    nnoremap N Nzzzv
-
-    " Reload nvimrc
-    nnoremap <silent> <leader>V :source $MYVIMRC<CR>:filetype detect<CR>:echo 'nvim config reloaded'<CR>
-
-    " Terminal Mode
-    " Use escape to go back to normal mode
-    tnoremap <Esc> <C-\><C-n>
-    " Window movement in terminal mode w/ CTRL + h,j,k,l
-    tnoremap <C-h> <C-\><C-n><C-W>h
-    tnoremap <C-j> <C-\><C-n><C-W>j
-    tnoremap <C-k> <C-\><C-n><C-W>k
-    tnoremap <C-l> <C-\><C-n><C-W>l
-
-    " Go to the next/previous error (in the same buffer)
-    nnoremap <silent> <leader>en :lnext<CR>
-    nnoremap <silent> <leader>ep :lprevious<CR>
-
-" KEYBINDINGS }}}
-
-]])
+    -- Window movement in terminal mode w/ CTRL + h,j,k,l
+    vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-W>h", opts)
+    vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-W>j", opts)
+    vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-W>k", opts)
+    vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-W>l", opts)
+end -- KEYBINDINGS }}}
 
 --  vim: foldmethod=marker
