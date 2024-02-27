@@ -1,6 +1,6 @@
 {
-  # # a reference to the home-manager config object this fn outputs
-  # config,
+  # a reference to the home-manager config object this fn outputs
+  config,
   # nixpkgs
   pkgs,
   # # nixpkgs.lib
@@ -44,6 +44,12 @@
     ./mods/ssh.nix
     ./mods/tmux.nix
   ];
+
+  # Not (currently) a NixOS machine. This makes home-manager integrate more
+  # nicely with non-NixOS by linking xdg-applications etc
+  targets.genericLinux.enable = true;
+  xdg.mime.enable = true;
+  xdg.systemDirs.data = ["${config.home.homeDirectory}/.nix-profile/share"];
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
