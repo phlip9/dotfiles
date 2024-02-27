@@ -169,16 +169,17 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
     --
     -- Press ';' to repeat the last move kind, in forward direction
     -- Press '+' to repeat the last move kind, in reverse direction
-    local mod = require("nvim-treesitter.textobjects.repeatable_move")
+    local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
-    vim.keymap.set({ "n", "x", "o" }, ";", mod.repeat_last_move_next, { remap = true })
-    vim.keymap.set({ "n", "x", "o" }, "+", mod.repeat_last_move_previous, { remap = true })
+    local opts = { silent = true, remap = false }
+    vim.keymap.set({ "n", "x", "o" }, ";", repeatable_move.repeat_last_move_next, opts)
+    vim.keymap.set({ "n", "x", "o" }, "+", repeatable_move.repeat_last_move_previous, opts)
 
     -- Make builtin f, F, t, T also repeatable
-    vim.keymap.set({ "n", "x", "o" }, "f", mod.builtin_f)
-    vim.keymap.set({ "n", "x", "o" }, "F", mod.builtin_F)
-    vim.keymap.set({ "n", "x", "o" }, "t", mod.builtin_t)
-    vim.keymap.set({ "n", "x", "o" }, "T", mod.builtin_T)
+    vim.keymap.set({ "n", "x", "o" }, "f", repeatable_move.builtin_f, opts)
+    vim.keymap.set({ "n", "x", "o" }, "F", repeatable_move.builtin_F, opts)
+    vim.keymap.set({ "n", "x", "o" }, "t", repeatable_move.builtin_t, opts)
+    vim.keymap.set({ "n", "x", "o" }, "T", repeatable_move.builtin_T, opts)
 end
 
 -- nvim-treesitter }}}
@@ -272,23 +273,25 @@ do  -- vim-gitgutter - Show git diff in the gutter {{{
     -- Don't automatically set mappings.
     vim.g.gitgutter_map_keys = false
 
-    vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, { remap = false })
-    vim.keymap.set("n", "<leader>ggd", vim.cmd.GitGutterDiffOrig, { remap = false })
-    vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, { remap = false })
-    vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, { remap = false })
+    local opts = { silent = true, remap = false }
+    vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, opts)
+    vim.keymap.set("n", "<leader>ggd", vim.cmd.GitGutterDiffOrig, opts)
+    vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, opts)
+    vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, opts)
+    vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, opts)
 
     -- Make GitGutter(Next|Prev)Hunk repeatable
     local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
         vim.cmd.GitGutterNextHunk,
         vim.cmd.GitGutterPrevHunk
     )
-    vim.keymap.set({ "n", "x", "o" }, "]h", move_hunk_next)
-    vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev)
+    vim.keymap.set({ "n", "x", "o" }, "]h", move_hunk_next, opts)
+    vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev, opts)
 
-    vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)")
-    vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)")
-    vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)")
-    vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)")
+    vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)", opts)
+    vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)", opts)
+    vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)", opts)
+    vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)", opts)
 end -- vim-gitgutter }}}
 
 do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
