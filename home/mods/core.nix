@@ -30,9 +30,10 @@
       # GNU core utils
       coreutils
       file
-      which
-      gnused
+      findutils
       gawk
+      gnused
+      which
 
       # archives
       zip
