@@ -128,6 +128,9 @@
     devShells = forEachPkgs (pkgs: {
       default = pkgs.mkShellNoCC {
         packages = [
+          # nix language server
+          pkgs.nil
+
           # Uncompromising nix code formatter
           # <https://github.com/kamadorueda/alejandra>
           pkgs.alejandra

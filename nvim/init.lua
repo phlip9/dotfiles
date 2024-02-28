@@ -412,7 +412,7 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
     vim.keymap.set("i", "<C-Space>", "coc#refresh()", opts)
 
     -- code navigation
-    local opts = { silent = true }
+    local opts = { silent = true, remap = false }
     vim.keymap.set("n", "gd", "<Plug>(coc-definition)", opts)
     vim.keymap.set("n", "gc", "<Plug>(coc-declaration)", opts)
     vim.keymap.set("n", "gi", "<Plug>(coc-implementation)", opts)
@@ -445,7 +445,7 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
             end
             vim.api.nvim_command(cmd)
         end
-    end, { silent = true })
+    end, opts)
 
     -- Remap <C-f> and <C-b> to scroll float windows/popups.
     local opts = { silent = true, expr = true, nowait = true, remap = false }
@@ -635,9 +635,8 @@ do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
 
     local function fzf_man_pages(cmd)
         local spec = {
-            -- man -k '.*<args>(<page-number>)'
-            -- this searches all man page "headlines" with the given regex
-            source = ("man -k '%s.*\\(\\d\\)'"):format(vim.fn.shellescape(cmd.args)),
+            -- this searches all man page "headlines"
+            source = ("man -k '%s'"):format(vim.fn.shellescape(cmd.args)),
             sink = function(out)
                 local space_idx = out:find(" ", 0, true) or -1
                 local man_page = out:sub(0, space_idx)

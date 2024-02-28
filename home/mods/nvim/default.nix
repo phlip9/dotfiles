@@ -174,24 +174,38 @@
     pkgs.writers.writeJSON
     "coc-settings.json"
     myDotfilesSpecificCocSettings;
+
+  # The final, wrapped neovim package.
+  finalNeovimPackage = pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped neovimConfig;
 in {
-  home.packages = [
-    (pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped neovimConfig)
-  ];
+  options = {
+    programs.my-neovim.finalPackage = lib.mkOption {
+      type = lib.types.package;
+      readOnly = true;
+      description = "Resulting customized neovim package.";
+    };
+  };
+  config = {
+    programs.my-neovim.finalPackage = finalNeovimPackage;
 
-  # symlink ~/.config/nvim to `dotfiles/nvim` dir.
-  xdg.configFile."nvim".source = mkOutOfStoreSymlink "${dotfilesDir}/nvim";
+    home.packages = [
+      finalNeovimPackage
+    ];
 
-  # symlink `~/.local/share/lua-language-server` to `${pkgs.lua-language-server}/share/lua-language-server`.
-  #
-  # ## Why:
-  #
-  # (1) I don't want to manage the `coc-settings.json` via nix, since then I lose
-  #     the extremely nice auto-complete for all the random settings.
-  # (2) `coc-sumneko-lua` can't seem to locate the lua LSP when it's in the
-  #     $PATH, so we need to place it somewhere fixed, like in ~/.local/...
-  xdg.dataFile."lua-language-server".source = "${pkgs.lua-language-server}/share/lua-language-server";
+    # symlink ~/.config/nvim to `dotfiles/nvim` dir.
+    xdg.configFile."nvim".source = mkOutOfStoreSymlink "${dotfilesDir}/nvim";
 
-  # Configure the lua LSP for local nvim plugin development.
-  home.file."dev/dotfiles/.vim/coc-settings.json".source = "${myDotfilesSpecificCocSettingsFile}";
+    # symlink `~/.local/share/lua-language-server` to `${pkgs.lua-language-server}/share/lua-language-server`.
+    #
+    # ## Why:
+    #
+    # (1) I don't want to manage the `coc-settings.json` via nix, since then I lose
+    #     the extremely nice auto-complete for all the random settings.
+    # (2) `coc-sumneko-lua` can't seem to locate the lua LSP when it's in the
+    #     $PATH, so we need to place it somewhere fixed, like in ~/.local/...
+    xdg.dataFile."lua-language-server".source = "${pkgs.lua-language-server}/share/lua-language-server";
+
+    # Configure the lua LSP for local nvim plugin development.
+    home.file."dev/dotfiles/.vim/coc-settings.json".source = "${myDotfilesSpecificCocSettingsFile}";
+  };
 }

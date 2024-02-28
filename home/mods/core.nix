@@ -60,7 +60,7 @@
     ];
 
     home.sessionVariables = {
-      "MANPAGER" = "${pkgs.bat}/bin/bat --language=man --plain";
+      "MANPAGER" = "${config.programs.my-neovim.finalPackage}/bin/nvim +Man!";
     };
 
     # Use consistent man across platforms
