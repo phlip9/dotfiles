@@ -942,6 +942,24 @@ do  -- KEYBINDINGS {{{
     vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-W>j", opts)
     vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-W>k", opts)
     vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-W>l", opts)
+
+    --
+    -- "lazy-shift" aliases
+    --
+    vim.cmd([[
+        command! -bar -nargs=* -complete=file -range=% -bang W         <line1>,<line2>write<bang> <args>
+        command! -bar -nargs=* -complete=file -range=% -bang Write     <line1>,<line2>write<bang> <args>
+        command! -bar -nargs=* -complete=file -range=% -bang Wq        <line1>,<line2>wq<bang> <args>
+        command! -bar                                  -bang Wqall     wqa<bang>
+        command! -bar -nargs=* -complete=file          -bang E         edit<bang> <args>
+        command! -bar -nargs=* -complete=file          -bang Edit      edit<bang> <args>
+        command! -bar                                  -bang Q         quit<bang>
+        command! -bar                                  -bang Quit      quit<bang>
+        command! -bar                                  -bang Qall      qall<bang>
+        command! -bar -nargs=? -complete=help                Help      help <args>
+        command! -bar                                        Messages  messages
+        command! -bar -nargs=+ -complete=file          -bang Source    source<bang> <args>
+    ]])
 end -- KEYBINDINGS }}}
 
 --  vim: foldmethod=marker
