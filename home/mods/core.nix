@@ -63,6 +63,15 @@
       "MANPAGER" = "${pkgs.bat}/bin/bat --language=man --plain";
     };
 
+    # Use consistent man across platforms
+    programs.man = {
+      enable = true;
+
+      # re-index man pages so `apropos`, `man -k`, and friends work.
+      # adds a few seconds to home-manager rebuild time.
+      generateCaches = true;
+    };
+
     programs.eza = {
       enable = true;
 

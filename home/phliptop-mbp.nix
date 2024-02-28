@@ -103,8 +103,4 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
-
-  # silence weird error after opening new shell:
-  #   ~/.nix-profile/bin/manpath: can't set the locale; make sure $LC_* and $LANG are correct
-  programs.man.enable = false;
 }
