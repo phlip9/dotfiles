@@ -1,4 +1,11 @@
-{...}: let
+{
+  lib,
+  pkgs,
+  ...
+}: let
+  getBin = lib.getBin;
+  writeBash = pkgs.writers.writeBash;
+
   stripNewlines = str: builtins.replaceStrings ["\n"] [""] str;
 in {
   # home-manager options:
@@ -72,6 +79,36 @@ in {
             | sed -n -E "s/^refs\\/heads\\/(master|main)$/\\1/p"
             | head --lines=1
       '';
+
+      # Open `nvim` with all unmerged branches (use --all to view all branches).
+      # Then delete all the selected branches.
+      rm-merged-branches = let
+        jq = "${getBin pkgs.jq}/bin/jq";
+        xargs = "${getBin pkgs.findutils}/bin/xargs";
+        script = writeBash "git-rm-merged-branches" ''
+          set -euo pipefail
+
+          # Filter out current branch and master/main branches
+          CURRENT_BRANCH="$(git branch --show-current --format='%(refname:short)')"
+          JQ_SELECT_BRANCH_NAME=".branch != \"master\" and .branch != \"main\" and .branch != \"$CURRENT_BRANCH\""
+
+          # By default, branches with no upstream are considered "merged"
+          JQ_SELECT="select($JQ_SELECT_BRANCH_NAME and .upstream == \"\") | .branch"
+          if [[ "$@" == "-a" || "$@" == "--all" ]]; then
+            JQ_SELECT="select($JQ_SELECT_BRANCH_NAME) | .branch"
+          fi
+
+          TEMPFILE=$(mktemp)
+          trap 'rm $TEMPFILE' EXIT
+
+          # List the selected branches and open them in an editor first to
+          # interactively choose which to delete.
+          git branch --list --format='{"branch":"%(refname:short)","upstream":"%(upstream)"}' \
+              | ${jq} -r "$JQ_SELECT" > $TEMPFILE
+          $EDITOR $TEMPFILE
+          ${xargs} git branch --delete --force < $TEMPFILE
+        '';
+      in "!${script}";
 
       #############
       # PR Review #

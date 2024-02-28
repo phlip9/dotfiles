@@ -48,8 +48,6 @@
       fd
       fastmod
       just
-      # TODO: figure out fzf setup on new machine
-      # fzf
 
       # network
       bind.dnsutils # `dig`, `nslookup`, `delv`, `nsupdate`
