@@ -180,6 +180,9 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
     vim.keymap.set({ "n", "x", "o" }, "F", repeatable_move.builtin_F, opts)
     vim.keymap.set({ "n", "x", "o" }, "t", repeatable_move.builtin_t, opts)
     vim.keymap.set({ "n", "x", "o" }, "T", repeatable_move.builtin_T, opts)
+
+    -- tree-sitter-just - grammar for Justfile's
+    -- require("tree-sitter-just").setup({})
 end
 
 -- nvim-treesitter }}}

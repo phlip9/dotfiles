@@ -43,6 +43,30 @@
   # All vim/nvim plugins + a few non-nixpkgs plugins overlayed
   p = pkgs.vimPlugins.extend extraPluginsGenerated;
 
+  # tree-sitter-just - justfile x nvim-treesitter integration
+  # TODO(phlip9): remove when upstreamed
+  tree-sitter-just = rec {
+    rev = "8bad9714bd38897450b09eb45276d1143c90160c";
+    version = builtins.substring 0 7 rev;
+    src = pkgs.fetchFromGitHub {
+      owner = "IndianBoy42";
+      repo = "tree-sitter-just";
+      rev = rev;
+      sha256 = "sha256-9lSLk6d386Si46YCSXQ3Qfw87ZxH89XM5CQShDBSiZA=";
+    };
+    plugin = pkgs.vimUtils.buildVimPlugin {
+      pname = "tree-sitter-just";
+      version = version;
+      src = src;
+      meta.homepage = "https://github.com/IndianBoy42/tree-sitter-just";
+    };
+    grammar = pkgs.tree-sitter.buildGrammar {
+      language = "just";
+      version = version;
+      src = src;
+    };
+  };
+
   # The _lua_ plugins we're actually using. These are separated out so we can
   # add these the lua LSP config when we're working on our nvim config.
   luaPlugins = [
@@ -82,6 +106,9 @@
         q.vim
         q.vimdoc
         q.yaml
+
+        # justfile parser (not upstreamed yet)
+        tree-sitter-just.grammar
       ]);
     }
     # nvim-treesitter-context - show the context that's past the scroll height
@@ -90,6 +117,8 @@
     {plugin = p.nvim-treesitter-endwise;}
     # nvim-treesitter-textobjects - syntax aware text objs + motions
     {plugin = p.nvim-treesitter-textobjects;}
+    # justfile parser (not upstreamed yet)
+    {plugin = tree-sitter-just.plugin;}
   ];
 
   # All plugins we're actually using.
@@ -138,9 +167,6 @@
 
       # vim-bbye - Close a buffer without messing up your layout
       {plugin = p.vim-bbye;}
-
-      # vim-just - Justfile syntax
-      {plugin = p.vim-just;}
     ];
 
   # Using the nixpkgs helper fn as a base, with some manual overrides added after.
