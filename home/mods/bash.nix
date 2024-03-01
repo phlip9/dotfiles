@@ -1,4 +1,5 @@
 {
+  lib,
   config,
   pkgs,
   ...
@@ -9,7 +10,9 @@
     # enable completion for all interactive shells
     enableCompletion = true;
 
-    initExtra = ''
+    # Manage our bashrc outside of nix.
+    # Use `mkAfter` so it's sourced last, after all the other nix stuff.
+    initExtra = lib.mkAfter ''
       source ${config.home.dotfilesDir}/bashrc
     '';
   };
