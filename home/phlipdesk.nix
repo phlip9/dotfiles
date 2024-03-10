@@ -57,6 +57,12 @@
     pkgs.htop
     pkgs.lm_sensors
 
+    # mount remote fs via ssh
+    pkgs.sshfs-fuse
+
+    # binary diff w/ alignment
+    pkgs.biodiff
+
     # Jan AI chat
     (pkgs.appimageTools.wrapType2 rec {
       pname = "Jan";
