@@ -23,6 +23,7 @@
     # maybe someday nix users won't have to live in fucking squalor...
     pkgs.nil
     pkgs.alejandra
+    pkgs.nixpkgs-fmt
   ];
   extraPkgsPath = lib.makeBinPath extraPkgs;
 

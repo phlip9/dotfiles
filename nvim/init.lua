@@ -541,6 +541,13 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
         callback = function() vim.fn.CocActionAsync("showSignatureHelp") end,
     })
 
+    -- coc-settings.json supports comments
+    vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
+        group = group,
+        pattern = "coc-settings.json",
+        command = "set filetype=jsonc",
+    })
+
     -- coc-fzf
     vim.g.coc_fzf_preview = "right:50%"
     local opts = { silent = true, remap = false }
