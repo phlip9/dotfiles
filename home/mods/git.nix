@@ -158,6 +158,10 @@ in {
       cme = "commit --amend --no-edit";
       cmf = "commit --fixup";
       co = "checkout";
+      cp = "cherry-pick";
+      cpa = "cherry-pick --abort";
+      cpc = "cherry-pick --continue";
+      cpe = "cherry-pick --edit-todo";
       d = "diff";
       ds = "diff --staged";
       fo = "fetch origin";
@@ -175,8 +179,9 @@ in {
       plu = "!git pull --ff-only upstream $(git master)";
       pom = "!git push origin $(git master)";
       rb = "rebase";
-      rbe = "rebase --edit-todo";
+      rba = "rebase --abort";
       rbc = "rebase --continue";
+      rbe = "rebase --edit-todo";
       ro = "!git rebase origin/$(git master)";
       ru = "!git rebase upstream/$(git master)";
       s = "status";
@@ -190,6 +195,7 @@ in {
       "*.swp"
       "tags"
       ".idea"
+      "/.vim"
     ];
   };
 }
