@@ -47,15 +47,44 @@
   p = pkgs.vimPlugins.extend extraPluginsGenerated;
 
   # tree-sitter-just - justfile x nvim-treesitter integration
-  # TODO(phlip9): remove when upstreamed
+  # TODO(phlip9): remove when upstreamed and nvim updates to v0.10 (?)
   tree-sitter-just = rec {
     rev = "a909b06b5a9b1051bd06e33bb1c366142cae6e15";
     version = builtins.substring 0 7 rev;
-    src = pkgs.fetchFromGitHub {
-      owner = "IndianBoy42";
-      repo = "tree-sitter-just";
-      rev = rev;
-      sha256 = "sha256-B+TIrOwma6lrn6tZjcyKumsJc/ETOOLJU+7VECLvCFU=";
+    src = pkgs.stdenvNoCC.mkDerivation {
+      pname = "tree-sitter-just-source";
+      version = version;
+      src = pkgs.fetchFromGitHub {
+        owner = "IndianBoy42";
+        repo = "tree-sitter-just";
+        rev = rev;
+        sha256 = "sha256-B+TIrOwma6lrn6tZjcyKumsJc/ETOOLJU+7VECLvCFU=";
+      };
+
+      dontUnpack = true;
+      dontPatch = true;
+      dontConfigure = true;
+      dontBuild = true;
+
+      # Need to use the latest queries for nvim, o/w features like outline
+      # are broken.
+      installPhase = ''
+        runHook preInstall
+
+        shopt -s extglob
+
+        # copy everything except queries dir
+        mkdir $out
+        cp -r $src/!(queries) $out/
+
+        # copy some 'nvim-next' queries into the queries dir
+        mkdir -p $out/queries/just
+        cp $src/queries/just/!(locals|indents|highlights).scm $out/queries/just/
+        cp $src/queries-flavored/nvim-next/*(locals|indents|highlights).scm $out/queries/just/
+        # cp $src/queries-flavored/nvim-next/* $out/queries/just/
+
+        runHook postInstall
+      '';
     };
     plugin = pkgs.vimUtils.buildVimPlugin {
       pname = "tree-sitter-just";
