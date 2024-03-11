@@ -49,13 +49,13 @@
   # tree-sitter-just - justfile x nvim-treesitter integration
   # TODO(phlip9): remove when upstreamed
   tree-sitter-just = rec {
-    rev = "8bad9714bd38897450b09eb45276d1143c90160c";
+    rev = "a909b06b5a9b1051bd06e33bb1c366142cae6e15";
     version = builtins.substring 0 7 rev;
     src = pkgs.fetchFromGitHub {
       owner = "IndianBoy42";
       repo = "tree-sitter-just";
       rev = rev;
-      sha256 = "sha256-9lSLk6d386Si46YCSXQ3Qfw87ZxH89XM5CQShDBSiZA=";
+      sha256 = "sha256-B+TIrOwma6lrn6tZjcyKumsJc/ETOOLJU+7VECLvCFU=";
     };
     plugin = pkgs.vimUtils.buildVimPlugin {
       pname = "tree-sitter-just";
@@ -74,7 +74,6 @@
   # add these the lua LSP config when we're working on our nvim config.
   luaPlugins = [
     # kanagawa - neovim colorscheme
-    # TODO(phlip9): use nixpkgs master after next update
     {plugin = p.kanagawa-nvim;}
 
     # nvim-treesitter - tree-sitter interface and syntax highlighting
