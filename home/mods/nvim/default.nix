@@ -12,7 +12,6 @@
   dotfilesDir = config.home.dotfilesDir;
 
   # packages to add to the nvim PATH w/o infecting whole env
-  # TODO: mkOption
   extraPkgs = [
     # tools
     pkgs.bat
@@ -22,7 +21,10 @@
     # semi-functioning nix language server.
     # maybe someday nix users won't have to live in fucking squalor...
     pkgs.nil
+
+    # preferred nix formatter
     pkgs.alejandra
+    # nixpkgs repo formatter
     pkgs.nixpkgs-fmt
   ];
   extraPkgsPath = lib.makeBinPath extraPkgs;
@@ -120,6 +122,11 @@
     {plugin = p.nvim-treesitter-textobjects;}
     # justfile parser (not upstreamed yet)
     {plugin = tree-sitter-just.plugin;}
+
+    # telescope.nvim - fuzzy picker framework
+    {plugin = p.telescope-nvim;}
+    # telescope-fzf-native - use native impl fzf algorithm to speed up matching
+    {plugin = p.telescope-fzf-native-nvim;}
   ];
 
   # All plugins we're actually using.

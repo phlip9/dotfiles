@@ -260,6 +260,85 @@ do -- kanagawa - neovim colorscheme {{{
     end
 end -- kanagawa }}}
 
+do  -- telescope.nvim - fuzzy picker framework {{{
+    -- Mappings:
+    --          O - open files search (ignoring files in .gitignore)
+    --   <space>O - open files search (all files)
+    --   <space>/ - grep with pattern
+    --   <space>' - grep using word under cursor
+    --          T - open buffers search
+    -- <space>gcm - search git commits
+    -- <space>gcb - search git commits for the current buffer
+    -- <space>gcs - search git commits for the current selection
+    --  <space>gs - open git status (<Tab> to stage/unstage)
+    --  <space>vh - search nvim help
+    --  <space>vm - search nvim mappings
+    -- <space>man - search man page entries
+    require("telescope").setup({
+        defaults = {
+            vimgrep_arguments = {
+                "rg",
+                "--color=never", "--no-heading", "--with-filename", "--line-number", "--column",
+                "--smart-case", "--hidden", "--follow",
+                "--glob=!.git/*", "--glob=!target/*", "--glob=!tags",
+            }
+        },
+        pickers = {
+            find_files = {
+                -- TODO(phlip9): maybe someday telescope will support fd colors
+                -- in the find_files picker
+                find_command = {
+                    "fd",
+                    "--type=f", "--color=never", "--strip-cwd-prefix",
+                    "--exclude=.git/*", "--exclude=target/*", "--exclude=tags",
+                },
+                follow = true,
+                hidden = true,
+            },
+            buffers = {
+                -- Sorts all buffers after most recent used.
+                sort_mru = true,
+                -- Don't display the current buffer in the list.
+                ignore_current_buffer = true,
+            },
+            man_pages = {
+                -- search all man sections
+                sections = { "ALL" },
+                -- Filter out ANSI escape codes from man page preview
+                PAGER = { "sed", "-e", "s/\\x1b\\[[0-9;]*m//g" },
+                -- PAGER = { "col", "-bx" },
+                -- PAGER = { "cat" },
+            }
+        }
+    })
+
+    -- telescope-fzf-native - use native impl fzf algorithm to speed up matching
+    require('telescope').load_extension('fzf')
+
+    local builtin = require("telescope.builtin")
+
+    local opts = { silent = true, remap = false }
+    local function with_desc(desc)
+        return vim.tbl_extend("force", opts, { desc = desc })
+    end
+
+    vim.keymap.set("n", "O", builtin.find_files, with_desc("search files"))
+    vim.keymap.set("n", "<space>O", function() builtin.find_files({ no_ignore = true }) end,
+        with_desc("find files (no gitignore)"))
+    vim.keymap.set("n", "<space>/", builtin.live_grep, with_desc("repo grep"))
+    vim.keymap.set({ "n", "x" }, "<space>'", builtin.grep_string, with_desc("repo grep word under cursor"))
+    vim.keymap.set("n", "T", builtin.buffers, with_desc("search buffers"))
+    vim.keymap.set("n", "<space>gcm", builtin.git_commits, with_desc("search git commits"))
+    vim.keymap.set("n", "<space>gcb", builtin.git_bcommits, with_desc("search git commits for current file"))
+    vim.keymap.set({ "n", "x" }, "<space>gcs", builtin.git_bcommits_range,
+        with_desc("search git commits for current selection"))
+    vim.keymap.set("n", "<space>gs", builtin.git_status, with_desc("open git status"))
+    vim.keymap.set("n", "<space>gb", builtin.git_branches, with_desc("open git branches"))
+    vim.keymap.set("n", "<space>vh", builtin.help_tags, with_desc("search nvim help"))
+    vim.keymap.set("n", "<space>vm", builtin.keymaps, with_desc("search nvim key mappings"))
+    vim.keymap.set("n", "<space>man", builtin.man_pages, with_desc("search man pages"))
+end -- }}}
+
 do  -- vim-gitgutter - Show git diff in the gutter {{{
     -- Mappings:
     -- <leader>ggt - Toggle git gutter
@@ -575,17 +654,6 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
 end -- coc.nvim }}}
 
 do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
-    -- Mappings:
-    --         O - open files search (ignoring files in .gitignore)
-    --  <space>O - open files search (all files)
-    --  <space>/ - grep with pattern
-    --  <space>' - grep using word under cursor
-    --         T - open buffers search
-    -- <space>cm - grep through commits
-    -- <space>cb - grep through commits for the current buffer
-    -- <space>vh - grep through nvim help
-    -- <space>vm - grep through nvim mappings
-
     vim.g.fzf_command_prefix = "Fzf"
     vim.g.fzf_files_options = { "--ansi" }
 
@@ -673,17 +741,17 @@ do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
     vim.api.nvim_create_user_command("FzfMan", fzf_man_pages,
         { bang = true, nargs = "*", desc = "grep through all man page titles" })
 
-    local opts = { silent = true, remap = false }
-    vim.keymap.set("n", "O", vim.cmd.FzfGitFiles2, opts)
-    vim.keymap.set("n", "<space>O", vim.cmd.FzfFiles2, opts)
-    vim.keymap.set("n", "<space>'", ":FzfGRg2 <C-R><C-W><CR>", opts)
-    vim.keymap.set("n", "<space>/", ":FzfGRg2 ", { remap = false })
-    vim.keymap.set("n", "T", vim.cmd.FzfBuffers, opts)
-    vim.keymap.set("n", "<space>cm", vim.cmd.FzfCommits, opts)
-    vim.keymap.set("n", "<space>cb", vim.cmd.FzfBCommits, opts)
-    vim.keymap.set("n", "<space>vh", vim.cmd.FzfHelptags, opts)
-    vim.keymap.set("n", "<space>vm", vim.cmd.FzfMaps, opts)
-    vim.keymap.set("n", "<space>man", vim.cmd.FzfMan, opts)
+    -- local opts = { silent = true, remap = false }
+    -- vim.keymap.set("n", "O", vim.cmd.FzfGitFiles2, opts)
+    -- vim.keymap.set("n", "<space>O", vim.cmd.FzfFiles2, opts)
+    -- vim.keymap.set("n", "<space>/", ":FzfGRg2 ", { remap = false })
+    -- vim.keymap.set("n", "<space>'", ":FzfGRg2 <C-R><C-W><CR>", opts)
+    -- vim.keymap.set("n", "T", vim.cmd.FzfBuffers, opts)
+    -- vim.keymap.set("n", "<space>cm", vim.cmd.FzfCommits, opts)
+    -- vim.keymap.set("n", "<space>cb", vim.cmd.FzfBCommits, opts)
+    -- vim.keymap.set("n", "<space>vh", vim.cmd.FzfHelptags, opts)
+    -- vim.keymap.set("n", "<space>vm", vim.cmd.FzfMaps, opts)
+    -- vim.keymap.set("n", "<space>man", vim.cmd.FzfMan, opts)
 end -- fzf.vim }}}
 
 do  -- NERDCommenter - Easily comment lines or blocks of text {{{
