@@ -19,6 +19,9 @@ end -- PRELUDE }}}
 
 -- PLUGINS {{{
 
+-- functions visible in whole init.lua go here
+local M = {}
+
 do -- lua utils {{{
     -- Pretty-print any lua value and display it in a temp buffer
     function _G.dbg(...)
@@ -29,6 +32,40 @@ do -- lua utils {{{
     ---@param modname string
     function _G.rerequire(modname)
         return require("util").rerequire(modname)
+    end
+
+    -- Wrap a function so that it recenters the cursor if it moved after calling
+    -- the function.
+    function M.recenter_after(fn)
+        return function(...)
+            local winid = vim.api.nvim_get_current_win()
+            local bufid = vim.api.nvim_win_get_buf(winid)
+            local cursor = vim.api.nvim_win_get_cursor(winid)
+
+            local status, res = pcall(fn, ...)
+            if not status then
+                vim.notify("recenter_after: " .. res, vim.log.levels.ERROR)
+                return
+            end
+
+            -- only recenter view if we actually moved somewhere
+            if winid ~= vim.api.nvim_get_current_win()
+                or bufid ~= vim.api.nvim_win_get_buf(winid)
+                or cursor ~= vim.api.nvim_win_get_cursor(winid)
+            then
+                -- recenter
+                vim.cmd(":normal! zz")
+            end
+
+            return res
+        end
+    end
+
+    function M.with_desc(desc, opts)
+        return vim.tbl_extend("force",
+            opts or {},
+            { silent = true, remap = false, desc = desc }
+        )
     end
 end -- lua utils }}}
 
@@ -172,8 +209,8 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
     local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
     local opts = { silent = true, remap = false }
-    vim.keymap.set({ "n", "x", "o" }, ";", repeatable_move.repeat_last_move_next, opts)
-    vim.keymap.set({ "n", "x", "o" }, "+", repeatable_move.repeat_last_move_previous, opts)
+    vim.keymap.set({ "n", "x", "o" }, ";", M.recenter_after(repeatable_move.repeat_last_move_next), opts)
+    vim.keymap.set({ "n", "x", "o" }, "+", M.recenter_after(repeatable_move.repeat_last_move_previous), opts)
 
     -- Make builtin f, F, t, T also repeatable
     vim.keymap.set({ "n", "x", "o" }, "f", repeatable_move.builtin_f, opts)
@@ -335,33 +372,28 @@ if pcall(require, "telescope") then
     local builtin = require("telescope.builtin")
     -- require("telescope.builtin.__files")
 
-    local function with_desc(desc, opts)
-        local opts = opts or { silent = true, remap = false }
-        return vim.tbl_extend("force", opts, { desc = desc })
-    end
-
     -- files/grep
-    vim.keymap.set("n", "O", builtin.find_files, with_desc("search files"))
+    vim.keymap.set("n", "O", builtin.find_files, M.with_desc("search files"))
     vim.keymap.set("n", "<space>O", function() builtin.find_files({ no_ignore = true }) end,
-        with_desc("find files (no gitignore)"))
-    vim.keymap.set("n", "<space>/", builtin.live_grep, with_desc("repo grep"))
-    vim.keymap.set({ "n", "x" }, "<space>'", builtin.grep_string, with_desc("repo grep word under cursor"))
+        M.with_desc("find files (no gitignore)"))
+    vim.keymap.set("n", "<space>/", builtin.live_grep, M.with_desc("repo grep"))
+    vim.keymap.set({ "n", "x" }, "<space>'", builtin.grep_string, M.with_desc("repo grep word under cursor"))
 
     -- git
-    vim.keymap.set("n", "<space>gcm", builtin.git_commits, with_desc("search git commits"))
-    vim.keymap.set("n", "<space>gcb", builtin.git_bcommits, with_desc("search git commits for current file"))
+    vim.keymap.set("n", "<space>gcm", builtin.git_commits, M.with_desc("search git commits"))
+    vim.keymap.set("n", "<space>gcb", builtin.git_bcommits, M.with_desc("search git commits for current file"))
     vim.keymap.set({ "n", "x" }, "<space>gcs", builtin.git_bcommits_range,
-        with_desc("search git commits for current selection"))
-    vim.keymap.set("n", "<space>gs", builtin.git_status, with_desc("open git status"))
-    vim.keymap.set("n", "<space>gb", builtin.git_branches, with_desc("open git branches"))
+        M.with_desc("search git commits for current selection"))
+    vim.keymap.set("n", "<space>gs", builtin.git_status, M.with_desc("open git status"))
+    vim.keymap.set("n", "<space>gb", builtin.git_branches, M.with_desc("open git branches"))
 
     -- nvim
-    vim.keymap.set("n", "T", builtin.buffers, with_desc("search buffers"))
-    vim.keymap.set("n", "<space>vh", builtin.help_tags, with_desc("search nvim help"))
-    vim.keymap.set("n", "<space>vm", builtin.keymaps, with_desc("search nvim key mappings"))
+    vim.keymap.set("n", "T", builtin.buffers, M.with_desc("search buffers"))
+    vim.keymap.set("n", "<space>vh", builtin.help_tags, M.with_desc("search nvim help"))
+    vim.keymap.set("n", "<space>vm", builtin.keymaps, M.with_desc("search nvim key mappings"))
 
     -- man
-    vim.keymap.set("n", "<space>man", builtin.man_pages, with_desc("search man pages"))
+    vim.keymap.set("n", "<space>man", builtin.man_pages, M.with_desc("search man pages"))
 
     -- LSP
     local function show_outline()
@@ -382,18 +414,18 @@ if pcall(require, "telescope") then
         print("No coc.nvim LSP or treesitter parser for outline")
     end
 
-    vim.keymap.set("n", "<space>o", show_outline, with_desc("document outline"))
-    vim.keymap.set("n", "<space>s", function() coc.workspace_symbols({}) end, with_desc("workspace symbols"))
-    vim.keymap.set("n", "<space>df", function() coc.diagnostics({}) end, with_desc("view file lints/errors"))
-    vim.keymap.set("n", "<space>da", function() coc.workspace_diagnostics({}) end, with_desc("view all lints/errors"))
+    vim.keymap.set("n", "<space>o", show_outline, M.with_desc("document outline"))
+    vim.keymap.set("n", "<space>s", function() coc.workspace_symbols({}) end, M.with_desc("workspace symbols"))
+    vim.keymap.set("n", "<space>df", function() coc.diagnostics({}) end, M.with_desc("view file lints/errors"))
+    vim.keymap.set("n", "<space>da", function() coc.workspace_diagnostics({}) end, M.with_desc("view all lints/errors"))
 
-    vim.keymap.set("n", "<leader>cm", function() coc.commands({}) end, with_desc("LSP commands"))
+    vim.keymap.set("n", "<leader>cm", function() coc.commands({}) end, M.with_desc("LSP commands"))
 
     local show_at_cursor = require("telescope.themes").get_cursor({})
     -- TODO(phlip9): combine cursor, line, and file code actions in one picker
     -- TODO(phlip9): work in visual select mode
     -- vim.keymap.set({ "n", "x" }, "<leader>a", function() coc.code_actions(show_at_cursor) end, opts)
-    vim.keymap.set({ "n", "x" }, "<leader>a", ":CocFzfList actions<cr>", with_desc("LSP code actions"))
+    vim.keymap.set({ "n", "x" }, "<leader>a", ":CocFzfList actions<cr>", M.with_desc("LSP code actions"))
 
     -- code navigation
 
@@ -424,12 +456,12 @@ if pcall(require, "telescope") then
         end
         return vim.api.nvim_command(cmd)
     end
-    vim.keymap.set("n", "gd", goto_definition, with_desc("goto definition"))
+    vim.keymap.set("n", "gd", goto_definition, M.with_desc("goto definition"))
 
-    vim.keymap.set("n", "gc", function() coc.declarations(show_at_cursor) end, with_desc("goto declaration"))
-    vim.keymap.set("n", "gi", function() coc.implementations(show_at_cursor) end, with_desc("goto implementations"))
-    vim.keymap.set("n", "gt", function() coc.type_definitions(show_at_cursor) end, with_desc("goto type definitions"))
-    vim.keymap.set("n", "gr", function() coc.references_used(show_at_cursor) end, with_desc("goto references"))
+    vim.keymap.set("n", "gc", function() coc.declarations(show_at_cursor) end, M.with_desc("goto declaration"))
+    vim.keymap.set("n", "gi", function() coc.implementations(show_at_cursor) end, M.with_desc("goto implementations"))
+    vim.keymap.set("n", "gt", function() coc.type_definitions(show_at_cursor) end, M.with_desc("goto type definitions"))
+    vim.keymap.set("n", "gr", function() coc.references_used(show_at_cursor) end, M.with_desc("goto references"))
 end -- }}}
 
 do  -- vim-gitgutter - Show git diff in the gutter {{{
@@ -448,21 +480,21 @@ do  -- vim-gitgutter - Show git diff in the gutter {{{
     -- Don't automatically set mappings.
     vim.g.gitgutter_map_keys = false
 
-    local opts = { silent = true, remap = false }
-    vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, opts)
-    vim.keymap.set("n", "<leader>ggd", vim.cmd.GitGutterDiffOrig, opts)
-    vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, opts)
-    vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, opts)
-    vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, opts)
+    vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, M.with_desc("toggle showing git hunks"))
+    vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, M.with_desc("stage git hunk"))
+    vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, M.with_desc("reset git hunk"))
+    vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, M.with_desc("preview git hunk in popup"))
+    vim.keymap.set("n", "<leader>hd", vim.cmd.GitGutterDiffOrig, M.with_desc("show full hunk diff in split window"))
 
     -- Make GitGutter(Next|Prev)Hunk repeatable
     local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
         vim.cmd.GitGutterNextHunk,
         vim.cmd.GitGutterPrevHunk
     )
-    vim.keymap.set({ "n", "x", "o" }, "]h", move_hunk_next, opts)
-    vim.keymap.set({ "n", "x", "o" }, "[h", move_hunk_prev, opts)
+    vim.keymap.set({ "n", "x", "o" }, "]h", M.recenter_after(move_hunk_next), M.with_desc("goto next git hunk"))
+    vim.keymap.set({ "n", "x", "o" }, "[h", M.recenter_after(move_hunk_prev), M.with_desc("goto prev git hunk"))
 
+    local opts = { silent = true, remap = false }
     vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)", opts)
     vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)", opts)
     vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)", opts)
@@ -587,15 +619,13 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
     -- Use <C-Space> to trigger autocomplete.
     vim.keymap.set("i", "<C-Space>", "coc#refresh()", opts)
 
-    -- code navigation
-    local opts = { silent = true, remap = false }
-
     -- code actions
-    vim.keymap.set("n", "<leader>rn", "<Plug>(coc-rename)", opts)
-    vim.keymap.set("n", "<leader>rf", "<Plug>(coc-refactor)", opts)
+    vim.keymap.set("n", "<leader>rn", "<Plug>(coc-rename)", M.with_desc("LSP rename symbol"))
+    vim.keymap.set("n", "<leader>rf", "<Plug>(coc-refactor)", M.with_desc("LSP refactor symbol"))
 
     -- Use <leader>doc to show docs for current symbol under cursor.
-    vim.keymap.set("n", "<leader>doc", function() vim.fn.CocActionAsync("doHover") end, opts)
+    vim.keymap.set("n", "<leader>doc", function() vim.fn.CocActionAsync("doHover") end,
+        M.with_desc("show symbol documentation"))
 
     -- Remap <C-f> and <C-b> to scroll float windows/popups.
     local opts = { silent = true, expr = true, nowait = true, remap = false }
@@ -633,9 +663,8 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
         function() return vim.fn.CocActionAsync("diagnosticNext") end,
         function() return vim.fn.CocActionAsync("diagnosticPrevious") end
     )
-    local opts = { silent = true, remap = false }
-    vim.keymap.set("n", "]d", move_diagnostic_next, opts)
-    vim.keymap.set("n", "[d", move_diagnostic_prev, opts)
+    vim.keymap.set("n", "]d", M.recenter_after(move_diagnostic_next), M.with_desc("goto next LSP lint/error"))
+    vim.keymap.set("n", "[d", M.recenter_after(move_diagnostic_prev), M.with_desc("goto prev LSP lint/error"))
 
     -- Run in a buffer when it's safe to assume a coc.nvim LSP is attached.
     local function coc_buffer_init()
@@ -744,9 +773,8 @@ do  -- NERDCommenter - Easily comment lines or blocks of text {{{
     }
 
     -- key bindings
-    local opts = { silent = true, remap = false }
-    vim.keymap.set({ "n", "x" }, "<leader>c<Space>", "<Plug>NERDCommenterToggle", opts)
-    vim.keymap.set({ "n", "x" }, "<leader>cb", "<Plug>NERDCommenterMinimal", opts)
+    vim.keymap.set({ "n", "x" }, "<leader>c<Space>", "<Plug>NERDCommenterToggle", M.with_desc("toggle line comment"))
+    vim.keymap.set({ "n", "x" }, "<leader>cb", "<Plug>NERDCommenterMinimal", M.with_desc("toggle block comment"))
 end -- NERDCommenter }}}
 
 do  -- SudoEdit.vim - Easily write to protected files {{{
