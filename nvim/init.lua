@@ -332,7 +332,7 @@ if pcall(require, "telescope") then
                 -- in the find_files picker
                 find_command = {
                     "fd",
-                    "--type=f", "--color=never", "--strip-cwd-prefix",
+                    "--type=file", "--color=never", "--strip-cwd-prefix",
                     "--exclude=.git/*", "--exclude=target/*", "--exclude=tags",
                 },
                 follow = true,
