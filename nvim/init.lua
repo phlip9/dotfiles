@@ -260,7 +260,11 @@ do -- kanagawa - neovim colorscheme {{{
     end
 end -- kanagawa }}}
 
-do  -- telescope.nvim - fuzzy picker framework {{{
+-- telescope.nvim - fuzzy picker framework {{{
+if pcall(require, "telescope") then
+    -- TODO(phlip9): why does require("telescope") fail when nvim is used as a
+    --               a man page viewer?
+
     -- Mappings:
     --          O - open files search (ignoring files in .gitignore)
     --   <space>O - open files search (all files)
@@ -274,7 +278,9 @@ do  -- telescope.nvim - fuzzy picker framework {{{
     --  <space>vh - search nvim help
     --  <space>vm - search nvim mappings
     -- <space>man - search man page entries
-    require("telescope").setup({
+
+    local telescope = require("telescope")
+    telescope.setup({
         defaults = {
             vimgrep_arguments = {
                 "rg",
@@ -309,34 +315,121 @@ do  -- telescope.nvim - fuzzy picker framework {{{
                 -- PAGER = { "col", "-bx" },
                 -- PAGER = { "cat" },
             }
+        },
+        extensions = {
+            coc = {
+                -- theme = "ivy",
+                -- prefer_locations = true,
+            }
         }
     })
 
     -- telescope-fzf-native - use native impl fzf algorithm to speed up matching
-    require('telescope').load_extension('fzf')
+    telescope.load_extension('fzf')
 
+    -- telescope-coc.nvim - telescope x coc.nvim integration
+    local coc = telescope.load_extension('coc')
+    -- require("telescope._extensions.coc")
+
+    -- builtin telescope commands
     local builtin = require("telescope.builtin")
+    -- require("telescope.builtin.__files")
 
-    local opts = { silent = true, remap = false }
-    local function with_desc(desc)
+    local function with_desc(desc, opts)
+        local opts = opts or { silent = true, remap = false }
         return vim.tbl_extend("force", opts, { desc = desc })
     end
 
+    -- files/grep
     vim.keymap.set("n", "O", builtin.find_files, with_desc("search files"))
     vim.keymap.set("n", "<space>O", function() builtin.find_files({ no_ignore = true }) end,
         with_desc("find files (no gitignore)"))
     vim.keymap.set("n", "<space>/", builtin.live_grep, with_desc("repo grep"))
     vim.keymap.set({ "n", "x" }, "<space>'", builtin.grep_string, with_desc("repo grep word under cursor"))
-    vim.keymap.set("n", "T", builtin.buffers, with_desc("search buffers"))
+
+    -- git
     vim.keymap.set("n", "<space>gcm", builtin.git_commits, with_desc("search git commits"))
     vim.keymap.set("n", "<space>gcb", builtin.git_bcommits, with_desc("search git commits for current file"))
     vim.keymap.set({ "n", "x" }, "<space>gcs", builtin.git_bcommits_range,
         with_desc("search git commits for current selection"))
     vim.keymap.set("n", "<space>gs", builtin.git_status, with_desc("open git status"))
     vim.keymap.set("n", "<space>gb", builtin.git_branches, with_desc("open git branches"))
+
+    -- nvim
+    vim.keymap.set("n", "T", builtin.buffers, with_desc("search buffers"))
     vim.keymap.set("n", "<space>vh", builtin.help_tags, with_desc("search nvim help"))
     vim.keymap.set("n", "<space>vm", builtin.keymaps, with_desc("search nvim key mappings"))
+
+    -- man
     vim.keymap.set("n", "<space>man", builtin.man_pages, with_desc("search man pages"))
+
+    -- LSP
+    local function show_outline()
+        -- Use coc.nvim LSP document outline if available
+        if vim.g.coc_service_initialized == 1 and vim.fn.CocHasProvider("documentSymbol") then
+            return coc.document_symbols({
+                -- don't show path in output
+                path_display = "hidden",
+            })
+        end
+
+        -- Use treesitter document outline if available
+        local parsers = require("nvim-treesitter.parsers")
+        if parsers.has_parser(parsers.get_buf_lang()) then
+            return builtin.treesitter({})
+        end
+
+        print("No coc.nvim LSP or treesitter parser for outline")
+    end
+
+    vim.keymap.set("n", "<space>o", show_outline, with_desc("document outline"))
+    vim.keymap.set("n", "<space>s", function() coc.workspace_symbols({}) end, with_desc("workspace symbols"))
+    vim.keymap.set("n", "<space>df", function() coc.diagnostics({}) end, with_desc("view file lints/errors"))
+    vim.keymap.set("n", "<space>da", function() coc.workspace_diagnostics({}) end, with_desc("view all lints/errors"))
+
+    vim.keymap.set("n", "<leader>cm", function() coc.commands({}) end, with_desc("LSP commands"))
+
+    local show_at_cursor = require("telescope.themes").get_cursor({})
+    -- TODO(phlip9): combine cursor, line, and file code actions in one picker
+    -- TODO(phlip9): work in visual select mode
+    -- vim.keymap.set({ "n", "x" }, "<leader>a", function() coc.code_actions(show_at_cursor) end, opts)
+    vim.keymap.set({ "n", "x" }, "<leader>a", ":CocFzfList actions<cr>", with_desc("LSP code actions"))
+
+    -- code navigation
+
+    local function goto_definition()
+        -- 1. Use coc.nvim LSP goto def if available
+        if vim.g.coc_service_initialized == 1 and vim.fn.CocHasProvider("definition") then
+            return coc.definitions(show_at_cursor)
+        end
+
+        -- 2. Vim help docs have their own goto def
+        local cw = vim.fn.expand("<cword>")
+        if vim.fn.index({ "vim", "help" }, vim.bo.filetype) >= 0 then
+            return vim.api.nvim_command("help " .. cw)
+        end
+
+        -- 3. Else fallback to `keywordprg`
+        -- `keywordprg` can be a vim command or a binary
+        local cmd = vim.o.keywordprg .. " " .. cw
+
+        -- if it's a binary and not vim command
+        if cmd:sub(1, 1) ~= ":" then
+            -- do nothing if this `keywordprg` is not installed
+            local bin = cmd:match("^%S+")
+            if not bin or not vim.fn.executable(bin) then return end
+
+            -- bin exists, just need to prefix w/ "!" to execute as shell cmd
+            cmd = "!" .. cmd
+        end
+        return vim.api.nvim_command(cmd)
+    end
+    vim.keymap.set("n", "gd", goto_definition, with_desc("goto definition"))
+
+    vim.keymap.set("n", "gc", function() coc.declarations(show_at_cursor) end, with_desc("goto declaration"))
+    vim.keymap.set("n", "gi", function() coc.implementations(show_at_cursor) end, with_desc("goto implementations"))
+    vim.keymap.set("n", "gt", function() coc.type_definitions(show_at_cursor) end, with_desc("goto type definitions"))
+    vim.keymap.set("n", "gr", function() coc.references_used(show_at_cursor) end, with_desc("goto references"))
 end -- }}}
 
 do  -- vim-gitgutter - Show git diff in the gutter {{{
@@ -383,14 +476,15 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
     --         gi  - goto implementations
     --         gt  - goto type definition
     --         gr  - goto references
+    --  <space>df  - view file errors/lints/diagnostics
+    --  <space>da  - view all errors/lints/diagnostics
+    --  <space>o   - fuzzy search file outline
+    --  <space>s   - fuzzy search project symbols
     -- <leader>rn  - rename
     -- <leader>rf  - refactor
     -- <leader>doc - show docs / symbol hover
     -- <leader>a   - code action
-    -- <leader>di  - diagnostic info
     -- <leader>cm  - select an LSP command
-    -- <space>o    - fuzzy search file outline
-    -- <space>s    - fuzzy search project symbols
     --
     -- Flutter:
     -- <leader>fd - flutter devices
@@ -407,9 +501,9 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
 
     local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
-    local function coc_rpc_ready()
-        return vim.fn["coc#rpc#ready()"] ~= 0
-    end
+    -- local function coc_rpc_ready()
+    --     return vim.fn["coc#rpc#ready()"] ~= 0
+    -- end
 
     local function coc_pum_visible()
         return vim.fn["coc#pum#visible"]() ~= 0
@@ -495,39 +589,13 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
 
     -- code navigation
     local opts = { silent = true, remap = false }
-    vim.keymap.set("n", "gd", "<Plug>(coc-definition)", opts)
-    vim.keymap.set("n", "gc", "<Plug>(coc-declaration)", opts)
-    vim.keymap.set("n", "gi", "<Plug>(coc-implementation)", opts)
-    vim.keymap.set("n", "gt", "<Plug>(coc-type-definition)", opts)
-    vim.keymap.set("n", "gr", "<Plug>(coc-references)", opts)
 
     -- code actions
     vim.keymap.set("n", "<leader>rn", "<Plug>(coc-rename)", opts)
     vim.keymap.set("n", "<leader>rf", "<Plug>(coc-refactor)", opts)
 
     -- Use <leader>doc to show docs for current symbol under cursor.
-    vim.keymap.set("n", "<leader>doc", function()
-        local cw = vim.fn.expand("<cword>")
-        if vim.fn.index({ "vim", "help" }, vim.bo.filetype) >= 0 then
-            vim.api.nvim_command("help " .. cw)
-        elseif coc_rpc_ready() then
-            vim.fn.CocActionAsync("doHover")
-        else
-            -- `keywordprg` can be a vim command or a binary
-            local cmd = vim.o.keywordprg .. " " .. cw
-
-            -- if it's a binary and not vim command
-            if cmd:sub(1, 1) ~= ":" then
-                -- do nothing if this `keywordprg` is not installed
-                local bin = cmd:match("^%S+")
-                if not bin or not vim.fn.executable(bin) then return end
-
-                -- bin exists, just need to prefix w/ "!" to execute as shell cmd
-                cmd = "!" .. cmd
-            end
-            vim.api.nvim_command(cmd)
-        end
-    end, opts)
+    vim.keymap.set("n", "<leader>doc", function() vim.fn.CocActionAsync("doHover") end, opts)
 
     -- Remap <C-f> and <C-b> to scroll float windows/popups.
     local opts = { silent = true, expr = true, nowait = true, remap = false }
@@ -629,13 +697,6 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
 
     -- coc-fzf
     vim.g.coc_fzf_preview = "right:50%"
-    local opts = { silent = true, remap = false }
-    vim.keymap.set("n", "<space>o", ":CocFzfList outline<cr>", opts)
-    vim.keymap.set("n", "<space>s", ":CocFzfList symbols<cr>", opts)
-    vim.keymap.set("n", "<leader>a", ":CocFzfList actions<cr>", opts)
-    vim.keymap.set("n", "<leader>di", ":CocFzfList diagnostics<cr>", opts)
-    vim.keymap.set("n", "<leader>cm", ":CocFzfList commands<cr>", opts)
-    vim.keymap.set("x", "<leader>a", ":CocFzfList actions", opts)
 
     -- ft: flutter
     vim.api.nvim_create_autocmd("FileType", {
@@ -656,102 +717,6 @@ end -- coc.nvim }}}
 do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
     vim.g.fzf_command_prefix = "Fzf"
     vim.g.fzf_files_options = { "--ansi" }
-
-    local fd_cmd = "fd " ..
-        "--type f --hidden --follow --color \"always\" --strip-cwd-prefix " ..
-        "--exclude \".git/*\" --exclude \"target/*\" --exclude \"tags\" "
-
-    local rg_cmd = "rg " ..
-        "--column --line-number --no-heading --fixed-strings " ..
-        "--ignore-case --hidden --follow --color \"always\" " ..
-        "--glob \"!.git/*\" --glob \"!target/*\" --glob \"!tags\" "
-
-    local function fzf_run(spec)
-        return vim.fn["fzf#run"](spec)
-    end
-
-    local function fzf_wrap(name, spec, fullscreen)
-        return vim.fn["fzf#wrap"](name, spec, fullscreen or false)
-    end
-
-    local function fzf_vim_files(dir, spec, bang)
-        return vim.fn["fzf#vim#files"](dir, spec, bang)
-    end
-
-    local function fzf_vim_grep(cmd, spec, bang)
-        return vim.fn["fzf#vim#grep"](cmd, spec, bang)
-    end
-
-    local function fzf_vim_with_preview(spec_str)
-        return vim.fn["fzf#vim#with_preview"](spec_str)
-    end
-
-
-    local function fzf_git_files(cmd)
-        local spec = fzf_vim_with_preview("right:50%")
-        vim.env.FZF_DEFAULT_COMMAND = fd_cmd
-        fzf_vim_files(cmd.args, spec, cmd.bang)
-    end
-
-    local function fzf_files(cmd)
-        local spec = fzf_vim_with_preview("right:50%")
-        vim.env.FZF_DEFAULT_COMMAND = fd_cmd .. "--no-ignore "
-        fzf_vim_files(cmd.args, spec, cmd.bang)
-    end
-
-    local function fzf_git_grep(cmd)
-        local spec = fzf_vim_with_preview("right:50%")
-        local cmd_str = rg_cmd .. " -- " .. vim.fn.shellescape(cmd.args)
-        fzf_vim_grep(cmd_str, spec, cmd.bang)
-    end
-
-    local function fzf_grep(cmd)
-        local spec = fzf_vim_with_preview("right:50%")
-        local cmd_str = rg_cmd .. " --no-ignore -- " .. vim.fn.shellescape(cmd.args)
-        fzf_vim_grep(cmd_str, spec, cmd.bang)
-    end
-
-    local function fzf_man_pages(cmd)
-        local spec = {
-            -- this searches all man page "headlines"
-            source = ("man -k '%s'"):format(vim.fn.shellescape(cmd.args)),
-            sink = function(out)
-                local space_idx = out:find(" ", 0, true) or -1
-                local man_page = out:sub(0, space_idx)
-                vim.cmd(":Man " .. man_page)
-            end,
-            options = {
-                "--delimiter", "[\\(\\)]",
-                "--preview", "MANPAGER=cat MANWIDTH=80 man {2} {1}",
-                "--preview-window", "right:50%",
-            },
-        }
-        fzf_run(fzf_wrap("man", spec, cmd.bang))
-    end
-
-
-    vim.api.nvim_create_user_command("FzfGitFiles2", fzf_git_files,
-        { bang = true, nargs = "?", complete = "dir", desc = "fd through all git files" })
-    vim.api.nvim_create_user_command("FzfFiles2", fzf_files,
-        { bang = true, nargs = "?", complete = "dir", desc = "fd through all files" })
-    vim.api.nvim_create_user_command("FzfGRg2", fzf_git_grep,
-        { bang = true, nargs = "*", desc = "rg through all git files" })
-    vim.api.nvim_create_user_command("FzfRg2", fzf_grep,
-        { bang = true, nargs = "*", desc = "rg through all files" })
-    vim.api.nvim_create_user_command("FzfMan", fzf_man_pages,
-        { bang = true, nargs = "*", desc = "grep through all man page titles" })
-
-    -- local opts = { silent = true, remap = false }
-    -- vim.keymap.set("n", "O", vim.cmd.FzfGitFiles2, opts)
-    -- vim.keymap.set("n", "<space>O", vim.cmd.FzfFiles2, opts)
-    -- vim.keymap.set("n", "<space>/", ":FzfGRg2 ", { remap = false })
-    -- vim.keymap.set("n", "<space>'", ":FzfGRg2 <C-R><C-W><CR>", opts)
-    -- vim.keymap.set("n", "T", vim.cmd.FzfBuffers, opts)
-    -- vim.keymap.set("n", "<space>cm", vim.cmd.FzfCommits, opts)
-    -- vim.keymap.set("n", "<space>cb", vim.cmd.FzfBCommits, opts)
-    -- vim.keymap.set("n", "<space>vh", vim.cmd.FzfHelptags, opts)
-    -- vim.keymap.set("n", "<space>vm", vim.cmd.FzfMaps, opts)
-    -- vim.keymap.set("n", "<space>man", vim.cmd.FzfMan, opts)
 end -- fzf.vim }}}
 
 do  -- NERDCommenter - Easily comment lines or blocks of text {{{

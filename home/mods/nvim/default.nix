@@ -155,6 +155,8 @@
     {plugin = p.telescope-nvim;}
     # telescope-fzf-native - use native impl fzf algorithm to speed up matching
     {plugin = p.telescope-fzf-native-nvim;}
+    # telescope-coc-nvim - telescope x coc.nvim integration
+    {plugin = p.telescope-coc-nvim;}
   ];
 
   # All plugins we're actually using.
