@@ -182,8 +182,12 @@ in {
       rba = "rebase --abort";
       rbc = "rebase --continue";
       rbe = "rebase --edit-todo";
-      ro = "!git rebase origin/$(git master)";
-      ru = "!git rebase upstream/$(git master)";
+      rbo = "!git rebase origin/$(git master)";
+      rbu = "!git rebase upstream/$(git master)";
+      rs = "reset";
+      rsh = "reset --hard";
+      rso = "!git reset --hard origin/$(git master)";
+      rsu = "!git reset --hard upstream/$(git master)";
       s = "status";
       sw = "switch";
       unwip = "!git reset --soft HEAD~1 && git restore --staged .";
