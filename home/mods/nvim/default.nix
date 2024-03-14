@@ -116,6 +116,7 @@
         q.cpp
         q.css
         q.csv
+        q.dart
         q.diff
         q.dockerfile
         q.git_rebase
