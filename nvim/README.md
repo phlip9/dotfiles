@@ -70,7 +70,14 @@ $ rusty-tags vi
 # Install rust-analyzer
 $ git clone --depth=1 https://github.com/rust-lang/rust-analyzer
 $ cd rust-analyzer
-$ RUSTFLAGS="-C target-cpu=native" cargo xtask install --server --jemalloc
+# Compile with many optimizations. rust-analyzer is going to consume a LOT of
+# CPU on our machine, might as well pay some extra upfront cost so it's faster
+# while developing.
+$ RUSTFLAGS="-C target-cpu=native" \
+    CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
+    CARGO_PROFILE_RELEASE_INCREMENTAL=false \
+    CARGO_PROFILE_RELEASE_LTO=fat \
+    cargo xtask install --server --jemalloc
 
 # (OSX) If rust-lldb doesn't work:
 $ brew unlink python
