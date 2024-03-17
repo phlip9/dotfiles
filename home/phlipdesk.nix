@@ -35,6 +35,7 @@
     ./mods/ctags.nix
     # ./mods/direnv.nix
     ./mods/fzf.nix
+    ./mods/gdb.nix
     ./mods/gh.nix
     ./mods/git.nix
     ./mods/inputrc.nix
