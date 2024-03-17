@@ -59,10 +59,6 @@
       wget
     ];
 
-    home.sessionVariables = {
-      "MANPAGER" = "${config.programs.my-neovim.finalPackage}/bin/nvim +Man!";
-    };
-
     # Use consistent man across platforms
     programs.man = {
       enable = true;
