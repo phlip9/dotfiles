@@ -3,6 +3,15 @@
     enable = true;
     package = pkgs.openssh;
 
+    # automatically add ssh keys to host agent after first use.
+    addKeysToAgent = "yes";
+
+    # try to share multiple sessions over a single network connection.
+    controlMaster = "auto";
+    controlPath = "\${XDG_RUNTIME_DIR}/ssh-%C";
+    # keep the connection open for this long after initially disconnecting.
+    controlPersist = "15m";
+
     matchBlocks = {
       "lexe-dev-sgx" = {
         user = "deploy";
