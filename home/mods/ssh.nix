@@ -8,7 +8,10 @@
 
     # try to share multiple sessions over a single network connection.
     controlMaster = "auto";
-    controlPath = "\${XDG_RUNTIME_DIR}/ssh-%C";
+    controlPath =
+      if !pkgs.stdenv.isDarwin
+      then "\${XDG_RUNTIME_DIR}/ssh-%C"
+      else "\${TMPDIR}/ssh-%C";
     # keep the connection open for this long after initially disconnecting.
     controlPersist = "15m";
 
