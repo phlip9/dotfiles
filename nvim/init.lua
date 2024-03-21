@@ -218,6 +218,30 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
     vim.keymap.set({ "n", "x", "o" }, "t", repeatable_move.builtin_t, opts)
     vim.keymap.set({ "n", "x", "o" }, "T", repeatable_move.builtin_T, opts)
 
+    -- Toggle treesitter syntax-based folding
+    local function toggle_treesitter_fold()
+        local buf = vim.api.nvim_get_current_buf()
+
+        if not vim.b[buf].prev_fold_state then
+            -- enable and save current state
+            vim.b[buf].prev_fold_state = {
+                foldmethod = vim.opt_local.foldmethod:get(),
+                foldexpr = vim.opt_local.foldexpr:get(),
+            }
+
+            vim.opt_local.foldmethod = "expr"
+            vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"
+        else
+            -- disable and restore previous state
+            local f = vim.b[buf].prev_fold_state
+            vim.opt_local.foldmethod = f.foldmethod
+            vim.opt_local.foldexpr = f.foldexpr
+            vim.b[buf].prev_fold_state = nil
+        end
+    end
+    vim.keymap.set("n", "<leader>tsf", toggle_treesitter_fold,
+        M.with_desc("Toggle Treesitter syntax-based folding", opts))
+
     -- tree-sitter-just - grammar for Justfile's
     -- require("tree-sitter-just").setup({})
 end
