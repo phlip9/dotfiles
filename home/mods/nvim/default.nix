@@ -125,6 +125,7 @@
         q.html
         q.ini
         q.javascript
+        q.jq
         q.json
         q.jsonc
         q.lua
