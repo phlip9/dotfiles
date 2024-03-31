@@ -27,6 +27,7 @@
           url = "https://github.com/Fris0uman/CDDA-Soundpacks/releases/download/${version}/CC-Sounds.zip";
           hash = "sha256-IkqdUZyfK50YV4dHapEjjBm/SVhOjZk0jiMKCo5h7gQ=";
         };
+        modRoot = "CC-Sounds";
       };
     };
 
