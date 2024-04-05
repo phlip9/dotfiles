@@ -16,7 +16,24 @@
       ;
   };
 
-  cdda-no-mod = pkgs.cataclysm-dda;
+  cdda-pre-fix = pkgs.cataclysm-dda-git.override rec {
+    version = "2024-04-04-2115";
+    rev = "cdda-experimental-${version}";
+    sha256 = "sha256-WvEbhCUyn7IYdzDQqqnV1m0CWJCuZx3sK/j+KLWrHH4=";
+    useXdgDir = true;
+  };
+
+  cdda-no-mod = cdda-pre-fix.overrideAttrs (super: {
+    # patch doesn't cleanly apply anymore
+    patches = [];
+
+    passthru =
+      super.passthru
+      // {
+        pkgs = pkgs.override {build = cdda-no-mod;};
+        withMods = cddaLib.wrapCDDA cdda-no-mod;
+      };
+  });
 
   customMods = self: super:
     lib.recursiveUpdate super {
