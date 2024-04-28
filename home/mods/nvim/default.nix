@@ -46,59 +46,6 @@
   # All vim/nvim plugins + a few non-nixpkgs plugins overlayed
   p = pkgs.vimPlugins.extend extraPluginsGenerated;
 
-  # tree-sitter-just - justfile x nvim-treesitter integration
-  # TODO(phlip9): remove when upstreamed and nvim updates to v0.10 (?)
-  tree-sitter-just = rec {
-    rev = "a909b06b5a9b1051bd06e33bb1c366142cae6e15";
-    version = builtins.substring 0 7 rev;
-    src = pkgs.stdenvNoCC.mkDerivation {
-      pname = "tree-sitter-just-source";
-      version = version;
-      src = pkgs.fetchFromGitHub {
-        owner = "IndianBoy42";
-        repo = "tree-sitter-just";
-        rev = rev;
-        sha256 = "sha256-B+TIrOwma6lrn6tZjcyKumsJc/ETOOLJU+7VECLvCFU=";
-      };
-
-      dontUnpack = true;
-      dontPatch = true;
-      dontConfigure = true;
-      dontBuild = true;
-
-      # Need to use the latest queries for nvim, o/w features like outline
-      # are broken.
-      installPhase = ''
-        runHook preInstall
-
-        shopt -s extglob
-
-        # copy everything except queries dir
-        mkdir $out
-        cp -r $src/!(queries) $out/
-
-        # copy some 'nvim-next' queries into the queries dir
-        mkdir -p $out/queries/just
-        cp $src/queries/just/!(locals|indents|highlights).scm $out/queries/just/
-        cp $src/queries-flavored/nvim-next/*(locals|indents|highlights).scm $out/queries/just/
-        # cp $src/queries-flavored/nvim-next/* $out/queries/just/
-
-        runHook postInstall
-      '';
-    };
-    plugin = pkgs.vimUtils.buildVimPlugin {
-      pname = "tree-sitter-just";
-      version = version;
-      src = src;
-      meta.homepage = "https://github.com/IndianBoy42/tree-sitter-just";
-    };
-    grammar = pkgs.tree-sitter.buildGrammar {
-      language = "just";
-      version = version;
-      src = src;
-    };
-  };
-
   # The _lua_ plugins we're actually using. These are separated out so we can
   # add these the lua LSP config when we're working on our nvim config.
   luaPlugins = [
@@ -128,6 +75,7 @@
         q.jq
         q.json
         q.jsonc
+        q.just
         q.lua
         q.make
         q.markdown
@@ -139,9 +87,6 @@
         q.vim
         q.vimdoc
         q.yaml
-
-        # justfile parser (not upstreamed yet)
-        tree-sitter-just.grammar
       ]);
     }
     # nvim-treesitter-context - show the context that's past the scroll height
@@ -150,8 +95,6 @@
     {plugin = p.nvim-treesitter-endwise;}
     # nvim-treesitter-textobjects - syntax aware text objs + motions
     {plugin = p.nvim-treesitter-textobjects;}
-    # justfile parser (not upstreamed yet)
-    {plugin = tree-sitter-just.plugin;}
 
     # telescope.nvim - fuzzy picker framework
     {plugin = p.telescope-nvim;}
