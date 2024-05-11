@@ -89,8 +89,10 @@
         q.yaml
       ]);
     }
-    # nvim-treesitter-context - show the context that's past the scroll height
-    {plugin = p.nvim-treesitter-context;}
+    # phlip9: disabled this plugin since it seems to perform poorly and is buggy
+    # # nvim-treesitter-context - show the context that's past the scroll height
+    # {plugin = p.nvim-treesitter-context;}
+
     # nvim-treesitter-endwise - auto-add `end` block to lua, bash, ruby, etc...
     {plugin = p.nvim-treesitter-endwise;}
     # nvim-treesitter-textobjects - syntax aware text objs + motions

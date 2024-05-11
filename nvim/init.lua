@@ -189,18 +189,18 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
         },
     })
 
-    -- nvim-treesitter-context - show the context that's past the scroll height
-    require("treesitter-context").setup({
-        enable = true,
-        -- max size of the context window
-        max_lines = 10,
-        -- don't show on small height windows
-        min_window_height = 50,
-        -- max size for any single context in the stack
-        multiline_threshold = 5,
-        -- no separator (background color is enough)
-        separator = "",
-    })
+    -- -- nvim-treesitter-context - show the context that's past the scroll height
+    -- require("treesitter-context").setup({
+    --     enable = true,
+    --     -- max size of the context window
+    --     max_lines = 10,
+    --     -- don't show on small height windows
+    --     min_window_height = 50,
+    --     -- max size for any single context in the stack
+    --     multiline_threshold = 5,
+    --     -- no separator (background color is enough)
+    --     separator = "",
+    -- })
 
     -- nvim-treesitter-textobjects - repeatable movements
     --
