@@ -554,6 +554,8 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
     -- <C-Space>  - trigger completion
     -- <C-f>      - scroll float window up
     -- <C-b>      - scroll float window down
+    --
+    -- :CocStop   - disable and stop coc.nvim
 
     local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
 
@@ -765,6 +767,40 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
             vim.keymap.set("n", "<leader>fl", ":CocCommand flutter.dev.openDevLog<CR>", opts)
         end
     })
+
+    -- :CocStop
+    vim.api.nvim_create_user_command("CocStop", function(opts)
+        -- An amalgamation of `:CocDisable` and `coc#rpc#restart()` that *should*
+        -- cleanly shutdown coc.nvim.
+        vim.cmd([[
+            if !coc#rpc#ready()
+                echohl MoreMsg | echom '[coc.nvim] already not running' | echohl None
+            else
+                call coc#highlight#clear_all()
+                call coc#ui#sign_unplace()
+                call coc#float#close_all()
+
+                autocmd! coc_dynamic_autocmd
+                autocmd! coc_dynamic_content
+                autocmd! coc_dynamic_option
+                autocmd! coc_nvim
+
+                call coc#rpc#request('detach', [])
+
+                if !empty(get(g:, 'coc_status', ''))
+                    unlet g:coc_status
+                endif
+                let g:coc_service_initialized = 0
+
+                sleep 100m
+
+                call coc#rpc#stop()
+                let g:coc_enabled = 0
+
+                echohl MoreMsg | echom '[coc.nvim] Stopped' | echohl None
+            endif
+        ]])
+    end, { desc = "Stop coc.nvim" })
 end -- coc.nvim }}}
 
 do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
