@@ -2,6 +2,12 @@
     "[json][rust][nix][dart][lua]": {
         "coc.preferences.formatOnSave": true,
     },
+    "workspace.ignoredFolders": [
+        "$HOME",
+        // rust-analyzer: don't cargo check sysroot crates.
+        "$HOME/.cargo/**",
+        "$HOME/.rustup/**",
+    ],
     "Lua.format.enable": true,
     "Lua.format.defaultConfig": {
         "indent_style": "space",
@@ -25,18 +31,18 @@
     "sumneko-lua.logPath": "${userHome}/.cache/lua-language-server/log",
     "sumneko-lua.serverDir": "${userHome}/.local/share/lua-language-server",
     "sumneko-lua.enableNvimLuaDev": true,
-    "rust-analyzer.cargo.buildScripts.enable": false,
     "rust-analyzer.checkOnSave": true,
     "rust-analyzer.diagnostics.disabled": [
         "macro-error",
+        "incorrect-ident-case",
         "inactive-code",
-        "incorrect-ident-case"
+        "unresolved-proc-macro",
     ],
-    "rust-analyzer.inlayHints.chainingHints.enable": true,
-    "rust-analyzer.procMacro.enable": true,
-    "rust-analyzer.procMacro.attributes.enable": true,
     "rust-analyzer.server.path": "${userHome}/.cargo/bin/rust-analyzer",
     "rust-analyzer.updates.checkOnStartup": false,
+    // // uncomment for debugging. then `:CocCommand workspace.showOutput` to
+    // // view the logs.
+    // "rust-analyzer.trace.server": "verbose",
     "dart.showTodos": false,
     "languageserver": {
         "nix": {
