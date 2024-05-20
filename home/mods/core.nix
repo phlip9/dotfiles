@@ -34,6 +34,7 @@
       gawk
       gnused
       which
+      parallel
 
       # archives
       zip
