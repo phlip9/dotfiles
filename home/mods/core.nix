@@ -34,32 +34,32 @@
       pkgs.findutils
       pkgs.gawk
       pkgs.gnused
-      pkgs.which
       pkgs.parallel
+      pkgs.which
 
       # archives
-      pkgs.zip
+      pkgs.gnutar
       pkgs.unzip
       pkgs.xz
+      pkgs.zip
       pkgs.zstd
-      pkgs.gnutar
 
-      # utils
-      pkgs.bat
-      pkgs.ripgrep
-      pkgs.jq
-      pkgs.fd
-      pkgs.fastmod
-      pkgs.just
-
+      # dev utils
       phlipPkgs.dotenvy
+      pkgs.bat
+      pkgs.fastmod
+      pkgs.fd
+      pkgs.jq
+      pkgs.just
+      pkgs.patchelf
+      pkgs.ripgrep
 
       # network
       pkgs.bind.dnsutils # `dig`, `nslookup`, `delv`, `nsupdate`
-      pkgs.iperf
-      pkgs.socat
-      pkgs.netcat-gnu # `nc`
       pkgs.curl
+      pkgs.iperf
+      pkgs.netcat-gnu # `nc`
+      pkgs.socat
       pkgs.wget
     ];
 
