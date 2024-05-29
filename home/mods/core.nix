@@ -1,9 +1,10 @@
 # Core tools that should be installed on every system
 {
   config,
-  lib,
-  pkgs,
   inputs,
+  lib,
+  phlipPkgs,
+  pkgs,
   ...
 }: {
   options.home.dotfilesDir = lib.mkOption {
@@ -26,38 +27,40 @@
     # space.
     nix.registry.nixpkgs.flake = inputs.nixpkgs;
 
-    home.packages = with pkgs; [
+    home.packages = [
       # GNU core utils
-      coreutils
-      file
-      findutils
-      gawk
-      gnused
-      which
-      parallel
+      pkgs.coreutils
+      pkgs.file
+      pkgs.findutils
+      pkgs.gawk
+      pkgs.gnused
+      pkgs.which
+      pkgs.parallel
 
       # archives
-      zip
-      unzip
-      xz
-      zstd
-      gnutar
+      pkgs.zip
+      pkgs.unzip
+      pkgs.xz
+      pkgs.zstd
+      pkgs.gnutar
 
       # utils
-      bat
-      ripgrep
-      jq
-      fd
-      fastmod
-      just
+      pkgs.bat
+      pkgs.ripgrep
+      pkgs.jq
+      pkgs.fd
+      pkgs.fastmod
+      pkgs.just
+
+      phlipPkgs.dotenvy
 
       # network
-      bind.dnsutils # `dig`, `nslookup`, `delv`, `nsupdate`
-      iperf
-      socat
-      netcat-gnu # `nc`
-      curl
-      wget
+      pkgs.bind.dnsutils # `dig`, `nslookup`, `delv`, `nsupdate`
+      pkgs.iperf
+      pkgs.socat
+      pkgs.netcat-gnu # `nc`
+      pkgs.curl
+      pkgs.wget
     ];
 
     # Use consistent man across platforms

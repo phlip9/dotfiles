@@ -170,7 +170,7 @@ function retry() {
 
     # Use GNU parallel to run the workers in parallel, exiting early when the
     # first fails.
-    seq $N | parallel --jobs $N --ungroup --halt now,done=1 do_work "$@"
+    seq "$N" | parallel --jobs "$N" --ungroup --halt now,done=1 do_work "$@"
 }
 
 # pyvenv helpers

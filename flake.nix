@@ -44,23 +44,24 @@
     };
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    home-manager,
-  } @ inputs: let
+  outputs = {self, ...} @ inputs: let
+    lib = inputs.nixpkgs.lib;
+
     # supported systems
     systems = ["aarch64-darwin" "x86_64-linux"];
 
-    # Example:
+    # genAttrs :: [ String ] -> (String -> Any) -> AttrSet
+    #
+    # ```
     # > genAttrs [ "bob" "joe" ] (name: "hello ${name}")
     # { bob = "hello bob"; joe = "hello joe" }
-    genAttrs = nixpkgs.lib.genAttrs;
+    # ```
+    genAttrs = lib.genAttrs;
 
-    # forEachSystem :: (String -> AttrSet) -> AttrSet
+    # eachSystem :: (builder :: String -> AttrSet) -> AttrSet
     #
-    # Example:
-    # > forEachSystem (system: { a = 123; b = "cool ${system}"; })
+    # ```
+    # > eachSystem (system: { a = 123; b = "cool ${system}"; })
     # {
     #   "aarch64-darwin" = {
     #     a = 123;
@@ -71,31 +72,44 @@
     #     b = "cool x86_64-linux";
     #   };
     # }
-    forEachSystem = builder:
-      genAttrs systems builder;
+    # ```
+    eachSystem = builder: genAttrs systems builder;
 
-    # forEachPkgs :: (Nixpkgs -> AttrSet) -> AttrSet
-    forEachPkgs = builder:
-      forEachSystem (
-        system:
-          builder nixpkgs.legacyPackages.${system}
-      );
-  in {
-    # TIP: uncomment this line to easily poke through the nixpkgs state in the
-    # `nix repl` (use `:load-flake .` after opening the repl).
+    # The "host" nixpkgs for each system.
     #
-    # pkgs = nixpkgs.legacyPackages."x86_64-linux";
+    # ```
+    # {
+    #   "aarch64-darwin" = <nixpkgs>;
+    #   "x86_64-linux" = <nixpkgs>;
+    # }
+    # ```
+    systemPkgs = eachSystem (system: inputs.nixpkgs.legacyPackages.${system});
 
-    # Re-export home-manager package so we can easily reference it on first-time
-    # setup for a new machine.
-    packages = forEachSystem (system: {
-      home-manager = inputs.home-manager.packages.${system}.home-manager;
+    # eachSystemPkgs :: (builder :: Nixpkgs -> AttrSet) -> AttrSet
+    eachSystemPkgs = builder: eachSystem (system: builder systemPkgs.${system});
+
+    # My custom packages for each system.
+    systemPhlipPkgs = eachSystemPkgs (pkgs:
+      import ./pkgs/default.nix {
+        pkgs = pkgs;
+      });
+  in {
+    packages = eachSystem (system: let
+      # pkgs = systemPkgs.${system};
+      hmPkgs = inputs.home-manager.packages.${system};
+      phlipPkgs = systemPhlipPkgs.${system};
+    in {
+      # Re-export home-manager package so we can easily reference it on
+      # first-time setup for a new machine.
+      home-manager = hmPkgs.home-manager;
+
+      dotenvy = phlipPkgs.dotenvy;
     });
 
     # home-manager configurations for different hosts
 
-    homeConfigurations."phlipdesk" = home-manager.lib.homeManagerConfiguration rec {
-      pkgs = nixpkgs.legacyPackages."x86_64-linux";
+    homeConfigurations."phlipdesk" = inputs.home-manager.lib.homeManagerConfiguration rec {
+      pkgs = systemPkgs."x86_64-linux";
       lib = pkgs.lib;
       modules = [./home/phlipdesk.nix];
 
@@ -103,13 +117,14 @@
       # the home-manager modules.
       extraSpecialArgs = {
         inputs = inputs;
+        phlipPkgs = systemPhlipPkgs.${pkgs.system};
       };
 
       check = true;
     };
 
-    homeConfigurations."phliptop-mbp" = home-manager.lib.homeManagerConfiguration rec {
-      pkgs = nixpkgs.legacyPackages."aarch64-darwin";
+    homeConfigurations."phliptop-mbp" = inputs.home-manager.lib.homeManagerConfiguration rec {
+      pkgs = systemPkgs."aarch64-darwin";
       lib = pkgs.lib;
       modules = [./home/phliptop-mbp.nix];
 
@@ -117,15 +132,16 @@
       # the home-manager modules.
       extraSpecialArgs = {
         inputs = inputs;
+        phlipPkgs = systemPhlipPkgs.${pkgs.system};
       };
 
       check = true;
     };
 
     # The *.nix file formatter.
-    formatter = forEachPkgs (pkgs: pkgs.alejandra);
+    formatter = eachSystemPkgs (pkgs: pkgs.alejandra);
 
-    devShells = forEachPkgs (pkgs: {
+    devShells = eachSystemPkgs (pkgs: {
       default = pkgs.mkShellNoCC {
         packages = [
           # nix language server
