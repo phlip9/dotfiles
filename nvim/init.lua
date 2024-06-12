@@ -343,6 +343,35 @@ if pcall(require, "telescope") then
     local telescope = require("telescope")
     telescope.setup({
         defaults = {
+            -- default key mappings for all pickers
+            mappings = {
+                -- insert mode
+                i = {
+                    -- Show 'elp in insert mode
+                    ["<C-e>"] = function(...)
+                        require("telescope.actions").which_key(...)
+                    end,
+
+                    -- Cycle through history
+                    ["<C-Up>"] = function(...)
+                        require("telescope.actions").cycle_history_prev(...)
+                    end,
+                    ["<C-Down>"] = function(...)
+                        require("telescope.actions").cycle_history_next(...)
+                    end,
+                },
+                -- normal mode
+                n = {
+                    -- Cycle through history
+                    ["<C-Up>"] = function(...)
+                        require("telescope.actions").cycle_history_prev(...)
+                    end,
+                    ["<C-Down>"] = function(...)
+                        require("telescope.actions").cycle_history_next(...)
+                    end,
+                }
+            },
+
             vimgrep_arguments = {
                 "rg",
                 "--color=never", "--no-heading", "--with-filename", "--line-number", "--column",
