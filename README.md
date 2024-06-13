@@ -747,3 +747,68 @@ If first time setup is already complete, then just:
 ```bash
 $ hm switch
 ```
+
+### Garbage collection
+
+Is your huge nix store filling up your root fs? You'll want to run nix garbage
+collection to clear out unused store paths.
+
+Start by unpinning old home-manager generations:
+
+```bash
+$ hm generations
+2024-05-29 11:15 : id 134 -> /nix/store/dwh7mqsji1671zy116znqiiqnvcsyh76-home-manager-generation
+2024-05-28 09:07 : id 133 -> /nix/store/fxdjm1mzyaxyw575v8yn40500s22ijzv-home-manager-generation
+...
+
+$ hm expire-generations 2024-05-28
+```
+
+Next unpin your old user profiles:
+
+```bash
+$ nix-env --delete-generations +1
+```
+
+Unpin any old _root_ user profiles:
+
+```bash
+$ sudo $(which nix-env) --delete-generations +1
+```
+
+Finally run the garbage collector to actually delete all the store paths that
+are no longer pinned:
+
+```bash
+$ nix store gc
+63704 store paths deleted, 76738.94 MiB freed
+```
+
+This is a good start. If you're still missing space, you'll want to clear out
+any `nix build` ./result symlinks scattered around your fs. Nix will tell you
+where they are (called GC roots):
+
+```bash
+phlip9@phlipdesk:~$ nix-store --gc --print-roots
+removing stale link from '/nix/var/nix/gcroots/auto/g60p5vbf9rkyhsjqdfhp0ff2b8sw6y3q' to '/nix/var/nix/profiles/per-user/root/profile-3-link'
+removing stale link from '/nix/var/nix/gcroots/auto/v73nmmh5d8van4ja5c8jn0gjlwhxbz3a' to '/nix/var/nix/profiles/per-user/root/profile-2-link'
+removing stale link from '/nix/var/nix/gcroots/auto/lzjbmb2ry0z7lma2fvpqprb12921pnb5' to '/nix/var/nix/profiles/per-user/root/profile-1-link'
+/home/phlip9/.cache/nix/flake-registry.json -> /nix/store/ypkhxink7miy8gw2mi88jlacl213cg4d-flake-registry.json
+/home/phlip9/.local/state/home-manager/gcroots/current-home -> /nix/store/dwh7mqsji1671zy116znqiiqnvcsyh76-home-manager-generation
+/home/phlip9/.local/state/nix/profiles/home-manager-133-link -> /nix/store/fxdjm1mzyaxyw575v8yn40500s22ijzv-home-manager-generation
+/home/phlip9/.local/state/nix/profiles/home-manager-134-link -> /nix/store/dwh7mqsji1671zy116znqiiqnvcsyh76-home-manager-generation
+/home/phlip9/.local/state/nix/profiles/profile-88-link -> /nix/store/b59q817jnxi3licvd5yjcya20j6g45ij-user-environment
+/home/phlip9/.local/state/nix/profiles/profile-89-link -> /nix/store/x0dc62hgzbkjazgcj3c0wawr51gnldby-user-environment
+/home/phlip9/dev/blockstream-electrs/result -> /nix/store/27zlpwjkwlykzry67cs2kcq6fgk969v4-electrs-aarch64-unknown-linux-gnu-0.4.1
+/home/phlip9/dev/dotfiles/result -> /nix/store/9v3khc64b5mzfslh99hfahhdzlyx0zwg-dotenvy-0.15.7
+...
+```
+
+Then delete some and re-run the GC:
+
+```bash
+$ cd ~/dev
+$ rm ./blockstream-electrs/result ./notes/result ./nix/result
+$ nix store gc
+4893 store paths deleted, 7355.03 MiB freed
+```
