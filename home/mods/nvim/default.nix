@@ -76,6 +76,7 @@
         q.json
         q.jsonc
         q.just
+        q.kotlin
         q.lua
         q.make
         q.markdown
