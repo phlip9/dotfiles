@@ -266,28 +266,9 @@ pathappend "$HOME/.cargo/bin"
 pathappend "$HOME/.local/bin"
 pathappend "$GEM_HOME/bin"
 
-# TODO: do we still need this?
-# # set RUST_SRC_PATH based on current rustup version
-# if [ -x "$(command -v rustc)" ]; then
-#     RUST_SYSROOT=$(rustc --print sysroot)
-#     export RUST_SRC_PATH=$RUST_SYSROOT/lib/rustlib/src/rust/src/
-# fi
-
 ## ENV VARS }}}
 
 ## COMPLETIONS {{{
-
-# Homebrew bash completions
-if [ -x "$(command -v brew)" ]; then
-    HOMEBREW_PREFIX="$(brew --prefix)"
-    if [[ -r "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh" ]]; then
-        source "${HOMEBREW_PREFIX}/etc/profile.d/bash_completion.sh"
-    else
-        for COMPLETION in "${HOMEBREW_PREFIX}/etc/bash_completion.d/"*; do
-            [[ -r "${COMPLETION}" ]] && source "${COMPLETION}"
-        done
-    fi
-fi
 
 # Bash completions from nix profiles
 for PROFILE in $NIX_PROFILES; do
