@@ -251,10 +251,6 @@ export GOROOT=$HOME/.local/go1.19.3
 
 # Android
 export ANDROID_HOME=$HOME/.local/android
-ANDROID_SDK_VERSION=33.0.1
-ANDROID_PATH=$ANDROID_HOME/cmdline-tools/latest/bin
-ANDROID_PATH=$ANDROID_PATH:$ANDROID_HOME/build-tools/$ANDROID_SDK_VERSION
-ANDROID_PATH=$ANDROID_PATH:$ANDROID_HOME/platform-tools
 
 # Ruby Gems
 export GEM_HOME=$HOME/.local/gem
