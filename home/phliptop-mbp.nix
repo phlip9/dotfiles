@@ -38,6 +38,7 @@
     ./mods/gh.nix
     ./mods/git.nix
     ./mods/inputrc.nix
+    ./mods/jdk.nix
     ./mods/local-bin.nix
     ./mods/nvim/default.nix
     ./mods/python.nix

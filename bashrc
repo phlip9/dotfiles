@@ -255,7 +255,6 @@ ANDROID_SDK_VERSION=33.0.1
 ANDROID_PATH=$ANDROID_HOME/cmdline-tools/latest/bin
 ANDROID_PATH=$ANDROID_PATH:$ANDROID_HOME/build-tools/$ANDROID_SDK_VERSION
 ANDROID_PATH=$ANDROID_PATH:$ANDROID_HOME/platform-tools
-export SDKMAN_DIR="$HOME/.local/sdkman"
 
 # Ruby Gems
 export GEM_HOME=$HOME/.local/gem
@@ -266,12 +265,6 @@ pathappend "$HOME/.pub-cache/bin" # dart
 pathappend "$HOME/.cargo/bin"
 pathappend "$HOME/.local/bin"
 pathappend "$GEM_HOME/bin"
-
-# Java SDKMAN
-if [[ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ]]; then
-    export SDKMAN_DIR="$HOME/.local/sdkman"
-    source "$SDKMAN_DIR/bin/sdkman-init.sh"
-fi
 
 # TODO: do we still need this?
 # # set RUST_SRC_PATH based on current rustup version
