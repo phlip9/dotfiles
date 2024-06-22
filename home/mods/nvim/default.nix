@@ -87,6 +87,7 @@
         q.toml
         q.vim
         q.vimdoc
+        q.xml
         q.yaml
       ]);
     }

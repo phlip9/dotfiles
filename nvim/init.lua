@@ -189,6 +189,9 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
         },
     })
 
+    -- -- Use the html treesitter parser for all .xml files, since it works better.
+    -- vim.treesitter.language.register("html", "xml")
+
     -- -- nvim-treesitter-context - show the context that's past the scroll height
     -- require("treesitter-context").setup({
     --     enable = true,
@@ -241,9 +244,6 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
     end
     vim.keymap.set("n", "<leader>tsf", toggle_treesitter_fold,
         M.with_desc("Toggle Treesitter syntax-based folding", opts))
-
-    -- tree-sitter-just - grammar for Justfile's
-    -- require("tree-sitter-just").setup({})
 end
 
 -- nvim-treesitter }}}
