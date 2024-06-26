@@ -1001,6 +1001,10 @@ do  -- BEHAVIOR {{{
         { "ni", "∉" },
         -- in set
         { "in", "∈" },
+        -- set union
+        { ")U", "∪" },
+        -- set intersection
+        { "(U", "∩" },
         -- and
         { "an", "∧" },
         -- or
