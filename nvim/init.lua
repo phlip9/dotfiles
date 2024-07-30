@@ -520,7 +520,7 @@ end -- }}}
 do  -- vim-gitgutter - Show git diff in the gutter {{{
     -- Mappings:
     -- <leader>ggt - Toggle git gutter
-    -- <leader>ggd - open git diff split pane for current file
+    -- <leader>hd - open git diff split pane for current file
     -- <leader>hs - Stage hunk
     -- <leader>hr - Undo hunk
     -- ]h - Move forward one hunk
