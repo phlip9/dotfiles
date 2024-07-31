@@ -42,12 +42,13 @@ in {
   config = {
     # Why do this funky setup? So we get alacritty auto-reload on config file
     # change, while still overriding settings on different machines.
-    xdg.configFile."alacritty/alacritty.yml".text = ''
-      import:
-        - ${dotfilesDir}/alacritty.yml
+    xdg.configFile."alacritty/alacritty.toml".text = ''
+      import = [
+        "${dotfilesDir}/alacritty.toml",
+      ]
 
-      font:
-        size: ${builtins.toString cfg.fontSize}.0
+      [font]
+      size = ${builtins.toString cfg.fontSize}
     '';
   };
 }
