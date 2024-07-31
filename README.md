@@ -64,10 +64,6 @@ $ mkdir ~/dev
 $ cd ~/dev
 $ git clone https://github.com/phlip9/dotfiles.git
 $ cd dotfiles
-
-# (OSX) source our personal bashrc settings
-$ echo "[ -f ~/.bashrc ] && source ~/.bashrc" >> ~/.bash_profile
-$ source ~/.bash_profile
 ```
 
 
@@ -76,7 +72,7 @@ $ source ~/.bash_profile
 See up-to-date version: <https://github.com/DeterminateSystems/nix-installer/releases>
 
 ```bash
-$ curl --proto '=https' --tlsv1.2 -sSfL https://install.determinate.systems/nix/tag/v0.9.1 \
+$ curl --proto '=https' --tlsv1.2 -sSfL https://install.determinate.systems/nix/tag/v0.20.2 \
     | bash -s -- install --diagnostic-endpoint ""
 
 # Add these lines to /etc/nix/nix.conf
@@ -86,8 +82,6 @@ $ sudo cat >> /etc/nix/nix.conf << EOF
 keep-derivations = true
 keep-outputs = true
 EOF
-$ echo -e "keep-derivations = true\nkeep-outputs = true" \
-    | sudo tee --append /etc/nix/nix.conf
 ```
 
 NOTE: this is using the unofficial DeterminateSystems nix installer.
@@ -102,6 +96,11 @@ $ nvim ./flake.nix
 
 # Switch to the home-manager config for this host
 $ nix run .#home-manager -- --flake .#$(hostname -s) switch
+
+# (Linux)
+# Set the login shell to the bash from nixpkgs
+$ sudo usermod --shell /home/$USER/.nix-profile/bin/bash $USER
+# Logout and log back in
 ```
 
 Post initial setup, just use the alias to switch to a new home-manager config
@@ -123,39 +122,6 @@ $ defaults write com.apple.Finder AppleShowAllFiles true
 
 
 ## Debian|Ubuntu|WSL
-
-### Install tmux
-
-#### Intall tmux (apt)
-
-+ If the installation is recent enough, the `tmux` in the package repos
-  should be new enough (>=3.0).
-
-```bash
-$ sudo apt install tmux
-```
-
-
-#### Install tmux (source)
-
-+ Install tmux build dependencies
-
-```bash
-$ sudo apt install m4 libevent-dev libncurses5-dev autogen automake pkg-config libtool perl bison
-```
-
-+ Build tmux from source
-
-```bash
-$ cd ~/dev
-$ git clone git@github.com:tmux/tmux.git
-$ cd tmux
-$ git checkout 3.0
-$ ./autogen.sh
-$ ./configure
-$ make && sudo make install
-```
-
 
 ### Remap Caps Lock -> Escape (tap) + Ctrl (hold)
 
@@ -243,14 +209,6 @@ $ sudo systemctl enable --now udevmon
       EV_KEY: [KEY_CAPSLOCK, KEY_ESC]
 ```
 
-
-### Install htop
-
-```bash
-$ sudo apt install lm-sensors htop
-```
-
-
 ### Firefox touch screen support and smooth scrolling
 
 + Add `MOZ_USE_XINPUT2 DEFAULT=1` to `/etc/security/pam_env.conf` and then relog.
@@ -263,26 +221,28 @@ $ sudo apt install lm-sensors htop
 ```bash
 # (Ubuntu/Debian/Pop!_OS)
 $ sudo apt install cmake pkg-config libfreetype6-dev libfontconfig1-dev \
-    libxcb-xfixes0-dev libxkbcommon-dev python3
+    libxcb-xfixes0-dev libxkbcommon-dev
 ```
 
 + Build and install
 
 ```bash
-$ git clone --depth=1 https://github.com/alacritty/alacritty.git
+$ git clone --filter=blob:none https://github.com/alacritty/alacritty.git
 $ cd alacritty
-
-# (Linux X11)
-$ RUSTFLAGS="-C target-cpu=native" cargo build \
-    --release \
-    --no-default-features \
-    --features=x11
 
 # (Linux Wayland)
 $ RUSTFLAGS="-C target-cpu=native" cargo build \
-    --release
+    --bin alacritty \
+    --release \
     --no-default-features \
     --features=wayland
+
+# (Linux X11)
+$ RUSTFLAGS="-C target-cpu=native" cargo build \
+    --bin alacritty \
+    --release \
+    --no-default-features \
+    --features=x11
 
 # Install
 $ sudo cp target/release/alacritty /usr/local/bin/
@@ -299,32 +259,10 @@ $ sudo cp extra/logo/alacritty-term.svg /usr/share/pixmaps/Alacritty.svg
 $ sudo desktop-file-install extra/linux/Alacritty.desktop
 $ sudo update-desktop-database
 
-# Install man page
-$ sudo mkdir -p /usr/local/share/man/man1
-$ gzip -c extra/alacritty.man | sudo tee /usr/local/share/man/man1/alacritty.1.gz > /dev/null
-$ gzip -c extra/alacritty-msg.man | sudo tee /usr/local/share/man/man1/alacritty-msg.1.gz > /dev/null
-
 # Install bash completions
 $ mkdir -p ~/.local/share/alacritty
 $ cp extra/completions/alacritty.bash ~/.local/share/alacritty/alacritty.bash
 $ chmod a+x ~/.local/share/alacritty/alacritty.bash
-```
-
-
-### Install gh cli
-
-```bash
-# (Ubuntu/Debian/Pop!_OS)
-$ curl --proto '=https' --tlsv1.3 \
-    https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-    | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-$ echo "deb [arch=$(dpkg --print-architecture)" \
-    "signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg]" \
-    "https://cli.github.com/packages stable main" \
-    | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-$ sudo apt update
-$ sudo apt install gh
-$ gh auth login
 ```
 
 

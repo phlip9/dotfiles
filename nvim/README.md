@@ -27,12 +27,9 @@ $ cd ~/Downloads && mkdir fonts && cd fonts
 
 # Download fonts (with extra query parameter cruft in filenames)
 $ curl --proto '=https' --tlsv1.3 https://github.com/powerline/fonts/tree/master/SourceCodePro \
-    | sed -n -e 's/^.*href="\(.*\.otf\)".*$/https:\/\/github.com\1?raw=true/p' \
-    | xargs wget
-# Remove query parameter cruft from the filenames
-$ ls \
-    | sed -n -e 's/^\(.*\)?raw=true/\1/p' \
-    | xargs -p -I'{}' mv '{}'?raw=true '{}'
+    | rg --only-matching --replace 'https://github.com/powerline/fonts/raw/master/SourceCodePro/$1' '\"([^/"]+\.otf)\"' \
+    | sort --unique \
+    | xargs -p -d '\n' wget
 
 # (Ubuntu/Debian/Pop!_OS - Gnome)
 $ sudo apt install gnome-tweaks
