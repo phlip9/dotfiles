@@ -123,6 +123,21 @@
       check = true;
     };
 
+    homeConfigurations."phliptop-nitro" = inputs.home-manager.lib.homeManagerConfiguration rec {
+      pkgs = systemPkgs."x86_64-linux";
+      lib = pkgs.lib;
+      modules = [./home/phliptop-nitro.nix];
+
+      # Use `extraSpecialArgs` to pass through arguments from the flake.nix to
+      # the home-manager modules.
+      extraSpecialArgs = {
+        inputs = inputs;
+        phlipPkgs = systemPhlipPkgs.${pkgs.system};
+      };
+
+      check = true;
+    };
+
     homeConfigurations."phliptop-mbp" = inputs.home-manager.lib.homeManagerConfiguration rec {
       pkgs = systemPkgs."aarch64-darwin";
       lib = pkgs.lib;
