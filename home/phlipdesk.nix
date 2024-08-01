@@ -31,7 +31,7 @@
 
     ./mods/alacritty.nix
     ./mods/bash.nix
-    ./mods/cdda.nix
+    # ./mods/cdda.nix
     ./mods/ctags.nix
     # ./mods/direnv.nix
     ./mods/fzf.nix
@@ -68,10 +68,10 @@
     # Jan AI chat
     (pkgs.appimageTools.wrapType2 rec {
       pname = "Jan";
-      version = "0.4.7";
+      version = "0.5.2";
       src = pkgs.fetchurl {
         url = "https://github.com/janhq/jan/releases/download/v${version}/jan-linux-x86_64-${version}.AppImage";
-        hash = "sha256-Mn7rIBEf46JbNof8h3z66TGdGKnb0FGMJc46JncA0KM=";
+        hash = "sha256-wsG73kfIn+6nOdH8BG3BRRH9zierOj/FHUho9bGcG6k=";
       };
     })
 

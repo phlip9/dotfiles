@@ -21,6 +21,7 @@ config/htop/htoprc
 
 # nix derivation result link
 /result
+/result-man
 
 # home-manager generated coc-settings for this repo.
 /.vim/coc-settings.json
