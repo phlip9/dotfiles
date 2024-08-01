@@ -11,5 +11,6 @@ in {
   ];
 
   # link tmux.conf
-  home.file.".tmux.conf".source = mkOutOfStoreSymlink "${dotfilesDir}/tmux.conf";
+
+  xdg.configFile."tmux/tmux.conf".source = mkOutOfStoreSymlink "${dotfilesDir}/tmux.conf";
 }

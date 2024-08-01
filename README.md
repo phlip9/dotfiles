@@ -110,6 +110,7 @@ after changing one of the dotfiles:
 $ hms
 ```
 
+
 ### Install Neovim and dev tooling
 
 [phlip9/dotfiles > nvim/README.md](https://github.com/phlip9/dotfiles/blob/master/nvim/README.md)
@@ -266,6 +267,13 @@ $ chmod a+x ~/.local/share/alacritty/alacritty.bash
 ```
 
 
+### (Linux Wayland) Install wl-clipboard
+
+```bash
+$ sudo apt install wl-clipboard
+```
+
+
 ### Install Signal
 
 ```bash
@@ -285,6 +293,11 @@ $ sudo apt update
 $ sudo apt install signal-desktop
 ```
 
+### (Ubuntu) Disable tracker3 file indexer
+
+```bash
+$ systemctl --user disable tracker-miner-fs-3.service
+```
 
 ## OSX ##
 
