@@ -44,6 +44,7 @@
     ./mods/nvim/default.nix
     ./mods/python.nix
     ./mods/ssh.nix
+    ./mods/ssh-agent.nix
     ./mods/tmux.nix
   ];
 

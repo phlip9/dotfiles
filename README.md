@@ -296,7 +296,21 @@ $ sudo apt install signal-desktop
 ### (Ubuntu) Disable tracker3 file indexer
 
 ```bash
-$ systemctl --user disable tracker-miner-fs-3.service
+$ systemctl --user stop tracker-miner-fs-3.service
+$ systemctl --user mask tracker-miner-fs-3.service
+```
+
+### (Ubuntu) Disable all the different shitty ssh agents
+
+```bash
+$ systemctl --user stop gnome-keyring-ssh.service
+$ systemctl --user mask gnome-keyring-ssh.service
+
+$ systemctl --user stop ssh-agent.service
+$ systemctl --user mask ssh-agent.service
+
+$ systemctl --user stop gpg-agent-ssh.service
+$ systemctl --user mask gpg-agent-ssh.service
 ```
 
 ## OSX ##
