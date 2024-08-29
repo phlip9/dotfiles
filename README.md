@@ -232,21 +232,28 @@ $ git clone --filter=blob:none https://github.com/alacritty/alacritty.git
 $ cd alacritty
 
 # (Linux Wayland)
-$ RUSTFLAGS="-C target-cpu=native" cargo build \
+$ RUSTFLAGS="-C target-cpu=native" CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
+    cargo build \
     --bin alacritty \
     --release \
     --no-default-features \
     --features=wayland
 
 # (Linux X11)
-$ RUSTFLAGS="-C target-cpu=native" cargo build \
+$ RUSTFLAGS="-C target-cpu=native" CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
+    cargo build \
     --bin alacritty \
     --release \
     --no-default-features \
     --features=x11
 
-# Install
+# (Linux) Install
 $ sudo cp target/release/alacritty /usr/local/bin/
+
+# (macOS) Build & Install
+$ RUSTFLAGS="-C target-cpu=native" CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
+    make app
+$ cp -r target/release/osx/Alacritty.app /Applications/
 ```
 
 + Post-build
@@ -340,19 +347,6 @@ $ chsh -s /bin/bash
 + Unmap Escape
 
 + Remap Caps Lock -> Control when used as a modifier and Caps Lock -> Escape when hit alone
-
-
-### Install Alacritty ###
-
-```bash
-$ git clone --depth=1 https://github.com/alacritty/alacritty.git
-$ cd alacritty
-$ RUSTFLAGS="-C target-cpu=native" make app
-$ cp -r target/release/osx/Alacritty.app /Applications/
-
-# install terminfo
-$ sudo tic -xe alacritty,alacritty-direct extra/alacritty.info
-```
 
 
 ### (Optional) Install iTerm2 ###
