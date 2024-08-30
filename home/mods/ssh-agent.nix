@@ -5,7 +5,7 @@
   ...
 }: let
   # TODO(phlip9): seahorse is gnome only. choose an askpass impl based on host cfg.
-  ssh-askpass = "${pkgs.gnome.seahorse}/libexec/seahorse/ssh-askpass";
+  ssh-askpass = "${pkgs.seahorse}/libexec/seahorse/ssh-askpass";
 
   shellHook = ''
     export -n SSH_AGENT_LAUNCHER
