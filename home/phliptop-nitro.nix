@@ -62,6 +62,11 @@
 
     pkgs.protobuf
 
+    # # TODO(phlip9): remove
+    # pkgs.openssl
+    # pkgs.openssl.dev
+    # pkgs.pkg-config
+
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello
@@ -79,6 +84,11 @@
     #   echo "Hello, ${config.home.username}!"
     # '')
   ];
+
+  # # TODO(phlip9): remove
+  # programs.bash.initExtra = lib.mkAfter ''
+  #   export PKG_CONFIG_PATH="$HOME/.nix-profile/lib/pkgconfig"
+  # '';
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
