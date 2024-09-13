@@ -110,6 +110,45 @@ after changing one of the dotfiles:
 $ hms
 ```
 
+### Generate new gpg keypair and add it to GitHub
+
+```bash
+# Generate a new ed25519 keypair
+$ gpg --full-generate-key
+Kind: (10) ECC (sign only)
+Curve: (1) Curve25519
+Expiration: 0 (none)
+
+Real name: Philip Kannegaard Hayes
+Email address: philiphayes9@gmail.com
+Comment: phliptop-mbp
+
+# List all local gpg keys that have a secret key
+$ gpg --list-secret-keys --keyid-format=long
+[keyboxd]
+---------
+sec   ed25519/F93E285483EA5FD2 2024-09-13 [SC]
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+uid                 [ultimate] Philip Kannegaard Hayes (phliptop-mbp) <philiphayes9@gmail.com>
+
+# Copy the pubkey
+$ gpg --armor --export F93E285483EA5FD2 | tee /dev/stderr | pbcopy
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mDMEZuOWThYJKwYBBAHaRw8BAQdAJLFRMDDy9y9KvazpZ+m56hhz+bhDU9LVp8bj
+U3yKiEi0P1BoaWxpcCBLYW5uZWdhYXJkIEhheWVzIChwaGxpcHRvcC1tYnApIDxw
+aGlsaXBoYXllczlAZ21haWwuY29tPoiTBBMWCgA7FiEEksZ3o5qzLB/XjoKH+T4o
+VIPqX9IFAmbjlk4CGwMFCwkIBwICIgIGFQoJCAsCBBYCAwECHgcCF4AACgkQ+T4o
+VIPqX9K9OAEA/wiGADK53NUI7DZ7AXDyJNICWCekaoz6FOuaSrYUe6sBANn4BkYb
+Y552/3BmTpqV0qCpW9rUMzHRb1MYPxCR2x0A
+=7dDH
+-----END PGP PUBLIC KEY BLOCK-----
+```
+
+Add it to GitHub: <https://github.com/settings/gpg/new>
+
+Repeat for all emails.
+
 
 ### Install Neovim and dev tooling
 

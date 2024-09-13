@@ -19,6 +19,12 @@ in {
 
     userName = "Philip Hayes";
     userEmail = "philiphayes9@gmail.com";
+    signing = {
+      # determine keypair to use by commit email
+      key = null;
+      # sign all commits by default
+      signByDefault = true;
+    };
 
     extraConfig = {
       core.editor = "nvim";
