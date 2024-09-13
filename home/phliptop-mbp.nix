@@ -49,9 +49,6 @@
     ./mods/tmux.nix
   ];
 
-  # TODO(phlip9): remove when home-manager PR lands
-  services.gpg-agent-phlip9.enable = true;
-
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
