@@ -17,10 +17,13 @@ in {
   programs.git = {
     enable = true;
 
-    userName = "Philip Hayes";
+    userName = "Philip Kannegaard Hayes";
     userEmail = "philiphayes9@gmail.com";
+
+    # gpg commit signing
     signing = {
-      # determine keypair to use by commit email
+      # determine keypair to use by commit email. the name and email in the gpg
+      # key must match "{userName} <{userEmail}>" EXACTLY.
       key = null;
       # sign all commits by default
       signByDefault = true;

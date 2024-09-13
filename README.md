@@ -119,9 +119,11 @@ Kind: (10) ECC (sign only)
 Curve: (1) Curve25519
 Expiration: 0 (none)
 
-Real name: Philip Kannegaard Hayes
-Email address: philiphayes9@gmail.com
-Comment: phliptop-mbp
+# The name and email must match the git config values exactly! Make sure comment
+# is also empty!
+Name: Philip Kannegaard Hayes
+Email: philiphayes9@gmail.com
+Comment:
 
 # List all local gpg keys that have a secret key
 $ gpg --list-secret-keys --keyid-format=long
@@ -129,7 +131,7 @@ $ gpg --list-secret-keys --keyid-format=long
 ---------
 sec   ed25519/F93E285483EA5FD2 2024-09-13 [SC]
       XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-uid                 [ultimate] Philip Kannegaard Hayes (phliptop-mbp) <philiphayes9@gmail.com>
+uid                 [ultimate] Philip Kannegaard Hayes <philiphayes9@gmail.com>
 
 # Copy the pubkey
 $ gpg --armor --export F93E285483EA5FD2 | tee /dev/stderr | pbcopy
