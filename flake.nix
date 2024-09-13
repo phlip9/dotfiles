@@ -178,5 +178,11 @@
         ];
       };
     });
+
+    _dbg = {
+      lib = lib;
+      systemPkgs = systemPkgs;
+      systemPhlipPkgs = systemPhlipPkgs;
+    };
   };
 }

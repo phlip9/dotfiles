@@ -36,6 +36,8 @@
     # ./mods/direnv.nix
     ./mods/fzf.nix
     ./mods/gh.nix
+    ./mods/gpg.nix
+    ./mods/gpg-agent.nix
     ./mods/git.nix
     ./mods/inputrc.nix
     ./mods/jdk.nix
@@ -46,6 +48,9 @@
     # ./mods/ssh.nix
     ./mods/tmux.nix
   ];
+
+  # TODO(phlip9): remove when home-manager PR lands
+  services.gpg-agent-phlip9.enable = true;
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
