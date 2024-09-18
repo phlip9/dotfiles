@@ -2,11 +2,16 @@
     "[json][rust][nix][dart][lua]": {
         "coc.preferences.formatOnSave": true,
     },
+    // Don't display inlay hints by default.
+    // Toggle with `:CocCommand document.toggleInlayHint`
+    "inlayHint.display": false,
     "workspace.ignoredFolders": [
         "$HOME",
         // rust-analyzer: don't cargo check sysroot crates.
         "$HOME/.cargo/**",
         "$HOME/.rustup/**",
+        // flutter/dart: don't check pub packages.
+        "$HOME/.pub-cache/**",
     ],
     "Lua.format.enable": true,
     "Lua.format.defaultConfig": {
