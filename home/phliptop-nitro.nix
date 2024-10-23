@@ -36,6 +36,8 @@
     # ./mods/direnv.nix
     ./mods/fzf.nix
     ./mods/gdb.nix
+    ./mods/gpg.nix
+    ./mods/gpg-agent.nix
     ./mods/gh.nix
     ./mods/git.nix
     ./mods/inputrc.nix
