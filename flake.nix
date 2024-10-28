@@ -85,18 +85,7 @@
     #   "x86_64-linux" = <nixpkgs>;
     # }
     # ```
-    # systemPkgs = eachSystem (system: inputs.nixpkgs.legacyPackages.${system});
-    # TODO(phlip9): remove when home-manager updates to not use bad `utillinux`
-    # alias.
-    systemPkgs = eachSystem (system:
-      import inputs.nixpkgs {
-        system = system;
-        overlays = [
-          (prev: self: {
-            utillinux = prev.util-linux;
-          })
-        ];
-      });
+    systemPkgs = eachSystem (system: inputs.nixpkgs.legacyPackages.${system});
 
     # eachSystemPkgs :: (builder :: Nixpkgs -> AttrSet) -> AttrSet
     eachSystemPkgs = builder: eachSystem (system: builder systemPkgs.${system});
