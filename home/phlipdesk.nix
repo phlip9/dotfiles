@@ -71,10 +71,10 @@
     # Jan AI chat
     (pkgs.appimageTools.wrapType2 rec {
       pname = "Jan";
-      version = "0.5.2";
+      version = "0.5.7";
       src = pkgs.fetchurl {
         url = "https://github.com/janhq/jan/releases/download/v${version}/jan-linux-x86_64-${version}.AppImage";
-        hash = "sha256-wsG73kfIn+6nOdH8BG3BRRH9zierOj/FHUho9bGcG6k=";
+        hash = "sha256-mWmqvyX9n79uCtCZimU7B1jFE+0Ucwe+RGw0oSQaSB4=";
       };
     })
 
