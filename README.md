@@ -812,3 +812,22 @@ $ rm ./blockstream-electrs/result ./notes/result ./nix/result
 $ nix store gc
 4893 store paths deleted, 7355.03 MiB freed
 ```
+
+### Upgrade nix
+
+```bash
+# Update `nix` cli and `nix-daemon` in the global default profile
+$ sudo -i nix upgrade-nix --profile /nix/var/nix/profiles/default
+
+# Reload systemd so it picks up the new `nix-daemon.service` unit
+$ systemctl daemon-reload
+
+# Restart nix-daemon
+$ systemctl restart nix-daemon.service
+
+# Check nix cli version
+$ nix --version
+
+# Check nix-daemon version
+$ nix store info
+```
