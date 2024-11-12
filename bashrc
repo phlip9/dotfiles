@@ -165,12 +165,11 @@ function retry() {
     # Simplified handling for case N=1
     if [[ $N -eq 1 ]]; then
         do_work "$@"
-        exit
+    else
+        # Use GNU parallel to run the workers in parallel, exiting early when
+        # the first fails.
+        seq "$N" | parallel --jobs "$N" --ungroup --halt now,done=1 do_work "$@"
     fi
-
-    # Use GNU parallel to run the workers in parallel, exiting early when the
-    # first fails.
-    seq "$N" | parallel --jobs "$N" --ungroup --halt now,done=1 do_work "$@"
 }
 
 # pyvenv helpers
