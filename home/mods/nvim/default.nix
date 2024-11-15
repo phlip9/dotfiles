@@ -25,7 +25,7 @@
     # preferred nix formatter
     pkgs.alejandra
     # nixpkgs repo formatter
-    pkgs.nixpkgs-fmt
+    pkgs.nixfmt-rfc-style
   ];
   extraPkgsPath = lib.makeBinPath extraPkgs;
 
