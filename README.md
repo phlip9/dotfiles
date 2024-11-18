@@ -82,6 +82,14 @@ $ sudo cat >> /etc/nix/nix.conf << EOF
 keep-derivations = true
 keep-outputs = true
 EOF
+
+# (macOS) Also add these lines to /etc/nix/nix.conf
+# TODO(phlip9): do we still need this with more recent nix version?
+$ sudo cat >> /etc/nix/nix.conf << EOF
+# lua-language-server seems to require this macOS system binary
+extra-allowed-impure-host-deps = /usr/bin/ditto
+extra-sandbox-paths = /usr/bin/ditto
+EOF
 ```
 
 NOTE: this is using the unofficial DeterminateSystems nix installer.
