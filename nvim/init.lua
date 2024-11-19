@@ -517,6 +517,17 @@ if pcall(require, "telescope") then
     vim.keymap.set("n", "gr", function() coc.references_used(show_at_cursor) end, M.with_desc("goto references"))
 end -- }}}
 
+
+do -- baleia.nvim - colorize ANSI escape sequences {{{
+    vim.api.nvim_create_user_command("AnsiColorize", function()
+        require("baleia")
+            .setup({
+                colors = require("baleia.styles.themes").NR_16,
+            })
+            .once(vim.api.nvim_get_current_buf())
+    end, { bang = true })
+end -- baleia.nvim }}}
+
 do  -- vim-gitgutter - Show git diff in the gutter {{{
     -- Mappings:
     -- <leader>ggt - Toggle git gutter

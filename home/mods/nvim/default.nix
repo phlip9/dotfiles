@@ -106,6 +106,9 @@
     {plugin = p.telescope-fzf-native-nvim;}
     # telescope-coc-nvim - telescope x coc.nvim integration
     {plugin = p.telescope-coc-nvim;}
+
+    # baleia.nvim - Colorize text with ANSI escape sequences.
+    {plugin = p.baleia-nvim;}
   ];
 
   # All plugins we're actually using.
