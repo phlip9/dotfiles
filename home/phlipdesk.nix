@@ -26,6 +26,9 @@
   # release notes.
   home.stateVersion = "24.05"; # Please read the comment before changing.
 
+  # TODO(phlip9): remove
+  home.enableNixpkgsReleaseCheck = false;
+
   imports = [
     ./mods/core.nix
 
@@ -41,8 +44,8 @@
     ./mods/gh.nix
     ./mods/git.nix
     ./mods/inputrc.nix
-    ./mods/jdk.nix
-    # ./mods/lexe.nix
+    # ./mods/jdk.nix
+    ./mods/lexe.nix
     ./mods/local-bin.nix
     ./mods/nvim/default.nix
     ./mods/python.nix
