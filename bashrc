@@ -248,15 +248,15 @@ fi
 # Go
 export GOROOT=$HOME/.local/go1.19.3
 
-# Android
-export ANDROID_HOME=$HOME/.local/android
+# # Android
+# export ANDROID_HOME=$HOME/.local/android
 
 # Ruby Gems
 export GEM_HOME=$HOME/.local/gem
 
 pathappend "$GOROOT/bin"
-pathappend "$HOME/.local/flutter/bin"
-pathappend "$HOME/.pub-cache/bin" # dart
+# pathappend "$HOME/.local/flutter/bin"
+# pathappend "$HOME/.pub-cache/bin" # dart
 pathappend "$HOME/.cargo/bin"
 pathappend "$HOME/.local/bin"
 pathappend "$GEM_HOME/bin"

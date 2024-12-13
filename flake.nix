@@ -87,6 +87,26 @@
     # ```
     systemPkgs = eachSystem (system: inputs.nixpkgs.legacyPackages.${system});
 
+    # mkPkgsUnfree :: NixpkgsFlakeInput -> String -> NixpkgsPackageSet
+    #
+    # Builds a `pkgs` set that allows unfree packages, like the Android SDK.
+    # Keep this as a separate package set for eval efficiency.
+    mkPkgsUnfree = nixpkgsFlake: system:
+      import nixpkgsFlake {
+        system = system;
+        config = {
+          android_sdk.accept_license = true;
+          allowUnfreePredicate = pkg:
+            builtins.elem (lib.getName pkg) [
+              "android-sdk-tools"
+              "android-sdk-cmdline-tools"
+            ];
+        };
+      };
+
+    # Host nixpkgs set that allows "unfree" packages, like the Android SDK.
+    systemPkgsUnfree = eachSystem (system: mkPkgsUnfree inputs.nixpkgs system);
+
     # eachSystemPkgs :: (builder :: Nixpkgs -> AttrSet) -> AttrSet
     eachSystemPkgs = builder: eachSystem (system: builder systemPkgs.${system});
 
@@ -120,6 +140,7 @@
       extraSpecialArgs = {
         inputs = inputs;
         phlipPkgs = systemPhlipPkgs.${pkgs.system};
+        pkgsUnfree = systemPkgsUnfree.${pkgs.system};
       };
 
       check = true;
@@ -135,6 +156,7 @@
       extraSpecialArgs = {
         inputs = inputs;
         phlipPkgs = systemPhlipPkgs.${pkgs.system};
+        pkgsUnfree = systemPkgsUnfree.${pkgs.system};
       };
 
       check = true;
@@ -150,6 +172,7 @@
       extraSpecialArgs = {
         inputs = inputs;
         phlipPkgs = systemPhlipPkgs.${pkgs.system};
+        pkgsUnfree = systemPkgsUnfree.${pkgs.system};
       };
 
       check = true;
@@ -182,6 +205,7 @@
     _dbg = {
       lib = lib;
       systemPkgs = systemPkgs;
+      systemPkgsUnfree = systemPkgsUnfree;
       systemPhlipPkgs = systemPhlipPkgs;
     };
   };
