@@ -49,6 +49,7 @@
       pkgs.bat
       pkgs.fastmod
       pkgs.fd
+      pkgs.hyperfine
       pkgs.jq
       pkgs.just
       pkgs.patchelf
