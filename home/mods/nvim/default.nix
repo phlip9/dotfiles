@@ -199,9 +199,12 @@ in {
   ];
 
   # use nvim as our man pager
-  home.sessionVariables = {
-    "MANPAGER" = "${finalNeovimPackage}/bin/nvim +Man!";
-  };
+  # - set `MANWIDTH=999` b/c man pages are hardwrapped at a few columns too
+  #   much. "disable" hardwrap with this env.
+  programs.bash.initExtra = ''
+    export MANPAGER="${finalNeovimPackage}/bin/nvim +Man!"
+    export MANWIDTH=999
+  '';
 
   # symlink ~/.config/nvim to `dotfiles/nvim` dir.
   xdg.configFile."nvim".source = mkOutOfStoreSymlink "${dotfilesDir}/nvim";
