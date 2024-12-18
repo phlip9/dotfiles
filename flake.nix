@@ -126,6 +126,8 @@
       home-manager = hmPkgs.home-manager;
 
       dotenvy = phlipPkgs.dotenvy;
+
+      firefox-profiler = phlipPkgs.firefox-profiler;
     });
 
     # home-manager configurations for different hosts
