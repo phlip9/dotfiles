@@ -1,5 +1,6 @@
 # Set up nixpkgs OpenSSH ssh-agent as a systemd/launchd user service.
 {
+  config,
   lib,
   pkgs,
   ...
@@ -8,13 +9,15 @@
   isDarwin = pkgs.hostPlatform.isDarwin;
 
   # ssh-agent socket location
-  sshAgentSock =
+  sshAgentDir =
     if isLinux
-    then "$XDG_RUNTIME_DIR/nix-ssh-agent"
+    then "$XDG_RUNTIME_DIR"
     # TODO(phlip9): find a better location for the socket on macOS
     else if isDarwin
-    then "/tmp/nix-ssh-agent"
+    then "${config.home.homeDirectory}/.ssh"
     else throw "nix-ssh-agent: config: unrecognized platform";
+  sshAgentSock = "nix-ssh-agent.socket";
+  sshAgentSockPath = "${sshAgentDir}/${sshAgentSock}";
 
   # ssh-askpass binary
   ssh-askpass =
@@ -34,8 +37,9 @@
 
   shellHook = ''
     export -n SSH_AGENT_LAUNCHER
-    export SSH_AUTH_SOCK="${sshAgentSock}"
+    export SSH_AUTH_SOCK="${sshAgentSockPath}"
     export SSH_ASKPASS="${ssh-askpass}"
+    export SSH_ASKPASS_REQUIRE=force
   '';
 in
   lib.mkMerge [
@@ -58,7 +62,7 @@ in
         };
 
         Service = {
-          ExecStart = "${pkgs.openssh}/bin/ssh-agent -D -a %t/nix-ssh-agent";
+          ExecStart = "${pkgs.openssh}/bin/ssh-agent -D -a %t/${sshAgentSock}";
           Environment = let
             ssh-askpass-wrapper =
               pkgs.writeScript "ssh-askpass-wrapper"
@@ -83,17 +87,18 @@ in
         enable = true;
         config = {
           Program = let
-            run-ssh-agent = pkgs.writeShellScript "run-nix-ssh-agent" ''
-              ${pkgs.coreutils}/bin/rm -f /tmp/nix-ssh-agent
-              ${pkgs.openssh}/bin/ssh-agent -D -a /tmp/nix-ssh-agent
+            run-nix-ssh-agent = pkgs.writeShellScript "run-nix-ssh-agent" ''
+              ${pkgs.coreutils}/bin/mkdir -m 700 -p ${sshAgentDir}
+              ${pkgs.coreutils}/bin/rm -f ${sshAgentSockPath}
+              exec ${pkgs.openssh}/bin/ssh-agent -D -a ${sshAgentSockPath}
             '';
-          in "${run-ssh-agent}";
+          in "${run-nix-ssh-agent}";
           EnvironmentVariables = {
             SSH_ASKPASS = "${ssh-askpass}";
             SSH_ASKPASS_REQUIRE = "force";
           };
-          StandardErrorPath = "/tmp/nix-ssh-agent.err";
-          StandardOutPath = "/tmp/nix-ssh-agent.out";
+          # StandardErrorPath = "${sshAgentDir}/nix-ssh-agent.err";
+          # StandardOutPath = "${sshAgentDir}/nix-ssh-agent.out";
           KeepAlive = true;
           RunAtLoad = true;
           ProcessType = "Background";
