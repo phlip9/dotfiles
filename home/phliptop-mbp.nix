@@ -50,6 +50,7 @@
     ./mods/python.nix
     # # TODO: get nixpkgs ssh talking to apple keychain (?)
     # ./mods/ssh.nix
+    ./mods/ssh-agent.nix
     ./mods/tmux.nix
   ];
 
