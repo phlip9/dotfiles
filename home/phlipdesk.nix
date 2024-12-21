@@ -3,6 +3,8 @@
   config,
   # nixpkgs
   pkgs,
+  # ../pkgs/default.nix
+  phlipPkgs,
   # # nixpkgs.lib
   # lib,
   # # flake inputs passed in via `extraSpecialArgs`
@@ -81,6 +83,9 @@
         hash = "sha256-LcC4RS/dzE02fT7OIE6yvCBomSrh/O4rWDzc/QLaxxI=";
       };
     })
+
+    # samply - sampling CPU profiler for Linux and macOS
+    phlipPkgs.samply
 
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
