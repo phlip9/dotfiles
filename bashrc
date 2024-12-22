@@ -103,6 +103,8 @@ alias bash-trace="bash -lixc exit 2>&1 | sed -n 's/^+* \(source\|\.\) //p'"
 # git shortcut
 alias g='git'
 complete -o bashdefault -o default -o nospace -F __git_wrap__git_main g
+# common typo
+alias gs='git status'
 
 # cargo shortcut
 alias c='cargo'
