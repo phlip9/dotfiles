@@ -144,6 +144,10 @@ alias less='less -r'
 # latexmk alias
 alias lmk='latexmk -pdf -pvc -shell-escape'
 
+# sudo-nvim
+# factory default, no plugins, no swap, binary
+alias sudo-nvim='sudo $(which nvim) --clean --noplugin -n -b'
+
 # makes a directory and cd's into it
 function mcd() {
     mkdir "$@" && cd "$_" || exit
