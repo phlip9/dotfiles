@@ -288,13 +288,31 @@ do -- kanagawa - neovim colorscheme {{{
             },
         },
 
-        -- -- add/modify highlights
-        -- ---@type fun(colors: KanagawaColorsSpec): table<string, table>
-        -- overrides = function(colors)
-        --     local _palette = colors.palette
-        --     local _theme = colors.theme
-        --     return {}
-        -- end,
+        -- add/modify highlights
+        ---@type fun(colors: KanagawaColorsSpec): table<string, table>
+        ---@diagnostic disable: unused-local
+        overrides = function(colors)
+            -- local _palette = colors.palette
+            -- local _theme = colors.theme
+            return {
+                -- markdown: remove link underlines
+                ["@markup.link"] = {
+                    link = "@string.special"
+                },
+                ["@markup.link.url"] = {
+                    link = "@string.special.url"
+                },
+                ["@string.special.url"] = {
+                    link = "Special"
+                },
+                -- ["@markup.underline"] = {
+                --     underline = false
+                -- },
+                -- AerialArrayIcon = {
+                --   link = "Type"
+                -- },
+            }
+        end,
 
         -- when `background` is set, use corresponding theme
         background = { dark = "dragon", light = "lotus" },
@@ -517,8 +535,7 @@ if pcall(require, "telescope") then
     vim.keymap.set("n", "gr", function() coc.references_used(show_at_cursor) end, M.with_desc("goto references"))
 end -- }}}
 
-
-do -- baleia.nvim - colorize ANSI escape sequences {{{
+do  -- baleia.nvim - colorize ANSI escape sequences {{{
     vim.api.nvim_create_user_command("AnsiColorize", function()
         require("baleia")
             .setup({
