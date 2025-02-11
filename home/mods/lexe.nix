@@ -1,4 +1,5 @@
 {
+  lib,
   pkgs,
   pkgsUnfree,
   ...
@@ -56,18 +57,24 @@
 
   # flutter/dart
   flutter = pkgs.flutter324;
+
+  isDarwin = pkgs.hostPlatform.isDarwin;
 in {
-  home.packages = [
-    flutter
-    pkgs.age-plugin-yubikey
-    pkgs.bundletool
-    pkgs.cargo-expand
-    pkgs.cargo-ndk
-    pkgs.fastlane
-    pkgs.josh
-    pkgs.rage
-    pkgs.toml-cli
-  ];
+  home.packages =
+    [
+      flutter
+      pkgs.age-plugin-yubikey
+      pkgs.bundletool
+      pkgs.cargo-expand
+      pkgs.cargo-ndk
+      pkgs.fastlane
+      pkgs.josh
+      pkgs.rage
+      pkgs.toml-cli
+    ]
+    ++ (lib.optionals isDarwin [
+      pkgs.cocoapods
+    ]);
 
   programs.bash.initExtra = ''
     export ANDROID_HOME=${ANDROID_HOME}
