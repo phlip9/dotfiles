@@ -74,6 +74,8 @@ in {
     ]
     ++ (lib.optionals isDarwin [
       pkgs.cocoapods
+      # provides idevicesyslog to follow attached iOS device logs from CLI
+      pkgs.libimobiledevice
     ]);
 
   programs.bash.initExtra = ''
