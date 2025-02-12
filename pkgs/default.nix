@@ -7,6 +7,9 @@ in {
   # profiler.firefox.org but local
   firefox-profiler = callPackage ./firefox-profiler.nix {};
 
+  # Claude modelcontextprotocol server for filesystem access
+  mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix {};
+
   # sampling profiler written in Rust, with native firefox-profiler integration
   samply = callPackage ./samply.nix {};
 }

@@ -127,6 +127,7 @@
 
       dotenvy = phlipPkgs.dotenvy;
       firefox-profiler = phlipPkgs.firefox-profiler;
+      mcp-server-filesystem = phlipPkgs.mcp-server-filesystem;
       samply = phlipPkgs.samply;
     });
 
