@@ -47,6 +47,7 @@
       # dev utils
       phlipPkgs.dotenvy
       pkgs.bat
+      pkgs.dua
       pkgs.fastmod
       pkgs.fd
       pkgs.hyperfine
