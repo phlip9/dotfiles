@@ -127,6 +127,7 @@
 
       dotenvy = phlipPkgs.dotenvy;
       firefox-profiler = phlipPkgs.firefox-profiler;
+      git-restore-mtime = phlipPkgs.git-restore-mtime;
       mcp-server-filesystem = phlipPkgs.mcp-server-filesystem;
       samply = phlipPkgs.samply;
     });
