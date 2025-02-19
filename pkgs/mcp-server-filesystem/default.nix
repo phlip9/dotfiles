@@ -26,12 +26,11 @@ buildNpmPackage rec {
   # 2. $ npm install
   # 4. $ rm -rf node_modules
   postPatch = ''
-    ln -sf ${./package.json} package.json
+    cp ${./package.json} package.json
     ln -sf ${./package-lock.json} package-lock.json
   '';
 
-  makeCacheWritable = true;
-  npmFlags = ["--omit=optional" "--ignore-scripts"];
+  npmFlags = ["--omit=optional"];
 
   dontNpmBuild = true;
 }
