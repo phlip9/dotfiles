@@ -128,6 +128,7 @@
       dotenvy = phlipPkgs.dotenvy;
       firefox-profiler = phlipPkgs.firefox-profiler;
       git-restore-mtime = phlipPkgs.git-restore-mtime;
+      goose-cli = phlipPkgs.goose-cli;
       mcp-server-filesystem = phlipPkgs.mcp-server-filesystem;
       samply = phlipPkgs.samply;
     });

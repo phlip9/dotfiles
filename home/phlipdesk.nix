@@ -88,6 +88,9 @@
     # samply - sampling CPU profiler for Linux and macOS
     phlipPkgs.samply
 
+    # goose - AI cli
+    phlipPkgs.goose-cli
+
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello

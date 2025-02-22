@@ -10,6 +10,9 @@ in {
   # restore fs mtimes from git
   git-restore-mtime = callPackage ./git-restore-mtime.nix {};
 
+  # block/goose - AI developer agent cli
+  goose-cli = callPackage ./goose-cli.nix {};
+
   # Claude modelcontextprotocol server for filesystem access
   mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix {};
 
