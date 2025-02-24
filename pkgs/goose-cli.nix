@@ -5,6 +5,7 @@
   fetchurl,
   hostPlatform,
   lib,
+  llvmPackages,
   oniguruma,
   pkg-config,
   rustPlatform,
@@ -28,7 +29,7 @@ rustPlatform.buildRustPackage rec {
 
   cargoBuildFlags = "-p goose-cli --bin goose";
 
-  nativeBuildInputs = lib.optionals hostPlatform.isLinux [
+  nativeBuildInputs = [
     pkg-config
   ];
 
@@ -43,12 +44,16 @@ rustPlatform.buildRustPackage rec {
       xorg.libxcb
     ];
 
-  env = {
-    # Needs older libgit2 version
-    # LIBGIT2_NO_VENDOR = true;
-    RUSTONIG_SYSTEM_LIBONIG = true;
-    ZSTD_SYS_USE_PKG_CONFIG = true;
-  };
+  env =
+    {
+      # Needs older libgit2 version
+      # LIBGIT2_NO_VENDOR = true;
+      RUSTONIG_SYSTEM_LIBONIG = true;
+      ZSTD_SYS_USE_PKG_CONFIG = true;
+    }
+    // lib.optionalAttrs hostPlatform.isDarwin {
+      LIBCLANG_PATH = "${lib.getLib llvmPackages.libclang}/lib";
+    };
 
   preBuild = let
     gpt-4o-tokenizer-json = fetchurl {
