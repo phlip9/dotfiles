@@ -5,8 +5,9 @@
   pkgs,
   # # nixpkgs.lib
   # lib,
-  # # flake inputs passed in via `extraSpecialArgs`
+  # flake inputs passed in via `extraSpecialArgs`
   # inputs,
+  phlipPkgs,
   ...
 }: {
   # Easily search through home-manager options:
@@ -61,6 +62,9 @@
 
     pkgs.htop
     # pkgs.lm_sensors
+
+    # goose - AI cli
+    phlipPkgs.goose-cli
 
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
