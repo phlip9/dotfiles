@@ -16,7 +16,10 @@ in {
   # Claude modelcontextprotocol server for filesystem access
   mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix {};
 
-  # OpenMW pre-built
+  # MOMW Tools Pack pre-built unstable
+  momw-tools-pack = callPackage ./momw-tools-pack.nix {};
+
+  # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix {};
 
   # sampling profiler written in Rust, with native firefox-profiler integration

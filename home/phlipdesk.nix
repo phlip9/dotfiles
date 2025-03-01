@@ -88,7 +88,10 @@
     # goose - AI cli
     phlipPkgs.goose-cli
 
-    # OpenMW nightly
+    # Modding OpenMW Tools Pack
+    phlipPkgs.momw-tools-pack
+
+    # OpenMW unstable
     phlipPkgs.openmw
 
     # samply - sampling CPU profiler for Linux and macOS

@@ -125,13 +125,17 @@
       # first-time setup for a new machine.
       home-manager = hmPkgs.home-manager;
 
-      dotenvy = phlipPkgs.dotenvy;
-      firefox-profiler = phlipPkgs.firefox-profiler;
-      git-restore-mtime = phlipPkgs.git-restore-mtime;
-      goose-cli = phlipPkgs.goose-cli;
-      mcp-server-filesystem = phlipPkgs.mcp-server-filesystem;
-      openmw = phlipPkgs.openmw;
-      samply = phlipPkgs.samply;
+      inherit
+        (phlipPkgs)
+        dotenvy
+        firefox-profiler
+        git-restore-mtime
+        goose-cli
+        mcp-server-filesystem
+        momw-tools-pack
+        openmw
+        samply
+        ;
     });
 
     # home-manager configurations for different hosts
