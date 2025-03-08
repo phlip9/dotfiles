@@ -8,7 +8,7 @@ just-fmt:
     just --fmt --unstable
 
 nix-fmt:
-    nix fmt
+    nix fmt .
 
 lint: bash-lint flake-lint nix-lint
 
@@ -31,4 +31,4 @@ update-nvim-extra-plugins:
             --debug DEBUG \
             --nixpkgs ../nixpkgs \
             update
-    nix fmt
+    just nix-fmt

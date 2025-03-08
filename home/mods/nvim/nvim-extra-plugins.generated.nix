@@ -6,4 +6,15 @@
   fetchFromGitHub,
   fetchgit,
 }: final: prev: {
+  copilot-vim = buildVimPlugin {
+    pname = "copilot.vim";
+    version = "2025-03-06";
+    src = fetchFromGitHub {
+      owner = "github";
+      repo = "copilot.vim";
+      rev = "5015939f131627a6a332c9e3ecad9a7cb4c2e549";
+      sha256 = "198mymn0ad1kzqzs1rimrhq7z3nrami45fp3yqnwp15am8bxmwi0";
+    };
+    meta.homepage = "https://github.com/github/copilot.vim/";
+  };
 }
