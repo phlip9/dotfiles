@@ -69,3 +69,6 @@ bindings = [
     # - `~` - Sequence terminator
     { key = "Return", mods = "Control", chars = "\u001b[27;5;13~" },
 ]
+
+# force nvim to write in-place so it doesn't break alacritty auto-reload.
+# vim: nobackup nowritebackup
