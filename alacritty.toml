@@ -57,7 +57,15 @@ style = "Regular"
 x = 0
 y = 0
 
-[[keyboard.bindings]]
-action = "Paste"
-key = "V"
-mods = "Control"
+[keyboard]
+bindings = [
+    { key = "V", mods = "Control", action = "Paste" },
+    # Map <C-Enter> so tmux and nvim pick it up. Explanation:
+    # - `\u001b` - This is the escape character (ASCII 27, or `ESC`)
+    # - `[` - Starts the Control Sequence Introducer (CSI)
+    # - `27` - A reference to the escape character again
+    # - `5` - Indicates Control modifier (5 = Ctrl, 6 = Ctrl+Shift)
+    # - `9` - The key code for Tab
+    # - `~` - Sequence terminator
+    { key = "Return", mods = "Control", chars = "\u001b[27;5;13~" },
+]

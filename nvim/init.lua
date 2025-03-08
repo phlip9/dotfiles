@@ -860,6 +860,18 @@ do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
     end, { desc = "Stop coc.nvim" })
 end -- coc.nvim }}}
 
+do  -- copilot.vim - Github Copilot {{{
+    -- Mappings:
+    -- <C-Enter> - Trigger Copilot completion
+    vim.g.copilot_no_tab_map = true
+    vim.keymap.set("i", "<C-CR>", 'copilot#Accept("\\<CR>")', {
+        expr = true,
+        replace_keycodes = false,
+        remap = false,
+        script = true,
+    })
+end -- copilot.vim }}}
+
 do  -- fzf.vim - fuzzy file matching, grepping, and tag searching using fzf {{{
     vim.g.fzf_command_prefix = "Fzf"
     vim.g.fzf_files_options = { "--ansi" }
