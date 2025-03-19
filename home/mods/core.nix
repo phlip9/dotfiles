@@ -50,6 +50,7 @@
       pkgs.dua
       pkgs.fastmod
       pkgs.fd
+      pkgs.hexyl
       pkgs.hyperfine
       pkgs.jq
       pkgs.just
