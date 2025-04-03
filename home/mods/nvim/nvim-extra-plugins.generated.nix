@@ -8,12 +8,12 @@
 }: final: prev: {
   copilot-vim = buildVimPlugin {
     pname = "copilot.vim";
-    version = "2025-03-06";
+    version = "2025-03-24";
     src = fetchFromGitHub {
       owner = "github";
       repo = "copilot.vim";
-      rev = "5015939f131627a6a332c9e3ecad9a7cb4c2e549";
-      sha256 = "198mymn0ad1kzqzs1rimrhq7z3nrami45fp3yqnwp15am8bxmwi0";
+      rev = "a9228e015528c9307890c48083c925eb98a64a79";
+      sha256 = "0957a7y513n34b2bqysnlpnx3z6rphx8mmrsx3r5219hp19h2pyn";
     };
     meta.homepage = "https://github.com/github/copilot.vim/";
   };
