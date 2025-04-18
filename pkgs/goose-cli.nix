@@ -16,16 +16,16 @@
 }:
 rustPlatform.buildRustPackage rec {
   pname = "goose-cli";
-  version = "1.0.17";
+  version = "1.0.18";
 
   src = fetchFromGitHub {
     owner = "block";
     repo = "goose";
     tag = "v${version}";
-    hash = "sha256-l/lcwTNUq2xJHh0MKhnDZjRJ/5cANbdar/Vusf38esQ=";
+    hash = "sha256-SCQxr1C02VdnI2rKrLvmuB2U1Ynu9IUoyISrTcmgcB8=";
   };
 
-  cargoHash = "sha256-4b7SwIPnFXD6giYiHKHK5Q9Z8cUrwse8tlio7uSz/RQ=";
+  cargoHash = "sha256-pKZijhMWCJuliOc4vyXZccbAPpZKi7RNs+NbJDDBFrc=";
 
   cargoBuildFlags = "-p goose-cli --bin goose";
 
