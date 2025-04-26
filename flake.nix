@@ -130,6 +130,7 @@
       inherit
         (phlipPkgs)
         aider-chat
+        cargo-release
         dist
         dotenvy
         firefox-profiler

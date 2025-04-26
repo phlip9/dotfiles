@@ -72,6 +72,9 @@
     # aider-chat - AI developer agent cli
     phlipPkgs.aider-chat
 
+    # cargo-release - release a Rust package
+    phlipPkgs.cargo-release
+
     # dist - build and distribute binary releases
     phlipPkgs.dist
 

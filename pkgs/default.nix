@@ -7,6 +7,9 @@ in {
   # aider - AI developer agent cli
   aider-chat = pkgsUnstable.aider-chat;
 
+  # cargo-release - release a Rust package
+  cargo-release = pkgsUnstable.cargo-release;
+
   # dist - build and distribute binary releases
   dist = pkgsUnstable.cargo-dist;
 
