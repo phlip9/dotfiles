@@ -7,6 +7,9 @@ in {
   # aider - AI developer agent cli
   aider-chat = pkgsUnstable.aider-chat;
 
+  # dist - build and distribute binary releases
+  dist = pkgsUnstable.cargo-dist;
+
   # cli to load .env
   dotenvy = callPackage ./dotenvy.nix {};
 

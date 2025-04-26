@@ -130,6 +130,7 @@
       inherit
         (phlipPkgs)
         aider-chat
+        dist
         dotenvy
         firefox-profiler
         git-restore-mtime

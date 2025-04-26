@@ -72,6 +72,9 @@
     # aider-chat - AI developer agent cli
     phlipPkgs.aider-chat
 
+    # dist - build and distribute binary releases
+    phlipPkgs.dist
+
     # mount remote fs via ssh
     pkgs.sshfs-fuse
 
