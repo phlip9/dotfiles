@@ -37,7 +37,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/release-24.11";
-    # nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-24.11";
@@ -86,6 +86,8 @@
     # }
     # ```
     systemPkgs = eachSystem (system: inputs.nixpkgs.legacyPackages.${system});
+    # nixpkgs-unstable for each system.
+    systemPkgsUnstable = eachSystem (system: inputs.nixpkgs-unstable.legacyPackages.${system});
 
     # mkPkgsUnfree :: NixpkgsFlakeInput -> String -> NixpkgsPackageSet
     #
@@ -111,13 +113,13 @@
     eachSystemPkgs = builder: eachSystem (system: builder systemPkgs.${system});
 
     # My custom packages for each system.
-    systemPhlipPkgs = eachSystemPkgs (pkgs:
+    systemPhlipPkgs = eachSystem (system:
       import ./pkgs/default.nix {
-        pkgs = pkgs;
+        pkgs = systemPkgs.${system};
+        pkgsUnstable = systemPkgsUnstable.${system};
       });
   in {
     packages = eachSystem (system: let
-      # pkgs = systemPkgs.${system};
       hmPkgs = inputs.home-manager.packages.${system};
       phlipPkgs = systemPhlipPkgs.${system};
     in {
@@ -127,6 +129,7 @@
 
       inherit
         (phlipPkgs)
+        aider-chat
         dotenvy
         firefox-profiler
         git-restore-mtime

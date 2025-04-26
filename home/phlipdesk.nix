@@ -69,6 +69,9 @@
     pkgs.htop
     pkgs.lm_sensors
 
+    # aider-chat - AI developer agent cli
+    phlipPkgs.aider-chat
+
     # mount remote fs via ssh
     pkgs.sshfs-fuse
 

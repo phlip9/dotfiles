@@ -1,6 +1,12 @@
-{pkgs}: let
+{
+  pkgs,
+  pkgsUnstable,
+}: let
   callPackage = pkgs.callPackage;
 in {
+  # aider - AI developer agent cli
+  aider-chat = pkgsUnstable.aider-chat;
+
   # cli to load .env
   dotenvy = callPackage ./dotenvy.nix {};
 
