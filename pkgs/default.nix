@@ -25,6 +25,9 @@ in {
   # block/goose - AI developer agent cli
   goose-cli = callPackage ./goose-cli.nix {};
 
+  # phlip9/imgen - OpenAI API image generator cli
+  imgen = callPackage ./imgen.nix {};
+
   # Claude modelcontextprotocol server for filesystem access
   mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix {};
 

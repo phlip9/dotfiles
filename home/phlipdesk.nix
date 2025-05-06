@@ -106,6 +106,9 @@
     # samply - sampling CPU profiler for Linux and macOS
     phlipPkgs.samply
 
+    # imgen - OpenAI API image generator cli
+    phlipPkgs.imgen
+
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello

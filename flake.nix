@@ -136,6 +136,7 @@
         firefox-profiler
         git-restore-mtime
         goose-cli
+        imgen
         mcp-server-filesystem
         momw-tools-pack
         openmw
