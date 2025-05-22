@@ -25,6 +25,9 @@ in {
   # block/goose - AI developer agent cli
   goose-cli = callPackage ./goose-cli.nix {};
 
+  # ctz/graviola - devshell for graviola development
+  graviola-tools = callPackage ./graviola-tools.nix {};
+
   # phlip9/imgen - OpenAI API image generator cli
   imgen = callPackage ./imgen.nix {};
 

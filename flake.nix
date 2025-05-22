@@ -136,6 +136,7 @@
         firefox-profiler
         git-restore-mtime
         goose-cli
+        graviola-tools
         imgen
         mcp-server-filesystem
         momw-tools-pack
@@ -220,6 +221,7 @@
 
     _dbg = {
       lib = lib;
+      nixpkgs = inputs.nixpkgs;
       systemPkgs = systemPkgs;
       systemPkgsUnfree = systemPkgsUnfree;
       systemPhlipPkgs = systemPhlipPkgs;
