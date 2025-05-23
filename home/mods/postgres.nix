@@ -15,10 +15,12 @@
   pkgs,
   ...
 }: let
-  inherit (lib) literalExpression mkOption optionalString types;
+  inherit (lib) literalExpression mkIf mkOption optionalString types;
 
   cfg = config.services.postgres;
   pkg = cfg.package;
+  isDarwin = pkgs.hostPlatform.isDarwin;
+  isLinux = pkgs.hostPlatform.isLinux;
 
   postgresqlConf = pkgs.writeTextDir "postgresql.conf" ''
     # Connection settings
@@ -167,7 +169,7 @@ in {
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = mkIf cfg.enable {
     # include postgres bins in $PATH
     home.packages = [pkg];
 
@@ -175,127 +177,130 @@ in {
     home.sessionVariablesExtra = shellHook;
     programs.bash.initExtra = shellHook;
 
-    systemd.user.services.postgres = {
-      Unit = {
-        Description = "PostgreSQL v${pkg.version} DB server";
-        # Stop when `proxy-to-postgres.service` stops due to inactivity
-        StopWhenUnneeded = true;
+    # Linux systemd user service
+    systemd.user = mkIf isLinux {
+      services.postgres = {
+        Unit = {
+          Description = "PostgreSQL v${pkg.version} DB server";
+          # Stop when `proxy-to-postgres.service` stops due to inactivity
+          StopWhenUnneeded = true;
+        };
+
+        Service = {
+          Type = "notify";
+
+          Environment = [
+            "PATH=${lib.makeBinPath [pkg pkgs.coreutils pkgs.gnugrep]}"
+            "PGDATA=${cfg.dataDir}"
+            "PGHOST=%t/postgres"
+          ];
+
+          ExecStartPre = let
+            script = pkgs.writeShellScript "postgres-pre-start" ''
+              set -euo pipefail
+
+              mkdir -p "$PGDATA" && chmod 700 "$PGDATA"
+              mkdir -p "$PGHOST" && chmod 700 "$PGHOST"
+
+              if [[ ! -e "$PGDATA/PG_VERSION" ]]; then
+                # cleanup the data dir
+                rm -f "$PGDATA/*.conf"
+
+                # init the database
+                initdb ${builtins.concatStringsSep " " cfg.initdbArgs} -D "$PGDATA"
+
+                # See ExecStartPost
+                touch "$PGDATA/.first_startup"
+              fi
+
+              ln -sfn "${postgresqlConf}/postgresql.conf" "$PGDATA/postgresql.conf"
+              ln -sfn "${pgHbaConf}/pg_hba.conf" "$PGDATA/pg_hba.conf"
+            '';
+          in "+${script}";
+
+          ExecStart = "${pkg}/bin/postgres --unix_socket_directories=%t/postgres";
+
+          ExecStartPost = let
+            script = pkgs.writeShellScript "postgres-post-start" ''
+              set -euo pipefail
+
+              # wait for the postgres to be ready
+              pg_isready -d template1 --timeout=15
+
+              # run the initial script on first startup if set
+              if [[ -e "$PGDATA/.first_startup" ]]; then
+                ${optionalString (cfg.initialScript != null) "psql -d postgres -f \"${cfg.initialScript}\""}
+                rm "$PGDATA/.first_startup"
+              fi
+
+              # ensure databases exist
+              for db in ${lib.concatStringsSep " " cfg.ensureDatabases}; do
+                psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$db'" | grep -q 1 || \
+                  psql -d postgres -tAc "CREATE DATABASE \"$db\""
+              done
+            '';
+          in "+${script}";
+
+          ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+
+          KillSignal = "SIGINT";
+          KillMode = "mixed";
+          TimeoutSec = 60;
+
+          # Hardening
+          ReadWritePaths = [cfg.dataDir];
+          DevicePolicy = "closed";
+          PrivateTmp = true;
+          ProtectHome = true;
+          ProtectSystem = "strict";
+          MemoryDenyWriteExecute = true;
+          NoNewPrivileges = true;
+          ProcSubset = "pid";
+          ProtectProc = "invisible";
+          RemoveIPC = true;
+          RestrictAddressFamilies = [
+            # "AF_INET"
+            # "AF_INET6"
+            # "AF_NETLINK"
+            "AF_UNIX"
+          ];
+          RestrictNamespaces = true;
+          RestrictRealtime = true;
+          RestrictSUIDSGID = true;
+        };
       };
 
-      Service = {
-        Type = "notify";
-
-        Environment = [
-          "PATH=${lib.makeBinPath [pkg pkgs.coreutils pkgs.gnugrep]}"
-          "PGDATA=${cfg.dataDir}"
-          "PGHOST=%t/postgres"
-        ];
-
-        ExecStartPre = let
-          script = pkgs.writeShellScript "postgres-pre-start" ''
-            set -euo pipefail
-
-            mkdir -p "$PGDATA" && chmod 700 "$PGDATA"
-            mkdir -p "$PGHOST" && chmod 700 "$PGHOST"
-
-            if [[ ! -e "$PGDATA/PG_VERSION" ]]; then
-              # cleanup the data dir
-              rm -f "$PGDATA/*.conf"
-
-              # init the database
-              initdb ${builtins.concatStringsSep " " cfg.initdbArgs} -D "$PGDATA"
-
-              # See ExecStartPost
-              touch "$PGDATA/.first_startup"
-            fi
-
-            ln -sfn "${postgresqlConf}/postgresql.conf" "$PGDATA/postgresql.conf"
-            ln -sfn "${pgHbaConf}/pg_hba.conf" "$PGDATA/pg_hba.conf"
-          '';
-        in "+${script}";
-
-        ExecStart = "${pkg}/bin/postgres --unix_socket_directories=%t/postgres";
-
-        ExecStartPost = let
-          script = pkgs.writeShellScript "postgres-post-start" ''
-            set -euo pipefail
-
-            # wait for the postgres to be ready
-            pg_isready -d template1 --timeout=15
-
-            # run the initial script on first startup if set
-            if [[ -e "$PGDATA/.first_startup" ]]; then
-              ${optionalString (cfg.initialScript != null) "psql -d postgres -f \"${cfg.initialScript}\""}
-              rm "$PGDATA/.first_startup"
-            fi
-
-            # ensure databases exist
-            for db in ${lib.concatStringsSep " " cfg.ensureDatabases}; do
-              psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$db'" | grep -q 1 || \
-                psql -d postgres -tAc "CREATE DATABASE \"$db\""
-            done
-          '';
-        in "+${script}";
-
-        ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
-
-        KillSignal = "SIGINT";
-        KillMode = "mixed";
-        TimeoutSec = 60;
-
-        # Hardening
-        ReadWritePaths = [cfg.dataDir];
-        DevicePolicy = "closed";
-        PrivateTmp = true;
-        ProtectHome = true;
-        ProtectSystem = "strict";
-        MemoryDenyWriteExecute = true;
-        NoNewPrivileges = true;
-        ProcSubset = "pid";
-        ProtectProc = "invisible";
-        RemoveIPC = true;
-        RestrictAddressFamilies = [
-          # "AF_INET"
-          # "AF_INET6"
-          # "AF_NETLINK"
-          "AF_UNIX"
-        ];
-        RestrictNamespaces = true;
-        RestrictRealtime = true;
-        RestrictSUIDSGID = true;
+      sockets.postgres = {
+        Unit = {
+          Description = "PostgreSQL public socket";
+        };
+        Socket = {
+          ListenStream = "%t/.s.PGSQL.5432";
+          SocketMode = "0700";
+          # Active this service on initial socket connection
+          Service = "proxy-to-postgres.service";
+        };
+        Install = {
+          WantedBy = ["sockets.target"];
+        };
       };
-    };
 
-    systemd.user.sockets.postgres = {
-      Unit = {
-        Description = "PostgreSQL public socket";
-      };
-      Socket = {
-        ListenStream = "%t/.s.PGSQL.5432";
-        SocketMode = "0700";
-        # Active this service on initial socket connection
-        Service = "proxy-to-postgres.service";
-      };
-      Install = {
-        WantedBy = ["sockets.target"];
-      };
-    };
-
-    systemd.user.services.proxy-to-postgres = {
-      Unit = {
-        Description = "PostgreSQL socket proxy";
-        Requires = ["postgres.service"];
-        After = ["postgres.service"];
-        JoinsNamespaceOf = ["postgres.service"];
-      };
-      Service = {
-        Type = "notify";
-        ExecStart = builtins.concatStringsSep " " [
-          "${pkgs.systemdMinimal}/lib/systemd/systemd-socket-proxyd"
-          "--exit-idle-time=600"
-          "%t/postgres/.s.PGSQL.5432"
-        ];
-        PrivateTmp = true;
+      services.proxy-to-postgres = {
+        Unit = {
+          Description = "PostgreSQL socket proxy";
+          Requires = ["postgres.service"];
+          After = ["postgres.service"];
+          JoinsNamespaceOf = ["postgres.service"];
+        };
+        Service = {
+          Type = "notify";
+          ExecStart = builtins.concatStringsSep " " [
+            "${pkgs.systemdMinimal}/lib/systemd/systemd-socket-proxyd"
+            "--exit-idle-time=600"
+            "%t/postgres/.s.PGSQL.5432"
+          ];
+          PrivateTmp = true;
+        };
       };
     };
   };
