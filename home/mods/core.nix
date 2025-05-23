@@ -72,7 +72,7 @@
 
       # re-index man pages so `apropos`, `man -k`, and friends work.
       # adds a few seconds to home-manager rebuild time.
-      generateCaches = true;
+      generateCaches = false;
     };
 
     programs.eza = {
