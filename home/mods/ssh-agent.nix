@@ -41,68 +41,61 @@
     export SSH_ASKPASS="${ssh-askpass}"
     export SSH_ASKPASS_REQUIRE=force
   '';
-in
-  lib.mkMerge [
-    # Common config
-    {
-      # ssh-agent env exports
-      # Also add this to `bash.initExtra` so it reloads after `hms`.
-      home.sessionVariablesExtra = shellHook;
-      programs.bash.initExtra = shellHook;
-    }
+in {
+  # Common config
+  # ssh-agent env exports
+  # Also add this to `bash.initExtra` so it reloads after `hms`.
+  home.sessionVariablesExtra = shellHook;
+  programs.bash.initExtra = shellHook;
 
-    # Linux - configure systemd service
-    (lib.mkIf isLinux {
-      systemd.user.services.nix-ssh-agent = {
-        Install.WantedBy = ["graphical-session-pre.target"];
+  # Linux - configure systemd user service
+  systemd.user.services.nix-ssh-agent = lib.mkIf isLinux {
+    Install.WantedBy = ["graphical-session-pre.target"];
 
-        Unit = {
-          Description = "nixpkgs OpenSSH agent";
-          Documentation = "man:ssh-agent(1)";
-        };
+    Unit = {
+      Description = "nixpkgs OpenSSH agent";
+      Documentation = "man:ssh-agent(1)";
+    };
 
-        Service = {
-          ExecStart = "${pkgs.openssh}/bin/ssh-agent -D -a %t/${sshAgentSock}";
-          Environment = let
-            ssh-askpass-wrapper =
-              pkgs.writeScript "ssh-askpass-wrapper"
-              ''
-                #!${pkgs.runtimeShell} -e
-                export DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^DISPLAY=\(.*\)/\1/; t; d')"
-                export XAUTHORITY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^XAUTHORITY=\(.*\)/\1/; t; d')"
-                export WAYLAND_DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^WAYLAND_DISPLAY=\(.*\)/\1/; t; d')"
-                exec ${ssh-askpass} "$@"
-              '';
-          in [
-            "SSH_ASKPASS=${ssh-askpass-wrapper}"
-            "DISPLAY=fake"
-          ];
-        };
+    Service = {
+      ExecStart = "${pkgs.openssh}/bin/ssh-agent -D -a %t/${sshAgentSock}";
+      Environment = let
+        ssh-askpass-wrapper =
+          pkgs.writeScript "ssh-askpass-wrapper"
+          ''
+            #!${pkgs.runtimeShell} -e
+            export DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^DISPLAY=\(.*\)/\1/; t; d')"
+            export XAUTHORITY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^XAUTHORITY=\(.*\)/\1/; t; d')"
+            export WAYLAND_DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^WAYLAND_DISPLAY=\(.*\)/\1/; t; d')"
+            exec ${ssh-askpass} "$@"
+          '';
+      in [
+        "SSH_ASKPASS=${ssh-askpass-wrapper}"
+        "DISPLAY=fake"
+      ];
+    };
+  };
+
+  # macOS - configure launchd agent
+  launchd.agents.nix-ssh-agent = lib.mkIf isDarwin {
+    enable = true;
+    config = {
+      Program = let
+        run-nix-ssh-agent = pkgs.writeShellScript "run-nix-ssh-agent" ''
+          ${pkgs.coreutils}/bin/mkdir -m 700 -p ${sshAgentDir}
+          ${pkgs.coreutils}/bin/rm -f ${sshAgentSockPath}
+          exec ${pkgs.openssh}/bin/ssh-agent -D -a ${sshAgentSockPath}
+        '';
+      in "${run-nix-ssh-agent}";
+      EnvironmentVariables = {
+        SSH_ASKPASS = "${ssh-askpass}";
+        SSH_ASKPASS_REQUIRE = "force";
       };
-    })
-
-    # macOS - configure launchd service
-    (lib.mkIf isDarwin {
-      launchd.agents.nix-ssh-agent = {
-        enable = true;
-        config = {
-          Program = let
-            run-nix-ssh-agent = pkgs.writeShellScript "run-nix-ssh-agent" ''
-              ${pkgs.coreutils}/bin/mkdir -m 700 -p ${sshAgentDir}
-              ${pkgs.coreutils}/bin/rm -f ${sshAgentSockPath}
-              exec ${pkgs.openssh}/bin/ssh-agent -D -a ${sshAgentSockPath}
-            '';
-          in "${run-nix-ssh-agent}";
-          EnvironmentVariables = {
-            SSH_ASKPASS = "${ssh-askpass}";
-            SSH_ASKPASS_REQUIRE = "force";
-          };
-          # StandardErrorPath = "${sshAgentDir}/nix-ssh-agent.err";
-          # StandardOutPath = "${sshAgentDir}/nix-ssh-agent.out";
-          KeepAlive = true;
-          RunAtLoad = true;
-          ProcessType = "Background";
-        };
-      };
-    })
-  ]
+      # StandardErrorPath = "${sshAgentDir}/nix-ssh-agent.err";
+      # StandardOutPath = "${sshAgentDir}/nix-ssh-agent.out";
+      KeepAlive = true;
+      RunAtLoad = true;
+      ProcessType = "Background";
+    };
+  };
+}
