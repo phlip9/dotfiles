@@ -1,3 +1,14 @@
+# Lazy-loaded PostgreSQL home-manager service tuned for integration tests
+#
+# Connect via: `PGHOST=$XDG_RUNTIME_DIR`
+#
+# 1. Use `systemd` socket activation and `systemd-socket-proxyd` to make
+#    postgres lazy load on-demand only when needed. The DB then spins down
+#    after 10 min of inactivity.
+# 2. Tune the DB for running integration tests with max speed and min
+#    safety+durability.
+#
+# DO NOT USE THIS IS IN PRODUCTION.
 {
   config,
   lib,
@@ -10,18 +21,91 @@
   pkg = cfg.package;
 
   postgresqlConf = pkgs.writeTextDir "postgresql.conf" ''
-    # Only allow connections via unix socket
-    listen_addresses = '''
+    # Connection settings
+    listen_addresses = ''' # Only allow connections via unix socket
     unix_socket_permissions = 0700
-
     ssl = off
+    max_connections = 64
+
+    # Remove brakes
+    fsync = off
+    synchronous_commit = off
+    full_page_writes = off
+    commit_delay = 0
+    commit_siblings = 0
+    wal_sync_method = open_sync  # (allegedly) fastest method when fsync is off
+
+    # WAL settings
+    wal_level = minimal                 # minimal WAL logging
+    max_wal_senders = 0                 # no replication
+    wal_buffers = 64MB                  # larger WAL buffer for faster writes
+    checkpoint_timeout = 60min          # infrequent checkpoints
+    checkpoint_completion_target = 0.9  # spread checkpoint writes
+    max_wal_size = 2GB                  # max size of WAL files
+    min_wal_size = 1GB                  # min size of WAL files
+    wal_compression = off
+
+    # Tune resource usage
+    shared_buffers = 2GB          # cache for frequently accessed data
+    work_mem = 16MB               # memory for sorts, hashes, and joins
+    maintenance_work_mem = 256MB  # for VACUUM, CREATE INDEX, ALTER TABLE, etc.
+    temp_buffers = 32MB           # for temporary tables
+    effective_cache_size = 4GB    # hint for query planner
+
+    # Tune query planner
+    random_page_cost = 1.0          # assume everything is in memory
+    effective_io_concurrency = 200  # NVMe can handle lots of concurrent I/O
+    seq_page_cost = 1.0             # sequential read cost
+    jit = off                       # disable JIT compilation
+
+    # Autovacuum - run only when idle
+    autovacuum = on
+    autovacuum_max_workers = 2            # Fewer workers when active
+    autovacuum_naptime = 5min             # Check more frequently when idle
+    autovacuum_vacuum_threshold = 1000    # Higher threshold
+    autovacuum_analyze_threshold = 1000   # Higher threshold
+    autovacuum_vacuum_scale_factor = 0.4  # Less aggressive
+    autovacuum_analyze_scale_factor = 0.2 # Less aggressive
+    autovacuum_vacuum_cost_delay = 10ms   # Slower when it runs
+    autovacuum_vacuum_cost_limit = 1000   # Limit vacuum impact
+
+    # Background writer - more aggressive when idle
+    bgwriter_delay = 1000ms     # Check more frequently
+    bgwriter_lru_maxpages = 0   # Disable LRU writes
+    bgwriter_flush_after = 0    # Disable flush-after
+    backend_flush_after = 0     # Disable backend flush
+
+    # Statement
+    statement_timeout = 10s                    # kill long-running test queries
+    lock_timeout = 10s                         # don't wait long for locks
+    idle_in_transaction_session_timeout = 10s  # kill idle transactions
+
+    # Reduce logging
+    log_destination = 'stderr'
+    log_line_prefix = '''
+    logging_collector = off             # systemd will handle logs
+    log_statement = 'none'              # don't log statements
+    log_duration = off                  # don't log statement duration
+    log_lock_waits = on                 # debug deadlocks
+    log_error_verbosity = terse
+    log_connections = off
+    log_disconnections = off
+    log_hostname = off
+    log_min_messages = warning          # Only log warnings and errors
+    log_checkpoints = off               # Don't log checkpoint activity
+    log_autovacuum_min_duration = 10s   # Only log slow autovacuum
   '';
+
   pgHbaConf = pkgs.writeTextDir "pg_hba.conf" ''
     # Type  DB   User          Addr       Method
 
     # Only local connections
     local   all  ${config.home.username}  peer
     local   all  all                      reject
+  '';
+
+  shellHook = ''
+    export PGHOST=$XDG_RUNTIME_DIR
   '';
 in {
   options = {
@@ -87,6 +171,10 @@ in {
     # include postgres bins in $PATH
     home.packages = [pkg];
 
+    # set `PGHOST` so `psql` et al. just works
+    home.sessionVariablesExtra = shellHook;
+    programs.bash.initExtra = shellHook;
+
     systemd.user.services.postgres = {
       Unit = {
         Description = "PostgreSQL v${pkg.version} DB server";
@@ -105,7 +193,7 @@ in {
 
         ExecStartPre = let
           script = pkgs.writeShellScript "postgres-pre-start" ''
-            set -euxo pipefail
+            set -euo pipefail
 
             mkdir -p "$PGDATA" && chmod 700 "$PGDATA"
             mkdir -p "$PGHOST" && chmod 700 "$PGHOST"
@@ -130,7 +218,7 @@ in {
 
         ExecStartPost = let
           script = pkgs.writeShellScript "postgres-post-start" ''
-            set -euxo pipefail
+            set -euo pipefail
 
             # wait for the postgres to be ready
             pg_isready -d template1 --timeout=15
@@ -204,7 +292,7 @@ in {
         Type = "notify";
         ExecStart = builtins.concatStringsSep " " [
           "${pkgs.systemdMinimal}/lib/systemd/systemd-socket-proxyd"
-          "--exit-idle-time=30"
+          "--exit-idle-time=600"
           "%t/postgres/.s.PGSQL.5432"
         ];
         PrivateTmp = true;
