@@ -85,16 +85,6 @@
     # binary diff w/ alignment
     pkgs.biodiff
 
-    # Jan AI chat
-    (pkgs.appimageTools.wrapType2 rec {
-      pname = "Jan";
-      version = "0.5.8";
-      src = pkgs.fetchurl {
-        url = "https://github.com/janhq/jan/releases/download/v${version}/jan-linux-x86_64-${version}.AppImage";
-        hash = "sha256-LcC4RS/dzE02fT7OIE6yvCBomSrh/O4rWDzc/QLaxxI=";
-      };
-    })
-
     # goose - AI cli
     phlipPkgs.goose-cli
 
