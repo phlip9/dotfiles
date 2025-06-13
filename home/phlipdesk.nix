@@ -76,6 +76,9 @@
     # cargo-release - release a Rust package
     phlipPkgs.cargo-release
 
+    # claude - Anthropic claude code CLI
+    phlipPkgs.claude-code
+
     # dist - build and distribute binary releases
     phlipPkgs.dist
 

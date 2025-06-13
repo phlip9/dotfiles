@@ -131,6 +131,7 @@
         (phlipPkgs)
         aider-chat
         cargo-release
+        claude-code
         dist
         dotenvy
         firefox-profiler

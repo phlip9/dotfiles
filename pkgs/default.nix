@@ -10,6 +10,9 @@ in {
   # cargo-release - release a Rust package
   cargo-release = pkgsUnstable.cargo-release;
 
+  # claude-code - Anthropic claude code CLI
+  claude-code = callPackage ./claude-code {};
+
   # dist - build and distribute binary releases
   dist = pkgsUnstable.cargo-dist;
 

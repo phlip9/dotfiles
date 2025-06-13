@@ -19,7 +19,7 @@
 
   cfg = config.services.postgres;
   pkg = cfg.package;
-  isDarwin = pkgs.hostPlatform.isDarwin;
+  # isDarwin = pkgs.hostPlatform.isDarwin;
   isLinux = pkgs.hostPlatform.isLinux;
 
   postgresqlConf = pkgs.writeTextDir "postgresql.conf" ''
