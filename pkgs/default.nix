@@ -16,9 +16,6 @@ in {
   # dist - build and distribute binary releases
   dist = pkgsUnstable.cargo-dist;
 
-  # cli to load .env
-  dotenvy = callPackage ./dotenvy.nix {};
-
   # profiler.firefox.org but local
   firefox-profiler = callPackage ./firefox-profiler.nix {};
 

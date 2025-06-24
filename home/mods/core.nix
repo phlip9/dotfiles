@@ -45,8 +45,8 @@
       pkgs.zstd
 
       # dev utils
-      phlipPkgs.dotenvy
       pkgs.bat
+      pkgs.dotenvy
       pkgs.dua
       pkgs.fastmod
       pkgs.fd
