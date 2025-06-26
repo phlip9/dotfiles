@@ -25,7 +25,7 @@ rustPlatform.buildRustPackage rec {
     hash = "sha256-SCQxr1C02VdnI2rKrLvmuB2U1Ynu9IUoyISrTcmgcB8=";
   };
 
-  cargoHash = "sha256-pKZijhMWCJuliOc4vyXZccbAPpZKi7RNs+NbJDDBFrc=";
+  cargoHash = "sha256-vLXMBRY/7W9NMXs5qxe5cbDmehitmvrEBbMV0ZAVKrA=";
 
   cargoBuildFlags = "-p goose-cli --bin goose";
 
