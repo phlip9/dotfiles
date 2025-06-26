@@ -8,29 +8,30 @@
   llvmPackages,
   oniguruma,
   pkg-config,
+  protobuf,
   rustPlatform,
-  writableTmpDirAsHomeHook,
   xorg,
   zlib,
   zstd,
 }:
 rustPlatform.buildRustPackage rec {
   pname = "goose-cli";
-  version = "1.0.18";
+  version = "1.0.29";
 
   src = fetchFromGitHub {
     owner = "block";
     repo = "goose";
     tag = "v${version}";
-    hash = "sha256-SCQxr1C02VdnI2rKrLvmuB2U1Ynu9IUoyISrTcmgcB8=";
+    hash = "sha256-R4hMGW9YKsvWEvSzZKkq5JTzBXGK2rXyOPB6vzMKbs0=";
   };
 
-  cargoHash = "sha256-vLXMBRY/7W9NMXs5qxe5cbDmehitmvrEBbMV0ZAVKrA=";
+  cargoHash = "sha256-EEivL+6XQyC9FkGnXwOYviwpY8lk7iaEJ1vbQMk2Rao=";
 
   cargoBuildFlags = "-p goose-cli --bin goose";
 
   nativeBuildInputs = [
     pkg-config
+    protobuf
   ];
 
   buildInputs =
@@ -71,19 +72,6 @@ rustPlatform.buildRustPackage rec {
   '';
 
   doCheck = false;
-
-  nativeCheckInputs = [writableTmpDirAsHomeHook];
-
-  __darwinAllowLocalNetworking = true;
-
-  checkFlags = [
-    "--skip=config::base::tests::test_multiple_secrets"
-    "--skip=config::base::tests::test_secret_management"
-    "--skip=developer::tests::test_global_goosehints"
-    "--skip=jetbrains::tests::test_capabilities"
-    "--skip=jetbrains::tests::test_router_creation"
-    "--skip=providers::oauth::tests::test_token_cache"
-  ];
 
   meta = {
     mainProgram = "goose";
