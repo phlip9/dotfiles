@@ -108,8 +108,31 @@ $ nix run .#home-manager -- --flake .#$(hostname -s) switch
 # (Linux)
 # Set the login shell to the bash from nixpkgs
 $ sudo usermod --shell /home/$USER/.nix-profile/bin/bash $USER
-# Logout and log back in
+
+# (macOS)
+$ chsh -s /Users/$USER/.nix-profile/bin/bash
 ```
+
+(macOS) Update /etc/profile to prefer nix path:
+
+```bash
+# (macOS) /etc/profile
+# System-wide .profile for sh(1)
+
+if [ -x /usr/libexec/path_helper ]; then
+  eval `/usr/libexec/path_helper -s`
+fi
+
+if [ "$USER" == "phlip9" ] && [ -d /Users/phlip9/.nix-profile/bin ]; then
+  export PATH="/Users/phlip9/.nix-profile/bin:$PATH"
+fi
+
+if [ "${BASH-no}" != "no" ]; then
+  [ -r /etc/bashrc ] && . /etc/bashrc
+fi
+```
+
+Logout and log back in
 
 Post initial setup, just use the alias to switch to a new home-manager config
 after changing one of the dotfiles:
