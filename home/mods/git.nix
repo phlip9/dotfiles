@@ -36,6 +36,10 @@ in {
       # silence annoying "detached head" warning
       advice.detachedHead = false;
 
+      # Read `.git-blame-ignore-revs` file in each repo to ignore certain
+      # commits when using `git blame`. Useful for ignoring bulk format commits.
+      blame.ignoreRevsFile = ".git-blame-ignore-revs";
+
       # make `git branch` sort branches by last commit date. much easier to find
       # recent, non-stale branches this way.
       branch.sort = "-committerdate";
