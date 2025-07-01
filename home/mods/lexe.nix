@@ -5,44 +5,47 @@
   ...
 }: let
   # composeAndroidPackages =
-  # { cmdLineToolsVersion ? "13.0"
-  # , toolsVersion ? "26.1.1"
-  # , platformToolsVersion ? "35.0.1"
-  # , buildToolsVersions ? [ "34.0.0" ]
-  # , includeEmulator ? false
-  # , emulatorVersion ? "35.1.4"
-  # , platformVersions ? []
-  # , includeSources ? false
-  # , includeSystemImages ? false
-  # , systemImageTypes ? [ "google_apis" "google_apis_playstore" ]
-  # , abiVersions ? [ "x86" "x86_64" "armeabi-v7a" "arm64-v8a" ]
-  # , cmakeVersions ? [ ]
-  # , includeNDK ? false
-  # , ndkVersion ? "26.3.11579264"
-  # , ndkVersions ? [ndkVersion]
-  # , useGoogleAPIs ? false
-  # , useGoogleTVAddOns ? false
-  # , includeExtras ? []
-  # , repoJson ? ./repo.json
-  # , repoXmls ? null
-  # , extraLicenses ? []
+  # { cmdLineToolsVersion ? "latest",
+  # , toolsVersion ? "latest",
+  # , platformToolsVersion ? "latest",
+  # , buildToolsVersions ? [ "latest" ],
+  # , includeEmulator ? false,
+  # , emulatorVersion ? "latest",
+  # , minPlatformVersion ? null,
+  # , maxPlatformVersion ? "latest",
+  # , numLatestPlatformVersions ? 1,
+  # , platformVersions ? ..,
+  # , includeSources ? false,
+  # , includeSystemImages ? false,
+  # , systemImageTypes ? [ "google_apis" "google_apis_playstore" ],
+  # , abiVersions ? [ "x86" "x86_64" "armeabi-v7a" "arm64-v8a" ],
+  # , includeCmake ? stdenv.hostPlatform.isx86_64 || stdenv.hostPlatform.isDarwin,
+  # , cmakeVersions ? [ "latest" ],
+  # , includeNDK ? false,
+  # , ndkVersion ? "latest",
+  # , ndkVersions ? [ ndkVersion ],
+  # , useGoogleAPIs ? false,
+  # , useGoogleTVAddOns ? false,
+  # , includeExtras ? [ ],
+  # , repoJson ? ./repo.json,
+  # , repoXmls ? null,
+  # , extraLicenses ? [ ],
   # }:
   androidSdkComposition = pkgsUnfree.androidenv.composeAndroidPackages rec {
     abiVersions = ["armeabi-v7a" "arm64-v8a"];
     platformVersions = [
-      "34" # lexe
-      "31" # app_links
+      "35" # lexe
+      "34" # app_links, flutter_zxing -> camera_android_camerax
     ];
     buildToolsVersions = [
-      "30.0.3" # gradle android plugin seems to want this?
+      "34.0.0" # gradle android plugin seems to want this?
     ];
     includeNDK = true;
-    ndkVersion = "26.3.11579264";
+    ndkVersion = "27.0.12077973";
     ndkVersions = [
-      ndkVersion # lexe
-      "23.1.7779620" # flutter_zxing
+      ndkVersion # lexe, flutter_zxing
     ];
-    cmakeVersions = ["3.18.1"]; # flutter_zxing
+    cmakeVersions = ["3.22.1"]; # flutter_zxing
   };
 
   # Links all the toolchains/libs/bins/etc in our chosen `androidSdkComposition`
@@ -56,7 +59,7 @@
   JAVA_HOME = "${pkgs.jdk17_headless.home}";
 
   # flutter/dart
-  flutter = pkgs.flutter324;
+  flutter = pkgs.flutter332;
 
   isDarwin = pkgs.hostPlatform.isDarwin;
 in {
@@ -76,6 +79,9 @@ in {
       pkgs.cocoapods
       # provides idevicesyslog to follow attached iOS device logs from CLI
       pkgs.libimobiledevice
+      # Use standard rsync. macOS rsync (OpenBSD) doesn't copy Flutter.framework
+      # with the right permissions.
+      pkgs.rsync
     ]);
 
   programs.bash.initExtra = ''
