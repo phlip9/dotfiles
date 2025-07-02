@@ -12,4 +12,4 @@ rm -f package.json
 
 # Update version and hashes
 cd -
-nix-update claude-code --version "$version"
+nix-update packages.currentSystem.claude-code --version "$version"
