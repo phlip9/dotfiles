@@ -63,6 +63,9 @@
     pkgs.htop
     # pkgs.lm_sensors
 
+    # claude - AI cli
+    phlipPkgs.claude-code
+
     # goose - AI cli
     phlipPkgs.goose-cli
 

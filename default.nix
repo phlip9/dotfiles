@@ -1,5 +1,5 @@
 # Non-flakes compatibility layer - allows using this repo with nix-build and nix-shell
-let
+{...}: let
   inherit (builtins) fetchTarball fromJSON mapAttrs readFile removeAttrs;
 
   # Read ./flake.lock
