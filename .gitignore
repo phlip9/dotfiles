@@ -25,3 +25,6 @@ config/htop/htoprc
 
 # home-manager generated coc-settings for this repo.
 /.vim/coc-settings.json
+
+# Claude
+/.claude

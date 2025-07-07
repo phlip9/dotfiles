@@ -77,11 +77,25 @@ in {
     ]
     ++ (lib.optionals isDarwin [
       pkgs.cocoapods
+
       # provides idevicesyslog to follow attached iOS device logs from CLI
       pkgs.libimobiledevice
-      # Use standard rsync. macOS rsync (OpenBSD) doesn't copy Flutter.framework
-      # with the right permissions.
-      pkgs.rsync
+
+      # Use standard rsync by default. macOS rsync (OpenBSD-based) doesn't copy
+      # Flutter.framework with the right permissions. However xcodebuild calls
+      # rsync with some magic apple flags, so we need to use apple rsync for
+      # those cases.
+      (pkgs.writeShellScriptBin "rsync" ''
+        # Use apple rsync if we get the special magic apple only
+        # --extended-attributes flag.
+        for arg in "$@"; do
+          if [[ "$arg" == "--extended-attributes" ]]; then
+            exec /usr/bin/rsync "$@"
+          fi
+        done
+
+        exec ${pkgs.rsync}/bin/rsync "$@"
+      '')
     ]);
 
   programs.bash.initExtra = ''
