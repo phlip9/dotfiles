@@ -492,7 +492,14 @@ if pcall(require, "telescope") then
 
     vim.keymap.set("n", "<leader>cm", function() coc.commands({}) end, M.with_desc("LSP commands"))
 
-    local show_at_cursor = require("telescope.themes").get_cursor({})
+    -- the theme for the "show at cursor" telescope pickers
+    -- increase height and width to fit more items and ensure paths are visible
+    local show_at_cursor = require("telescope.themes").get_cursor({
+        layout_config = {
+            height = 32,
+            width = 170,
+        }
+    })
     -- TODO(phlip9): combine cursor, line, and file code actions in one picker
     -- TODO(phlip9): work in visual select mode
     -- vim.keymap.set({ "n", "x" }, "<leader>a", function() coc.code_actions(show_at_cursor) end, opts)
