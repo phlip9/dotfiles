@@ -1,20 +1,20 @@
 {
   pkgs,
-  pkgsUnstable,
+  # pkgsUnstable,
 }: let
   callPackage = pkgs.callPackage;
 in {
   # aider - AI developer agent cli
-  aider-chat = pkgsUnstable.aider-chat;
+  aider-chat = pkgs.aider-chat;
 
   # cargo-release - release a Rust package
-  cargo-release = pkgsUnstable.cargo-release;
+  cargo-release = pkgs.cargo-release;
 
   # claude-code - Anthropic claude code CLI
   claude-code = callPackage ./claude-code {};
 
   # dist - build and distribute binary releases
-  dist = pkgsUnstable.cargo-dist;
+  dist = pkgs.cargo-dist;
 
   # profiler.firefox.org but local
   firefox-profiler = callPackage ./firefox-profiler.nix {};

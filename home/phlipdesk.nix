@@ -70,8 +70,8 @@
     pkgs.htop
     pkgs.lm_sensors
 
-    # aider-chat - AI developer agent cli
-    phlipPkgs.aider-chat
+    # # aider-chat - AI developer agent cli
+    # phlipPkgs.aider-chat
 
     # cargo-release - release a Rust package
     phlipPkgs.cargo-release
@@ -88,8 +88,8 @@
     # binary diff w/ alignment
     pkgs.biodiff
 
-    # goose - AI cli
-    phlipPkgs.goose-cli
+    # # goose - AI cli
+    # phlipPkgs.goose-cli
 
     # Modding OpenMW Tools Pack
     phlipPkgs.momw-tools-pack

@@ -66,8 +66,8 @@
     # claude - AI cli
     phlipPkgs.claude-code
 
-    # goose - AI cli
-    phlipPkgs.goose-cli
+    # # goose - AI cli
+    # phlipPkgs.goose-cli
 
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.

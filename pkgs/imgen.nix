@@ -15,7 +15,7 @@ rustPlatform.buildRustPackage rec {
     hash = "sha256-I7hVG3Gu/k05vo3Sg+foS1kF979OLrgHNqqZIUydDxM=";
   };
 
-  cargoHash = "sha256-CZwoVyKGDwPMkq34jXIG6H5lG4al8g6kqno8gvl2hpA=";
+  cargoHash = "sha256-Ko9imoFjEdBBmKuKvOPxY4BTeKeNwmLS/RLT3Cb7m4o=";
 
   cargoBuildFlags = "-p imgen --bin imgen";
 
