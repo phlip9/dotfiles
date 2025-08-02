@@ -103,6 +103,9 @@
     # imgen - OpenAI API image generator cli
     phlipPkgs.imgen
 
+    # io_uring man pages
+    pkgs.liburing.man
+
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello

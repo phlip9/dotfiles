@@ -66,6 +66,9 @@
 
     pkgs.protobuf
 
+    # io_uring man pages
+    pkgs.liburing.man
+
     # # TODO(phlip9): remove
     # pkgs.openssl
     # pkgs.openssl.dev
