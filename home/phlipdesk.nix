@@ -150,7 +150,7 @@
   #
   # if you don't want to manage your shell through Home Manager.
   home.sessionVariables = {
-    # EDITOR = "emacs";
+    HF_HOME = "/mnt/phlipdisk3/huggingface";
   };
 
   # Let Home Manager install and manage itself.
