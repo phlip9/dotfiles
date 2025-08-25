@@ -14,6 +14,12 @@ in {
   # git config options:
   # <https://git-scm.com/docs/git-config#_variables>
 
+  home.packages = [
+    # git absorb - automatically create fixup commits for staged changes
+    # <https://github.com/tummychow/git-absorb>
+    pkgs.git-absorb
+  ];
+
   programs.git = {
     enable = true;
 
@@ -165,6 +171,8 @@ in {
       # #############
 
       a = "add";
+      ab = "absorb";
+      abr = "absorb --and-rebase";
       b = "branch";
       cm = "commit";
       cma = "commit --amend";
