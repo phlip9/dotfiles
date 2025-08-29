@@ -216,10 +216,11 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
     vim.keymap.set({ "n", "x", "o" }, "+", M.recenter_after(repeatable_move.repeat_last_move_previous), opts)
 
     -- Make builtin f, F, t, T also repeatable
-    vim.keymap.set({ "n", "x", "o" }, "f", repeatable_move.builtin_f, opts)
-    vim.keymap.set({ "n", "x", "o" }, "F", repeatable_move.builtin_F, opts)
-    vim.keymap.set({ "n", "x", "o" }, "t", repeatable_move.builtin_t, opts)
-    vim.keymap.set({ "n", "x", "o" }, "T", repeatable_move.builtin_T, opts)
+    local opts = { silent = true, remap = false, expr = true }
+    vim.keymap.set({ "n", "x", "o" }, "f", repeatable_move.builtin_f_expr, opts)
+    vim.keymap.set({ "n", "x", "o" }, "F", repeatable_move.builtin_F_expr, opts)
+    vim.keymap.set({ "n", "x", "o" }, "t", repeatable_move.builtin_t_expr, opts)
+    vim.keymap.set({ "n", "x", "o" }, "T", repeatable_move.builtin_T_expr, opts)
 
     -- Toggle treesitter syntax-based folding
     local function toggle_treesitter_fold()
@@ -242,6 +243,7 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
             vim.b[buf].prev_fold_state = nil
         end
     end
+    local opts = { silent = true, remap = false }
     vim.keymap.set("n", "<leader>tsf", toggle_treesitter_fold,
         M.with_desc("Toggle Treesitter syntax-based folding", opts))
 end

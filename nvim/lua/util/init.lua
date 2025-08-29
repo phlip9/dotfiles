@@ -69,7 +69,7 @@ function M.dbg(...)
         ---@diagnostic disable-next-line: cast-local-type
         value = nil
     else
-        value = vim.tbl_islist(value) and vim.tbl_count(value) <= 1 and value[1] or value
+        value = vim.islist(value) and vim.tbl_count(value) <= 1 and value[1] or value
     end
     M._dbg(value)
     return value
