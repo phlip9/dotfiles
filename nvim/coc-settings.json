@@ -13,6 +13,8 @@
         // flutter/dart: don't check pub packages.
         "$HOME/.pub-cache/**",
     ],
+    // maybe this will fix rust-analyzer and dart lsp conflicts?
+    "workspace.bottomUpFiletypes": ["dart", "yaml"],
     "Lua.format.enable": true,
     "Lua.format.defaultConfig": {
         "indent_style": "space",
