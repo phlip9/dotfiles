@@ -1113,7 +1113,7 @@ do  -- KEYBINDINGS {{{
     -- note: "_ is the blackhole register
     vim.keymap.set("v", "<leader>p", "\"_dP", opts)
 
-    -- " Reload nvimrc
+    -- Reload nvimrc
     vim.keymap.set("n", "<leader>V", ":source $MYVIMRC<CR>:filetype detect<CR>:echo 'nvim config reloaded'<CR>", opts)
 
     -- remap Visual Block selection to something that doesn't conflict with
@@ -1133,6 +1133,22 @@ do  -- KEYBINDINGS {{{
     vim.keymap.set("n", "<C-j>", "<C-w>j", opts)
     vim.keymap.set("n", "<C-k>", "<C-w>k", opts)
     vim.keymap.set("n", "<C-l>", "<C-w>l", opts)
+
+    -- copy path and copy relative path (yp, yrp)
+    local function copy_absolute_path()
+        local path = vim.fn.expand("%:p")
+        vim.fn.setreg("+", path)
+        print("Copied: " .. path)
+    end
+    local function copy_relative_path()
+        local path = vim.fn.expand("%:~:.")
+        vim.fn.setreg("+", path)
+        print("Copied: " .. path)
+    end
+    vim.keymap.set("n", "yp", copy_absolute_path, M.with_desc("copy absolute file path"))
+    vim.keymap.set("n", "yrp", copy_relative_path, M.with_desc("copy relative file path"))
+    vim.api.nvim_create_user_command("CopyPath", copy_absolute_path, { desc = "Copy absolute file path to clipboard" })
+    vim.api.nvim_create_user_command("CopyPathRel", copy_relative_path, { desc = "Copy relative file path to clipboard" })
 
     -- -- re-center screen on C-d, C-u, search next/prev
     -- vim.keymap.set("n", "<C-d>", "<C-d>zz", opts)
