@@ -49,13 +49,16 @@
         user = "deploy";
         hostname = "lexe-prod.uswest2.prod.lexe.app";
         port = 22022;
-        forwardAgent = true;
+      };
+      "lexe-prod-www" = {
+        user = "deploy";
+        hostname = "lexe-prod-www.uswest2.prod.lexe.app";
+        port = 22022;
       };
       "lexe-staging-sgx" = {
         user = "deploy";
         hostname = "lexe-staging-sgx.uswest2.staging.lexe.app";
         port = 22022;
-        forwardAgent = true;
       };
     };
   };
