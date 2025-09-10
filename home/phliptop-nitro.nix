@@ -69,6 +69,10 @@
     # io_uring man pages
     pkgs.liburing.man
 
+    # age tools
+    pkgs.age-plugin-yubikey
+    pkgs.rage
+
     # # TODO(phlip9): remove
     # pkgs.openssl
     # pkgs.openssl.dev
