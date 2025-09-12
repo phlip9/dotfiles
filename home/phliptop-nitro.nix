@@ -2,6 +2,7 @@
   # a reference to the home-manager config object this fn outputs
   config,
   # nixpkgs
+  phlipPkgs,
   pkgs,
   # # nixpkgs.lib
   # lib,
@@ -69,9 +70,8 @@
     # io_uring man pages
     pkgs.liburing.man
 
-    # age tools
-    pkgs.age-plugin-yubikey
-    pkgs.rage
+    # codex - AI cli
+    phlipPkgs.codex
 
     # # TODO(phlip9): remove
     # pkgs.openssl

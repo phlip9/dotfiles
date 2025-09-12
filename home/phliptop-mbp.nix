@@ -2,12 +2,12 @@
   # # a reference to the home-manager config object this fn outputs
   # config,
   # nixpkgs
+  phlipPkgs,
   pkgs,
   # # nixpkgs.lib
   # lib,
   # flake inputs passed in via `extraSpecialArgs`
   # inputs,
-  phlipPkgs,
   ...
 }: {
   # Easily search through home-manager options:

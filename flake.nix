@@ -137,6 +137,7 @@
         aider-chat
         cargo-release
         claude-code
+        codex
         dist
         firefox-profiler
         git-restore-mtime

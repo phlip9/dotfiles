@@ -13,6 +13,9 @@ in {
   # claude-code - Anthropic claude code CLI
   claude-code = callPackage ./claude-code {};
 
+  # codex - OpenAI codex CLI
+  codex = callPackage ./codex.nix {};
+
   # dist - build and distribute binary releases
   dist = pkgs.cargo-dist;
 
