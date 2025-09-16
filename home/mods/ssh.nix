@@ -41,7 +41,7 @@
     matchBlocks = {
       "lexe-dev-sgx" = {
         user = "deploy";
-        hostname = "lexe-dev-sgx.westus.cloudapp.azure.com";
+        hostname = "lexe-dev-sgx.uswest.dev.lexe.app";
         port = 22022;
         forwardAgent = true;
       };
