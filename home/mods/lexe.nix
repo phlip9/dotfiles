@@ -2,6 +2,7 @@
   lib,
   pkgs,
   pkgsUnfree,
+  pkgsYubikey,
   ...
 }: let
   # composeAndroidPackages =
@@ -66,7 +67,6 @@ in {
   home.packages =
     [
       flutter
-      pkgs.age-plugin-yubikey
       pkgs.bundletool
       pkgs.cargo-expand
       pkgs.cargo-ndk
@@ -75,6 +75,7 @@ in {
       pkgs.lego
       pkgs.rage
       pkgs.toml-cli
+      pkgsYubikey.age-plugin-yubikey
     ]
     ++ (lib.optionals isDarwin [
       pkgs.cocoapods

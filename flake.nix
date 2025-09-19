@@ -39,6 +39,13 @@
     nixpkgs.url = "github:nixos/nixpkgs/release-25.05";
     # nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # A nixpkgs with an older version of `age-plugin-yubikey` that still uses
+    # Client protocol 4:4 for communicating with `pcscd`. The latest release
+    # upgraded to Client protocol 4:5, but `pcscd` packaged on Ubuntu only
+    # supports Server protocol 4:4, causing `age-plugin-yubikey` to fail.
+    # TODO(phlip9): remove once Ubuntu LTS packages `pcscd` with server protocol 4:5.
+    nixpkgs-yubikey.url = "github:nixos/nixpkgs/807e9154dcb16384b1b765ebe9cd2bba2ac287fd";
+
     home-manager = {
       url = "github:nix-community/home-manager/release-25.05";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -114,6 +121,10 @@
     # Host nixpkgs set that allows "unfree" packages, like the Android SDK.
     systemPkgsUnfree = eachSystem (system: mkPkgsUnfree inputs.nixpkgs system);
 
+    # Host nixpkgs set with old age-plugin-yubikey and pcsclite packages that
+    # support running against Ubuntu 24.04 LTS pcscd.
+    systemPkgsYubikey = eachSystem (system: inputs.nixpkgs-yubikey.legacyPackages.${system});
+
     # eachSystemPkgs :: (builder :: Nixpkgs -> AttrSet) -> AttrSet
     eachSystemPkgs = builder: eachSystem (system: builder systemPkgs.${system});
 
@@ -164,6 +175,7 @@
         inputs = inputs;
         phlipPkgs = systemPhlipPkgs.${pkgs.system};
         pkgsUnfree = systemPkgsUnfree.${pkgs.system};
+        pkgsYubikey = systemPkgs.${pkgs.system};
       };
 
       check = true;
@@ -180,6 +192,7 @@
         inputs = inputs;
         phlipPkgs = systemPhlipPkgs.${pkgs.system};
         pkgsUnfree = systemPkgsUnfree.${pkgs.system};
+        pkgsYubikey = systemPkgsYubikey.${pkgs.system};
       };
 
       check = true;
@@ -196,6 +209,7 @@
         inputs = inputs;
         phlipPkgs = systemPhlipPkgs.${pkgs.system};
         pkgsUnfree = systemPkgsUnfree.${pkgs.system};
+        pkgsYubikey = systemPkgs.${pkgs.system};
       };
 
       check = true;
@@ -230,6 +244,7 @@
       nixpkgs = inputs.nixpkgs;
       systemPkgs = systemPkgs;
       systemPkgsUnfree = systemPkgsUnfree;
+      systemPkgsYubikey = systemPkgsYubikey;
       systemPhlipPkgs = systemPhlipPkgs;
     };
   };

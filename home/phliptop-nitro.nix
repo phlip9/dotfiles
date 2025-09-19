@@ -4,6 +4,7 @@
   # nixpkgs
   phlipPkgs,
   pkgs,
+  pkgsYubikey,
   # # nixpkgs.lib
   # lib,
   # # flake inputs passed in via `extraSpecialArgs`
@@ -72,6 +73,13 @@
 
     # codex - AI cli
     phlipPkgs.codex
+
+    # lexe tools
+    pkgs.josh
+    pkgs.lego
+    pkgs.rage
+    pkgs.toml-cli
+    pkgsYubikey.age-plugin-yubikey
 
     # # TODO(phlip9): remove
     # pkgs.openssl
