@@ -72,6 +72,7 @@ in {
       pkgs.cargo-ndk
       pkgs.fastlane
       pkgs.josh
+      pkgs.lego
       pkgs.rage
       pkgs.toml-cli
     ]
