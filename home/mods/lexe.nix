@@ -1,5 +1,6 @@
 {
   lib,
+  phlipPkgs,
   pkgs,
   pkgsUnfree,
   pkgsYubikey,
@@ -67,12 +68,12 @@ in {
   home.packages =
     [
       flutter
+      phlipPkgs.lego
       pkgs.bundletool
       pkgs.cargo-expand
       pkgs.cargo-ndk
       pkgs.fastlane
       pkgs.josh
-      pkgs.lego
       pkgs.rage
       pkgs.toml-cli
       pkgsYubikey.age-plugin-yubikey

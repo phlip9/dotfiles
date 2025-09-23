@@ -34,6 +34,9 @@ in {
   # phlip9/imgen - OpenAI API image generator cli
   imgen = callPackage ./imgen.nix {};
 
+  # go-acme/lego - patched Let's Encrypt ACME client
+  lego = callPackage ./lego.nix {};
+
   # Claude modelcontextprotocol server for filesystem access
   mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix {};
 

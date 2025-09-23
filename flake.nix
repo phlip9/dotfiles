@@ -155,6 +155,7 @@
         goose-cli
         graviola-tools
         imgen
+        lego
         mcp-server-filesystem
         momw-tools-pack
         openmw
