@@ -75,8 +75,8 @@
     phlipPkgs.codex
 
     # lexe tools
+    phlipPkgs.lego
     pkgs.josh
-    pkgs.lego
     pkgs.rage
     pkgs.toml-cli
     pkgsYubikey.age-plugin-yubikey
