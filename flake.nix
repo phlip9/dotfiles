@@ -154,6 +154,7 @@
         git-restore-mtime
         goose-cli
         graviola-tools
+        lossless-cut
         imgen
         lego
         mcp-server-filesystem

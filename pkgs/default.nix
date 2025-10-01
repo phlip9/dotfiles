@@ -37,6 +37,9 @@ in {
   # go-acme/lego - patched Let's Encrypt ACME client
   lego = callPackage ./lego.nix {};
 
+  # LosslessCut - extremely simple linear video cutting
+  lossless-cut = callPackage ./lossless-cut.nix {};
+
   # Claude modelcontextprotocol server for filesystem access
   mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix {};
 

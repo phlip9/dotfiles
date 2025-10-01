@@ -91,6 +91,9 @@
     # # goose - AI cli
     # phlipPkgs.goose-cli
 
+    # lossless-cut - simple trimming and cutting video editor
+    phlipPkgs.lossless-cut
+
     # Modding OpenMW Tools Pack
     phlipPkgs.momw-tools-pack
 
