@@ -5,8 +5,8 @@
   phlipPkgs,
   pkgs,
   pkgsYubikey,
-  # # nixpkgs.lib
-  # lib,
+  # nixpkgs.lib
+  lib,
   # # flake inputs passed in via `extraSpecialArgs`
   # inputs,
   ...
@@ -146,4 +146,7 @@
   #
 
   programs.alacritty.fontSize = 11;
+
+  # Remove NIX_PATH / nix-channels stuff
+  systemd.user.sessionVariables.NIX_PATH = lib.mkForce "";
 }

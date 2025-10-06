@@ -176,5 +176,5 @@
   programs.alacritty.fontSize = 11;
 
   # Remove NIX_PATH / nix-channels stuff
-  systemd.user.sessionVariables.NIX_PATH = "";
+  systemd.user.sessionVariables.NIX_PATH = lib.mkForce "";
 }
