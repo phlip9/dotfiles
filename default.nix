@@ -19,8 +19,7 @@
   getLockedFlake = name: input: let
     src = fetchLockedFlake input.locked;
     flake = import (src + "/flake.nix");
-    outputs =
-      flake.outputs {
+    outputs = flake.outputs ({
         self = outputs;
       }
       # TODO(phlip9): actually pass correct inputs
@@ -28,7 +27,7 @@
         if name == "home-manager"
         then {nixpkgs = input.nixpkgs;}
         else {}
-      );
+      ));
   in
     outputs // {outPath = src;};
 
