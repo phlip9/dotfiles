@@ -60,6 +60,11 @@
         hostname = "lexe-staging-sgx.uswest2.staging.lexe.app";
         port = 22022;
       };
+      "lexe-staging-esplora" = {
+        user = "deploy";
+        hostname = "lexe-staging-esplora.uswest2.staging.lexe.app";
+        port = 22022;
+      };
     };
   };
 }
