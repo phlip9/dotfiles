@@ -36,7 +36,7 @@
   # };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/release-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
     # nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     # A nixpkgs with an older version of `age-plugin-yubikey` that still uses
@@ -102,19 +102,25 @@
     mkPkgsUnfree = nixpkgsFlake: system:
       import nixpkgsFlake {
         system = system;
-        config = {
+        config = let
+          allowed = {
+            android-sdk-build-tools = null;
+            android-sdk-cmdline-tools = null;
+            android-sdk-ndk = null;
+            android-sdk-platform-tools = null;
+            android-sdk-platforms = null;
+            android-sdk-tools = null;
+            build-tools = null;
+            cmake = null;
+            cmdline-tools = null;
+            ndk = null;
+            platform-tools = null;
+            platforms = null;
+            tools = null;
+          };
+        in {
           android_sdk.accept_license = true;
-          allowUnfreePredicate = let
-            allowed = {
-              android-sdk-build-tools = null;
-              android-sdk-cmdline-tools = null;
-              android-sdk-platform-tools = null;
-              android-sdk-platforms = null;
-              android-sdk-tools = null;
-              android-sdk-ndk = null;
-            };
-          in
-            pkg: allowed ? ${lib.getName pkg};
+          allowUnfreePredicate = pkg: allowed ? ${lib.getName pkg};
         };
       };
 
@@ -248,6 +254,16 @@
       systemPkgsUnfree = systemPkgsUnfree;
       systemPkgsYubikey = systemPkgsYubikey;
       systemPhlipPkgs = systemPhlipPkgs;
+
+      libs = let
+        pkgs = systemPkgs.x86_64-linux;
+      in
+        lib.makeLibraryPath [pkgs.stdenv.cc.cc pkgs.stdenv.cc.libc pkgs.openssl];
+
+      ld = let
+        pkgs = systemPkgs.x86_64-linux;
+        # in "${pkgs.stdenv.cc.libc}/lib/ld-linux-x86-64.so.2";
+      in "${lib.makeLibraryPath [pkgs.stdenv.cc.libc]}/ld-linux-x86-64.so.2";
     };
   };
 }
