@@ -15,7 +15,7 @@
     aarch64-darwin = rec {
       target = "aarch64-apple-darwin";
       url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${target}.tar.gz";
-      hash = "sha256-0000000000000000000000000000000000000000000=";
+      hash = "sha256-zdZt2ej30ENbU0vfuoT5gi3AbtRQ9p5tIf9lPU6fTjY=";
     };
   };
 

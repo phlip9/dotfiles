@@ -66,6 +66,9 @@
     # claude - AI cli
     phlipPkgs.claude-code
 
+    # codex - AI cli
+    phlipPkgs.codex
+
     # # goose - AI cli
     # phlipPkgs.goose-cli
 
