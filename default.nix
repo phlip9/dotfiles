@@ -17,10 +17,21 @@
       };
 
   getLockedFlake = name: input: let
-    src = fetchLockedFlake input.locked;
+    locked = input.locked;
+    rev = locked.rev or "dirty";
+    src = fetchLockedFlake locked;
     flake = import (src + "/flake.nix");
+    flakeExt = {
+      lastModified = locked.lastModified;
+      narHash = locked.narHash;
+      outPath = src;
+      owner = locked.owner;
+      repo = locked.repo;
+      rev = rev;
+      shortRev = builtins.substring 0 7 rev;
+    };
     outputs = flake.outputs ({
-        self = outputs;
+        self = outputs // flakeExt;
       }
       # TODO(phlip9): actually pass correct inputs
       // (
@@ -29,7 +40,7 @@
         else {}
       ));
   in
-    outputs // {outPath = src;};
+    outputs // flakeExt;
 
   # Fetch all inputs
   inputs = mapAttrs getLockedFlake lockedInputs;
