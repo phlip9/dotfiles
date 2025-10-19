@@ -149,6 +149,9 @@
       # first-time setup for a new machine.
       home-manager = hmPkgs.home-manager;
 
+      # NixOS graphical installer ISO image
+      nixos-iso = self.nixosConfigurations.isoGraphicalInstaller.system.build.isoImage;
+
       inherit
         (phlipPkgs)
         aider-chat
@@ -223,6 +226,28 @@
       check = true;
     };
 
+    # NixOS graphical installer ISO configuration
+    nixosConfigurations.isoGraphicalInstaller = inputs.nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ({
+          config,
+          modulesPath,
+          ...
+        }: {
+          imports = [
+            "${modulesPath}/installer/cd-dvd/installation-cd-graphical-combined.nix"
+          ];
+
+          system.nixos.versionSuffix = ".${inputs.nixpkgs.shortRev}";
+          system.nixos.revision = inputs.nixpkgs.rev;
+
+          nix.settings.experimental-features = ["nix-command" "flakes"];
+          # nixpkgs.flake.source = inputs.nixpkgs.outPath;
+        })
+      ];
+    };
+
     # The *.nix file formatter.
     formatter = eachSystemPkgs (pkgs: pkgs.alejandra);
 
@@ -254,16 +279,6 @@
       systemPkgsUnfree = systemPkgsUnfree;
       systemPkgsYubikey = systemPkgsYubikey;
       systemPhlipPkgs = systemPhlipPkgs;
-
-      libs = let
-        pkgs = systemPkgs.x86_64-linux;
-      in
-        lib.makeLibraryPath [pkgs.stdenv.cc.cc pkgs.stdenv.cc.libc pkgs.openssl];
-
-      ld = let
-        pkgs = systemPkgs.x86_64-linux;
-        # in "${pkgs.stdenv.cc.libc}/lib/ld-linux-x86-64.so.2";
-      in "${lib.makeLibraryPath [pkgs.stdenv.cc.libc]}/ld-linux-x86-64.so.2";
     };
   };
 }
