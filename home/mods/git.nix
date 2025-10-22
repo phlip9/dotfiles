@@ -152,10 +152,10 @@ in {
       cm-stat = "!git diff --stat HEAD~1";
 
       # Open all changed files in `nvim` with gitgutter diff'ed against master.
-      pr-rv = "!nvim $(git pr-files) +\"let g:gitgutter_diff_base = '$(git master)'\"";
+      pr-rv = "!nvim $(git pr-files) +\"let g:gitgutter_diff_base = '$(git pr-base)'\"";
 
       # Open only one specific changed file just like `git pr-review`
-      pr-rvo = "!nvim +\"let g:gitgutter_diff_base = '$(git master)'\"";
+      pr-rvo = "!nvim +\"let g:gitgutter_diff_base = '$(git pr-base)'\"";
 
       # Single commit: open all changed files in `nvim` with gitgutter diff.
       cm-rv = "!nvim $(git cm-files) +\"let g:gitgutter_diff_base = '$(git rev-parse HEAD~1)'\"";
@@ -164,7 +164,7 @@ in {
       pr-desc = "!git log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
 
       # Start rebase to review by commit
-      pr-rv-by-commit = "!git rebase --interactive $(git master)";
+      pr-rv-by-commit = "!git rebase --interactive $(git pr-base)";
 
       # #############
       # # Shortcuts #
