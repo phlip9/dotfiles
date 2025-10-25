@@ -152,6 +152,8 @@
       # NixOS graphical installer ISO image
       nixos-iso = self.nixosConfigurations.isoGraphicalInstaller.system.build.isoImage;
 
+      npins = systemPkgs.${system}.npins;
+
       inherit
         (phlipPkgs)
         aider-chat

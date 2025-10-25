@@ -54,6 +54,7 @@
       pkgs.hyperfine
       pkgs.jq
       pkgs.just
+      pkgs.npins
       pkgs.patchelf
       pkgs.ripgrep
 
