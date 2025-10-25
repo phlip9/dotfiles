@@ -275,6 +275,7 @@
     _dbg = {
       lib = lib;
       nixpkgs = inputs.nixpkgs;
+      home-manager = inputs.home-manager;
       systemPkgs = systemPkgs;
       systemPkgsUnfree = systemPkgsUnfree;
       systemPkgsYubikey = systemPkgsYubikey;
