@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-
-# home-manager switch
-
 set -euo pipefail
+
+# home-manager switch the current host using the configs in our dotfiles
+
+HM_HOST="${HM_HOST:-$(hostname -s)}"
 
 TMPDIR="$(mktemp --tmpdir -d home-manager-build.XXXXXXXXXX)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
 pushd "$TMPDIR" > /dev/null
 
+# --out-link into to a file to ensure we have a GC root while activating
 generation="$TMPDIR/generation"
 nix build -f ~/dev/dotfiles --out-link "$generation" "$@" \
-  homeConfigs."$(hostname -s)".activationPackage
+  homeConfigs."$HM_HOST".activationPackage
 
 "$generation"/activate
 
