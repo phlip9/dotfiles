@@ -14,7 +14,10 @@ nix-fmt:
 lint: bash-lint flake-lint nix-lint
 
 bash-lint:
-    shellcheck bashrc
+    nix shell -f . pkgs.shellcheck pkgs.fd --command \
+        fd --type file '^.*(hms|bashrc|\.sh)$' \
+            --exclude pkgs/claude-code \
+            --exec shellcheck {}
 
 flake-lint:
     nix flake check
