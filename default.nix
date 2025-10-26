@@ -25,21 +25,21 @@
   #
   # package sets
   #
-  args ? {
-    inherit localSystem overlays;
-    config = import ./nix/config-unfree.nix;
-  }
-  # if we explicitly set crossSystem, even when crossSystem == localSystem,
-  # building androidSdk will re-bootstrap since it decides to build
-  # glibc-x86_64-unknown-linux-gnu-2.40-66 instead of glibc-2.40-66 for some
-  # reason...
-  // (
-    if crossSystem == localSystem then
-      { }
-    else
-      {
-        inherit crossSystem crossOverlays;
-      }
+  args ? (
+    {
+      inherit localSystem overlays;
+      config = import ./nix/config-unfree.nix;
+    }
+    # if we explicitly set crossSystem, even when crossSystem == localSystem,
+    # building androidSdk will re-bootstrap since it decides to build
+    # glibc-x86_64-unknown-linux-gnu-2.40-66 instead of glibc-2.40-66 for some
+    # reason...
+    // (
+      if crossSystem == localSystem then
+        { }
+      else
+        { inherit crossSystem crossOverlays; }
+    )
   ),
   pkgs ? import nixpkgs args,
   pkgsYubikey ? import nixpkgs-yubikey args,
@@ -48,50 +48,25 @@
 let
   phlipPkgs = import ./pkgs { inherit pkgs; };
 in
-rec {
+{
   inherit
     hm
-    nixpkgs
-    pkgs
     phlipPkgs
+    pkgs
     sources
     ;
+
   lib = pkgs.lib;
 
   # home-manager configs
-  homeConfigurations = {
-    phlipdesk = hm.lib.homeManagerConfiguration {
-      pkgs = pkgs;
-      modules = [ ./home/phlipdesk.nix ];
-      extraSpecialArgs = {
-        # force hm to use one pkgs eval to reduce eval time by 600ms
-        inherit phlipPkgs pkgs;
-        inputs = sources;
-        pkgsUnfree = pkgs;
-        pkgsYubikey = pkgs;
-      };
-    };
-    phliptop-nitro = hm.lib.homeManagerConfiguration {
-      pkgs = pkgs;
-      modules = [ ./home/phliptop-nitro.nix ];
-      extraSpecialArgs = {
-        # force hm to use one pkgs eval to reduce eval time by 600ms
-        inherit phlipPkgs pkgs pkgsYubikey;
-        inputs = sources;
-        pkgsUnfree = pkgs;
-      };
-    };
-    phliptop-mbp = hm.lib.homeManagerConfiguration {
-      pkgs = pkgs;
-      modules = [ ./home/phliptop-mbp.nix ];
-      extraSpecialArgs = {
-        # force hm to use one pkgs eval to reduce eval time by 600ms
-        inherit phlipPkgs pkgs;
-        inputs = sources;
-        pkgsUnfree = pkgs;
-        pkgsYubikey = pkgs;
-      };
-    };
+  homeConfigurations = import ./home {
+    inherit
+      hm
+      phlipPkgs
+      pkgs
+      pkgsYubikey
+      sources
+      ;
   };
 }
 // phlipPkgs
