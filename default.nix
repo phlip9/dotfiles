@@ -59,7 +59,7 @@ rec {
   lib = pkgs.lib;
 
   # home-manager configs
-  homeConfigurations = import ./home {
+  homeConfigs = import ./home {
     inherit
       hm
       phlipPkgs
@@ -70,7 +70,7 @@ rec {
   };
 
   # NixOS system configs
-  nixosConfigurations = import ./nixos {
+  nixosConfigs = import ./nixos {
     inherit
       phlipPkgs
       pkgs
@@ -78,6 +78,7 @@ rec {
       ;
   };
 
-  nixos-iso = nixosConfigurations.nixos-iso;
+  # NixOS graphical installer .iso image
+  nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;
 }
 // phlipPkgs

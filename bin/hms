@@ -11,7 +11,7 @@ pushd "$TMPDIR" > /dev/null
 
 generation="$TMPDIR/generation"
 nix build -f ~/dev/dotfiles --out-link "$generation" "$@" \
-  homeConfigurations."$(hostname -s)".activationPackage
+  homeConfigs."$(hostname -s)".activationPackage
 
 "$generation"/activate
 

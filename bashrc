@@ -218,15 +218,19 @@ function aoe4rank() {
 }
 
 # nix home-manager, but with configuration in my dotfiles git repo.
-alias hmb='nix build --file ~/dev/dotfiles homeConfigurations."$(hostname -s)".activationPackage'
+alias hmb='nix build --file ~/dev/dotfiles homeConfigs."$(hostname -s)".activationPackage'
 
 # nix aliases
 alias nb='nix build --file .'
-alias ne='nix eval --file .'
-alias nr='nix run --file .'
 alias nbf='nix build'
+alias nd='nix develop --file .'
+alias ndf='nix develop'
+alias ne='nix eval --file .'
 alias nef='nix eval'
+alias nr='nix run --file .'
 alias nrf='nix run'
+alias ns='nix shell --file .'
+alias nsf='nix shell'
 # see __complete_nix_alias below for alias completions
 
 ## ALIASES }}}
