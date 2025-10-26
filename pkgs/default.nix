@@ -1,7 +1,4 @@
-{
-  pkgs,
-  # pkgsUnstable,
-}: let
+{pkgs}: let
   callPackage = pkgs.callPackage;
 in {
   # aider - AI developer agent cli
@@ -45,6 +42,10 @@ in {
 
   # MOMW Tools Pack pre-built unstable
   momw-tools-pack = callPackage ./momw-tools-pack.nix {};
+
+  # nixfmt - standard nix formatter
+  # TODO(phlip9): change to `pkgs.nixfmt` after release-25.11
+  nixfmt = pkgs.nixfmt-rfc-style;
 
   # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix {};

@@ -2,6 +2,7 @@
 # config dir symlink working.
 {
   config,
+  phlipPkgs,
   pkgs,
   lib,
   ...
@@ -25,7 +26,7 @@
     # preferred nix formatter
     pkgs.alejandra
     # nixpkgs repo formatter
-    pkgs.nixfmt-rfc-style
+    phlipPkgs.nixfmt
   ];
   extraPkgsPath = lib.makeBinPath extraPkgs;
 

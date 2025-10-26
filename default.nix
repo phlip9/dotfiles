@@ -28,7 +28,7 @@
   args ?
     {
       inherit localSystem overlays;
-      config = import ./config-unfree.nix;
+      config = import ./nix/config-unfree.nix;
     }
     # if we explicitly set crossSystem, even when crossSystem == localSystem,
     # building androidSdk will re-bootstrap since it decides to build

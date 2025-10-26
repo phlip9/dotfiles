@@ -8,7 +8,8 @@ just-fmt:
     just --fmt --unstable
 
 nix-fmt:
-    nix fmt .
+    nix shell -f . phlipPkgs.nixfmt pkgs.fd --command \
+        fd --extension "nix" --exec nixfmt --check {}
 
 lint: bash-lint flake-lint nix-lint
 

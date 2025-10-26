@@ -19,9 +19,9 @@ config/htop/htoprc
 # direnv cache
 /.direnv
 
-# nix derivation result link
+# nix build result links
 /result
-/result-man
+/result-*
 
 # home-manager generated coc-settings for this repo.
 /.vim/coc-settings.json

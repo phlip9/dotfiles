@@ -251,7 +251,7 @@
     };
 
     # The *.nix file formatter.
-    formatter = eachSystemPkgs (pkgs: pkgs.alejandra);
+    formatter = eachSystem (system: systemPhlipPkgs.${system}.nixfmt);
 
     devShells = eachSystemPkgs (pkgs: {
       default = pkgs.mkShellNoCC {
