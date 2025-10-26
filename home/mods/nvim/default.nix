@@ -191,18 +191,6 @@ let
   myDotfilesSpecificCocSettings = {
     "Lua.runtime.version" = "LuaJIT";
     "Lua.workspace.library" = map (x: "${x.plugin.outPath}/lua") luaPlugins;
-    languageserver.nix = {
-      command = "nil";
-      filetypes = [ "nix" ];
-      rootPatterns = [ ".git" ];
-      settings.nil = {
-        formatting.command = [
-          "nixfmt"
-          "--width=80"
-        ];
-        diagnostics.excludedFiles = [ "generated.nix" ];
-      };
-    };
   };
   myDotfilesSpecificCocSettingsFile = pkgs.writers.writeJSON "coc-settings.json" myDotfilesSpecificCocSettings;
 

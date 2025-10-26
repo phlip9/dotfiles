@@ -54,23 +54,15 @@
     "languageserver": {
         "nix": {
             "command": "nil",
-            "filetypes": [
-                "nix"
-            ],
-            "rootPatterns": [
-                "flake.nix"
-            ],
+            "filetypes": ["nix"],
+            "rootPatterns": [".git", "flake.nix", "configuration.nix", "default.nix"],
             "settings": {
                 "nil": {
                     "formatting": {
-                        "command": [
-                            "alejandra"
-                        ]
+                        "command": ["nixfmt", "--width=80"]
                     },
                     "diagnostics": {
-                        "excludedFiles": [
-                            "generated.nix"
-                        ]
+                        "excludedFiles": ["generated.nix"]
                     }
                 }
             }
