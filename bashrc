@@ -218,9 +218,7 @@ function aoe4rank() {
 }
 
 # nix home-manager, but with configuration in my dotfiles git repo.
-alias hm='home-manager --flake ~/dev/dotfiles#$(hostname -s)'
-complete -o default -F _home-manager_completions hm
-alias hms='home-manager --flake ~/dev/dotfiles#$(hostname -s) switch'
+alias hmb='nix build -f ~/dev/dotfiles homeConfigurations."$(hostname -s)".activationPackage'
 
 ## ALIASES }}}
 

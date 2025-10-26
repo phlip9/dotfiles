@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# home-manager switch
+
+set -euo pipefail
+
+TMPDIR="$(mktemp --tmpdir -d home-manager-build.XXXXXXXXXX)"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+pushd "$TMPDIR" > /dev/null
+
+generation="$TMPDIR/generation"
+nix build -f ~/dev/dotfiles --out-link "$generation" "$@" \
+  homeConfigurations."$(hostname -s)".activationPackage
+
+"$generation"/activate
+
+popd > /dev/null
