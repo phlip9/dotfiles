@@ -10,7 +10,8 @@
   # # flake inputs passed in via `extraSpecialArgs`
   # inputs,
   ...
-}: {
+}:
+{
   # Easily search through home-manager options:
   # <https://mipmip.github.io/home-manager-option-search>
 
@@ -58,7 +59,7 @@
   # nicely with non-NixOS by linking xdg-applications etc
   targets.genericLinux.enable = true;
   xdg.mime.enable = true;
-  xdg.systemDirs.data = ["${config.home.homeDirectory}/.nix-profile/share"];
+  xdg.systemDirs.data = [ "${config.home.homeDirectory}/.nix-profile/share" ];
 
   # The home.packages option allows you to install Nix packages into your
   # environment.

@@ -3,14 +3,17 @@
   pkgs,
   config,
   ...
-}: let
+}:
+let
   dotfilesDir = config.home.dotfilesDir;
   hostPlatform = pkgs.hostPlatform;
   mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
-in {
+in
+{
   home.file = {
     ".local/bin/hms".source = mkOutOfStoreSymlink "${dotfilesDir}/bin/hms";
-    ".local/bin/picolispfmt".source = mkOutOfStoreSymlink "${dotfilesDir}/bin/picolispfmt";
+    ".local/bin/picolispfmt".source =
+      mkOutOfStoreSymlink "${dotfilesDir}/bin/picolispfmt";
     ".local/bin/traceexec.d" = {
       enable = hostPlatform.isDarwin;
       source = mkOutOfStoreSymlink "${dotfilesDir}/bin/traceexec.d";

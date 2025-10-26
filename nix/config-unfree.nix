@@ -19,11 +19,14 @@ let
   };
 
   # inlined lib.getName to avoid circular dependency
-  getName = x:
-    if builtins.isString x
-    then (builtins.parseDrvName x).name
-    else x.pname or (builtins.parseDrvName x.name).name;
-in {
+  getName =
+    x:
+    if builtins.isString x then
+      (builtins.parseDrvName x).name
+    else
+      x.pname or (builtins.parseDrvName x.name).name;
+in
+{
   android_sdk.accept_license = true;
   allowUnfreePredicate = pkg: allowed ? ${getName pkg};
 }

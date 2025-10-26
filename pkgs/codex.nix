@@ -3,7 +3,8 @@
   lib,
   openssl,
   stdenv,
-}: let
+}:
+let
   version = "0.45.0";
 
   sources = {
@@ -21,30 +22,36 @@
 
   source = sources.${stdenv.hostPlatform.system};
 in
-  stdenv.mkDerivation {
-    pname = "codex";
-    inherit version;
+stdenv.mkDerivation {
+  pname = "codex";
+  inherit version;
 
-    src = fetchurl {
-      inherit (source) url hash;
-    };
+  src = fetchurl {
+    inherit (source) url hash;
+  };
 
-    sourceRoot = ".";
+  sourceRoot = ".";
 
-    installPhase = ''
-      runHook preInstall
+  installPhase = ''
+    runHook preInstall
 
-      mkdir -p $out/bin
-      cp codex-${source.target} $out/bin/codex
+    mkdir -p $out/bin
+    cp codex-${source.target} $out/bin/codex
 
-      runHook postInstall
-    '';
+    runHook postInstall
+  '';
 
-    fixupPhase = lib.optionalString stdenv.hostPlatform.isLinux ''
-      patchelf --set-rpath "${lib.makeLibraryPath [stdenv.cc.cc stdenv.cc.libc openssl]}" "$out/bin/codex"
-      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" "$out/bin/codex"
-    '';
-  }
+  fixupPhase = lib.optionalString stdenv.hostPlatform.isLinux ''
+    patchelf --set-rpath "${
+      lib.makeLibraryPath [
+        stdenv.cc.cc
+        stdenv.cc.libc
+        openssl
+      ]
+    }" "$out/bin/codex"
+    patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" "$out/bin/codex"
+  '';
+}
 # TODO(phlip9): build from source when nixpkgs gets newer rustc
 # {
 #   fetchFromGitHub,
@@ -139,4 +146,3 @@ in
 #
 #   buildInputs = [openssl];
 # }
-

@@ -16,7 +16,7 @@ stdenv.mkDerivation {
     hash = "sha256-owGWQ3CqyurlVg3NswH0xedeEW/MIJiiU2+5NR1W1jo=";
   };
 
-  buildInputs = [python3];
+  buildInputs = [ python3 ];
 
   installPhase = ''
     mkdir $out

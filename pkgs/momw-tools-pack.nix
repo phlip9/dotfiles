@@ -6,16 +6,18 @@
   p7zip,
   runCommandLocal,
   unrar,
-}: let
+}:
+let
   pname = "momw-tools-pack";
   version = "20250129";
 
   # tell nixpkgs to STFU about unfree packages
   unrarIgnoreUnfree = unrar.overrideAttrs {
-    meta = {};
+    meta = { };
   };
 in
-  runCommandLocal "${pname}-${version}" {
+runCommandLocal "${pname}-${version}"
+  {
     bins = fetchzip {
       pname = pname;
       version = version;
@@ -26,12 +28,18 @@ in
     nativeBuildInputs = [
       makeWrapper
     ];
-  } ''
+  }
+  ''
     mkdir -p "$out/bin"
     ln -s "$bins/delta_plugin" "$bins/groundcoverify" "$bins/momw-configurator-linux-amd64" \
       "$bins/openmw-validator-linux-amd64" "$bins/s3lightfixes" "$bins/tes3cmd" "$bins/umo" \
       "$out/bin/"
 
     wrapProgram "$out/bin/umo" \
-      --prefix PATH : ${lib.makeBinPath [p7zip unrarIgnoreUnfree]}
+      --prefix PATH : ${
+        lib.makeBinPath [
+          p7zip
+          unrarIgnoreUnfree
+        ]
+      }
   ''

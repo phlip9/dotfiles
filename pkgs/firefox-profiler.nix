@@ -21,7 +21,7 @@ stdenvNoCC.mkDerivation rec {
   nativeBuildInputs = [
     fixup-yarn-lock
     nodejs_18
-    (yarn.override {nodejs = nodejs_18;})
+    (yarn.override { nodejs = nodejs_18; })
   ];
 
   yarnOfflineCache = fetchYarnDeps {

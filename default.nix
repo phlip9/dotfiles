@@ -8,9 +8,9 @@
   # The system packages will ultimately be run on.
   crossSystem ? localSystem,
   # List of overlay layers used to extend Nixpkgs.
-  overlays ? [],
+  overlays ? [ ],
   # List of overlays to apply to target packages only.
-  crossOverlays ? [],
+  crossOverlays ? [ ],
   #
   # pinned sources
   #
@@ -25,66 +25,73 @@
   #
   # package sets
   #
-  args ?
-    {
-      inherit localSystem overlays;
-      config = import ./nix/config-unfree.nix;
-    }
-    # if we explicitly set crossSystem, even when crossSystem == localSystem,
-    # building androidSdk will re-bootstrap since it decides to build
-    # glibc-x86_64-unknown-linux-gnu-2.40-66 instead of glibc-2.40-66 for some
-    # reason...
-    // (
-      if crossSystem == localSystem
-      then {}
-      else {
+  args ? {
+    inherit localSystem overlays;
+    config = import ./nix/config-unfree.nix;
+  }
+  # if we explicitly set crossSystem, even when crossSystem == localSystem,
+  # building androidSdk will re-bootstrap since it decides to build
+  # glibc-x86_64-unknown-linux-gnu-2.40-66 instead of glibc-2.40-66 for some
+  # reason...
+  // (
+    if crossSystem == localSystem then
+      { }
+    else
+      {
         inherit crossSystem crossOverlays;
       }
-    ),
+  ),
   pkgs ? import nixpkgs args,
   pkgsYubikey ? import nixpkgs-yubikey args,
-  hm ? import home-manager {inherit pkgs;},
-}: let
-  phlipPkgs = import ./pkgs {inherit pkgs;};
+  hm ? import home-manager { inherit pkgs; },
+}:
+let
+  phlipPkgs = import ./pkgs { inherit pkgs; };
 in
-  rec {
-    inherit hm nixpkgs pkgs phlipPkgs sources;
-    lib = pkgs.lib;
+rec {
+  inherit
+    hm
+    nixpkgs
+    pkgs
+    phlipPkgs
+    sources
+    ;
+  lib = pkgs.lib;
 
-    # home-manager configs
-    homeConfigurations = {
-      phlipdesk = hm.lib.homeManagerConfiguration {
-        pkgs = pkgs;
-        modules = [./home/phlipdesk.nix];
-        extraSpecialArgs = {
-          # force hm to use one pkgs eval to reduce eval time by 600ms
-          inherit phlipPkgs pkgs;
-          inputs = sources;
-          pkgsUnfree = pkgs;
-          pkgsYubikey = pkgs;
-        };
-      };
-      phliptop-nitro = hm.lib.homeManagerConfiguration {
-        pkgs = pkgs;
-        modules = [./home/phliptop-nitro.nix];
-        extraSpecialArgs = {
-          # force hm to use one pkgs eval to reduce eval time by 600ms
-          inherit phlipPkgs pkgs pkgsYubikey;
-          inputs = sources;
-          pkgsUnfree = pkgs;
-        };
-      };
-      phliptop-mbp = hm.lib.homeManagerConfiguration {
-        pkgs = pkgs;
-        modules = [./home/phliptop-mbp.nix];
-        extraSpecialArgs = {
-          # force hm to use one pkgs eval to reduce eval time by 600ms
-          inherit phlipPkgs pkgs;
-          inputs = sources;
-          pkgsUnfree = pkgs;
-          pkgsYubikey = pkgs;
-        };
+  # home-manager configs
+  homeConfigurations = {
+    phlipdesk = hm.lib.homeManagerConfiguration {
+      pkgs = pkgs;
+      modules = [ ./home/phlipdesk.nix ];
+      extraSpecialArgs = {
+        # force hm to use one pkgs eval to reduce eval time by 600ms
+        inherit phlipPkgs pkgs;
+        inputs = sources;
+        pkgsUnfree = pkgs;
+        pkgsYubikey = pkgs;
       };
     };
-  }
-  // phlipPkgs
+    phliptop-nitro = hm.lib.homeManagerConfiguration {
+      pkgs = pkgs;
+      modules = [ ./home/phliptop-nitro.nix ];
+      extraSpecialArgs = {
+        # force hm to use one pkgs eval to reduce eval time by 600ms
+        inherit phlipPkgs pkgs pkgsYubikey;
+        inputs = sources;
+        pkgsUnfree = pkgs;
+      };
+    };
+    phliptop-mbp = hm.lib.homeManagerConfiguration {
+      pkgs = pkgs;
+      modules = [ ./home/phliptop-mbp.nix ];
+      extraSpecialArgs = {
+        # force hm to use one pkgs eval to reduce eval time by 600ms
+        inherit phlipPkgs pkgs;
+        inputs = sources;
+        pkgsUnfree = pkgs;
+        pkgsYubikey = pkgs;
+      };
+    };
+  };
+}
+// phlipPkgs

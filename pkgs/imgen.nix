@@ -19,6 +19,6 @@ rustPlatform.buildRustPackage rec {
 
   cargoBuildFlags = "-p imgen --bin imgen";
 
-  nativeBuildInputs = [pkg-config];
-  buildInputs = [openssl];
+  nativeBuildInputs = [ pkg-config ];
+  buildInputs = [ openssl ];
 }

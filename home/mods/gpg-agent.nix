@@ -2,7 +2,8 @@
   lib,
   pkgs,
   ...
-}: {
+}:
+{
   services.gpg-agent = {
     enable = true;
     enableSshSupport = false;

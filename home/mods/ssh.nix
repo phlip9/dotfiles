@@ -3,7 +3,8 @@
   lib,
   pkgs,
   ...
-}: {
+}:
+{
   programs.ssh = {
     enable = true;
     package = pkgs.openssh;
@@ -27,16 +28,19 @@
     controlPersist = "15m";
     # control socket location
     controlPath =
-      if pkgs.hostPlatform.isLinux
-      then "\${XDG_RUNTIME_DIR}/ssh-%C.socket"
-      else if pkgs.hostPlatform.isDarwin
+      if pkgs.hostPlatform.isLinux then
+        "\${XDG_RUNTIME_DIR}/ssh-%C.socket"
+      else if
+        pkgs.hostPlatform.isDarwin
       # macOS: use ~/.ssh dir to avoid this error:
       # ```
       # unix_listener: path "/var/folders/t9/3kwc3f8j5hgd1y5s48ck7jqw0000gn/T//ssh-818c3a884cebb5241ab66a1cc549b3f5051864bf.LGKJdTrUY5vFBcWv"
       #                too long for Unix domain socket
       # ```
-      then "${config.home.homeDirectory}/.ssh/ssh-%C.socket"
-      else throw "nix-ssh: error: unrecognized platform";
+      then
+        "${config.home.homeDirectory}/.ssh/ssh-%C.socket"
+      else
+        throw "nix-ssh: error: unrecognized platform";
 
     matchBlocks = {
       "lexe-dev-sgx" = {

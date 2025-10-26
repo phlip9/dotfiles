@@ -4,7 +4,8 @@
   buildVimPlugin,
   buildNeovimPlugin,
   fetchFromGitHub,
-}: final: prev: {
+}:
+final: prev: {
   copilot-vim = buildVimPlugin {
     pname = "copilot.vim";
     version = "2025-07-28";
@@ -15,6 +16,6 @@
       sha256 = "18zyw39flqgdpmnniii7yri169l2vlnsgckg5gr5la85r99pzfvk";
     };
     meta.homepage = "https://github.com/github/copilot.vim/";
-    meta.hydraPlatforms = [];
+    meta.hydraPlatforms = [ ];
   };
 }

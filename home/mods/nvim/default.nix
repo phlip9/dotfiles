@@ -6,7 +6,8 @@
   pkgs,
   lib,
   ...
-}: let
+}:
+let
   inherit (builtins) map;
 
   mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
@@ -51,10 +52,10 @@
   # add these the lua LSP config when we're working on our nvim config.
   luaPlugins = [
     # copilot.vim
-    {plugin = p.copilot-vim;}
+    { plugin = p.copilot-vim; }
 
     # kanagawa - neovim colorscheme
-    {plugin = p.kanagawa-nvim;}
+    { plugin = p.kanagawa-nvim; }
 
     # nvim-treesitter - tree-sitter interface and syntax highlighting
     {
@@ -100,68 +101,66 @@
     # {plugin = p.nvim-treesitter-context;}
 
     # nvim-treesitter-endwise - auto-add `end` block to lua, bash, ruby, etc...
-    {plugin = p.nvim-treesitter-endwise;}
+    { plugin = p.nvim-treesitter-endwise; }
     # nvim-treesitter-textobjects - syntax aware text objs + motions
-    {plugin = p.nvim-treesitter-textobjects;}
+    { plugin = p.nvim-treesitter-textobjects; }
 
     # telescope.nvim - fuzzy picker framework
-    {plugin = p.telescope-nvim;}
+    { plugin = p.telescope-nvim; }
     # telescope-fzf-native - use native impl fzf algorithm to speed up matching
-    {plugin = p.telescope-fzf-native-nvim;}
+    { plugin = p.telescope-fzf-native-nvim; }
     # telescope-coc-nvim - telescope x coc.nvim integration
-    {plugin = p.telescope-coc-nvim;}
+    { plugin = p.telescope-coc-nvim; }
 
     # baleia.nvim - Colorize text with ANSI escape sequences.
-    {plugin = p.baleia-nvim;}
+    { plugin = p.baleia-nvim; }
   ];
 
   # All plugins we're actually using.
-  plugins =
-    luaPlugins
-    ++ [
-      # vim-airline - Lightweight yet fancy status line
-      {plugin = p.vim-airline;}
+  plugins = luaPlugins ++ [
+    # vim-airline - Lightweight yet fancy status line
+    { plugin = p.vim-airline; }
 
-      # vim-fugitive - Vim Git integration
-      {plugin = p.vim-fugitive;}
+    # vim-fugitive - Vim Git integration
+    { plugin = p.vim-fugitive; }
 
-      # vim-gitgutter - Show git diff in the gutter
-      {plugin = p.vim-gitgutter;}
+    # vim-gitgutter - Show git diff in the gutter
+    { plugin = p.vim-gitgutter; }
 
-      # NERDCommenter - Easily comment lines or blocks of text
-      {plugin = p.nerdcommenter;}
+    # NERDCommenter - Easily comment lines or blocks of text
+    { plugin = p.nerdcommenter; }
 
-      # delimitMate - Autocompletion for delimiters
-      {plugin = p.delimitMate;}
+    # delimitMate - Autocompletion for delimiters
+    { plugin = p.delimitMate; }
 
-      # SudoEdit.vim - Easily write to protected files
-      {plugin = p.SudoEdit-vim;}
+    # SudoEdit.vim - Easily write to protected files
+    { plugin = p.SudoEdit-vim; }
 
-      # fzf.vim - fuzzy file matching, grepping, and tag searching using fzf
-      {plugin = p.fzf-vim;}
+    # fzf.vim - fuzzy file matching, grepping, and tag searching using fzf
+    { plugin = p.fzf-vim; }
 
-      # coc.nvim - Complete engine and Language Server support for neovim
-      {plugin = p.coc-nvim;}
-      {plugin = p.coc-fzf;}
+    # coc.nvim - Complete engine and Language Server support for neovim
+    { plugin = p.coc-nvim; }
+    { plugin = p.coc-fzf; }
 
-      # coc.nvim - LSP integrations
-      {plugin = p.coc-flutter;}
-      {plugin = p.coc-json;}
-      {plugin = p.coc-rust-analyzer;}
-      {plugin = p.coc-sumneko-lua;}
-      {plugin = p.coc-toml;}
-      {plugin = p.coc-vimlsp;}
-      {plugin = p.coc-yaml;}
+    # coc.nvim - LSP integrations
+    { plugin = p.coc-flutter; }
+    { plugin = p.coc-json; }
+    { plugin = p.coc-rust-analyzer; }
+    { plugin = p.coc-sumneko-lua; }
+    { plugin = p.coc-toml; }
+    { plugin = p.coc-vimlsp; }
+    { plugin = p.coc-yaml; }
 
-      # goyo.vim - distraction free editing
-      {plugin = p.goyo-vim;}
+    # goyo.vim - distraction free editing
+    { plugin = p.goyo-vim; }
 
-      # Recover.vim - Show a diff when recovering swp files
-      {plugin = p.Recover-vim;}
+    # Recover.vim - Show a diff when recovering swp files
+    { plugin = p.Recover-vim; }
 
-      # vim-bbye - Close a buffer without messing up your layout
-      {plugin = p.vim-bbye;}
-    ];
+    # vim-bbye - Close a buffer without messing up your layout
+    { plugin = p.vim-bbye; }
+  ];
 
   # Using the nixpkgs helper fn as a base, with some manual overrides added after.
   neovimConfigBase = pkgs.neovimUtils.makeNeovimConfig {
@@ -175,14 +174,17 @@
   };
 
   # Need some args passed directly to `wrapNeovimUnstable`
-  neovimConfig =
-    neovimConfigBase
-    // {
-      # Don't manage config, we'll just symlink to our `dotfiles/nvim/init.vim`.
-      wrapRc = false;
-      # Inject extra packages into nvim PATH.
-      wrapperArgs = neovimConfigBase.wrapperArgs ++ ["--suffix" "PATH" ":" extraPkgsPath];
-    };
+  neovimConfig = neovimConfigBase // {
+    # Don't manage config, we'll just symlink to our `dotfiles/nvim/init.vim`.
+    wrapRc = false;
+    # Inject extra packages into nvim PATH.
+    wrapperArgs = neovimConfigBase.wrapperArgs ++ [
+      "--suffix"
+      "PATH"
+      ":"
+      extraPkgsPath
+    ];
+  };
 
   # Need a coc-settings.json specific to our dotfiles directory for good
   # autocompletion that includes all our plugins.
@@ -190,14 +192,12 @@
     "Lua.runtime.version" = "LuaJIT";
     "Lua.workspace.library" = map (x: "${x.plugin.outPath}/lua") luaPlugins;
   };
-  myDotfilesSpecificCocSettingsFile =
-    pkgs.writers.writeJSON
-    "coc-settings.json"
-    myDotfilesSpecificCocSettings;
+  myDotfilesSpecificCocSettingsFile = pkgs.writers.writeJSON "coc-settings.json" myDotfilesSpecificCocSettings;
 
   # The final, wrapped neovim package.
   finalNeovimPackage = pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped neovimConfig;
-in {
+in
+{
   home.packages = [
     finalNeovimPackage
   ];
@@ -221,8 +221,11 @@ in {
   #     the extremely nice auto-complete for all the random settings.
   # (2) `coc-sumneko-lua` can't seem to locate the lua LSP when it's in the
   #     $PATH, so we need to place it somewhere fixed, like in ~/.local/...
-  xdg.dataFile."lua-language-server".source = "${pkgs.lua-language-server}/share/lua-language-server";
+  xdg.dataFile."lua-language-server".source =
+    "${pkgs.lua-language-server}/share/lua-language-server";
 
   # Configure the lua LSP for local nvim plugin development.
-  home.file."dev/dotfiles/.vim/coc-settings.json".source = "${myDotfilesSpecificCocSettingsFile}";
+  home.file."dev/dotfiles/.vim/coc-settings.json".source = "${
+    myDotfilesSpecificCocSettingsFile
+  }";
 }

@@ -5,7 +5,8 @@
 # * load environment variables
 # * run `nix develop` to for isolated per-project tools
 # * setup secrets for deployment
-{...}: {
+{ ... }:
+{
   programs.direnv = {
     enable = true;
 

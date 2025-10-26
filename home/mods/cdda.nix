@@ -3,10 +3,10 @@
   pkgs,
   lib,
   ...
-}: let
+}:
+let
   cddaLib = {
-    inherit
-      (pkgs.cataclysmDDA)
+    inherit (pkgs.cataclysmDDA)
       attachPkgs
       buildMod
       buildSoundPack
@@ -25,17 +25,16 @@
 
   cdda-no-mod = cdda-pre-fix.overrideAttrs (super: {
     # patch doesn't cleanly apply anymore
-    patches = [];
+    patches = [ ];
 
-    passthru =
-      super.passthru
-      // {
-        pkgs = pkgs.override {build = cdda-no-mod;};
-        withMods = cddaLib.wrapCDDA cdda-no-mod;
-      };
+    passthru = super.passthru // {
+      pkgs = pkgs.override { build = cdda-no-mod; };
+      withMods = cddaLib.wrapCDDA cdda-no-mod;
+    };
   });
 
-  customMods = self: super:
+  customMods =
+    self: super:
     lib.recursiveUpdate super {
       soundpack.CC-Sounds = cddaLib.buildSoundPack rec {
         modName = "CC-Sounds";
@@ -48,10 +47,12 @@
       };
     };
 
-  cdda = (cddaLib.attachPkgs cddaLib.pkgs cdda-no-mod).withMods (mods:
-    with mods.extend customMods; [
+  cdda = (cddaLib.attachPkgs cddaLib.pkgs cdda-no-mod).withMods (
+    mods: with mods.extend customMods; [
       soundpack.CC-Sounds
-    ]);
-in {
-  home.packages = [cdda];
+    ]
+  );
+in
+{
+  home.packages = [ cdda ];
 }

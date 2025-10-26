@@ -20,11 +20,13 @@
   config,
   lib,
   ...
-}: let
+}:
+let
   cfg = config.programs.alacritty;
 
   dotfilesDir = config.home.dotfilesDir;
-in {
+in
+{
   # programs.alacritty.enable = true;
   # programs.alacritty.settings = {
   #   import = [

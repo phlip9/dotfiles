@@ -1,7 +1,8 @@
 {
   fetchurl,
   writeShellScriptBin,
-}: let
+}:
+let
   version = "3.65.0";
   appImageBin = fetchurl {
     url = "https://github.com/mifi/lossless-cut/releases/download/v${version}/LosslessCut-linux-x86_64.AppImage";
@@ -9,6 +10,6 @@
     executable = true;
   };
 in
-  writeShellScriptBin "lossless-cut" ''
-    exec "${appImageBin}" "$@"
-  ''
+writeShellScriptBin "lossless-cut" ''
+  exec "${appImageBin}" "$@"
+''

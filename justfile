@@ -9,7 +9,7 @@ just-fmt:
 
 nix-fmt:
     nix shell -f . phlipPkgs.nixfmt pkgs.fd --command \
-        fd --extension "nix" --exec nixfmt --check {}
+        fd --extension "nix" --exec nixfmt --width 80 {}
 
 lint: bash-lint flake-lint nix-lint
 

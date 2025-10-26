@@ -2,11 +2,13 @@
 {
   fetchzip,
   runCommandLocal,
-}: let
+}:
+let
   pname = "openmw";
   version = "0.49.0-rc5";
 in
-  runCommandLocal "${pname}-${version}" {
+runCommandLocal "${pname}-${version}"
+  {
     # Use latest unstable binary release, since
     # 1. no nixGL issues
     # 2. nixpkgs uses old stable release
@@ -17,7 +19,8 @@ in
       url = "https://github.com/OpenMW/openmw/releases/download/openmw-49-rc5/openmw-0.49.0-Linux-64BitRC5.tar.gz";
       hash = "sha256-gsMHm66f3oAWAmMbTJZY86AV5C1jJiSJfaJAdo8Uhl0=";
     };
-  } ''
+  }
+  ''
     # link top-level binaries
     mkdir -p "$out/bin"
     ln -s \

@@ -6,7 +6,8 @@
   # TODO(phlip9): rename inputs -> sources
   inputs,
   ...
-}: {
+}:
+{
   options.home.dotfilesDir = lib.mkOption {
     type = lib.types.str;
     default = "${config.home.homeDirectory}/dev/dotfiles";

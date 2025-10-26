@@ -30,7 +30,7 @@ buildNpmPackage rec {
     ln -sf ${./package-lock.json} package-lock.json
   '';
 
-  npmFlags = ["--omit=optional"];
+  npmFlags = [ "--omit=optional" ];
 
   dontNpmBuild = true;
 }

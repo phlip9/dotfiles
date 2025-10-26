@@ -4,7 +4,8 @@
   phlipPkgs,
   pkgs,
   ...
-}: {
+}:
+{
   # Claude Desktop config
   home.file."Library/Application Support/Claude/claude_desktop_config.json" = {
     enable = pkgs.hostPlatform.isDarwin;

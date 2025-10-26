@@ -5,7 +5,8 @@
   pkgsUnfree,
   pkgsYubikey,
   ...
-}: let
+}:
+let
   # composeAndroidPackages =
   # { cmdLineToolsVersion ? "latest",
   # , toolsVersion ? "latest",
@@ -34,7 +35,10 @@
   # , extraLicenses ? [ ],
   # }:
   androidSdkComposition = pkgsUnfree.androidenv.composeAndroidPackages rec {
-    abiVersions = ["armeabi-v7a" "arm64-v8a"];
+    abiVersions = [
+      "armeabi-v7a"
+      "arm64-v8a"
+    ];
     platformVersions = [
       "35" # lexe
       "34" # app_links, flutter_zxing -> camera_android_camerax
@@ -47,7 +51,7 @@
     ndkVersions = [
       ndkVersion # lexe, flutter_zxing
     ];
-    cmakeVersions = ["3.22.1"]; # flutter_zxing
+    cmakeVersions = [ "3.22.1" ]; # flutter_zxing
   };
 
   # Links all the toolchains/libs/bins/etc in our chosen `androidSdkComposition`
@@ -64,42 +68,42 @@
   flutter = pkgs.flutter332;
 
   isDarwin = pkgs.hostPlatform.isDarwin;
-in {
-  home.packages =
-    [
-      flutter
-      phlipPkgs.lego
-      pkgs.bundletool
-      pkgs.cargo-expand
-      pkgs.cargo-ndk
-      pkgs.fastlane
-      pkgs.josh
-      pkgs.rage
-      pkgs.toml-cli
-      pkgsYubikey.age-plugin-yubikey
-    ]
-    ++ (lib.optionals isDarwin [
-      pkgs.cocoapods
+in
+{
+  home.packages = [
+    flutter
+    phlipPkgs.lego
+    pkgs.bundletool
+    pkgs.cargo-expand
+    pkgs.cargo-ndk
+    pkgs.fastlane
+    pkgs.josh
+    pkgs.rage
+    pkgs.toml-cli
+    pkgsYubikey.age-plugin-yubikey
+  ]
+  ++ (lib.optionals isDarwin [
+    pkgs.cocoapods
 
-      # provides idevicesyslog to follow attached iOS device logs from CLI
-      pkgs.libimobiledevice
+    # provides idevicesyslog to follow attached iOS device logs from CLI
+    pkgs.libimobiledevice
 
-      # Use standard rsync by default. macOS rsync (OpenBSD-based) doesn't copy
-      # Flutter.framework with the right permissions. However xcodebuild calls
-      # rsync with some magic apple flags, so we need to use apple rsync for
-      # those cases.
-      (pkgs.writeShellScriptBin "rsync" ''
-        # Use apple rsync if we get the special magic apple only
-        # --extended-attributes flag.
-        for arg in "$@"; do
-          if [[ "$arg" == "--extended-attributes" ]]; then
-            exec /usr/bin/rsync "$@"
-          fi
-        done
+    # Use standard rsync by default. macOS rsync (OpenBSD-based) doesn't copy
+    # Flutter.framework with the right permissions. However xcodebuild calls
+    # rsync with some magic apple flags, so we need to use apple rsync for
+    # those cases.
+    (pkgs.writeShellScriptBin "rsync" ''
+      # Use apple rsync if we get the special magic apple only
+      # --extended-attributes flag.
+      for arg in "$@"; do
+        if [[ "$arg" == "--extended-attributes" ]]; then
+          exec /usr/bin/rsync "$@"
+        fi
+      done
 
-        exec ${pkgs.rsync}/bin/rsync "$@"
-      '')
-    ]);
+      exec ${pkgs.rsync}/bin/rsync "$@"
+    '')
+  ]);
 
   programs.bash.initExtra = ''
     export ANDROID_HOME=${ANDROID_HOME}
