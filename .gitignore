@@ -28,3 +28,6 @@ config/htop/htoprc
 
 # Claude
 /.claude
+
+/prompts
+/prompts.md

@@ -218,7 +218,16 @@ function aoe4rank() {
 }
 
 # nix home-manager, but with configuration in my dotfiles git repo.
-alias hmb='nix build -f ~/dev/dotfiles homeConfigurations."$(hostname -s)".activationPackage'
+alias hmb='nix build --file ~/dev/dotfiles homeConfigurations."$(hostname -s)".activationPackage'
+
+# nix aliases
+alias nb='nix build --file .'
+alias ne='nix eval --file .'
+alias nr='nix run --file .'
+alias nbf='nix build'
+alias nef='nix eval'
+alias nrf='nix run'
+# see __complete_nix_alias below for alias completions
 
 ## ALIASES }}}
 
@@ -262,6 +271,37 @@ for PROFILE in $NIX_PROFILES; do
         [[ -r "${COMPLETION}" ]] && source "${COMPLETION}"
     done
 done
+
+# Adjust nix alias completions so they behave like the underlying nix commands.
+__complete_nix_alias() {
+    declare -F _complete_nix >/dev/null || return 1
+
+    local -a alias_words
+    case "${COMP_WORDS[0]}" in
+        nb) alias_words=(nix build --file .) ;;
+        ne) alias_words=(nix eval --file .) ;;
+        nr) alias_words=(nix run --file .) ;;
+        nbf) alias_words=(nix build) ;;
+        nef) alias_words=(nix eval) ;;
+        nrf) alias_words=(nix run) ;;
+        *) return 1 ;;
+    esac
+
+    local -a saved_words=("${COMP_WORDS[@]}")
+    local saved_cword=$COMP_CWORD
+    local alias_len=${#alias_words[@]}
+
+    COMP_WORDS=("${alias_words[@]}" "${saved_words[@]:1}")
+    COMP_CWORD=$((saved_cword + alias_len - 1))
+
+    _complete_nix
+
+    local status=$?
+    COMP_WORDS=("${saved_words[@]}")
+    COMP_CWORD=$saved_cword
+    return $status
+}
+complete -F __complete_nix_alias nb ne nbf nef
 
 # Alacritty
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"
