@@ -1,20 +1,22 @@
 {
-  phlipPkgs,
+  # be careful not to pass `pkgs` eval to normal NixOS system evals
   pkgs,
   sources,
 }:
 let
+  nixpkgs = sources.nixpkgs;
+
+  # be careful not to pass `pkgs` eval to normal NixOS system evals. they should
+  # control their own package set.
   nixosSystem =
     args:
-    import (sources.nixpkgs + "/nixos/lib/eval-config.nix") (
+    import (nixpkgs + "/nixos/lib/eval-config.nix") (
       {
-        lib = pkgs.lib;
+        lib = import (nixpkgs + "/lib");
         system = null;
         modules = args.modules;
       }
-      // (builtins.removeAttrs args [
-        "modules"
-      ])
+      // (builtins.removeAttrs args [ "modules" ])
     );
 in
 {
@@ -34,11 +36,11 @@ in
             (modulesPath + "/installer/cd-dvd/installation-cd-graphical-combined.nix")
           ];
 
-          # force external, read-only pkgs
+          # force external, read-only pkgs for iso
           nixpkgs = {
             pkgs = pkgs;
             overlays = lib.mkForce pkgs.overlays;
-            flake.source = sources.nixpkgs.outPath;
+            flake.source = nixpkgs.outPath;
           };
 
           # enable `nix` command and flakes support
@@ -49,5 +51,10 @@ in
         }
       )
     ];
+  };
+
+  # phlipdesk experimental NixOS install
+  phlipnixos = nixosSystem {
+    modules = [ ./phlipnixos/default.nix ];
   };
 }

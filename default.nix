@@ -72,7 +72,6 @@ rec {
   # NixOS system configs
   nixosConfigs = import ./nixos {
     inherit
-      phlipPkgs
       pkgs
       sources
       ;
