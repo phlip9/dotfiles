@@ -48,7 +48,7 @@
 let
   phlipPkgs = import ./pkgs { inherit pkgs; };
 in
-{
+rec {
   inherit
     hm
     phlipPkgs
@@ -68,5 +68,16 @@ in
       sources
       ;
   };
+
+  # NixOS system configs
+  nixosConfigurations = import ./nixos {
+    inherit
+      phlipPkgs
+      pkgs
+      sources
+      ;
+  };
+
+  nixos-iso = nixosConfigurations.nixos-iso;
 }
 // phlipPkgs
