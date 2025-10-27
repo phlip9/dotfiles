@@ -1,11 +1,9 @@
 {
   # be careful not to pass `pkgs` eval to normal NixOS system evals
   pkgs,
-  sources,
+  nixpkgs,
 }:
 let
-  nixpkgs = sources.nixpkgs;
-
   # be careful not to pass `pkgs` eval to normal NixOS system evals. they should
   # control their own package set.
   nixosSystem =

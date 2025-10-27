@@ -13,6 +13,12 @@
       "url": "https://github.com/nix-community/home-manager/archive/3b955f5f0a942f9f60cdc9cacb7844335d0f21c3.tar.gz",
       "hash": "0q3lv288xlzxczh6lc5lcw0zj9qskvjw3pzsrgvdh8rl8ibyq75s"
     },
+    "nixos-unstable": {
+      "type": "Channel",
+      "name": "nixos-unstable",
+      "url": "https://releases.nixos.org/nixos/unstable/nixos-25.11pre883951.6a08e6bb4e46/nixexprs.tar.xz",
+      "hash": "1iy212zdcqrkymzp1rx9q74j6chqav0mbibsvnlfarw6kmqlid75"
+    },
     "nixpkgs": {
       "type": "Channel",
       "name": "nixos-25.05",

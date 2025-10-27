@@ -5,19 +5,19 @@ set -euo pipefail
 
 NO_HOST="${NO_HOST:-$(hostname -s)}"
 
-needs_remote_sudo=0
+needs_sudo=0
 for arg in "$@"; do
   case "$arg" in
     switch|boot)
-      needs_remote_sudo=1
+      needs_sudo=1
       break
       ;;
   esac
 done
 
 cmd=(nixos-rebuild -f ~/dev/dotfiles -A nixosConfigs."${NO_HOST}")
-if [[ "${needs_remote_sudo}" -eq 1 ]]; then
-  cmd+=(--use-remote-sudo)
+if [[ "${needs_sudo}" -eq 1 ]]; then
+  cmd+=(--sudo)
 fi
 cmd+=("$@")
 

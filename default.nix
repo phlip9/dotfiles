@@ -20,6 +20,8 @@
   nixpkgs ? sources.nixpkgs,
   # pinned old nixpkgs for age-plugin-yubikey that works with older pcscd
   nixpkgs-yubikey ? sources.nixpkgs-yubikey,
+  # pinned nixpkgs unstable source path
+  nixos-unstable ? sources.nixos-unstable,
   # pinned home-manager source path
   home-manager ? sources.home-manager,
   #
@@ -43,6 +45,7 @@
   ),
   pkgs ? import nixpkgs args,
   pkgsYubikey ? import nixpkgs-yubikey args,
+  pkgsUnstable ? import nixos-unstable args,
   hm ? import home-manager { inherit pkgs; },
 }:
 let
@@ -53,6 +56,7 @@ rec {
     hm
     phlipPkgs
     pkgs
+    pkgsUnstable
     sources
     ;
 
@@ -71,10 +75,8 @@ rec {
 
   # NixOS system configs
   nixosConfigs = import ./nixos {
-    inherit
-      pkgs
-      sources
-      ;
+    inherit pkgs;
+    nixpkgs = nixos-unstable;
   };
 
   # NixOS graphical installer .iso image
