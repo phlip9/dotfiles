@@ -53,14 +53,18 @@
   # Window/Display Manager
   #
 
-  # enable X11 windowing system
-  services.xserver.enable = true;
+  # # enable X11 windowing system
+  # services.xserver.enable = true;
 
   # enable GNOME desktop environment
   services.desktopManager.gnome.enable = true;
   services.displayManager.gdm.enable = true;
 
-  # Configure keymap in X11
+  # # enable COSMIC DE
+  # services.desktopManager.cosmic.enable = true;
+  # services.displayManager.cosmic-greeter.enable = true;
+
+  # Configure keymap
   services.xserver.xkb = {
     layout = "us";
     variant = "";
@@ -84,9 +88,6 @@
     # no need to redefine it in your config for now)
     #media-session.enable = true;
   };
-
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
 
   # fonts
   fonts.packages = [
@@ -163,9 +164,9 @@
   nixpkgs.config.allowUnfree = true;
 
   # list packages installed in system profile
-  environment.systemPackages = [
-    pkgs.alacritty
-    pkgs.wget
+  environment.systemPackages = with pkgs; [
+    alacritty
+    wget
   ];
 
   # enable 1Password
