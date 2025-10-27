@@ -45,6 +45,7 @@ in
     # Why do this funky setup? So we get alacritty auto-reload on config file
     # change, while still overriding settings on different machines.
     xdg.configFile."alacritty/alacritty.toml".text = ''
+      [general]
       import = [
         "${dotfilesDir}/alacritty.toml",
       ]
