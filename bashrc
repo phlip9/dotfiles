@@ -233,6 +233,10 @@ alias ns='nix shell --file .'
 alias nsf='nix shell'
 # see __complete_nix_alias below for alias completions
 
+# nixos aliases
+alias norb='nor build'
+alias nors='nor switch'
+
 ## ALIASES }}}
 
 ## ENV VARS {{{

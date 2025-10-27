@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# nixos-rebuild the current host using the configs in our dotfiles
+
+NO_HOST="${NO_HOST:-$(hostname -s)}"
+
+needs_remote_sudo=0
+for arg in "$@"; do
+  case "$arg" in
+    switch|boot)
+      needs_remote_sudo=1
+      break
+      ;;
+  esac
+done
+
+cmd=(nixos-rebuild -f ~/dev/dotfiles -A nixosConfigs."${NO_HOST}")
+if [[ "${needs_remote_sudo}" -eq 1 ]]; then
+  cmd+=(--use-remote-sudo)
+fi
+cmd+=("$@")
+
+"${cmd[@]}"

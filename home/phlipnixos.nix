@@ -71,8 +71,8 @@
     # # cargo-release - release a Rust package
     # phlipPkgs.cargo-release
 
-    # # codex - OpenAI codex code CLI
-    # phlipPkgs.codex
+    # codex - OpenAI codex code CLI
+    phlipPkgs.codex
 
     # # claude - Anthropic claude code CLI
     # phlipPkgs.claude-code
