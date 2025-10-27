@@ -54,4 +54,7 @@ in
 
   # sampling profiler written in Rust, with native firefox-profiler integration
   samply = callPackage ./samply.nix { };
+
+  # xremap - dynamic key remap for X11 and Wayland
+  xremap = callPackage ./xremap.nix { };
 }

@@ -1,8 +1,19 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  ...
+}:
+let
+  phlipPkgs = import ../../pkgs { inherit pkgs; };
+in
 {
   imports = [
     ./hardware-configuration.nix
   ];
+
+  # disabledModules = [
+  #   (modulesPath + "/services/hardware/interception-tools.nix")
+  # ];
 
   # bootloader
   boot.loader.systemd-boot.enable = true;
@@ -77,6 +88,31 @@
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
+  # fonts
+  fonts.packages = [
+    pkgs.source-code-pro
+  ];
+
+  # caps2esc
+  services.xremap = {
+    enable = true;
+    package = phlipPkgs.xremap;
+    extraArgs = [
+      "--watch"
+      "--device=daskeyboard"
+    ];
+    config = # yaml
+      ''
+        modmap:
+          - name: CapsLock to Ctrl/Esc
+            remap:
+              CAPSLOCK:
+                held: LEFTCTRL
+                alone: ESC
+                free_hold: true
+      '';
+  };
+
   #
   # Nvidia graphics drivers
   #
@@ -128,7 +164,7 @@
 
   # list packages installed in system profile
   environment.systemPackages = [
-    pkgs.vim
+    pkgs.alacritty
     pkgs.wget
   ];
 
