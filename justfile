@@ -36,3 +36,6 @@ update-nvim-extra-plugins:
             --nixpkgs ../nixpkgs \
             update
     just nix-fmt
+
+nvim-print-plugins-dir:
+    nvim --headless -c 'lua print(vim.opt.runtimepath:get()[1] .. "/pack/myNeovimPackages/start\n")' -c 'qa'
