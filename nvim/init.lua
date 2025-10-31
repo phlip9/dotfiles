@@ -557,9 +557,10 @@ end -- baleia.nvim }}}
 do  -- vim-gitgutter - Show git diff in the gutter {{{
     -- Mappings:
     -- <leader>ggt - Toggle git gutter
-    -- <leader>hd - open git diff split pane for current file
     -- <leader>hs - Stage hunk
     -- <leader>hr - Undo hunk
+    -- <leader>hd - open git diff split pane for current file
+    -- <leader>hv - open popup preview for current hunk
     -- ]h - Move forward one hunk
     -- [h - Move backward one hunk
     -- <motion>ih - <motion> in hunk
@@ -576,10 +577,18 @@ do  -- vim-gitgutter - Show git diff in the gutter {{{
     vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, M.with_desc("preview git hunk in popup"))
     vim.keymap.set("n", "<leader>hd", vim.cmd.GitGutterDiffOrig, M.with_desc("show full hunk diff in split window"))
 
-    -- Make GitGutter(Next|Prev)Hunk repeatable
+    vim.api.nvim_create_user_command("GitGutterNextHunkAllBufs", function(opts)
+        require("vim-gitgutter-ext").next_hunk_all_bufs(opts.count)
+    end, { count = 1, desc = "goto next git hunk across all open buffers" })
+
+    vim.api.nvim_create_user_command("GitGutterPrevHunkAllBufs", function(opts)
+        require("vim-gitgutter-ext").prev_hunk_all_bufs(opts.count)
+    end, { count = 1, desc = "goto prev git hunk across all open buffers" })
+
+    -- Make GitGutter(Next|Prev)HunkAllBufs repeatable
     local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
-        vim.cmd.GitGutterNextHunk,
-        vim.cmd.GitGutterPrevHunk
+        function() require("vim-gitgutter-ext").next_hunk_all_bufs(1) end,
+        function() require("vim-gitgutter-ext").prev_hunk_all_bufs(1) end
     )
     vim.keymap.set({ "n", "x", "o" }, "]h", M.recenter_after(move_hunk_next), M.with_desc("goto next git hunk"))
     vim.keymap.set({ "n", "x", "o" }, "[h", M.recenter_after(move_hunk_prev), M.with_desc("goto prev git hunk"))
