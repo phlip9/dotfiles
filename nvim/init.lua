@@ -109,8 +109,8 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
                 keymaps = {
                     ["af"] = "@function.outer",
                     ["if"] = "@function.inner",
-                    ["ac"] = "@class.outer",
-                    ["ic"] = "@class.inner",
+                    ["acl"] = "@class.outer",
+                    ["icl"] = "@class.inner",
                     ["ap"] = "@parameter.outer",
                     ["ip"] = "@parameter.inner",
                     ["ai"] = "@call.outer",
@@ -139,28 +139,28 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
 
                 goto_next_start = {
                     ["]f"] = { query = "@function.outer", desc = "goto next function start" },
-                    ["]c"] = { query = "@class.outer", desc = "goto next class start" },
+                    ["]cl"] = { query = "@class.outer", desc = "goto next class start" },
                     ["]p"] = { query = "@parameter.outer", desc = "goto next parameter start" },
                     ["]i"] = { query = "@call.outer", desc = "goto next function invocation start" },
                     ["]s"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope start" },
                 },
                 goto_next_end = {
                     ["]F"] = { query = "@function.outer", desc = "goto next function end" },
-                    ["]C"] = { query = "@class.outer", desc = "goto next class end" },
+                    ["]Cl"] = { query = "@class.outer", desc = "goto next class end" },
                     ["]P"] = { query = "@parameter.outer", desc = "goto next parameter end" },
                     ["]I"] = { query = "@call.outer", desc = "goto next function invocation end" },
                     ["]S"] = { query = "@local.scope", query_group = "locals", desc = "goto next scope end" },
                 },
                 goto_previous_start = {
                     ["[f"] = { query = "@function.outer", desc = "goto prev function start" },
-                    ["[c"] = { query = "@class.outer", desc = "goto prev class start" },
+                    ["[cl"] = { query = "@class.outer", desc = "goto prev class start" },
                     ["[p"] = { query = "@parameter.outer", desc = "goto prev parameter start" },
                     ["[i"] = { query = "@call.outer", desc = "goto prev function invocation start" },
                     ["[s"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope start" },
                 },
                 goto_previous_end = {
                     ["[F"] = { query = "@function.outer", desc = "goto prev function end" },
-                    ["[C"] = { query = "@class.outer", desc = "goto prev class end" },
+                    ["[Cl"] = { query = "@class.outer", desc = "goto prev class end" },
                     ["[P"] = { query = "@parameter.outer", desc = "goto prev parameter end" },
                     ["[I"] = { query = "@call.outer", desc = "goto prev function invocation end" },
                     ["[S"] = { query = "@local.scope", query_group = "locals", desc = "goto prev scope end" },
@@ -172,12 +172,12 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
                 enable = true,
                 swap_next = {
                     [">f"] = { query = "@function.outer", desc = "swap w/ next function" },
-                    [">c"] = { query = "@class.outer", desc = "swap w/ next class" },
+                    [">cl"] = { query = "@class.outer", desc = "swap w/ next class" },
                     [">p"] = { query = "@parameter.inner", desc = "swap w/ next parameter" },
                 },
                 swap_previous = {
                     ["<f"] = { query = "@function.outer", desc = "swap w/ prev function" },
-                    ["<c"] = { query = "@class.outer", desc = "swap w/ prev class" },
+                    ["<cl"] = { query = "@class.outer", desc = "swap w/ prev class" },
                     ["<p"] = { query = "@parameter.inner", desc = "swap w/ prev parameter" },
                 },
             },
