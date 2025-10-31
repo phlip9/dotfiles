@@ -28,7 +28,8 @@
 - `just bash-lint` lint bash scripts
 - `just nix-fmt` format nix files
 - `just nix-lint` lint nix files
-- `just nvim-print-plugins-dir` print nvim plugins dir for grepping/debugging
+- `just nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
+- `just nvim-print-base-runtime-path` print base nvim installation's runtime path
 
 - ex: `nix build -f . samply` build `samply` package in `pkgs/samply.nix`
 - ex: `nix build -f . pkgs.lego` build `lego` package in from nixpkgs
