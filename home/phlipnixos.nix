@@ -1,12 +1,12 @@
 {
   # a reference to the home-manager config object this fn outputs
-  config,
+  # config,
   # nixpkgs
   pkgs,
   # ../pkgs/default.nix
   phlipPkgs,
   # nixpkgs.lib
-  lib,
+  # lib,
   # # flake inputs passed in via `extraSpecialArgs`
   # inputs,
   ...
