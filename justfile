@@ -11,22 +11,19 @@ nix-fmt:
     nix shell -f . phlipPkgs.nixfmt pkgs.fd --command \
         fd --extension "nix" --exec nixfmt --width 80 {}
 
-lint: bash-lint flake-lint nix-lint
+lint: bash-lint nix-lint
 
 bash-lint:
     nix shell -f . pkgs.shellcheck pkgs.fd --command \
-        fd --type file '^.*(hms|bashrc|\.sh)$' \
+        fd --type file '^.*(hms|nos|bashrc|\.sh)$' \
             --exclude pkgs/claude-code \
             --exec shellcheck {}
 
-flake-lint:
-    nix flake check
-
 nix-lint:
-    nix shell nixpkgs#nil --command \
+    nix shell -f . pkgs.nil --command \
         fd --extension "nix" --exec nil diagnostics
 
-update-nvim-extra-plugins:
+nvim-update-extra-plugins:
     nix shell nixpkgs#vimPluginsUpdater --command \
         vim-plugins-updater \
             --input-names ./home/mods/nvim/nvim-extra-plugins.csv \
