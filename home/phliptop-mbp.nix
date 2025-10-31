@@ -40,6 +40,7 @@
     # ./mods/claude.nix
     ./mods/ctags.nix
     # ./mods/direnv.nix
+    ./mods/fonts.nix
     ./mods/fzf.nix
     ./mods/gh.nix
     ./mods/gpg.nix
