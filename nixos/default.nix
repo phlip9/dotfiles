@@ -13,7 +13,7 @@ let
         lib = import (nixpkgs + "/lib");
         system = null;
         modules = args.modules;
-        extraModules = import ./modules;
+        extraModules = import ./mods;
       }
       // (builtins.removeAttrs args [ "modules" ])
     );
