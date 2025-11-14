@@ -5,18 +5,22 @@
   stdenv,
 }:
 let
-  version = "0.45.0";
+  version = "0.58.0";
 
+  # ```bash
+  # $ (export version="0.58.0" target="aarch64-apple-darwin";
+  #    nix store prefetch-file "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${target}.tar.gz";)
+  # ```
   sources = {
     x86_64-linux = rec {
       target = "x86_64-unknown-linux-gnu";
       url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${target}.tar.gz";
-      hash = "sha256-Af4/iKMyaKCyEC7ehO5laYCxOWRH30VkVaI+8EXL4Rg=";
+      hash = "sha256-nutN5TeMwdrTYMXclnqQMXfJHuhZR29BcJpB4DialeQ=";
     };
     aarch64-darwin = rec {
       target = "aarch64-apple-darwin";
       url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${target}.tar.gz";
-      hash = "sha256-zdZt2ej30ENbU0vfuoT5gi3AbtRQ9p5tIf9lPU6fTjY=";
+      hash = "sha256-Nkhm8fxmSCAMMY9w0c88sOSEXAb0yyHKp/XTI/8e9T0=";
     };
   };
 
