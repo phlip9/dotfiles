@@ -1161,6 +1161,23 @@ do  -- KEYBINDINGS {{{
     vim.api.nvim_create_user_command("CopyPath", copy_absolute_path, { desc = "Copy absolute file path to clipboard" })
     vim.api.nvim_create_user_command("CopyPathRel", copy_relative_path, { desc = "Copy relative file path to clipboard" })
 
+    -- quickfix list next/prev with repeatable_move and recenter
+    local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
+    local move_qf_next, move_qf_prev = repeatable_move.make_repeatable_move_pair(
+        function() vim.cmd.cnext() end,
+        function() vim.cmd.cprev() end
+    )
+    vim.keymap.set("n", "]q", M.recenter_after(move_qf_next), M.with_desc("goto next quickfix"))
+    vim.keymap.set("n", "[q", M.recenter_after(move_qf_prev), M.with_desc("goto prev quickfix"))
+
+    -- location list next/prev with repeatable_move and recenter
+    local move_ll_next, move_ll_prev = repeatable_move.make_repeatable_move_pair(
+        function() vim.cmd.lnext() end,
+        function() vim.cmd.lprev() end
+    )
+    vim.keymap.set("n", "]l", M.recenter_after(move_ll_next), M.with_desc("goto next location list"))
+    vim.keymap.set("n", "[l", M.recenter_after(move_ll_prev), M.with_desc("goto prev location list"))
+
     -- -- re-center screen on C-d, C-u, search next/prev
     -- vim.keymap.set("n", "<C-d>", "<C-d>zz", opts)
     -- vim.keymap.set("n", "<C-u>", "<C-u>zz", opts)
