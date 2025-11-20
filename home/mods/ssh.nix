@@ -43,9 +43,9 @@
         throw "nix-ssh: error: unrecognized platform";
 
     matchBlocks = {
-      "lexe-dev-sgx" = {
+      "lexe-dev" = {
         user = "deploy";
-        hostname = "lexe-dev-sgx.uswest.dev.lexe.app";
+        hostname = "lexe-dev.uswest.dev.lexe.app";
         port = 22022;
         forwardAgent = true;
       };
