@@ -52,6 +52,7 @@
     # ./mods/jdk.nix
     # ./mods/lexe.nix
     ./mods/local-bin.nix
+    # ./mods/lsyncd.nix
     ./mods/nvim/default.nix
     # ./mods/postgres.nix
     ./mods/python.nix
