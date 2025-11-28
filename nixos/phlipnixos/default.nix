@@ -206,6 +206,12 @@
   environment.systemPackages = [
     pkgs.alacritty
     pkgs.wl-clipboard
+
+    # nvtop
+    pkgs.nvtopPackages.nvidia
+
+    # video player
+    pkgs.mpv
   ];
 
   # enable 1Password

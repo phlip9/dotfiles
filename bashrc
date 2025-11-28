@@ -309,7 +309,7 @@ __complete_nix_alias() {
     COMP_CWORD=$saved_cword
     return $status
 }
-complete -F __complete_nix_alias nb ne nbf nef
+complete -F __complete_nix_alias nb ne nr nbf nef nrf
 
 # Alacritty
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"
