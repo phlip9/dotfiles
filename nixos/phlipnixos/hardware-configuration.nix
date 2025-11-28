@@ -46,7 +46,6 @@
     "/mnt/phlipdisk3" = {
       device = "/dev/disk/by-uuid/0b5829aa-d02f-4a0d-9022-32bb83b6a7a2";
       fsType = "ext4";
-      options = [ "ro" ];
     };
     "/mnt/ubuntu" = {
       device = "/dev/disk/by-uuid/3a888929-866b-4f92-b4d2-7030c295c441";
