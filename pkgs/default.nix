@@ -3,6 +3,8 @@ let
   callPackage = pkgs.callPackage;
 in
 {
+  _type = "pkgs";
+
   # aider - AI developer agent cli
   aider-chat = pkgs.aider-chat;
 

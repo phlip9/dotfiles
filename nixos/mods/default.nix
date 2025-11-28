@@ -1,3 +1,4 @@
 [
+  ./phlippkgs.nix
   ./xremap.nix
 ]
