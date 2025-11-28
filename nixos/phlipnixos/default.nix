@@ -66,6 +66,40 @@
     };
   };
 
+  # remove some gnome gunk
+  environment.gnome.excludePackages = [
+    pkgs.decibels
+    pkgs.epiphany # remove this if things break
+    pkgs.gnome-calculator
+    pkgs.gnome-calendar
+    pkgs.gnome-characters
+    pkgs.gnome-clocks
+    pkgs.gnome-connections
+    pkgs.gnome-contacts
+    pkgs.gnome-logs
+    pkgs.gnome-maps
+    pkgs.gnome-music
+    pkgs.gnome-software
+    pkgs.gnome-system-monitor
+    pkgs.gnome-text-editor
+    pkgs.gnome-tour
+    pkgs.gnome-weather
+    pkgs.orca
+    pkgs.simple-scan
+    pkgs.snapshot
+    #pkgs.totem
+    pkgs.yelp
+  ];
+  programs.evince.enable = false;
+  programs.geary.enable = false;
+  services.gnome = {
+    gnome-online-accounts.enable = false;
+    gnome-remote-desktop.enable = false;
+    localsearch.enable = false;
+    rygel.enable = false;
+    tinysparql.enable = false;
+  };
+
   # # enable COSMIC DE
   # services.desktopManager.cosmic.enable = true;
   # services.displayManager.cosmic-greeter.enable = true;
