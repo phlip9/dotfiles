@@ -58,7 +58,13 @@
 
   # enable GNOME desktop environment
   services.desktopManager.gnome.enable = true;
-  services.displayManager.gdm.enable = true;
+  services.displayManager = {
+    gdm.enable = true;
+    autoLogin = {
+      enable = true;
+      user = "phlip9";
+    };
+  };
 
   # # enable COSMIC DE
   # services.desktopManager.cosmic.enable = true;
