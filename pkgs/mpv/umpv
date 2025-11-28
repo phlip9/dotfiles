@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# mpv wrapper that reuses a single mpv instance via the IPC socket.
+
+runtime_dir="${XDG_RUNTIME_DIR:-/tmp}"
+socket="${MPV_SOCKET:-$runtime_dir/mpv.sock}"
+mpv_bin="${MPV_BIN:-mpv}"
+
+die() {
+  echo "umpv: $*" >&2
+  exit 1
+}
+
+if ! command -v "$mpv_bin" >/dev/null 2>&1; then
+  die "could not find mpv binary '$mpv_bin'"
+fi
+
+# Launch a brand-new mpv tied to our socket.
+start_new_instance() {
+  exec "$mpv_bin" --input-ipc-server="$socket" "$@"
+}
+
+# Send files to the existing mpv instance via jq + socat.
+send_over_ipc() {
+  local file_mode=$1
+  shift
+  local target
+  for target in "$@"; do
+    local abs_path
+    if [[ $target == /* ]]; then
+      abs_path=$target
+    else
+      abs_path=$PWD/$target
+    fi
+    if ! jq -nc --arg path "$abs_path" --arg mode "$file_mode" \
+      '{command:["loadfile",$path,$mode]}' \
+      | socat - "UNIX-CONNECT:$socket" >/dev/null;
+    then
+      return 1
+    fi
+    file_mode="append-play"
+  done
+}
+
+# Split args into options vs target files.
+files=()
+options=()
+pass_files=false
+for arg in "$@"; do
+  if ! $pass_files && [[ $arg == "--" ]]; then
+    pass_files=true
+    continue
+  fi
+  if ! $pass_files && [[ $arg == -* ]]; then
+    options+=("$arg")
+    continue
+  fi
+  files+=("$arg")
+done
+
+if ((${#options[@]} > 0)) || ((${#files[@]} == 0)); then
+  start_new_instance "$@"
+fi
+
+# Initialize mpv if the socket is missing or stale.
+if [[ ! -S $socket ]]; then
+  rm -f "$socket"
+  start_new_instance "$@"
+fi
+
+# Attempt to control the existing instance; otherwise relaunch.
+if ! send_over_ipc replace "${files[@]}"; then
+  rm -f "$socket"
+  start_new_instance "$@"
+fi

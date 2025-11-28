@@ -287,11 +287,15 @@ __complete_nix_alias() {
     local -a alias_words
     case "${COMP_WORDS[0]}" in
         nb) alias_words=(nix build --file .) ;;
+        nd) alias_words=(nix develop --file .) ;;
         ne) alias_words=(nix eval --file .) ;;
         nr) alias_words=(nix run --file .) ;;
+        ns) alias_words=(nix shell --file .) ;;
         nbf) alias_words=(nix build) ;;
+        ndf) alias_words=(nix develop) ;;
         nef) alias_words=(nix eval) ;;
         nrf) alias_words=(nix run) ;;
+        nsf) alias_words=(nix shell) ;;
         *) return 1 ;;
     esac
 
@@ -309,7 +313,7 @@ __complete_nix_alias() {
     COMP_CWORD=$saved_cword
     return $status
 }
-complete -F __complete_nix_alias nb ne nr nbf nef nrf
+complete -F __complete_nix_alias nb nd ne nr ns nbf ndf nef nrf nsf
 
 # Alacritty
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"

@@ -45,6 +45,9 @@ in
   # MOMW Tools Pack pre-built unstable
   momw-tools-pack = callPackage ./momw-tools-pack.nix { };
 
+  # mpv with patched umpv
+  mpv = callPackage ./mpv { };
+
   # nixfmt - standard nix formatter
   # TODO(phlip9): change to `pkgs.nixfmt` after release-25.11
   nixfmt = pkgs.nixfmt-rfc-style;

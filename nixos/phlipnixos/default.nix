@@ -3,9 +3,9 @@
   pkgs,
   ...
 }:
-# let
-#   phlipPkgs = import ../../pkgs { inherit pkgs; };
-# in
+let
+  phlipPkgs = import ../../pkgs { inherit pkgs; };
+in
 {
   imports = [
     ./hardware-configuration.nix
@@ -211,7 +211,7 @@
     pkgs.nvtopPackages.nvidia
 
     # video player
-    pkgs.mpv
+    phlipPkgs.mpv
   ];
 
   # enable 1Password
