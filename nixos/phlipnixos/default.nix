@@ -97,7 +97,6 @@
   # caps2esc
   services.xremap = {
     enable = true;
-    # package = phlipPkgs.xremap;
     extraArgs = [
       "--watch"
       "--device=daskeyboard"
@@ -164,9 +163,9 @@
   nixpkgs.config.allowUnfree = true;
 
   # list packages installed in system profile
-  environment.systemPackages = with pkgs; [
-    alacritty
-    wget
+  environment.systemPackages = [
+    pkgs.alacritty
+    pkgs.wl-clipboard
   ];
 
   # enable 1Password
@@ -175,14 +174,6 @@
     enable = true;
     polkitPolicyOwners = [ "phlip9" ];
   };
-
-  # Some programs need SUID wrappers, can be configured further or are
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
