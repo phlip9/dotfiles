@@ -1,5 +1,6 @@
 {
   config,
+  phlipPkgs,
   pkgs,
   ...
 }:
@@ -208,7 +209,7 @@
     pkgs.nvtopPackages.nvidia
 
     # video player
-    config.phlipPkgs.mpv
+    phlipPkgs.mpv
   ];
 
   # enable 1Password

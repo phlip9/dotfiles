@@ -9,5 +9,5 @@
     type = lib.types.pkgs;
   };
 
-  config.phlipPkgs = import ../../pkgs { inherit pkgs; };
+  config._module.args.phlipPkgs = import ../../pkgs { inherit pkgs; };
 }
