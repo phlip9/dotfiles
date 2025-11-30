@@ -46,9 +46,6 @@
     pkgs.xwayland-satellite # niri will support X11 apps if this is in PATH
   ];
 
-  # # top bar
-  # programs.waybar.enable = true;
-
   # change system power/performance profiles
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;

@@ -100,8 +100,13 @@
     user = "phlip9";
   };
 
-  # mDNS
-  services.avahi.enable = true;
+  # TODO(phlip9): router is handling *.lan allocations, do we still need this?
+  # # mDNS
+  # services.avahi = {
+  #   enable = true;
+  #   # enable NSS plugin so local applications see *.local DNS names
+  #   nssmdns4 = true;
+  # };
 
   # install firefox
   programs.firefox.enable = true;
