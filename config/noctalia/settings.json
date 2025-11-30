@@ -8,7 +8,7 @@
         ],
         "position": "center",
         "sortByMostUsed": true,
-        "terminalCommand": "xterm -e",
+        "terminalCommand": "alacritty -e",
         "useApp2Unit": false,
         "viewMode": "list"
     },
@@ -17,7 +17,7 @@
         "externalMixer": "pwvucontrol || pavucontrol",
         "mprisBlacklist": [
         ],
-        "preferredPlayer": "",
+        "preferredPlayer": "mpv",
         "visualizerQuality": "high",
         "visualizerType": "linear",
         "volumeOverdrive": false,
@@ -32,6 +32,7 @@
         "marginHorizontal": 0.25,
         "marginVertical": 0.25,
         "monitors": [
+            "DP-2"
         ],
         "outerCorners": true,
         "position": "top",
@@ -41,18 +42,18 @@
                 {
                     "characterCount": 2,
                     "followFocusedScreen": false,
-                    "hideUnoccupied": false,
+                    "hideUnoccupied": true,
                     "id": "Workspace",
                     "labelMode": "index"
                 }
             ],
             "left": [
                 {
-                    "colorizeDistroLogo": false,
+                    "colorizeDistroLogo": true,
                     "customIconPath": "",
-                    "icon": "noctalia",
+                    "icon": "",
                     "id": "ControlCenter",
-                    "useDistroLogo": false
+                    "useDistroLogo": true
                 },
                 {
                     "diskPath": "/",
@@ -67,12 +68,12 @@
                 },
                 {
                     "colorizeIcons": false,
-                    "hideMode": "hidden",
+                    "hideMode": "transparent",
                     "id": "ActiveWindow",
                     "maxWidth": 145,
                     "scrollingMode": "hover",
                     "showIcon": true,
-                    "useFixedWidth": false
+                    "useFixedWidth": true
                 },
                 {
                     "hideMode": "hidden",
@@ -95,7 +96,7 @@
                 {
                     "blacklist": [
                     ],
-                    "colorizeIcons": false,
+                    "colorizeIcons": true,
                     "drawerEnabled": true,
                     "id": "Tray",
                     "pinned": [
@@ -105,11 +106,6 @@
                     "hideWhenZero": true,
                     "id": "NotificationHistory",
                     "showUnreadBadge": true
-                },
-                {
-                    "displayMode": "onhover",
-                    "id": "Battery",
-                    "warningThreshold": 30
                 },
                 {
                     "displayMode": "onhover",
@@ -195,9 +191,6 @@
         "shortcuts": {
             "left": [
                 {
-                    "id": "WiFi"
-                },
-                {
                     "id": "Bluetooth"
                 },
                 {
@@ -227,7 +220,7 @@
         "backgroundOpacity": 1,
         "colorizeIcons": false,
         "displayMode": "auto_hide",
-        "enabled": true,
+        "enabled": false,
         "floatingRatio": 1,
         "monitors": [
         ],
@@ -265,7 +258,7 @@
     "location": {
         "analogClockInCalendar": false,
         "firstDayOfWeek": -1,
-        "name": "Tokyo",
+        "name": "Redwood City, CA",
         "showCalendarEvents": true,
         "showCalendarWeather": true,
         "showWeekNumberInCalendar": false,
@@ -275,7 +268,7 @@
         "weatherShowEffects": true
     },
     "network": {
-        "wifiEnabled": true
+        "wifiEnabled": false
     },
     "nightLight": {
         "autoSchedule": true,
@@ -294,6 +287,7 @@
         "location": "top_right",
         "lowUrgencyDuration": 3,
         "monitors": [
+            "DP-2"
         ],
         "normalUrgencyDuration": 8,
         "overlayLayer": true,
@@ -307,6 +301,7 @@
         ],
         "location": "top_right",
         "monitors": [
+            "DP-2"
         ],
         "overlayLayer": true
     },
@@ -314,7 +309,7 @@
         "audioCodec": "opus",
         "audioSource": "default_output",
         "colorRange": "limited",
-        "directory": "/home/phlip9/Videos",
+        "directory": "/home/phlip9/Videos/Recordings",
         "frameRate": 60,
         "quality": "very_high",
         "showCursor": true,
@@ -328,26 +323,32 @@
         "powerOptions": [
             {
                 "action": "lock",
+                "countdownEnabled": true,
                 "enabled": true
             },
             {
                 "action": "suspend",
+                "countdownEnabled": true,
                 "enabled": true
             },
             {
                 "action": "hibernate",
+                "countdownEnabled": true,
                 "enabled": true
             },
             {
                 "action": "reboot",
+                "countdownEnabled": true,
                 "enabled": true
             },
             {
                 "action": "logout",
+                "countdownEnabled": true,
                 "enabled": true
             },
             {
                 "action": "shutdown",
+                "countdownEnabled": true,
                 "enabled": true
             }
         ],
@@ -368,7 +369,7 @@
         "warningColor": ""
     },
     "templates": {
-        "alacritty": false,
+        "alacritty": true,
         "cava": false,
         "code": false,
         "discord": false,
@@ -413,9 +414,9 @@
         "randomIntervalSec": 300,
         "recursiveSearch": false,
         "setWallpaperOnAllMonitors": true,
-        "transitionDuration": 1500,
+        "transitionDuration": 1000,
         "transitionEdgeSmoothness": 0.05,
-        "transitionType": "random",
+        "transitionType": "disc",
         "useWallhaven": false,
         "wallhavenCategories": "111",
         "wallhavenOrder": "desc",
