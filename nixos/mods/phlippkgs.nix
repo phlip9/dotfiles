@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  sources,
   ...
 }:
 
@@ -9,5 +10,5 @@
     type = lib.types.pkgs;
   };
 
-  config._module.args.phlipPkgs = import ../../pkgs { inherit pkgs; };
+  config._module.args.phlipPkgs = import ../../pkgs { inherit pkgs sources; };
 }

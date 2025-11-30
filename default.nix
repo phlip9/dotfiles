@@ -49,7 +49,7 @@
   hm ? import home-manager { inherit pkgs; },
 }:
 let
-  phlipPkgs = import ./pkgs { inherit pkgs; };
+  phlipPkgs = import ./pkgs { inherit pkgs sources; };
 in
 rec {
   inherit
@@ -74,10 +74,11 @@ rec {
   };
 
   # NixOS system configs
-  nixosConfigs = import ./nixos {
-    inherit pkgs;
-    nixpkgs = nixos-unstable;
-  };
+  nixosConfigs = import ./nixos { inherit pkgs sources; };
+
+  # convenient pkgs + phlipPkgs packages sets from nixos machine
+  pkgsNixos = nixosConfigs.phlipnixos.pkgs;
+  phlipPkgsNixos = nixosConfigs.phlipnixos._module.args.phlipPkgs;
 
   # NixOS graphical installer .iso image
   nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;

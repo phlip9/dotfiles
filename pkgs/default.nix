@@ -1,4 +1,4 @@
-{ pkgs }:
+{ pkgs, sources }:
 let
   callPackage = pkgs.callPackage;
 in
@@ -50,9 +50,17 @@ in
   # mpv with patched umpv
   mpv = callPackage ./mpv { };
 
+  # niri - scrolling tiling wayland compositor
+  niri = callPackage ./niri.nix { };
+
   # nixfmt - standard nix formatter
   # TODO(phlip9): change to `pkgs.nixfmt` after release-25.11
   nixfmt = pkgs.nixfmt-rfc-style;
+
+  # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
+  noctalia-shell = callPackage (sources.noctalia-shell + "/nix/package.nix") {
+    version = builtins.substring 1 100 sources.noctalia-shell.version;
+  };
 
   # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix { };

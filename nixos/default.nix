@@ -1,9 +1,11 @@
 {
   # be careful not to pass `pkgs` eval to normal NixOS system evals
   pkgs,
-  nixpkgs,
+  sources,
 }:
 let
+  nixpkgs = sources.nixos-unstable;
+
   # be careful not to pass `pkgs` eval to normal NixOS system evals. they should
   # control their own package set.
   nixosSystem =
@@ -12,8 +14,10 @@ let
       {
         lib = import (nixpkgs + "/lib");
         system = null;
-        modules = args.modules;
-        extraModules = import ./mods;
+        modules = args.modules ++ [
+          { _module.args.sources = sources; }
+        ];
+        extraModules = import ./mods { inherit sources; };
       }
       // (builtins.removeAttrs args [ "modules" ])
     );

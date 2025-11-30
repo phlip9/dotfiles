@@ -7,6 +7,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ../profiles/desktop.nix
   ];
 
   # disabledModules = [
@@ -48,110 +49,6 @@
   ];
 
   #
-  # Window/Display Manager
-  #
-
-  # # enable X11 windowing system
-  # services.xserver.enable = true;
-
-  # enable GNOME desktop environment
-  services.desktopManager.gnome.enable = true;
-  services.displayManager = {
-    gdm.enable = true;
-    autoLogin = {
-      enable = true;
-      user = "phlip9";
-    };
-  };
-
-  # remove some gnome gunk
-  environment.gnome.excludePackages = [
-    pkgs.decibels
-    pkgs.epiphany # remove this if things break
-    pkgs.gnome-calculator
-    pkgs.gnome-calendar
-    pkgs.gnome-characters
-    pkgs.gnome-clocks
-    pkgs.gnome-connections
-    pkgs.gnome-contacts
-    pkgs.gnome-logs
-    pkgs.gnome-maps
-    pkgs.gnome-music
-    pkgs.gnome-software
-    pkgs.gnome-system-monitor
-    pkgs.gnome-text-editor
-    pkgs.gnome-tour
-    pkgs.gnome-weather
-    pkgs.orca
-    pkgs.simple-scan
-    pkgs.snapshot
-    #pkgs.totem
-    pkgs.yelp
-  ];
-  programs.evince.enable = false;
-  programs.geary.enable = false;
-  services.gnome = {
-    gnome-online-accounts.enable = false;
-    gnome-remote-desktop.enable = false;
-    localsearch.enable = false;
-    rygel.enable = false;
-    tinysparql.enable = false;
-  };
-
-  # # enable COSMIC DE
-  # services.desktopManager.cosmic.enable = true;
-  # services.displayManager.cosmic-greeter.enable = true;
-
-  # Configure keymap
-  services.xserver.xkb = {
-    layout = "us";
-    variant = "";
-  };
-
-  # disable CUPS. don't need printing.
-  services.printing.enable = false;
-
-  # enable sound with pipewire
-  services.pulseaudio.enable = false;
-  security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
-    #media-session.enable = true;
-  };
-
-  # fonts
-  fonts.packages = [
-    pkgs.source-code-pro
-  ];
-
-  # caps2esc
-  services.xremap = {
-    enable = true;
-    extraArgs = [
-      "--watch"
-      "--device=daskeyboard"
-    ];
-    config = # yaml
-      ''
-        modmap:
-          - name: CapsLock to Ctrl/Esc
-            remap:
-              CAPSLOCK:
-                held: LEFTCTRL
-                alone: ESC
-                free_hold: true
-      '';
-  };
-
-  #
   # Nvidia graphics drivers
   #
 
@@ -188,11 +85,23 @@
     isNormalUser = true;
     description = "Philip Kannegaard Hayes";
     extraGroups = [
+      "input"
       "networkmanager"
+      "plugdev"
+      "video"
       "wheel"
     ];
     packages = [ ];
   };
+
+  # FDE + single-user => can just use auto-login
+  services.displayManager.autoLogin = {
+    enable = true;
+    user = "phlip9";
+  };
+
+  # mDNS
+  services.avahi.enable = true;
 
   # install firefox
   programs.firefox.enable = true;
