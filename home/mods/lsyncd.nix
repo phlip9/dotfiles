@@ -11,6 +11,7 @@ in
     pkgs.rsync
   ];
 
-  # symlink ~/.config/lsyncd -> ~/dev/dotfiles/lsyncd
-  xdg.configFile."lsyncd".source = mkOutOfStoreSymlink "${dotfilesDir}/lsyncd";
+  # symlink ~/.config/lsyncd -> ~/dev/dotfiles/config/lsyncd
+  xdg.configFile."lsyncd".source =
+    mkOutOfStoreSymlink "${dotfilesDir}/config/lsyncd";
 }

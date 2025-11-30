@@ -4,6 +4,5 @@ let
   dotfilesDir = config.home.dotfilesDir;
 in
 {
-  xdg.configFile."gdb/gdbinit".source =
-    mkOutOfStoreSymlink "${dotfilesDir}/gdbinit";
+  xdg.configFile."gdb".source = mkOutOfStoreSymlink "${dotfilesDir}/config/gdb";
 }

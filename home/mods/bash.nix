@@ -14,7 +14,7 @@
     # Manage our bashrc outside of nix.
     # Use `mkAfter` so it's sourced last, after all the other nix stuff.
     initExtra = lib.mkAfter ''
-      source ${config.home.dotfilesDir}/bashrc
+      source ${config.home.dotfilesDir}/config/bash/bashrc
     '';
   };
 

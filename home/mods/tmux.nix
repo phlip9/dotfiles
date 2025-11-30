@@ -8,12 +8,7 @@ let
   dotfilesDir = config.home.dotfilesDir;
 in
 {
-  home.packages = [
-    pkgs.tmux
-  ];
+  home.packages = [ pkgs.tmux ];
 
-  # link tmux.conf
-
-  xdg.configFile."tmux/tmux.conf".source =
-    mkOutOfStoreSymlink "${dotfilesDir}/tmux.conf";
+  xdg.configFile."tmux".source = mkOutOfStoreSymlink "${dotfilesDir}/config/tmux";
 }

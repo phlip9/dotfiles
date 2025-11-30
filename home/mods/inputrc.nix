@@ -4,5 +4,6 @@ let
   dotfilesDir = config.home.dotfilesDir;
 in
 {
-  home.file.".inputrc".source = mkOutOfStoreSymlink "${dotfilesDir}/inputrc";
+  home.file.".inputrc".source =
+    mkOutOfStoreSymlink "${dotfilesDir}/config/readline/inputrc";
 }

@@ -47,7 +47,7 @@ in
     xdg.configFile."alacritty/alacritty.toml".text = ''
       [general]
       import = [
-        "${dotfilesDir}/alacritty.toml",
+        "${dotfilesDir}/config/alacritty/alacritty.toml",
       ]
 
       [font]
