@@ -38,20 +38,16 @@
   # desktop environment packages
   environment.systemPackages = [
     pkgs.adwaita-icon-theme # mouse cursor and icons
+    pkgs.apple-cursor # macOS-looking cursor
     pkgs.fuzzel # application launcher
     pkgs.gnome-themes-extra # dark adwaita theme
-    # pkgs.mako # notification daemon
-    # pkgs.swaybg # wallpaper
-    # pkgs.swaylock # lock screen
+    pkgs.oculante # fast and simple image viewer and editor
     pkgs.wl-clipboard # clipboard support
     pkgs.xwayland-satellite # niri will support X11 apps if this is in PATH
   ];
 
   # # top bar
   # programs.waybar.enable = true;
-
-  # lock screen
-  security.pam.services.swaylock = { };
 
   # change system power/performance profiles
   services.power-profiles-daemon.enable = true;

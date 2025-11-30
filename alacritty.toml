@@ -57,6 +57,10 @@ style = "Regular"
 x = 0
 y = 0
 
+[window.padding]
+x = 2
+y = 2
+
 [keyboard]
 bindings = [
     { key = "V", mods = "Control", action = "Paste" },
