@@ -40,9 +40,9 @@
     pkgs.adwaita-icon-theme # mouse cursor and icons
     pkgs.fuzzel # application launcher
     pkgs.gnome-themes-extra # dark adwaita theme
-    pkgs.mako # notification daemon
+    # pkgs.mako # notification daemon
     # pkgs.swaybg # wallpaper
-    pkgs.swaylock # lock screen
+    # pkgs.swaylock # lock screen
     pkgs.wl-clipboard # clipboard support
     pkgs.xwayland-satellite # niri will support X11 apps if this is in PATH
   ];

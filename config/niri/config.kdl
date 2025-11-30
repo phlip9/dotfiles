@@ -8,18 +8,18 @@
 // https://yalter.github.io/niri/Configuration:-Input
 input {
     keyboard {
-        xkb {
-            // You can set rules, model, layout, variant and options.
-            // For more information, see xkeyboard-config(7).
-
-            // For example:
-            // layout "us,ru"
-            // options "grp:win_space_toggle,compose:ralt,ctrl:nocaps"
-
-            // If this section is empty, niri will fetch xkb settings
-            // from org.freedesktop.locale1. You can control these using
-            // localectl set-x11-keymap.
-        }
+        // xkb {
+        //     // You can set rules, model, layout, variant and options.
+        //     // For more information, see xkeyboard-config(7).
+        //
+        //     // For example:
+        //     // layout "us,ru"
+        //     // options "grp:win_space_toggle,compose:ralt,ctrl:nocaps"
+        //
+        //     // If this section is empty, niri will fetch xkb settings
+        //     // from org.freedesktop.locale1. You can control these using
+        //     // localectl set-x11-keymap.
+        // }
 
         // Enable numlock on startup, omitting this setting disables it.
         numlock
@@ -29,13 +29,13 @@ input {
     // Omitting settings disables them, or leaves them at their default values.
     // All commented-out settings here are examples, not defaults.
     touchpad {
-        // off
-        tap
+        off
+        // tap
         // dwt
         // dwtp
         // drag false
         // drag-lock
-        natural-scroll
+        // natural-scroll
         // accel-speed 0.2
         // accel-profile "flat"
         // scroll-method "two-finger"
@@ -74,44 +74,47 @@ input {
 // The built-in laptop monitor is usually called "eDP-1".
 // Find more information on the wiki:
 // https://yalter.github.io/niri/Configuration:-Outputs
-// Remember to uncomment the node by removing "/-"!
-/-output "eDP-1" {
-    // Uncomment this line to disable this output.
-    // off
-
-    // Resolution and, optionally, refresh rate of the output.
-    // The format is "<width>x<height>" or "<width>x<height>@<refresh rate>".
-    // If the refresh rate is omitted, niri will pick the highest refresh rate
-    // for the resolution.
-    // If the mode is omitted altogether or is invalid, niri will pick one automatically.
-    // Run `niri msg outputs` while inside a niri instance to list all outputs and their modes.
-    mode "1920x1080@120.030"
-
-    // You can use integer or fractional scale, for example use 1.5 for 150% scale.
-    scale 2
-
-    // Transform allows to rotate the output counter-clockwise, valid values are:
-    // normal, 90, 180, 270, flipped, flipped-90, flipped-180 and flipped-270.
-    transform "normal"
-
-    // Position of the output in the global coordinate space.
-    // This affects directional monitor actions like "focus-monitor-left", and cursor movement.
-    // The cursor can only move between directly adjacent outputs.
-    // Output scale and rotation has to be taken into account for positioning:
-    // outputs are sized in logical, or scaled, pixels.
-    // For example, a 3840×2160 output with scale 2.0 will have a logical size of 1920×1080,
-    // so to put another output directly adjacent to it on the right, set its x to 1920.
-    // If the position is unset or results in an overlap, the output is instead placed
-    // automatically.
-    position x=1280 y=0
-}
+//
+// output "eDP-1" {
+//     // Uncomment this line to disable this output.
+//     // off
+//
+//     // Resolution and, optionally, refresh rate of the output.
+//     // The format is "<width>x<height>" or "<width>x<height>@<refresh rate>".
+//     // If the refresh rate is omitted, niri will pick the highest refresh rate
+//     // for the resolution.
+//     // If the mode is omitted altogether or is invalid, niri will pick one automatically.
+//     // Run `niri msg outputs` while inside a niri instance to list all outputs and their modes.
+//     mode "1920x1080@120.030"
+//
+//     // You can use integer or fractional scale, for example use 1.5 for 150% scale.
+//     scale 2
+//
+//     // Transform allows to rotate the output counter-clockwise, valid values are:
+//     // normal, 90, 180, 270, flipped, flipped-90, flipped-180 and flipped-270.
+//     transform "normal"
+//
+//     // Position of the output in the global coordinate space.
+//     // This affects directional monitor actions like "focus-monitor-left", and cursor movement.
+//     // The cursor can only move between directly adjacent outputs.
+//     // Output scale and rotation has to be taken into account for positioning:
+//     // outputs are sized in logical, or scaled, pixels.
+//     // For example, a 3840×2160 output with scale 2.0 will have a logical size of 1920×1080,
+//     // so to put another output directly adjacent to it on the right, set its x to 1920.
+//     // If the position is unset or results in an overlap, the output is instead placed
+//     // automatically.
+//     position x=1280 y=0
+// }
 
 // Settings that influence how windows are positioned and sized.
 // Find more information on the wiki:
 // https://yalter.github.io/niri/Configuration:-Layout
 layout {
     // Set gaps around windows in logical pixels.
-    gaps 16
+    gaps 6
+
+    // Used for stationary wallpaper in backdrop.
+    background-color "transparent"
 
     // When to center a column when changing focus, options are:
     // - "never", default behavior, focusing an off-screen column will keep at the left
@@ -126,9 +129,10 @@ layout {
         // Proportion sets the width as a fraction of the output width, taking gaps into account.
         // For example, you can perfectly fit four windows sized "proportion 0.25" on an output.
         // The default preset widths are 1/3, 1/2 and 2/3 of the output.
-        proportion 0.33333
+
+        proportion 0.25
         proportion 0.5
-        proportion 0.66667
+        proportion 0.75
 
         // Fixed sets the width in logical pixels exactly.
         // fixed 1920
@@ -156,10 +160,10 @@ layout {
     // You can change how the focus ring looks.
     focus-ring {
         // Uncomment this line to disable the focus ring.
-        // off
+        off
 
         // How many logical pixels the ring extends out from the windows.
-        width 4
+        width 2
 
         // Colors can be set in a variety of ways:
         // - CSS named colors: "red"
@@ -267,15 +271,15 @@ layout {
 // which may be more convenient to use.
 // See the binds section below for more spawn examples.
 
-// This line starts waybar, a commonly used bar for Wayland compositors.
-spawn-at-startup "waybar"
+// // This line starts waybar, a commonly used bar for Wayland compositors.
+// spawn-at-startup "waybar"
 
 // To run a shell command (with variables, pipes, etc.), use spawn-sh-at-startup:
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
 
 hotkey-overlay {
     // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.
-    // skip-at-startup
+    skip-at-startup
 }
 
 // Uncomment this line to ask the clients to omit their client-side decorations if possible.
@@ -301,7 +305,7 @@ animations {
     // off
 
     // Slow down all animations by this factor. Values below 1 speed them up instead.
-    // slowdown 3.0
+    slowdown 0.75
 }
 
 // Window rules let you adjust behavior for individual windows.
@@ -339,11 +343,29 @@ window-rule {
     // block-out-from "screencast"
 }
 
-// Example: enable rounded corners for all windows.
-// (This example rule is commented out with a "/-" in front.)
-/-window-rule {
+// noctalia-shell recommendations
+// <https://docs.noctalia.dev/getting-started/compositor-settings/>
+window-rule {
+    // Rounded corners for a modern look
     geometry-corner-radius 12
+
+    // Clips window contents to the rounded corner boundaries.
     clip-to-geometry true
+}
+debug {
+  // Allows notification actions and window activation from Noctalia.
+  honor-xdg-activation-with-invalid-serial
+}
+// Show the noctalia-shell wallpaper in the backdrop.
+layer-rule {
+  match namespace="^noctalia-wallpaper*"
+  place-within-backdrop true
+}
+// Disable the background shadow thing in the overview
+overview {
+    workspace-shadow {
+        off
+    }
 }
 
 binds {
@@ -362,23 +384,34 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
-    Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
+    Mod+T hotkey-overlay-title="Terminal (alacritty)" { spawn "alacritty"; }
     Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
-    Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
+    // Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
 
-    // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
-    // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
-    // For example, this is a standard bind to toggle the screen reader (orca).
-    Super+Alt+S allow-when-locked=true hotkey-overlay-title=null { spawn-sh "pkill orca || exec orca"; }
+    // See all noctalia-shell ipc fns: `noctalia-shell ipc show`
+    Mod+Space hotkey-overlay-title="Launcher" { spawn "noctalia-shell" "ipc" "call" "launcher" "toggle"; }
+    Alt+L hotkey-overlay-title="Lock" { spawn "noctalia-shell" "ipc" "call" "lockScreen" "lock"; }
 
-    // Example volume keys mappings for PipeWire & WirePlumber.
-    // The allow-when-locked=true property makes them work even when the session is locked.
-    // Using spawn-sh allows to pass multiple arguments together with the command.
-    // "-l 1.0" limits the volume to 100%.
-    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1+ -l 1.0"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1-"; }
-    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+    // // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
+    // // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
+    // // For example, this is a standard bind to toggle the screen reader (orca).
+    // Super+Alt+S allow-when-locked=true hotkey-overlay-title=null { spawn-sh "pkill orca || exec orca"; }
+
+    // // Example volume keys mappings for PipeWire & WirePlumber.
+    // // The allow-when-locked=true property makes them work even when the session is locked.
+    // // Using spawn-sh allows to pass multiple arguments together with the command.
+    // // "-l 1.0" limits the volume to 100%.
+    // XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1+ -l 1.0"; }
+    // XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 0.1-"; }
+    // XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    // XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+
+    F12       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "increase"; }
+    F11       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "decrease"; }
+    F10       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "muteOutput"; }
+    Shift+F12 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "increaseInput"; }
+    Shift+F11 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "decreaseInput"; }
+    Shift+F10 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "muteOutputInput"; }
 
     // Example media keys mapping using playerctl.
     // This will work with any MPRIS-enabled media player.

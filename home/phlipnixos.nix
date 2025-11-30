@@ -55,6 +55,7 @@
     # ./mods/lsyncd.nix
     ./mods/mpv.nix
     ./mods/niri.nix
+    ./mods/noctalia.nix
     ./mods/nvim/default.nix
     # ./mods/postgres.nix
     ./mods/python.nix

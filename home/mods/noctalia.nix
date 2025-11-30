@@ -4,5 +4,6 @@ let
   dotfilesDir = config.home.dotfilesDir;
 in
 {
-  xdg.configFile."niri".source = mkOutOfStoreSymlink "${dotfilesDir}/config/niri";
+  xdg.configFile."noctalia".source =
+    mkOutOfStoreSymlink "${dotfilesDir}/config/noctalia";
 }
