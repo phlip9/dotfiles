@@ -15,8 +15,10 @@
   # ];
 
   # bootloader
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
+  };
 
   # use latest kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -85,6 +87,7 @@
     isNormalUser = true;
     description = "Philip Kannegaard Hayes";
     extraGroups = [
+      "i2c"
       "input"
       "networkmanager"
       "plugdev"
@@ -93,6 +96,16 @@
     ];
     packages = [ ];
   };
+
+  # # TODO(phlip9): more robust brightness control
+  # # <https://discourse.nixos.org/t/brightness-control-of-external-monitors-with-ddcci-backlight/8639/23>
+  # #
+  # # Writes to the monitor brightness really should be intermediated by a
+  # # persistent service vs. writing with ddcutil directly.
+  # # Either use something like ddccontrol or ddcutil-service and update
+  # # noctalia-shell, or maybe the ddcci_backlight driver handles this
+  # # correctly?
+  # services.ddccontrol.enable = true;
 
   # FDE + single-user => can just use auto-login
   services.displayManager.autoLogin = {

@@ -422,9 +422,13 @@ binds {
     F12       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "increase"; }
     F11       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "decrease"; }
     F10       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "muteOutput"; }
+
     Shift+F12 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "increaseInput"; }
     Shift+F11 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "decreaseInput"; }
     Shift+F10 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "muteOutputInput"; }
+
+    CTRL+F12 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "brightness" "increase"; }
+    CTRL+F11 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "brightness" "decrease"; }
 
     // Example media keys mapping using playerctl.
     // This will work with any MPRIS-enabled media player.

@@ -21,6 +21,8 @@
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
 
+  hardware.i2c.enable = true;
+
   boot.initrd.luks.devices = {
     "crypt-nixos".device = "/dev/disk/by-uuid/809d56ca-d278-49e7-845b-47f4354ea6a1";
     "crypt-swap".device = "/dev/disk/by-uuid/817d77e0-f4fd-43c2-8307-4ab50caf50d8";
