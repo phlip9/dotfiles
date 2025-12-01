@@ -53,29 +53,10 @@
   # trying out lix.systems
   nix.package = pkgs.lixPackageSets.stable.lix;
   nixpkgs.overlays = [
-    # $ ne pkgsNixos.lixPackageSets.stable --apply 'builtins.attrNames' --json | jq -r '.[]'
+    # TODO(phlip9): figure out why infinite recursion: <https://git.lix.systems/lix-project/lix/issues/980>
+    # or use more sophisticated overlay like: <https://git.lix.systems/lix-project/nixos-module/src/branch/main/overlay.nix>
     (final: prev: {
-      inherit (prev.lixPackageSets.stable)
-        # aws-sdk-cpp
-        # boehmgc
-        # callPackage
-        colmena
-        # confDir
-        # editline
-        # lix
-        # newScope
-        nix-direnv
-        nix-eval-jobs
-        nix-fast-build
-        nix-serve-ng
-        nix-update
-        nixpkgs-review
-        # overrideScope
-        # packages
-        # recurseForDerivations
-        # stateDir
-        # storeDir
-        ;
+      nix = prev.lixPackageSets.stable.lix;
     })
   ];
 
