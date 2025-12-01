@@ -126,9 +126,33 @@
   };
 
   # fonts
-  fonts.packages = [
-    pkgs.source-code-pro
-  ];
+  fonts = {
+    packages = [
+      pkgs.inter
+      pkgs.merriweather
+      pkgs.noto-fonts-monochrome-emoji
+      pkgs.source-code-pro
+    ];
+    fontconfig = {
+      # my default font stack
+      defaultFonts = {
+        monospace = [ "Source Code Pro" ];
+        sansSerif = [ "Inter" ];
+        serif = [ "Merriweather" ];
+        emoji = [ "Noto Emoji" ];
+      };
+      # LCD subpixel rendering for my standard 108 DPI LCD display
+      subpixel = {
+        rgba = "rgb";
+        lcdfilter = "light";
+      };
+      # disable ugly, legacy bitmap fonts
+      allowBitmaps = false;
+      # # TODO(phlip9): experiment
+      # hinting.style = "medium";
+      # hinting.style = "full";
+    };
+  };
 
   # # QT
   # qt = {

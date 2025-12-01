@@ -32,7 +32,8 @@
         "marginHorizontal": 0.25,
         "marginVertical": 0.25,
         "monitors": [
-            "DP-2"
+            "DP-2",
+            "DP-3"
         ],
         "outerCorners": true,
         "position": "top",
@@ -389,9 +390,9 @@
         "wezterm": false
     },
     "ui": {
-        "fontDefault": "Roboto",
+        "fontDefault": "Sans Serif",
         "fontDefaultScale": 1,
-        "fontFixed": "Source Code Pro",
+        "fontFixed": "Monospace",
         "fontFixedScale": 1,
         "panelBackgroundOpacity": 1,
         "panelsAttachedToBar": true,
