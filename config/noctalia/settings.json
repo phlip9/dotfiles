@@ -9,7 +9,7 @@
         "position": "center",
         "sortByMostUsed": true,
         "terminalCommand": "alacritty -e",
-        "useApp2Unit": false,
+        "useApp2Unit": true,
         "viewMode": "list"
     },
     "audio": {

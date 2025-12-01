@@ -55,6 +55,7 @@
   # desktop environment packages
   environment.systemPackages = [
     pkgs.adwaita-icon-theme # mouse cursor and icons
+    pkgs.app2unit # have noctalia-shell launcher open apps in their own units
     pkgs.apple-cursor # macOS-looking cursor
     pkgs.ffmpegthumbnailer # nautilus uses this for video thumbnails
     pkgs.fuzzel # application launcher
