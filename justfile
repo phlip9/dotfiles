@@ -42,11 +42,3 @@ nvim-print-my-plugins-dir:
 
 nvim-print-base-runtime-dir:
     readlink -f "$(dirname "$(readlink -f "$(which nvim)")")/../share/nvim/runtime"
-
-dbg-gnome:
-    dbus-run-session -- gnome-shell --nested --wayland
-    # MUTTER_DEBUG_DUMMY_MODE_SPECS=1024x768 \
-    #     dbus-run-session -- gnome-shell --nested --wayland
-
-dbg-niri:
-    dbus-run-session -- $(readlink -f result/bin/niri)
