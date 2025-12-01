@@ -97,15 +97,13 @@
     packages = [ ];
   };
 
-  # # TODO(phlip9): more robust brightness control
-  # # <https://discourse.nixos.org/t/brightness-control-of-external-monitors-with-ddcci-backlight/8639/23>
-  # #
-  # # Writes to the monitor brightness really should be intermediated by a
-  # # persistent service vs. writing with ddcutil directly.
-  # # Either use something like ddccontrol or ddcutil-service and update
-  # # noctalia-shell, or maybe the ddcci_backlight driver handles this
-  # # correctly?
-  # services.ddccontrol.enable = true;
+  # sudo-rs - memory-safe sudo
+  security.sudo.enable = false;
+  security.sudo-rs = {
+    enable = true;
+    # only users in "wheel" can even run `sudo`
+    execWheelOnly = true;
+  };
 
   # FDE + single-user => can just use auto-login
   services.displayManager.autoLogin = {
@@ -120,6 +118,16 @@
   #   # enable NSS plugin so local applications see *.local DNS names
   #   nssmdns4 = true;
   # };
+
+  # # TODO(phlip9): more robust brightness control
+  # # <https://discourse.nixos.org/t/brightness-control-of-external-monitors-with-ddcci-backlight/8639/23>
+  # #
+  # # Writes to the monitor brightness really should be intermediated by a
+  # # persistent service vs. writing with ddcutil directly.
+  # # Either use something like ddccontrol or ddcutil-service and update
+  # # noctalia-shell, or maybe the ddcci_backlight driver handles this
+  # # correctly?
+  # services.ddccontrol.enable = true;
 
   # install firefox
   programs.firefox.enable = true;
