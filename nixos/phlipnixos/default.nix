@@ -50,6 +50,35 @@
     "flakes"
   ];
 
+  # trying out lix.systems
+  nix.package = pkgs.lixPackageSets.stable.lix;
+  nixpkgs.overlays = [
+    # $ ne pkgsNixos.lixPackageSets.stable --apply 'builtins.attrNames' --json | jq -r '.[]'
+    (final: prev: {
+      inherit (prev.lixPackageSets.stable)
+        # aws-sdk-cpp
+        # boehmgc
+        # callPackage
+        colmena
+        # confDir
+        # editline
+        # lix
+        # newScope
+        nix-direnv
+        nix-eval-jobs
+        nix-fast-build
+        nix-serve-ng
+        nix-update
+        nixpkgs-review
+        # overrideScope
+        # packages
+        # recurseForDerivations
+        # stateDir
+        # storeDir
+        ;
+    })
+  ];
+
   #
   # Nvidia graphics drivers
   #
