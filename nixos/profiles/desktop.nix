@@ -1,4 +1,5 @@
 {
+  lib,
   phlipPkgs,
   pkgs,
   ...
@@ -11,10 +12,10 @@
   # # enable X11 windowing system
   # services.xserver.enable = true;
 
-  # enable GNOME display manager
-  services.displayManager = {
-    gdm.enable = true;
-  };
+  # # enable GNOME display manager
+  # services.displayManager = {
+  #   gdm.enable = true;
+  # };
 
   # # enable GNOME desktop environment
   # services.desktopManager.gnome.enable = true;
@@ -23,13 +24,29 @@
   # services.desktopManager.cosmic.enable = true;
   # services.displayManager.cosmic-greeter.enable = true;
 
-  # enable niri scrolling tiling wayland compositor
+  # minimal greetd auto-login direct to niri-session
+  # - docs: <https://man.sr.ht/~kennylevinsen/greetd>
+  services.greetd = {
+    enable = true;
+    settings = rec {
+      initial_session = {
+        command = lib.getExe' phlipPkgs.niri "niri-session";
+        user = "phlip9";
+      };
+      default_session = initial_session;
+    };
+  };
+
+  # niri scrolling tiling wayland compositor
+  # - docs: <https://github.com/YaLTeR/niri/wiki/Getting-Started>
   programs.niri = {
     enable = true;
     package = phlipPkgs.niri;
   };
 
-  # noctalia shell
+  # noctalia desktop shell
+  # - repo: <https://github.com/noctalia-dev/noctalia-shell>
+  # - docs: <https://docs.noctalia.dev/>
   services.noctalia-shell = {
     enable = true;
     package = phlipPkgs.noctalia-shell;
@@ -39,8 +56,10 @@
   environment.systemPackages = [
     pkgs.adwaita-icon-theme # mouse cursor and icons
     pkgs.apple-cursor # macOS-looking cursor
+    pkgs.ffmpegthumbnailer # nautilus uses this for video thumbnails
     pkgs.fuzzel # application launcher
     pkgs.gnome-themes-extra # dark adwaita theme
+    pkgs.gradia # pretty screenshots
     pkgs.oculante # fast and simple image viewer and editor
     pkgs.wl-clipboard # clipboard support
     pkgs.xwayland-satellite # niri will support X11 apps if this is in PATH
@@ -50,40 +69,40 @@
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;
 
-  # remove gunk
-  environment.gnome.excludePackages = [
-    pkgs.decibels
-    pkgs.epiphany # remove this if things break
-    pkgs.gnome-calculator
-    pkgs.gnome-calendar
-    pkgs.gnome-characters
-    pkgs.gnome-clocks
-    pkgs.gnome-connections
-    pkgs.gnome-contacts
-    pkgs.gnome-logs
-    pkgs.gnome-maps
-    pkgs.gnome-music
-    pkgs.gnome-software
-    pkgs.gnome-system-monitor
-    pkgs.gnome-text-editor
-    pkgs.gnome-tour
-    pkgs.gnome-weather
-    pkgs.orca
-    pkgs.simple-scan
-    pkgs.snapshot
-    # pkgs.totem
-    pkgs.yelp
-  ];
-  programs.evince.enable = false;
-  programs.geary.enable = false;
-  services.gnome = {
-    gnome-online-accounts.enable = false;
-    gnome-remote-desktop.enable = false;
-    localsearch.enable = false;
-    rygel.enable = false;
-    tinysparql.enable = false;
-    # gcr-ssh-agent = false; # TODO(phlip9): disable
-  };
+  # # remove gnome gunk
+  # environment.gnome.excludePackages = [
+  #   pkgs.decibels
+  #   pkgs.epiphany # remove this if things break
+  #   pkgs.gnome-calculator
+  #   pkgs.gnome-calendar
+  #   pkgs.gnome-characters
+  #   pkgs.gnome-clocks
+  #   pkgs.gnome-connections
+  #   pkgs.gnome-contacts
+  #   pkgs.gnome-logs
+  #   pkgs.gnome-maps
+  #   pkgs.gnome-music
+  #   pkgs.gnome-software
+  #   pkgs.gnome-system-monitor
+  #   pkgs.gnome-text-editor
+  #   pkgs.gnome-tour
+  #   pkgs.gnome-weather
+  #   pkgs.orca
+  #   pkgs.simple-scan
+  #   pkgs.snapshot
+  #   # pkgs.totem
+  #   pkgs.yelp
+  # ];
+  # programs.evince.enable = false;
+  # programs.geary.enable = false;
+  # services.gnome = {
+  #   gnome-online-accounts.enable = false;
+  #   gnome-remote-desktop.enable = false;
+  #   localsearch.enable = false;
+  #   rygel.enable = false;
+  #   tinysparql.enable = false;
+  #   # gcr-ssh-agent = false; # TODO(phlip9): disable
+  # };
   services.speechd.enable = false;
 
   # configure keymap
