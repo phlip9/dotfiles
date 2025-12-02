@@ -75,18 +75,19 @@
     # use proprietary drivers. OSS drivers only support Turing+ (1080 Ti /
     # Pascal is too old)
     open = false;
+    package = config.boot.kernelPackages.nvidiaPackages.beta;
 
-    # stable (v570.153.02) and beta (575.64.05) fail to build against kernel v6.17.0
-    # package = config.boot.kernelPackages.nvidiaPackages.beta;
-    # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/nvidia-x11/default.nix#L74>
-    package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
-      version = "580.95.05";
-      sha256_64bit = "sha256-hJ7w746EK5gGss3p8RwTA9VPGpp2lGfk5dlhsv4Rgqc=";
-      sha256_aarch64 = "sha256-zLRCbpiik2fGDa+d80wqV3ZV1U1b4lRjzNQJsLLlICk=";
-      openSha256 = "sha256-RFwDGQOi9jVngVONCOB5m/IYKZIeGEle7h0+0yGnBEI=";
-      settingsSha256 = "sha256-F2wmUEaRrpR1Vz0TQSwVK4Fv13f3J9NJLtBe4UP2f14=";
-      persistencedSha256 = "sha256-QCwxXQfG/Pa7jSTBB0xD3lsIofcerAWWAHKvWjWGQtg=";
-    };
+    # # Use latest drivers if stable and beta fail to build against latest kernel
+    # # <https://www.nvidia.com/en-us/drivers/unix/>
+    # # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/nvidia-x11/default.nix#L74>
+    # package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
+    #   version = "580.95.05";
+    #   sha256_64bit = "sha256-hJ7w746EK5gGss3p8RwTA9VPGpp2lGfk5dlhsv4Rgqc=";
+    #   sha256_aarch64 = "sha256-zLRCbpiik2fGDa+d80wqV3ZV1U1b4lRjzNQJsLLlICk=";
+    #   openSha256 = "sha256-RFwDGQOi9jVngVONCOB5m/IYKZIeGEle7h0+0yGnBEI=";
+    #   settingsSha256 = "sha256-F2wmUEaRrpR1Vz0TQSwVK4Fv13f3J9NJLtBe4UP2f14=";
+    #   persistencedSha256 = "sha256-QCwxXQfG/Pa7jSTBB0xD3lsIofcerAWWAHKvWjWGQtg=";
+    # };
   };
 
   #
