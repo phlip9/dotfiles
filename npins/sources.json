@@ -16,8 +16,8 @@
     "nixos-unstable": {
       "type": "Channel",
       "name": "nixos-unstable",
-      "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre903292.2fad6eac6077/nixexprs.tar.xz",
-      "hash": "1c0c0a78466m07rr8z6wiixkn7s7lsy0y1cza3lg4ap2cwdl9zgb"
+      "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre904649.2d293cbfa5a7/nixexprs.tar.xz",
+      "hash": "07gj4v84d8dl2gdxd4nvd9pmavjgv9i3lb3acrnl5i6zc5wy7cy4"
     },
     "nixpkgs": {
       "type": "Channel",
@@ -42,10 +42,10 @@
       "version_upper_bound": null,
       "release_prefix": null,
       "submodules": false,
-      "version": "v3.4.0",
-      "revision": "f89aae28c04631026df4888e2b27021ad0d4f3e1",
-      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v3.4.0",
-      "hash": "1y10zbafq4n6jjwm1r78dn63zrgmrvikbbcdy8flswk75zs2sfbr"
+      "version": "v3.5.0",
+      "revision": "4179347775bb0d5d445209320fb01faf8900eaf7",
+      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v3.5.0",
+      "hash": "0apy8vm9b48qj0ghmlvz7yr17zj1v6byv5flsv2n2jsq8vdidpl7"
     }
   },
   "version": 5
