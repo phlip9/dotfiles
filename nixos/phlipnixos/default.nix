@@ -150,6 +150,7 @@
   environment.systemPackages = [
     pkgs.alacritty
     pkgs.wl-clipboard
+    pkgs.signal-desktop
 
     # nvtop
     pkgs.nvtopPackages.nvidia
