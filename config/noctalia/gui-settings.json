@@ -51,7 +51,9 @@
             "left": [
                 {
                     "colorizeDistroLogo": true,
+                    "colorizeSystemIcon": "primary",
                     "customIconPath": "",
+                    "enableColorization": true,
                     "icon": "",
                     "id": "ControlCenter",
                     "useDistroLogo": true
@@ -61,7 +63,7 @@
                     "id": "SystemMonitor",
                     "showCpuTemp": true,
                     "showCpuUsage": true,
-                    "showDiskUsage": false,
+                    "showDiskUsage": true,
                     "showMemoryAsPercent": false,
                     "showMemoryUsage": true,
                     "showNetworkStats": false,
@@ -136,11 +138,11 @@
         "cards": [
             {
                 "enabled": true,
-                "id": "banner-card"
+                "id": "calendar-header-card"
             },
             {
                 "enabled": true,
-                "id": "calendar-card"
+                "id": "calendar-month-card"
             },
             {
                 "enabled": true,
@@ -161,7 +163,7 @@
         "manualSunrise": "06:30",
         "manualSunset": "18:30",
         "matugenSchemeType": "scheme-neutral",
-        "predefinedScheme": "Rosepine",
+        "predefinedScheme": "Rose Pine",
         "schedulingMode": "off",
         "useWallpaperColors": true
     },
@@ -228,7 +230,6 @@
         "onlySameOutput": true,
         "pinnedApps": [
         ],
-        "radiusRatio": 0.1,
         "size": 1
     },
     "general": {
@@ -355,16 +356,21 @@
         ],
         "showHeader": true
     },
-    "settingsVersion": 25,
+    "settingsVersion": 26,
     "systemMonitor": {
         "cpuCriticalThreshold": 90,
+        "cpuPollingInterval": 3000,
         "cpuWarningThreshold": 80,
         "criticalColor": "",
         "diskCriticalThreshold": 90,
+        "diskPollingInterval": 3000,
         "diskWarningThreshold": 80,
         "memCriticalThreshold": 90,
+        "memPollingInterval": 3000,
         "memWarningThreshold": 80,
+        "networkPollingInterval": 3000,
         "tempCriticalThreshold": 90,
+        "tempPollingInterval": 3000,
         "tempWarningThreshold": 80,
         "useCustomColors": false,
         "warningColor": ""
@@ -374,6 +380,7 @@
         "cava": false,
         "code": false,
         "discord": false,
+        "emacs": false,
         "enableUserTemplates": false,
         "foot": false,
         "fuzzel": true,
@@ -381,6 +388,7 @@
         "gtk": true,
         "kcolorscheme": false,
         "kitty": false,
+        "niri": true,
         "pywalfox": false,
         "qt": true,
         "spicetify": false,
@@ -400,14 +408,13 @@
         "tooltipsEnabled": true
     },
     "wallpaper": {
-        "defaultWallpaper": "",
         "directory": "/home/phlip9/Pictures/Wallpapers",
         "enableMultiMonitorDirectories": false,
         "enabled": true,
-        "fillColor": "#000000",
+        "fillColor": "#161311",
         "fillMode": "crop",
         "hideWallpaperFilenames": false,
-        "monitors": [
+        "monitorDirectories": [
         ],
         "overviewEnabled": false,
         "panelPosition": "follow_bar",
