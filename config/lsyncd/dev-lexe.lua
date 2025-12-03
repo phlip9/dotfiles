@@ -11,6 +11,7 @@ sync {
         "**/ios/Flutter/.last_build_id",
         "*~",
         ".dart_tool/",
+        ".env",
         ".flutter-plugins",
         ".flutter-plugins-dependencies",
         ".git/",
