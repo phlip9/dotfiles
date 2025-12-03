@@ -141,7 +141,43 @@
   # services.ddccontrol.enable = true;
 
   # install firefox
-  programs.firefox.enable = true;
+  programs.firefox = {
+    enable = true;
+
+    # set firefox default config json ("organisation policy")
+    # <https://mozilla.github.io/policy-templates/>
+    policies = {
+      # manage FF extensions
+      # - check about:support for extension/add-on ID strings.
+      ExtensionSettings = {
+        # uBlock Origin
+        "uBlock0@raymondhill.net" = {
+          install_url = "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi";
+          installation_mode = "normal_installed";
+        };
+        # Ctrl+Number to switch tabs
+        "{84601290-bec9-494a-b11c-1baa897a9683}" = {
+          install_url = "https://addons.mozilla.org/firefox/downloads/latest/ctrl-number-to-switch-tabs/latest.xpi";
+          installation_mode = "normal_installed";
+        };
+        # 1Password
+        "{d634138d-c276-4fc8-924b-40a0ea21d284}" = {
+          install_url = "https://addons.mozilla.org/firefox/downloads/latest/1password-x-password-manager/latest.xpi";
+          installation_mode = "normal_installed";
+        };
+        # Vimium
+        "{d7742d87-e61d-4b78-b8a1-b469842139fa}" = {
+          install_url = "https://addons.mozilla.org/firefox/downloads/latest/vimium_ff/latest.xpi";
+          installation_mode = "normal_installed";
+        };
+      };
+
+      # improve 1Password integration by disabling builtin password manager
+      DisableFormHistory = true;
+      OfferToSaveLogins = false;
+      PasswordManagerEnabled = false;
+    };
+  };
 
   # allow unfree packages
   nixpkgs.config.allowUnfree = true;
