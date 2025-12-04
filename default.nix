@@ -46,6 +46,7 @@
   pkgs ? import nixpkgs args,
   pkgsYubikey ? import nixpkgs-yubikey args,
   pkgsUnstable ? import nixos-unstable args,
+  # pkgsUnstable ? import sources."nixos-25.11pre" args,
   hm ? import home-manager { inherit pkgs; },
 }:
 let
@@ -76,11 +77,15 @@ rec {
   # NixOS system configs
   nixosConfigs = import ./nixos { inherit pkgs sources; };
 
+  # NixOS graphical installer .iso image
+  nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;
+
   # convenient pkgs + phlipPkgs packages sets from nixos machine
   pkgsNixos = nixosConfigs.phlipnixos.pkgs;
   phlipPkgsNixos = nixosConfigs.phlipnixos._module.args.phlipPkgs;
 
-  # NixOS graphical installer .iso image
-  nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;
+  rustc-sgx = import ./rustc-sgx.nix {
+    inherit pkgs pkgsUnstable nixpkgs;
+  };
 }
 // phlipPkgs
