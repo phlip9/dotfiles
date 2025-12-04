@@ -79,6 +79,7 @@
     # codex - OpenAI codex code CLI
     phlipPkgs.codex
 
+    # TODO(phlip9): need a better home for these
     pkgs.clangStdenv.cc
     pkgs.gh
     pkgs.protobuf

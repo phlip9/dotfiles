@@ -46,3 +46,7 @@ nvim-print-base-runtime-dir:
 # Boot into Limine UEFI bootloader in a QEMU VM
 qemu-bootloader:
     ./bin/qemu-bootloader.sh
+
+dbg-cross:
+    nix eval -f . rustc-sgx.pkgsCross.pkgsBuildTarget.targetPlatform --json \
+      --apply 'x: builtins.removeAttrs x ["canExecute" "emulator" "emulatorAvailable" "isCompatible" "parsed" "staticEmulatorAvailable"]'
