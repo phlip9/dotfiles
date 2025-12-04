@@ -42,3 +42,7 @@ nvim-print-my-plugins-dir:
 
 nvim-print-base-runtime-dir:
     readlink -f "$(dirname "$(readlink -f "$(which nvim)")")/../share/nvim/runtime"
+
+dbg-cross:
+    nix eval -f . rustc-sgx.pkgsCross.pkgsBuildTarget.targetPlatform --json \
+      --apply 'x: builtins.removeAttrs x ["canExecute" "emulator" "emulatorAvailable" "isCompatible" "parsed" "staticEmulatorAvailable"]'
