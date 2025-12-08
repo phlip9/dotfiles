@@ -79,6 +79,13 @@
     # codex - OpenAI codex code CLI
     phlipPkgs.codex
 
+    # rustup - rust toolchain manager
+    pkgs.rustup
+
+    # TODO(phlip9): need a better home for these
+    pkgs.stdenv.cc
+    pkgs.protobuf
+
     # # claude - Anthropic claude code CLI
     # phlipPkgs.claude-code
 

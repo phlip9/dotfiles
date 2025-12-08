@@ -1,41 +1,28 @@
 {
-  eza,
-
+  callPackage,
   cargo,
-  fetchurl,
+  cmake,
+  fetchFromGitHub,
+  file,
   lib,
+  llvmPackages,
+  pkg-config,
   pkgsBuildBuild,
   pkgsBuildHost,
-  pkgsHostTarget,
+  # pkgsHostTarget,
+  python3,
+  removeReferencesTo,
   rustc,
   stdenv,
-  runCommandLocal,
-
-  file,
-  python3,
-  cmake,
-  rustfmt,
-  pkg-config,
-  openssl,
-  xz,
-  ninja,
-
   which,
-  libffi,
-  removeReferencesTo,
-  makeWrapper,
-
-  libiconv,
-  zlib,
-  llvmPackages,
+  xz,
 }:
 
 let
   inherit (lib)
     optionals
     optional
-    optionalString
-    concatStringsSep
+    fileset
     ;
   # fastCross = true;
   useLLVM = false;
@@ -60,8 +47,8 @@ let
   llvmSharedForHost = llvmSharedFor pkgsBuildHost;
   llvmSharedForTarget = llvmSharedForHost;
 
-  # For use at runtime
-  llvmShared = llvmSharedFor pkgsHostTarget;
+  # # For use at runtime
+  # llvmShared = llvmSharedFor pkgsHostTarget;
 in
 
 stdenv.mkDerivation (final: {
@@ -69,12 +56,49 @@ stdenv.mkDerivation (final: {
   # version = "1.91.1";
   version = "1.90.0";
 
-  src = fetchurl {
-    url = "https://static.rust-lang.org/dist/rustc-${final.version}-src.tar.gz";
-    # hash = "sha256-ONziBdOfYVcSYfBEQjehzp7+y5cOdg2OxNlXr1tEVyM="; # 1.91.1
-    hash = "sha256-eZqfnLpO1TUeBxBIvPa1VgdV2QCWSN7zOkB91JYfm34="; # 1.90.0
-    # See https://nixos.org/manual/nixpkgs/stable/#using-git-bisect-on-the-rust-compiler
-    passthru.isReleaseTarball = true;
+  # src = fileset.toSource {
+  #   root = ../rust;
+  #   fileset = fileset.difference ../rust (
+  #     fileset.unions [
+  #       (fileset.maybeMissing ../rust/.cargo)
+  #       (fileset.maybeMissing ../rust/bootstrap.toml)
+  #       (fileset.maybeMissing ../rust/build)
+  #       (fileset.maybeMissing ../rust/inst)
+  #       (fileset.maybeMissing ../rust/src/tools/cargo)
+  #       (fileset.maybeMissing ../rust/src/tools/rustc-perf)
+  #       (fileset.maybeMissing ../rust/target)
+  #       (fileset.maybeMissing ../rust/vendor)
+  #       ../rust/.git
+  #       ../rust/Makefile
+  #       ../rust/src/llvm-project/clang/test
+  #       ../rust/src/llvm-project/libcxx/test
+  #       ../rust/src/llvm-project/llvm/test
+  #       ../rust/tests
+  #     ]
+  #   );
+  # };
+
+  # src = fetchurl {
+  #   url = "https://static.rust-lang.org/dist/rustc-${final.version}-src.tar.gz";
+  #   # hash = "sha256-ONziBdOfYVcSYfBEQjehzp7+y5cOdg2OxNlXr1tEVyM="; # 1.91.1
+  #   hash = "sha256-eZqfnLpO1TUeBxBIvPa1VgdV2QCWSN7zOkB91JYfm34="; # 1.90.0
+  #   # See https://nixos.org/manual/nixpkgs/stable/#using-git-bisect-on-the-rust-compiler
+  #   passthru.isReleaseTarball = true;
+  # };
+
+  src = fetchFromGitHub {
+    owner = "phlip9";
+    repo = "rust";
+    rev = "382910c1ea92afe8efa1767c60ba35998ae41f3c";
+    fetchSubmodules = true;
+    hash = "sha256-eSngC2xtyCet70DaKtCjLZf7znbQlaH42VPYE3d2mP4=";
+  };
+
+  cargoVendorDir = callPackage ./rust-std-vendor.nix {
+    inherit rustc cargo;
+    name = "rust-std-vendor-${final.version}";
+    vendorSrc = final.src;
+    hash = "sha256-Jw/wXp5nPdieDqHKQeqAe3Z3GFb8UVYP1i8KAAyLs7U=";
   };
 
   __darwinAllowLocalNetworking = true;
@@ -125,6 +149,20 @@ stdenv.mkDerivation (final: {
   }" =
     "${pkgsBuildHost.stdenv.cc.targetPrefix}pkg-config";
 
+  # TODO(phlip9): clang+flags from std Docker build?
+  # <rust/src/ci/docker/host-x86_64/dist-various-2/Dockerfile>
+  #
+  # AR_x86_64_fortanix_unknown_sgx=ar \
+  # CC_x86_64_fortanix_unknown_sgx=clang-11 \
+  # CFLAGS_x86_64_fortanix_unknown_sgx="-D__ELF__ -isystem/usr/include/x86_64-linux-gnu -mlvi-hardening -mllvm -x86-experimental-lvi-inline-asm-hardening" \
+  # CXX_x86_64_fortanix_unknown_sgx=clang++-11 \
+  # CXXFLAGS_x86_64_fortanix_unknown_sgx="-D__ELF__ -isystem/usr/include/x86_64-linux-gnu -mlvi-hardening -mllvm -x86-experimental-lvi-inline-asm-hardening" \
+  #
+  # Also: <src/ci/docker/host-x86_64/dist-various-2/build-x86_64-fortanix-unknown-sgx-toolchain.sh>
+  #
+  # # Note - this overwrites the environment variable set in the Dockerfile
+  # export CXXFLAGS_x86_64_fortanix_unknown_sgx="-cxx-isystem/usr/include/c++/$(detect_cxx_include_path) -cxx-isystem/usr/include/x86_64-linux-gnu/c++/$(detect_cxx_include_path) $CFLAGS_x86_64_fortanix_unknown_sgx"
+
   configureFlags =
     let
       buildPlatform = stdenv.buildPlatform;
@@ -156,12 +194,16 @@ stdenv.mkDerivation (final: {
       setTarget = "--set=target.\"${target}\"";
     in
     [
+      "--set=change-id=ignore"
       "--sysconfdir=${placeholder "out"}/etc"
+      "--tools="
       "--release-channel=stable"
       "--set=build.rustc=${rustc}/bin/rustc"
       "--set=build.cargo=${cargo}/bin/cargo"
-      "--tools=rustc,rustdoc"
+      "--enable-local-rust"
+      "--enable-local-rebuild"
       "--enable-rpath"
+      "--enable-locked-deps"
       "--enable-vendor"
       "--disable-lld"
       "--build=${buildPlatform.rust.rustcTargetSpec}"
@@ -199,11 +241,7 @@ stdenv.mkDerivation (final: {
       # https://github.com/NixOS/nixpkgs/issues/311930
       "--llvm-libunwind=${if withBundledLLVM then "in-tree" else "system"}"
       "--enable-use-libcxx"
-    ]
-  #
-  ;
-
-  # RUSTC_BOOTSTRAP = true;
+    ];
 
   buildPhase = ''
     runHook preBuild
@@ -215,7 +253,8 @@ stdenv.mkDerivation (final: {
     ln -s ${rustc.unwrapped}/bin/rustc build/${stdenv.hostPlatform.rust.rustcTargetSpec}/stage1-rustc/${stdenv.hostPlatform.rust.rustcTargetSpec}/release/rustc-main
     touch build/${stdenv.hostPlatform.rust.rustcTargetSpec}/stage0-std/${stdenv.hostPlatform.rust.rustcTargetSpec}/release/.libstd-stamp
     touch build/${stdenv.hostPlatform.rust.rustcTargetSpec}/stage{0,1}-rustc/${stdenv.hostPlatform.rust.rustcTargetSpec}/release/.librustc-stamp
-    python ./x.py --keep-stage=0 --stage=1 build library
+
+    python ./x.py --keep-stage=0 --stage=1 build library --verbose
 
     runHook postBuild
   '';
@@ -223,7 +262,7 @@ stdenv.mkDerivation (final: {
   installPhase = ''
     runHook preInstall
 
-    python ./x.py --keep-stage=0 --stage=1 install library/std
+    python ./x.py --keep-stage=0 --stage=1 install library/std --verbose
 
     runHook postInstall
   '';
@@ -234,12 +273,16 @@ stdenv.mkDerivation (final: {
   postPatch = ''
     patchShebangs src/etc
 
-    ${optionalString (!withBundledLLVM) "rm -rf src/llvm"}
+    mkdir -p \
+      src/gcc \
+      src/tools/cargo \
+      src/tools/rustc-perf \
+      src/tools/enzyme/enzyme
 
     # Useful debugging parameter
     # export VERBOSE=1
-  ''
-  + lib.optionalString (!(final.src.passthru.isReleaseTarball or false)) ''
+
+    ln -s $cargoVendorDir vendor
     mkdir .cargo
     cat > .cargo/config.toml <<\EOF
     [source.crates-io]
@@ -247,6 +290,9 @@ stdenv.mkDerivation (final: {
     [source.vendored-sources]
     directory = "vendor"
     EOF
+
+    ls -la | grep vendor
+    cat .cargo/config.toml
   '';
 
   # rustc unfortunately needs cmake to compile llvm-rt but doesn't
@@ -264,21 +310,10 @@ stdenv.mkDerivation (final: {
     rustc
     cmake
     which
-    libffi
     removeReferencesTo
     pkg-config
     xz
   ];
-
-  buildInputs = [
-    openssl
-  ]
-  ++ optionals stdenv.hostPlatform.isDarwin [
-    libiconv
-    zlib
-  ]
-  ++ optional (!withBundledLLVM) llvmShared.lib
-  ++ optional (useLLVM && !withBundledLLVM) llvmPackages.libunwind;
 
   postInstall = ''
     # remove stuff that doesn't make sense for a rust-std only nix package
@@ -293,12 +328,4 @@ stdenv.mkDerivation (final: {
   configurePlatforms = [ ];
 
   enableParallelBuilding = true;
-
-  # requiredSystemFeatures = [ "big-parallel" ];
-
-  passthru = {
-    llvm = llvmShared;
-    inherit llvmPackages;
-    inherit (rustc) tier1TargetPlatforms targetPlatforms badTargetPlatforms;
-  };
 })

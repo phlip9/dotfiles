@@ -84,7 +84,17 @@ rec {
 
   std-orig = pkgs.callPackage ./rust-std.nix { };
 
-  std = pkgs.callPackage ./rust-std2.nix {
+  # std = pkgs.callPackage ./rust-std2.nix {
+  #   rustc = fenix-rustc;
+  #   cargo = fenixPkgs.stable.cargo;
+  # };
+
+  std = pkgs.callPackage ./rust-std3.nix {
+    rustc = fenix-rustc;
+    cargo = fenixPkgs.stable.cargo;
+  };
+
+  vendor = pkgs.callPackage ./rust-std-vendor.nix {
     rustc = fenix-rustc;
     cargo = fenixPkgs.stable.cargo;
   };
