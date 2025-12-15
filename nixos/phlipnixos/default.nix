@@ -41,6 +41,11 @@
     LC_TIME = "en_US.UTF-8";
   };
 
+  # firmware update daemon
+  services.fwupd = {
+    enable = true;
+  };
+
   #
   # Nix
   #
@@ -59,6 +64,16 @@
       nix = prev.lixPackageSets.stable.lix;
     })
   ];
+
+  # Run non-NixOS binaries
+  programs.nix-ld = {
+    enable = true;
+    libraries = [
+      pkgs.libglvnd
+      config.hardware.nvidia.package
+      pkgs.alsa-lib
+    ];
+  };
 
   #
   # Nvidia graphics drivers
