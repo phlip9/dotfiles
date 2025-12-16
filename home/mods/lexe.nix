@@ -80,6 +80,7 @@ in
     pkgs.josh
     pkgs.rage
     pkgs.toml-cli
+    pkgs.uv
     pkgsYubikey.age-plugin-yubikey
   ]
   ++ (lib.optionals isDarwin [
