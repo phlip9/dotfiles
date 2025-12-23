@@ -17,6 +17,9 @@ in
   # codex - OpenAI codex CLI
   codex = callPackage ./codex.nix { };
 
+  # cataclysm-tlg - Catacylsm: The Last Generation
+  cataclysm-tlg = callPackage ./cataclysm-tlg.nix { };
+
   # dist - build and distribute binary releases
   dist = pkgs.cargo-dist;
 
