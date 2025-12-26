@@ -17,6 +17,9 @@ in
   # codex - OpenAI codex CLI
   codex = callPackage ./codex.nix { };
 
+  # cataclysm-dda - Cataclysm: Dark Days Ahead
+  cataclysm-dda = callPackage ./cataclysm-dda.nix { };
+
   # cataclysm-tlg - Catacylsm: The Last Generation
   cataclysm-tlg = callPackage ./cataclysm-tlg.nix { };
 
