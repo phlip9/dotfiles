@@ -79,6 +79,11 @@
     # codex - OpenAI codex code CLI
     phlipPkgs.codex
 
+    pkgs.clangStdenv.cc
+    pkgs.protobuf
+    pkgs.rustup
+    pkgs.uv
+
     # # claude - Anthropic claude code CLI
     # phlipPkgs.claude-code
 
