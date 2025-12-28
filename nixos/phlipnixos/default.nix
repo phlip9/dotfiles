@@ -69,9 +69,9 @@
   programs.nix-ld = {
     enable = true;
     libraries = [
-      pkgs.libglvnd
       config.hardware.nvidia.package
       pkgs.alsa-lib
+      pkgs.libglvnd
     ];
   };
 
