@@ -187,6 +187,11 @@
           install_url = "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi";
           installation_mode = "normal_installed";
         };
+        # BetterTTV - Twitch/Youtube emotes, QoL, etc
+        "firefox@betterttv.net" = {
+          install_url = "https://addons.mozilla.org/firefox/downloads/latest/betterttv/latest.xpi";
+          installation_mode = "normal_installed";
+        };
         # Ctrl+Number to switch tabs
         "{84601290-bec9-494a-b11c-1baa897a9683}" = {
           install_url = "https://addons.mozilla.org/firefox/downloads/latest/ctrl-number-to-switch-tabs/latest.xpi";
