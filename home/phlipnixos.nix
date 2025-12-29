@@ -80,6 +80,7 @@
     phlipPkgs.codex
 
     pkgs.clangStdenv.cc
+    pkgs.gh
     pkgs.protobuf
     pkgs.rustup
     pkgs.uv

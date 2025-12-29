@@ -22,7 +22,30 @@
       enable = true;
       efiSupport = true;
       secureBoot.enable = true;
-      maxGenerations = 10;
+      maxGenerations = 8;
+
+      style = {
+        wallpapers = [
+          (pkgs.fetchurl {
+            url = "https://phlip9.com/notes/__pub/sand_dunes_cropped.jpeg";
+            hash = "sha256-PITohebOHZ68rWOXUbpcXYy8rqHq7/atdY66zff91cQ=";
+          })
+        ];
+        wallpaperStyle = "centered";
+        backdrop = "DEC0B2";
+        interface.brandingColor = 7;
+        graphicalTerminal = {
+          # black, red, green, brown, blue, magenta, cyan, gray
+          palette = "0D0C0C;C4746E;8A9A7B;C4B28A;8BA4B0;A292A3;8EA4A2;C8C093";
+          brightPalette = "A6A69C;E46876;87A987;E6C384;7FB4CA;938AA9;7AA89F;C5C9C5";
+          foreground = "DEDDD3";
+          background = "12120F";
+          brightForeground = "C8C093";
+          brightBackground = "2D4F67";
+          margin = 196;
+          marginGradient = 0;
+        };
+      };
     };
     efi.canTouchEfiVariables = true;
     timeout = 2;
@@ -52,6 +75,16 @@
   # firmware update daemon
   services.fwupd = {
     enable = true;
+  };
+
+  # enable TPM2.0 device with user-space resource manager daemon
+  security.tpm2 = {
+    enable = true;
+    abrmd.enable = true;
+    pkcs11.enable = true;
+
+    tctiEnvironment.enable = true;
+    tctiEnvironment.interface = "tabrmd";
   };
 
   #
@@ -234,8 +267,13 @@
 
   # list packages installed in system profile
   environment.systemPackages = [
+    # terminal
     pkgs.alacritty
+
+    # copy/paste
     pkgs.wl-clipboard
+
+    # Signal messenger
     pkgs.signal-desktop
 
     # nvtop
