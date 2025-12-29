@@ -61,6 +61,7 @@
     pkgs.fuzzel # application launcher
     pkgs.gnome-themes-extra # dark adwaita theme
     pkgs.gradia # pretty screenshots
+    pkgs.nautilus # file chooser
     pkgs.oculante # fast and simple image viewer and editor
     pkgs.wl-clipboard # clipboard support
     pkgs.xwayland-satellite # niri will support X11 apps if this is in PATH
