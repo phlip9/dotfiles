@@ -42,3 +42,7 @@ nvim-print-my-plugins-dir:
 
 nvim-print-base-runtime-dir:
     readlink -f "$(dirname "$(readlink -f "$(which nvim)")")/../share/nvim/runtime"
+
+# Boot into Limine UEFI bootloader in a QEMU VM
+qemu-bootloader:
+    ./bin/qemu-bootloader.sh
