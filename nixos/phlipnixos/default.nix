@@ -16,8 +16,16 @@
 
   # bootloader
   boot.loader = {
-    systemd-boot.enable = true;
+    # Enable Limine bootloader with secure boot
+    # See: <../../doc/SECURE-BOOT.md>
+    limine = {
+      enable = true;
+      efiSupport = true;
+      secureBoot.enable = true;
+      maxGenerations = 10;
+    };
     efi.canTouchEfiVariables = true;
+    timeout = 2;
   };
 
   # use latest kernel
