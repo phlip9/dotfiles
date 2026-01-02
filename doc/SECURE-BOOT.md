@@ -133,8 +133,8 @@ $ ls -T /var/lib/sbctl
 
 # Since my TPM2 doesn't appear to have an event log, verify that there are no
 # important Option ROMs that need us to install the Microsoft CA:
-$ ls /sys/bus/pci/devices/*/rom
-/sys/bus/pci/devices/0000:01:00.0/rom # <- nvidia GPU
+$ fd ^rom$ /sys/devices --exec bash -c 'echo "{}: $(lspci -s "$(basename "$(dirname {})")")"'
+/sys/devices/pci0000:00/0000:00:01.0/0000:01:00.0/rom: 01:00.0 VGA compatible controller: NVIDIA Corporation GP102 [GeForce GTX 1080 Ti] (rev a1)
 
 # Enroll our new keys.
 #

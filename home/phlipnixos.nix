@@ -84,6 +84,7 @@
     pkgs.protobuf
     pkgs.rustup
     pkgs.uv
+    pkgs.htmlq
 
     # # claude - Anthropic claude code CLI
     # phlipPkgs.claude-code
