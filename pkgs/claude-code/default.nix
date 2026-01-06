@@ -1,17 +1,18 @@
+# Update with `./pkgs/claude-code/update.sh`
 {
   buildNpmPackage,
   fetchzip,
 }:
-buildNpmPackage rec {
+buildNpmPackage (final: {
   pname = "claude-code";
-  version = "1.0.61";
+  version = "2.0.76";
 
   src = fetchzip {
-    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${version}.tgz";
-    hash = "sha256-K10rlFGi2KH65VE0kiBY1lU16xkMPV24/GSD6OjU3v0=";
+    url = "https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-${final.version}.tgz";
+    hash = "sha256-46IqiGJZrZM4vVcanZj/vY4uxFH3/4LxNA+Qb6iIHDk=";
   };
 
-  npmDepsHash = "sha256-svhP8ILXsjxYG+aKj16cCpegh1SRfoNdgJQmOXdJbh4=";
+  npmDepsHash = "sha256-xSNyYImDpsW6AltA7d0ayMsfVaBcnyPIQOg/Ea2cGNk=";
 
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
@@ -19,13 +20,14 @@ buildNpmPackage rec {
 
   dontNpmBuild = true;
 
-  AUTHORIZED = "1";
+  env.AUTHORIZED = "1";
 
   # Disable all telemetry, auto-updating, error reporting, etc...
-  # <https://docs.anthropic.com/en/docs/claude-code/settings#environment-variables>
+  # <https://code.claude.com/docs/en/settings#environment-variables>
   postInstall = ''
     wrapProgram $out/bin/claude \
-      --set CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC 1
+      --set CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC 1 \
+      --unset DEV
   '';
 
   passthru.updateScript = ./update.sh;
@@ -36,4 +38,4 @@ buildNpmPackage rec {
     downloadPage = "https://www.npmjs.com/package/@anthropic-ai/claude-code";
     mainProgram = "claude";
   };
-}
+})

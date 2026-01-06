@@ -12,4 +12,4 @@ rm -f package.json
 popd
 
 # Update version and hashes
-nix-update packages.currentSystem.claude-code --version "$version"
+nix-update claude-code --version "$version"
