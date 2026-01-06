@@ -1,11 +1,5 @@
 local M = {}
 
----@param modname string
-function M.rerequire(modname)
-    package.loaded[modname] = nil
-    return require(modname)
-end
-
 ---open a new temporary, unnamed buffer filled with `contents`
 ---@param contents string
 function M.nvim_open_tmp_buf(contents)
@@ -73,6 +67,20 @@ function M.dbg(...)
     end
     M._dbg(value)
     return value
+end
+
+---print all loaded lua packages in a temporary buffer
+function M.print_loaded_packages()
+    local packages = {}
+    for name, _ in pairs(package.loaded) do
+        table.insert(packages, name)
+    end
+    table.sort(packages)
+
+    local contents = "Loaded Lua Packages (" .. #packages .. "):\n\n"
+    contents = contents .. table.concat(packages, "\n")
+
+    M.nvim_open_tmp_buf(contents)
 end
 
 return M

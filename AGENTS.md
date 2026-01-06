@@ -56,3 +56,9 @@
 - nix: all external inputs are pinned by default. all packages, home-manager
   configs, nixos configs, etc are accesible from the top-level default.nix for
   ease of use and debugging. avoid overlays.
+
+## nvim
+
+### lua
+
+- use `require_local("module")` when importing modules from `nvim/lua/`

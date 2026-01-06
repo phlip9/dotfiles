@@ -2,6 +2,9 @@ do -- PRELUDE {{{
     -- enable experimental lua module loader w/ byte-code cache
     vim.loader.enable()
 
+    -- Rebind mapleader to something more accessible.
+    vim.g.mapleader = ","
+
     -- Track the "generation" number for sourcing `init.lua`.
     -- Used to ensure re-sourcing will re-run "one-time" init in various places.
     if _G.my_init_generation == nil then
@@ -10,11 +13,18 @@ do -- PRELUDE {{{
         _G.my_init_generation = _G.my_init_generation + 1
     end
 
-    -- Rebind mapleader to something more accessible.
-    vim.g.mapleader = ","
+    ---require() for local lua modules. It marks the imported module so it is
+    ---automatically reloaded when we re-source `nvim/init.lua`.
+    ---@param name string
+    ---@return table
+    function _G.require_local(name)
+        local module = require(name)
+        rawset(module, "_is_local_module", true)
+        return module
+    end
 
     -- `string` extension methods
-    require("util.stringext")
+    require_local("util.stringext")
 end -- PRELUDE }}}
 
 -- PLUGINS {{{
@@ -25,13 +35,12 @@ local M = {}
 do -- lua utils {{{
     -- Pretty-print any lua value and display it in a temp buffer
     function _G.dbg(...)
-        return require("util").dbg(...)
+        return require_local("util").dbg(...)
     end
 
-    -- Unload and then `require` a module
-    ---@param modname string
-    function _G.rerequire(modname)
-        return require("util").rerequire(modname)
+    -- Pretty-print all loaded lua packages in a temp buffer
+    function _G.print_loaded_packages(...)
+        return require_local("util").print_loaded_packages(...)
     end
 
     -- Wrap a function so that it recenters the cursor if it moved after calling
@@ -75,7 +84,7 @@ do  -- help split - open vim :help in current window {{{
         pattern = "*",
         group = group,
         desc = "Force :help to open in current buffer",
-        callback = function(opts) require("helpsplit").on_buf_new(opts) end,
+        callback = function(opts) require_local("helpsplit").on_buf_new(opts) end,
     })
 end -- help split }}}
 
@@ -578,17 +587,17 @@ do  -- vim-gitgutter - Show git diff in the gutter {{{
     vim.keymap.set("n", "<leader>hd", vim.cmd.GitGutterDiffOrig, M.with_desc("show full hunk diff in split window"))
 
     vim.api.nvim_create_user_command("GitGutterNextHunkAllBufs", function(opts)
-        require("vim-gitgutter-ext").next_hunk_all_bufs(opts.count)
+        require_local("vim-gitgutter-ext").next_hunk_all_bufs(opts.count)
     end, { count = 1, desc = "goto next git hunk across all open buffers" })
 
     vim.api.nvim_create_user_command("GitGutterPrevHunkAllBufs", function(opts)
-        require("vim-gitgutter-ext").prev_hunk_all_bufs(opts.count)
+        require_local("vim-gitgutter-ext").prev_hunk_all_bufs(opts.count)
     end, { count = 1, desc = "goto prev git hunk across all open buffers" })
 
     -- Make GitGutter(Next|Prev)HunkAllBufs repeatable
     local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
-        function() require("vim-gitgutter-ext").next_hunk_all_bufs(1) end,
-        function() require("vim-gitgutter-ext").prev_hunk_all_bufs(1) end
+        function() require_local("vim-gitgutter-ext").next_hunk_all_bufs(1) end,
+        function() require_local("vim-gitgutter-ext").prev_hunk_all_bufs(1) end
     )
     vim.keymap.set({ "n", "x", "o" }, "]h", M.recenter_after(move_hunk_next), M.with_desc("goto next git hunk"))
     vim.keymap.set({ "n", "x", "o" }, "[h", M.recenter_after(move_hunk_prev), M.with_desc("goto prev git hunk"))
@@ -1090,6 +1099,13 @@ do  -- BEHAVIOR {{{
         -- sum, sigma (upper)
         { "su", "∑" },
     })
+
+    -- In insert mode, expand ex: 'TODO' -> 'TODO(phlip9):'
+    vim.cmd([[
+        iabbrev TODO TODO(phlip9):
+        iabbrev FIXME FIXME(phlip9):
+        iabbrev NOTE NOTE(phlip9):
+    ]])
 end -- BEHAVIOR }}}
 
 do  -- TAB SETTINGS {{{
@@ -1124,8 +1140,26 @@ do  -- KEYBINDINGS {{{
     -- note: "_ is the blackhole register
     vim.keymap.set("v", "<leader>p", "\"_dP", opts)
 
-    -- Reload nvimrc
-    vim.keymap.set("n", "<leader>V", ":source $MYVIMRC<CR>:filetype detect<CR>:echo 'nvim config reloaded'<CR>", opts)
+    -- Reload nvim/init.lua (and all local modules)
+    local function reload_nvim_config()
+        -- if a module has `_is_local_module` set to true (i.e., it was loaded
+        -- with `require_local(..)`), then unload it from the package require()
+        -- cache so it gets reloaded on next require().
+        for name, pkg in pairs(package.loaded) do
+            if type(pkg) == "table" and rawget(pkg, "_is_local_module") then
+                package.loaded[name] = nil
+                vim.notify("- unloaded: " .. name, vim.log.levels.DEBUG)
+            end
+        end
+
+        vim.cmd("source $MYVIMRC")
+        vim.cmd("filetype detect")
+        vim.notify("Reloaded nvim/init.lua", vim.log.levels.INFO)
+    end
+    vim.keymap.set("n", "<leader>nr", reload_nvim_config, opts)
+
+    -- Edit nvim/init.lua
+    vim.keymap.set("n", "<leader>ne", ":e $MYVIMRC<CR>", opts)
 
     -- remap Visual Block selection to something that doesn't conflict with
     -- system copy/paste

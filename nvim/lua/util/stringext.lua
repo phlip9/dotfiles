@@ -1,5 +1,7 @@
 -- Lua `string` extensions
 
+local M = {}
+
 ---Only append `value` to the string `s` if `s` doesn't already contain `value`.
 ---@param s string
 ---@param value string
@@ -14,3 +16,5 @@ function string.append_once(s, value, delim)
         return s
     end
 end
+
+return M
