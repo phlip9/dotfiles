@@ -6,7 +6,7 @@
   nix-update-script,
 }:
 let
-  version = "0.72.0";
+  version = "0.79.0";
 
   # ```bash
   # $ (export version="0.72.0" target="x86_64-unknown-linux-gnu";
@@ -16,12 +16,12 @@ let
     x86_64-linux = rec {
       target = "x86_64-unknown-linux-gnu";
       url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${target}.tar.gz";
-      hash = "sha256-oOSVzMCP0dE37CFN9Wx1Mg5S0Hf9k6i1T0UwkUK8Xh8=";
+      hash = "sha256-qkoT2tww6m6ybalOe5LgGDTBwEtc9Fr4HJTW83PS+C0=";
     };
     aarch64-darwin = rec {
       target = "aarch64-apple-darwin";
       url = "https://github.com/openai/codex/releases/download/rust-v${version}/codex-${target}.tar.gz";
-      hash = "sha256-+ce2hx8FClfX5owsAZY8DjTEBCuZ8YDs35UNybGsevg=";
+      hash = "sha256-fwHZr05y5HNVf6qjI936Bk0VBqdZ9CWYOoWqX6cJo+o=";
     };
   };
 
