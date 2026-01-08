@@ -89,7 +89,12 @@ rec {
   #   cargo = fenixPkgs.stable.cargo;
   # };
 
-  std = pkgs.callPackage ./rust-std3.nix {
+  std3 = pkgs.callPackage ./rust-std3.nix {
+    rustc = fenix-rustc;
+    cargo = fenixPkgs.stable.cargo;
+  };
+
+  std = pkgs.callPackage ./rust-std4.nix {
     rustc = fenix-rustc;
     cargo = fenixPkgs.stable.cargo;
   };
