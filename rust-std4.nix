@@ -39,6 +39,7 @@ let
   # Use plain, unwrapped (not nixpkgs wrapped) compilers and binutils.
   bintools-unwrapped = llvmPackages.bintools-unwrapped;
   clang-unwrapped = llvmPackages.clang-unwrapped;
+  lld = llvmPackages.lld;
   libcxx = llvmPackages.libcxx.dev;
 
   # snmalloc needs c++ std headers to compile. We have to configure them a bit
@@ -223,7 +224,6 @@ stdenv.mkDerivation (final: {
       "--host=${hostPlatform.rust.rustcTargetSpec}"
       "--target=${target}"
 
-      "--disable-lld"
       "--disable-llvm-bitcode-linker"
       "--enable-llvm-link-shared"
       "--enable-local-rebuild"
@@ -254,7 +254,7 @@ stdenv.mkDerivation (final: {
       "${setTarget}.cc=${lib.getExe' clang-unwrapped "clang"}"
       "${setTarget}.crt-static=true"
       "${setTarget}.cxx=${lib.getExe' clang-unwrapped "clang++"}"
-      "${setTarget}.linker=${lib.getExe' clang-unwrapped "clang"}"
+      "${setTarget}.linker=${lib.getExe' lld "ld.lld"}"
       "${setTarget}.llvm-config=${llvmSharedForHost.dev}/bin/llvm-config"
       "${setTarget}.ranlib=${lib.getExe' bintools-unwrapped "ar"}"
     ];
@@ -290,7 +290,8 @@ stdenv.mkDerivation (final: {
     # remove stuff that doesn't make sense for a rust-std only nix package
     rmdir $out/etc
     rm $out/lib/rustlib/install.log $out/lib/rustlib/uninstall.sh \
-       $out/lib/rustlib/rust-installer-version $out/lib/rustlib/components
+       $out/lib/rustlib/rust-installer-version $out/lib/rustlib/components \
+       $out/lib/rustlib/manifest-rust-std-x86_64-fortanix-unknown-sgx
   '';
 
   outputs = [ "out" ];

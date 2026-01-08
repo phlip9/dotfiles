@@ -104,6 +104,14 @@ rec {
     cargo = fenixPkgs.stable.cargo;
   };
 
+  fenix-with-sgx = fenixPkgs.combine [
+    fenixPkgs.stable.rustc
+    fenixPkgs.stable.cargo
+    std
+  ];
+
+  # rustup toolchain link 1.90.0-sgx /nix/store/0jxypwhv53zm707j8ms5wyg569fh7sp3-rust-mixed
+
   # std = pkgsUnstable.callPackage ./rust-std2.nix { };
 
   fetchLockedFlake =
