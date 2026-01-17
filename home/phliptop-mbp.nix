@@ -53,6 +53,7 @@
     # ./mods/lsyncd.nix
     # ./mods/mpv.nix
     ./mods/nvim/default.nix
+    ./mods/omnara.nix
     ./mods/python.nix
     ./mods/ssh.nix
     ./mods/ssh-agent.nix

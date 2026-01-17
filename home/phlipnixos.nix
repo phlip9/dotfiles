@@ -57,6 +57,7 @@
     ./mods/niri.nix
     ./mods/noctalia.nix
     ./mods/nvim/default.nix
+    # ./mods/omnara.nix
     # ./mods/postgres.nix
     ./mods/python.nix
     ./mods/ssh.nix
