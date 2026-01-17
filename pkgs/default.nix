@@ -68,6 +68,9 @@ in
     version = builtins.substring 1 100 sources.noctalia-shell.version;
   };
 
+  # omnara - Omnara CLI
+  omnara = callPackage ./omnara { };
+
   # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix { };
 
