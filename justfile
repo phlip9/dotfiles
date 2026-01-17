@@ -17,6 +17,7 @@ bash-lint:
     nix shell -f . pkgs.shellcheck pkgs.fd --command \
         fd --type file '^.*(hms|nos|bashrc|\.sh)$' \
             --exclude pkgs/claude-code \
+            --exclude pkgs/codex \
             --exec shellcheck {}
 
 nix-lint:

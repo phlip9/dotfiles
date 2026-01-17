@@ -15,7 +15,7 @@ in
   claude-code = callPackage ./claude-code { };
 
   # codex - OpenAI codex CLI
-  codex = callPackage ./codex.nix { };
+  codex = callPackage ./codex { };
 
   # cataclysm-dda - Cataclysm: Dark Days Ahead
   cataclysm-dda = callPackage ./cataclysm-dda.nix { };
