@@ -26,14 +26,16 @@ stdenv.mkDerivation {
   '';
 
   fixupPhase = lib.optionalString stdenv.hostPlatform.isLinux ''
-    patchelf --set-rpath "${
-      lib.makeLibraryPath [
-        stdenv.cc.cc
-        stdenv.cc.libc
-        openssl
-      ]
-    }" "$out/bin/codex"
-    patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" "$out/bin/codex"
+    patchelf \
+      --set-rpath "${
+        lib.makeLibraryPath [
+          stdenv.cc.cc
+          stdenv.cc.libc
+          openssl
+        ]
+      }" \
+      --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+      "$out/bin/codex"
   '';
 
   passthru.updateScript = ./update.sh;
@@ -42,6 +44,9 @@ stdenv.mkDerivation {
     description = "OpenAI Codex CLI";
     homepage = "https://github.com/openai/codex";
     mainProgram = "codex";
-    platforms = [ "x86_64-linux" "aarch64-darwin" ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-darwin"
+    ];
   };
 }

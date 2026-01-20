@@ -21,18 +21,20 @@ stdenv.mkDerivation {
     runHook preInstall
     mkdir -p $out/bin
     cp $src $out/bin/omnara
-    chmod +x $out/bin/omnara
+    chmod 0755 $out/bin/omnara
     runHook postInstall
   '';
 
   fixupPhase = lib.optionalString stdenv.hostPlatform.isLinux ''
-    patchelf --set-rpath "${
-      lib.makeLibraryPath [
-        stdenv.cc.cc
-        stdenv.cc.libc
-      ]
-    }" "$out/bin/omnara"
-    patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" "$out/bin/omnara"
+    patchelf \
+      --set-rpath "${
+        lib.makeLibraryPath [
+          stdenv.cc.cc
+          stdenv.cc.libc
+        ]
+      }" \
+      --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+      "$out/bin/omnara"
   '';
 
   passthru.updateScript = ./update.sh;
@@ -41,6 +43,9 @@ stdenv.mkDerivation {
     description = "Omnara CLI";
     homepage = "https://omnara.com";
     mainProgram = "omnara";
-    platforms = [ "x86_64-linux" "aarch64-darwin" ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-darwin"
+    ];
   };
 }
