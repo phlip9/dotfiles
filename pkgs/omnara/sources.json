@@ -1,13 +1,13 @@
 {
-  "version": "0.13.4",
+  "version": "0.13.5",
   "x86_64-linux": {
     "target": "linux-x64",
-    "url": "https://releases.omnara.com/0.13.4/omnara-linux-x64",
-    "hash": "sha256-ZMb5cwzpJfBd0PP7svgKKht7BJc9z3pu71UKgh0n/jI="
+    "url": "https://releases.omnara.com/0.13.5/omnara-linux-x64",
+    "hash": "sha256-E+XcJt2HNL67AsJ+vk9BlcdqR/pUxDfNdA5x+085gi0="
   },
   "aarch64-darwin": {
     "target": "darwin-arm64",
-    "url": "https://releases.omnara.com/0.13.4/omnara-darwin-arm64",
-    "hash": "sha256-u4Rk5VwW/vWGtmU+4JWheIJF+wv+wci3O/NYU/PpL4c="
+    "url": "https://releases.omnara.com/0.13.5/omnara-darwin-arm64",
+    "hash": "sha256-p8sz6RpXaYOsn/pj0KxYmluj38g9IYk8DHA4qwy9fpw="
   }
 }
