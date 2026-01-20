@@ -69,6 +69,12 @@
         hostname = "lexe-staging-esplora.uswest2.staging.lexe.app";
         port = 22022;
       };
+      "omnara1" = {
+        user = "phlip9";
+        hostname = "omnara1.phlip9.com";
+        port = 22022;
+        forwardAgent = true;
+      };
     };
   };
 }

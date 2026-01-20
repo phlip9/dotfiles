@@ -1,5 +1,18 @@
 {
   "pins": {
+    "disko": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "nix-community",
+        "repo": "disko"
+      },
+      "branch": "master",
+      "submodules": false,
+      "revision": "916506443ecd0d0b4a0f4cf9d40a3c22ce39b378",
+      "url": "https://github.com/nix-community/disko/archive/916506443ecd0d0b4a0f4cf9d40a3c22ce39b378.tar.gz",
+      "hash": "1bp5hqzqqz99qgx55r50dbqz1b6x4i8q15xnxb0sj31ykbxhqj9z"
+    },
     "home-manager": {
       "type": "Git",
       "repository": {

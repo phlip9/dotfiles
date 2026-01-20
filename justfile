@@ -47,3 +47,20 @@ nvim-print-base-runtime-dir:
 # Boot into Limine UEFI bootloader in a QEMU VM
 qemu-bootloader:
     ./bin/qemu-bootloader.sh
+
+deploy-omnara1-nixos-anywhere:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    IFS=$'\n' paths=($(nix build -f . --print-out-paths --no-link \
+        pkgsUnstable.nixos-anywhere \
+        nixosConfigs.omnara1.config.system.build.diskoScript \
+        nixosConfigs.omnara1.config.system.build.toplevel))
+
+    nixos_anywhere=${paths[0]}
+    disko_script=${paths[1]}
+    toplevel=${paths[2]}
+
+    "$nixos_anywhere/bin/nixos-anywhere" -L \
+        --store-paths "$disko_script" "$toplevel" \
+        root@omnara1.phlip9.com

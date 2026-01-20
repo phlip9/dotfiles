@@ -52,4 +52,15 @@
       pkgsYubikey = pkgs;
     };
   };
+
+  omnara1 = hm.lib.homeManagerConfiguration {
+    pkgs = pkgs;
+    modules = [ ./omnara1.nix ];
+    extraSpecialArgs = {
+      inherit phlipPkgs pkgs;
+      inputs = sources;
+      pkgsUnfree = pkgs;
+      pkgsYubikey = pkgs;
+    };
+  };
 }
