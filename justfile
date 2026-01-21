@@ -64,3 +64,9 @@ deploy-omnara1-nixos-anywhere:
     "$nixos_anywhere/bin/nixos-anywhere" -L \
         --store-paths "$disko_script" "$toplevel" \
         root@omnara1.phlip9.com
+
+deploy-omnara1-nixos-rebuild args="switch":
+    nix shell -f . pkgsNixos.nixos-rebuild-ng --command \
+        nixos-rebuild -f . -A nixosConfigs.omnara1 \
+            --target-host omnara1 \
+            {{args}}

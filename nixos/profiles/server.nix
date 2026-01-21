@@ -84,7 +84,6 @@
   i18n.defaultLocale = "en_US.UTF-8";
 
   # sudo-rs - memory-safe sudo
-  security.sudo.enable = false;
   security.sudo-rs = {
     enable = true;
     execWheelOnly = true;

@@ -91,11 +91,19 @@
     ];
   };
 
-  security.sudo.wheelNeedsPassword = false;
+  # password-less sudo for wheel group
+  security.sudo-rs.wheelNeedsPassword = false;
 
   # Allow all sudoers to manage NixOS system.
   nix.settings.trusted-users = [
     "root"
     "@wheel"
   ];
+
+  # Run non-NixOS binaries
+  programs.nix-ld = {
+    enable = true;
+    libraries = [
+    ];
+  };
 }
