@@ -21,6 +21,12 @@
   home.username = "phlip9";
   home.homeDirectory = "/home/phlip9";
 
+  # This dev machine uses its own GitHub account.
+  programs.git = {
+    userName = "lexe-agent (phlip9)";
+    userEmail = "admin+github.agent@lexe.app";
+  };
+
   # This value determines the Home Manager release that your configuration is
   # compatible with. This helps avoid breakage when a new Home Manager release
   # introduces backwards incompatible changes.
@@ -41,22 +47,22 @@
     # ./mods/direnv.nix
     # ./mods/fonts.nix
     ./mods/fzf.nix
-    # ./mods/gdb.nix
+    ./mods/gdb.nix
+    ./mods/gh.nix
+    ./mods/git.nix
     # ./mods/gpg.nix
     # ./mods/gpg-agent.nix
-    # ./mods/gh.nix
-    ./mods/git.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
-    # ./mods/lexe.nix
+    ./mods/lexe.nix
     ./mods/local-bin.nix
     # ./mods/lsyncd.nix
     # ./mods/mpv.nix
     # ./mods/niri.nix
     # ./mods/noctalia.nix
     ./mods/nvim/default.nix
-    # ./mods/omnara.nix
-    # ./mods/postgres.nix
+    ./mods/omnara.nix
+    ./mods/postgres.nix
     ./mods/python.nix
     ./mods/ssh.nix
     # ./mods/ssh-agent.nix
@@ -75,6 +81,12 @@
     pkgs.rustup
     pkgs.uv
     pkgs.htmlq
+
+    # claude - AI cli
+    phlipPkgs.claude-code
+
+    # codex - AI cli
+    phlipPkgs.codex
   ];
 
   # Let Home Manager install and manage itself.

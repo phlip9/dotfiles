@@ -25,8 +25,8 @@ in
   programs.git = {
     enable = true;
 
-    userName = "Philip Kannegaard Hayes";
-    userEmail = "philiphayes9@gmail.com";
+    userName = lib.mkDefault "Philip Kannegaard Hayes";
+    userEmail = lib.mkDefault "philiphayes9@gmail.com";
 
     # gpg commit signing
     signing = {

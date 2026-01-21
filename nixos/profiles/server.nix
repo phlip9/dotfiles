@@ -12,6 +12,15 @@
     (modulesPath + "/profiles/headless.nix")
   ];
 
+  # Bootloader
+  boot.loader = {
+    # Limit the number of generations we hold on to.
+    grub.configurationLimit = 4;
+
+    # Servers are headless, don't wait for someone to select a boot entry.
+    timeout = 0;
+  };
+
   # Firewall
   networking.firewall.enable = true;
 
@@ -88,6 +97,9 @@
     enable = true;
     execWheelOnly = true;
   };
+
+  # password-less sudo for wheel group
+  security.sudo-rs.wheelNeedsPassword = false;
 
   # Basic packages
   environment.systemPackages = with pkgs; [

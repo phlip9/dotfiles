@@ -26,7 +26,6 @@
       efiSupport = true;
       efiInstallAsRemovable = true;
     };
-    timeout = 0;
   };
 
   # Use latest kernel
@@ -43,10 +42,9 @@
   systemd.network.enable = true;
   networking.useNetworkd = true;
 
+  # Static network configuration (Hetzner)
   networking.wireless.enable = false;
   networking.useDHCP = false;
-
-  # Static network configuration (Hetzner)
   networking.interfaces.eno1 = {
     ipv4.addresses = [
       {
@@ -92,16 +90,11 @@
     openssh.authorizedKeys.keys = [
       "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIP/8j7BMuNsn+aXTjm3LP8mDR8q/GylbrkGVBn1PBrwhAAAABHNzaDo= phlip9-5ci-fips"
     ];
+
+    # Enable "linger" so that systemd will start the user service and all
+    # `default.target`-triggered user services automatically on boot.
+    linger = true;
   };
-
-  # password-less sudo for wheel group
-  security.sudo-rs.wheelNeedsPassword = false;
-
-  # Allow all sudoers to manage NixOS system.
-  nix.settings.trusted-users = [
-    "root"
-    "@wheel"
-  ];
 
   # Run non-NixOS binaries
   programs.nix-ld = {
