@@ -2,6 +2,7 @@
 {
   buildNpmPackage,
   fetchzip,
+  versionCheckHook,
 }:
 buildNpmPackage (final: {
   pname = "claude-code";
@@ -29,6 +30,11 @@ buildNpmPackage (final: {
       --set CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC 1 \
       --unset DEV
   '';
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgram = "${placeholder "out"}/bin/claude";
+  versionCheckProgramArg = "--version";
+  doInstallCheck = true;
 
   passthru.updateScript = ./update.sh;
 
