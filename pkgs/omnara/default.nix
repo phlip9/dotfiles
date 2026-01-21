@@ -1,13 +1,21 @@
+# Packaging notes:
+# - The omnara binary is really a bun single-file executable. You can read the
+#   minified typescript source by dumping the binary's strings lol... This is
+#   how I found the OMNARA_NO_UPDATE env.
+# - Manual patchelf appears to corrupt the binary somehow.
+
 {
+  autoPatchelfHook,
   fetchurl,
   lib,
-  stdenv,
+  makeBinaryWrapper,
+  stdenvNoCC,
 }:
 let
   sources = lib.importJSON ./sources.json;
-  source = sources.${stdenv.hostPlatform.system};
+  source = sources.${stdenvNoCC.hostPlatform.system};
 in
-stdenv.mkDerivation {
+stdenvNoCC.mkDerivation {
   pname = "omnara";
   inherit (sources) version;
 
@@ -16,26 +24,29 @@ stdenv.mkDerivation {
   };
 
   dontUnpack = true;
+  dontConfigure = true;
+  dontBuild = true;
+
+  strictDeps = true;
+  nativeBuildInputs = [
+    makeBinaryWrapper
+  ]
+  ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [
+    autoPatchelfHook
+  ];
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/bin
-    cp $src $out/bin/omnara
-    chmod 0755 $out/bin/omnara
+
+    install -Dm 755 $src $out/bin/omnara
+
+    wrapProgram $out/bin/omnara \
+      --set OMNARA_NO_UPDATE 1
+
     runHook postInstall
   '';
 
-  fixupPhase = lib.optionalString stdenv.hostPlatform.isLinux ''
-    patchelf \
-      --set-rpath "${
-        lib.makeLibraryPath [
-          stdenv.cc.cc
-          stdenv.cc.libc
-        ]
-      }" \
-      --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-      "$out/bin/omnara"
-  '';
+  dontStrip = true;
 
   passthru.updateScript = ./update.sh;
 
