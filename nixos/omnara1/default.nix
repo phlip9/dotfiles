@@ -26,7 +26,6 @@
       efiSupport = true;
       efiInstallAsRemovable = true;
     };
-    # efi.canTouchEfiVariables = true;
     timeout = 0;
   };
 
@@ -45,38 +44,42 @@
   networking.useNetworkd = true;
 
   networking.wireless.enable = false;
-  networking.useDHCP = true;
+  networking.useDHCP = false;
 
-  # # Static network configuration (Hetzner)
-  # networking.useDHCP = false;
-  # networking.interfaces.enp0s31f6 = {
-  #   ipv4.addresses = [
-  #     {
-  #       address = "95.217.195.225";
-  #       prefixLength = 32;
-  #     }
-  #   ];
-  #   ipv6.addresses = [
-  #     {
-  #       address = "2a01:4f9:4a:52de::2";
-  #       prefixLength = 64;
-  #     }
-  #   ];
-  # };
-  # networking.defaultGateway = {
-  #   address = "95.217.195.193";
-  #   interface = "enp0s31f6";
-  # };
-  # networking.defaultGateway6 = {
-  #   address = "fe80::1";
-  #   interface = "enp0s31f6";
-  # };
-  # networking.nameservers = [
-  #   "185.12.64.1"
-  #   "185.12.64.2"
-  #   "2a01:4ff:ff00::add:1"
-  #   "2a01:4ff:ff00::add:2"
-  # ];
+  # Static network configuration (Hetzner)
+  networking.interfaces.eno1 = {
+    ipv4.addresses = [
+      {
+        address = "95.217.195.225";
+        prefixLength = 26;
+      }
+    ];
+    ipv6.addresses = [
+      {
+        address = "2a01:4f9:4a:52de::2";
+        prefixLength = 64;
+      }
+    ];
+  };
+  networking.defaultGateway = {
+    address = "95.217.195.193";
+    interface = "eno1";
+  };
+  networking.defaultGateway6 = {
+    address = "fe80::1";
+    interface = "eno1";
+  };
+  networking.nameservers = [
+    "185.12.64.1"
+    "185.12.64.2"
+    "2a01:4ff:ff00::add:1"
+    "2a01:4ff:ff00::add:2"
+  ];
+  services.timesyncd.servers = [
+    "ntp1.hetzner.de"
+    "ntp2.hetzner.com"
+    "ntp3.hetzner.net"
+  ];
 
   # users and groups are static and must be configured via nix
   users.mutableUsers = false;
