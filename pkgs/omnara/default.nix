@@ -41,7 +41,8 @@ stdenvNoCC.mkDerivation {
     install -Dm 755 $src $out/bin/omnara
 
     wrapProgram $out/bin/omnara \
-      --set OMNARA_NO_UPDATE 1
+      --set OMNARA_NO_UPDATE 1 \
+      --set OMNARA_RELEASE_URL "http://localhost:6969"
 
     runHook postInstall
   '';

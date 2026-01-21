@@ -13,6 +13,13 @@ let
   omnara = phlipPkgs.omnara;
 
   homeDir = config.home.homeDirectory;
+
+  # Run as a login shell so we get normal PATH + aliases
+  execStart = [
+    "${pkgs.bashInteractive}/bin/bash"
+    "-lc"
+    "'exec ${omnara}/bin/omnara daemon run-service'"
+  ];
 in
 {
   # Add omnara to PATH
@@ -29,7 +36,7 @@ in
 
     Service = {
       Type = "simple";
-      ExecStart = "${omnara}/bin/omnara daemon run-service";
+      ExecStart = builtins.concatStringsSep " " execStart;
       Restart = "on-failure";
       RestartSec = 5;
       WorkingDirectory = homeDir;
@@ -41,11 +48,7 @@ in
     enable = true;
     config = {
       ProcessType = "Background";
-      ProgramArguments = [
-        "${omnara}/bin/omnara"
-        "daemon"
-        "run-service"
-      ];
+      ProgramArguments = execStart;
       WorkingDirectory = homeDir;
       RunAtLoad = true;
       KeepAlive = {
