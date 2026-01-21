@@ -16,7 +16,7 @@ esac
 # Fetch latest binary to get version
 echo "Fetching latest omnara binary..."
 TMPDIR=$(mktemp -d)
-trap "rm -rf $TMPDIR" EXIT
+trap 'rm -rf "$TMPDIR"' EXIT
 
 curl -sL "https://releases.omnara.com/latest/omnara-${CURRENT_TARGET}" -o "$TMPDIR/omnara"
 chmod +x "$TMPDIR/omnara"

@@ -10,7 +10,7 @@ sync {
         "*~",
         ".git/",
     },
-    excludeFrom = "/home/phlip9/dev/rust-sgx/.gitignore",
+    excludeFrom = "/home/phlip9/dev/dotfiles/.gitignore",
     rsync = {
         archive = true,
         compress = true,

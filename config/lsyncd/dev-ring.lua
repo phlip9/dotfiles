@@ -14,6 +14,7 @@ sync {
         "/result.*",
         "target/",
     },
+    excludeFrom = "/home/phlip9/dev/ring/.gitignore",
     rsync = {
         archive = true,
         compress = true,
