@@ -62,3 +62,11 @@
 ### lua
 
 - use `require_local("module")` when importing modules from `nvim/lua/`
+
+## Creating PRs
+
+Create PRs using the `gh` CLI tool:
+
+```bash
+$ gh pr create --repo phlip9/dotfiles --title "..." --body "..."
+```
