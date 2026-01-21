@@ -94,5 +94,6 @@
     bind.dnsutils
     git
     htop
+    rsync
   ];
 }
