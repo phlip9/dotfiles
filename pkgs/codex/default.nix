@@ -3,6 +3,7 @@
   lib,
   openssl,
   stdenv,
+  versionCheckHook,
 }:
 let
   sources = lib.importJSON ./sources.json;
@@ -37,6 +38,10 @@ stdenv.mkDerivation {
       --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
       "$out/bin/codex"
   '';
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "--version";
+  doInstallCheck = true;
 
   passthru.updateScript = ./update.sh;
 

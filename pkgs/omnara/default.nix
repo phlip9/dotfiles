@@ -10,6 +10,7 @@
   lib,
   makeBinaryWrapper,
   stdenvNoCC,
+  versionCheckHook,
 }:
 let
   sources = lib.importJSON ./sources.json;
@@ -48,6 +49,10 @@ stdenvNoCC.mkDerivation {
   '';
 
   dontStrip = true;
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  versionCheckProgramArg = "--version";
+  doInstallCheck = true;
 
   passthru.updateScript = ./update.sh;
 
