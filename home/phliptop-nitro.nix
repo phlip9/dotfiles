@@ -86,7 +86,6 @@
     pkgs.toml-cli
     pkgsYubikey.age-plugin-yubikey
 
-    # # TODO(phlip9): remove
     # pkgs.openssl
     # pkgs.openssl.dev
     # pkgs.pkg-config
@@ -109,7 +108,6 @@
     # '')
   ];
 
-  # # TODO(phlip9): remove
   # programs.bash.initExtra = lib.mkAfter ''
   #   export PKG_CONFIG_PATH="$HOME/.nix-profile/lib/pkgconfig"
   # '';
