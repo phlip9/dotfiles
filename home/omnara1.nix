@@ -50,8 +50,8 @@
     ./mods/gdb.nix
     ./mods/gh.nix
     ./mods/git.nix
-    # ./mods/gpg.nix
-    # ./mods/gpg-agent.nix
+    ./mods/gpg.nix
+    ./mods/gpg-agent.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
     ./mods/lexe.nix
