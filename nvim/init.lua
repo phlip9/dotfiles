@@ -586,18 +586,10 @@ do  -- vim-gitgutter - Show git diff in the gutter {{{
     vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, M.with_desc("preview git hunk in popup"))
     vim.keymap.set("n", "<leader>hd", vim.cmd.GitGutterDiffOrig, M.with_desc("show full hunk diff in split window"))
 
-    vim.api.nvim_create_user_command("GitGutterNextHunkAllBufs", function(opts)
-        require_local("vim-gitgutter-ext").next_hunk_all_bufs(opts.count)
-    end, { count = 1, desc = "goto next git hunk across all open buffers" })
-
-    vim.api.nvim_create_user_command("GitGutterPrevHunkAllBufs", function(opts)
-        require_local("vim-gitgutter-ext").prev_hunk_all_bufs(opts.count)
-    end, { count = 1, desc = "goto prev git hunk across all open buffers" })
-
-    -- Make GitGutter(Next|Prev)HunkAllBufs repeatable
+    -- Make GitGutter(Next|Prev)Hunk repeatable
     local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
-        function() require_local("vim-gitgutter-ext").next_hunk_all_bufs(1) end,
-        function() require_local("vim-gitgutter-ext").prev_hunk_all_bufs(1) end
+        vim.cmd.GitGutterNextHunk,
+        vim.cmd.GitGutterPrevHunk
     )
     vim.keymap.set({ "n", "x", "o" }, "]h", M.recenter_after(move_hunk_next), M.with_desc("goto next git hunk"))
     vim.keymap.set({ "n", "x", "o" }, "[h", M.recenter_after(move_hunk_prev), M.with_desc("goto prev git hunk"))
