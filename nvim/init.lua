@@ -1115,22 +1115,22 @@ do  -- KEYBINDINGS {{{
     local opts = { silent = true, remap = false }
 
     -- Delete `keyworkprg`/man-page keybind
-    vim.keymap.set("v", "K", "<Nop>", opts)
+    vim.keymap.set("v", "K", "<Nop>", M.with_desc("disable K in visual", opts))
 
     -- map arrow keys to something more useful (indent/unindent)
-    vim.keymap.set("n", "<Left>", "<<", opts)
-    vim.keymap.set("n", "<Right>", ">>", opts)
+    vim.keymap.set("n", "<Left>", "<<", M.with_desc("unindent line", opts))
+    vim.keymap.set("n", "<Right>", ">>", M.with_desc("indent line", opts))
 
-    vim.keymap.set("v", "<Left>", "<gv", opts)
-    vim.keymap.set("v", "<Right>", ">gv", opts)
+    vim.keymap.set("v", "<Left>", "<gv", M.with_desc("unindent selection", opts))
+    vim.keymap.set("v", "<Right>", ">gv", M.with_desc("indent selection", opts))
 
     -- up/down adds line above/below
-    vim.keymap.set("n", "<Up>", "O<Esc>j", opts)
-    vim.keymap.set("n", "<Down>", "o<Esc>k", opts)
+    vim.keymap.set("n", "<Up>", "O<Esc>j", M.with_desc("add blank line above", opts))
+    vim.keymap.set("n", "<Down>", "o<Esc>k", M.with_desc("add blank line below", opts))
 
     -- replace currently selected text w/o clobbering the yank register
     -- note: "_ is the blackhole register
-    vim.keymap.set("v", "<leader>p", "\"_dP", opts)
+    vim.keymap.set("v", "<leader>p", "\"_dP", M.with_desc("paste without clobbering register", opts))
 
     -- Reload nvim/init.lua (and all local modules)
     local function reload_nvim_config()
@@ -1148,28 +1148,28 @@ do  -- KEYBINDINGS {{{
         vim.cmd("filetype detect")
         vim.notify("Reloaded nvim/init.lua", vim.log.levels.INFO)
     end
-    vim.keymap.set("n", "<leader>nr", reload_nvim_config, opts)
+    vim.keymap.set("n", "<leader>nr", reload_nvim_config, M.with_desc("reload nvim config", opts))
 
     -- Edit nvim/init.lua
-    vim.keymap.set("n", "<leader>ne", ":e $MYVIMRC<CR>", opts)
+    vim.keymap.set("n", "<leader>ne", ":e $MYVIMRC<CR>", M.with_desc("edit nvim config", opts))
 
     -- remap Visual Block selection to something that doesn't conflict with
     -- system copy/paste
-    vim.keymap.set("n", "<leader>v", "<C-v>", opts)
+    vim.keymap.set("n", "<leader>v", "<C-v>", M.with_desc("visual block mode", opts))
 
     -- map S-J and S-K to next and prev buffer
-    vim.keymap.set("n", "J", ":bp<CR>", opts)
-    vim.keymap.set("n", "K", ":bn<CR>", opts)
+    vim.keymap.set("n", "J", ":bp<CR>", M.with_desc("prev buffer", opts))
+    vim.keymap.set("n", "K", ":bn<CR>", M.with_desc("next buffer", opts))
 
     -- map S-H and S-L to undo and redo
-    vim.keymap.set("n", "H", "u", opts)
-    vim.keymap.set("n", "L", "<C-R>", opts)
+    vim.keymap.set("n", "H", "u", M.with_desc("undo", opts))
+    vim.keymap.set("n", "L", "<C-R>", M.with_desc("redo", opts))
 
     -- Window movement w/ CTRL + h,j,k,l
-    vim.keymap.set("n", "<C-h>", "<C-w>h", opts)
-    vim.keymap.set("n", "<C-j>", "<C-w>j", opts)
-    vim.keymap.set("n", "<C-k>", "<C-w>k", opts)
-    vim.keymap.set("n", "<C-l>", "<C-w>l", opts)
+    vim.keymap.set("n", "<C-h>", "<C-w>h", M.with_desc("move to left window", opts))
+    vim.keymap.set("n", "<C-j>", "<C-w>j", M.with_desc("move to window below", opts))
+    vim.keymap.set("n", "<C-k>", "<C-w>k", M.with_desc("move to window above", opts))
+    vim.keymap.set("n", "<C-l>", "<C-w>l", M.with_desc("move to right window", opts))
 
     -- copy path and copy relative path (yp, yrp)
     local function copy_absolute_path()
@@ -1215,13 +1215,13 @@ do  -- KEYBINDINGS {{{
     --
 
     -- Use escape to go back to normal mode
-    vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", opts)
+    vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", M.with_desc("exit terminal mode", opts))
 
     -- Window movement in terminal mode w/ CTRL + h,j,k,l
-    vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-W>h", opts)
-    vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-W>j", opts)
-    vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-W>k", opts)
-    vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-W>l", opts)
+    vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-W>h", M.with_desc("move to left window", opts))
+    vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-W>j", M.with_desc("move to window below", opts))
+    vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-W>k", M.with_desc("move to window above", opts))
+    vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-W>l", M.with_desc("move to right window", opts))
 
     --
     -- "lazy-shift" aliases
