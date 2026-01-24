@@ -211,6 +211,10 @@ in
       rbu = "!git rebase upstream/$(git master)";
       rs = "reset";
       rsh = "reset --hard";
+      rsho = "!git reset --hard origin/$(git branch --show-current)";
+      rshom = "!git reset --hard origin/$(git master)";
+      rshu = "!git reset --hard upstream/$(git branch --show-current)";
+      rshum = "!git reset --hard upstream/$(git master)";
       rso = "!git reset --hard origin/$(git master)";
       rsu = "!git reset --hard upstream/$(git master)";
       s = "status";
