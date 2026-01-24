@@ -70,3 +70,7 @@ deploy-omnara1-nixos-rebuild args="switch":
         nixos-rebuild -f . -A nixosConfigs.omnara1 \
             --target-host omnara1 \
             {{args}}
+
+# Update phlipPkgs package(s) with updateScript
+phlippkgs-update pkg="":
+    nix-shell pkgs/update.nix {{ if pkg != "" { "--argstr package " + pkg } else { "" } }}
