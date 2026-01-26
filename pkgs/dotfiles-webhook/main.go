@@ -65,6 +65,7 @@ type app struct {
 	cfg    config
 	secret []byte
 	deb    *debouncer
+	run    func(context.Context) error
 }
 
 // pushEvent models the minimal fields we care about from a GitHub push.
@@ -90,7 +91,10 @@ func main() {
 	a := &app{
 		cfg:    cfg,
 		secret: secret,
+		run:    nil, // filled in below
 	}
+	// default run implementation points to git-backed sync.
+	a.run = a.runSync
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -101,9 +105,7 @@ func main() {
 	}
 
 	// Debounced worker for subsequent webhook-triggered syncs.
-	a.deb = newDebouncer(cfg.Quiet, func() error {
-		return a.runSync(ctx)
-	})
+	a.deb = newDebouncer(cfg.Quiet, func() error { return a.run(ctx) })
 
 	go a.deb.run(ctx)
 
@@ -235,7 +237,7 @@ func handleHealth(w http.ResponseWriter, _ *http.Request) {
 func (a *app) initialSync(ctx context.Context) error {
 	backoff := time.Second
 	for {
-		if err := a.runSync(ctx); err == nil {
+		if err := a.run(ctx); err == nil {
 			return nil
 		} else {
 			log.Printf("initial sync failed: %v; retrying in %s",
