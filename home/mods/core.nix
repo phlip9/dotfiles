@@ -2,6 +2,7 @@
 {
   config,
   lib,
+  phlipPkgs,
   pkgs,
   # TODO(phlip9): rename inputs -> sources
   inputs,
@@ -75,6 +76,13 @@
       pkgs.netcat-gnu # `nc`
       pkgs.socat
       pkgs.wget
+
+      # deploy
+      phlipPkgs.rage-age-compat
+      pkgs.rage
+      pkgs.sops
+      pkgs.ssh-to-age
+      pkgs.yq-go
     ];
 
     # Use consistent man across platforms

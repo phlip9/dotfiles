@@ -102,4 +102,7 @@
     libraries = [
     ];
   };
+
+  # TODO(phlip9): remove
+  sops.secrets.testkey = { };
 }

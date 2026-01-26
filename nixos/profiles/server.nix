@@ -1,5 +1,6 @@
 # Headless server profile
 {
+  config,
   lib,
   modulesPath,
   pkgs,
@@ -209,4 +210,9 @@
 
   # Servers don't need fonts
   fonts.fontconfig.enable = false;
+
+  # Secrets
+  sops = {
+    defaultSopsFile = ../${config.networking.hostName}/secrets.yaml;
+  };
 }

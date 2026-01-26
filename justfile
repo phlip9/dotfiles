@@ -66,8 +66,24 @@ deploy-bootstrap cfg:
         root@{{ cfg }}
 
 deploy *args:
-    nix shell -f . pkgsNixos.deploy-rs --command \
+    nix shell -f . pkgsUnstable.deploy-rs --command \
         deploy -f . {{ args }}
+
+# Make sure all sops secrets files are encrypted for all relevant keys.
+sops-updatekeys:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    combined_regex=$(
+        yq -r '.creation_rules[].path_regex | select(. != null)' .sops.yaml \
+            | sort -u \
+            | paste -sd'|'
+    )
+
+    [ -z "$combined_regex" ] && exit 0
+
+    fd --type file --full-path --regex "(${combined_regex})" \
+        --exec sops updatekeys {}
 
 # Update phlipPkgs package(s) with updateScript
 phlippkgs-update pkg="":

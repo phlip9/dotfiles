@@ -9,6 +9,7 @@
     }
   )
 
+  (sources.sops-nix + "/modules/sops/default.nix")
   (sources.noctalia-shell + "/nix/nixos-module.nix")
   ./phlippkgs.nix
   ./xremap.nix

@@ -59,6 +59,19 @@
       "revision": "33ac782ecf72b90efa5108865547c5c31f82c7f9",
       "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v3.7.5",
       "hash": "0lpbx4zlv4i7ygl66hiqmm7rvlr46w0f63qhblnc1yx75xhyq6jc"
+    },
+    "sops-nix": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "Mic92",
+        "repo": "sops-nix"
+      },
+      "branch": "master",
+      "submodules": false,
+      "revision": "2eb9eed7ef48908e0f02985919f7eb9d33fa758f",
+      "url": "https://github.com/Mic92/sops-nix/archive/2eb9eed7ef48908e0f02985919f7eb9d33fa758f.tar.gz",
+      "hash": "0p2a00wlkhhkmqkmxrvkb5ybp0xdw8pbksf5d7hwc6ly3pvfljzr"
     }
   },
   "version": 5

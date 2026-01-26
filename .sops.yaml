@@ -1,0 +1,12 @@
+# See: <./doc/SECRETS.md>
+
+keys:
+  - &phliptop-nitro age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
+  - &omnara1 age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
+
+creation_rules:
+  - path_regex: nixos/omnara1/secrets.yaml$
+    key_groups:
+      - age:
+        - *phliptop-nitro
+        - *omnara1
