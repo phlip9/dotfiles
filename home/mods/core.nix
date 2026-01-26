@@ -69,7 +69,7 @@
       pkgs.ripgrep
 
       # network
-      pkgs.bind.dnsutils # `dig`, `nslookup`, `delv`, `nsupdate`
+      pkgs.dnsutils # `dig`, `nslookup`, `delv`, `nsupdate`
       pkgs.curl
       pkgs.iperf
       pkgs.netcat-gnu # `nc`
