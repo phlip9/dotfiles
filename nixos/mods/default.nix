@@ -1,3 +1,6 @@
+# This list of NixOS modules is always imported in our NixOS configs, unlike
+# nixos/profiles/*.nix. They are generally usually "off" by default, with
+# an "enable" option and other options to turn on and configure them.
 { sources }:
 
 [
@@ -12,5 +15,6 @@
   (sources.sops-nix + "/modules/sops/default.nix")
   (sources.noctalia-shell + "/nix/nixos-module.nix")
   ./phlippkgs.nix
+  ./dotfiles-webhook.nix
   ./xremap.nix
 ]

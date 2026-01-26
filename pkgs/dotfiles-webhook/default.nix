@@ -1,4 +1,4 @@
-{ buildGoModule }:
+{ buildGoModule, gitMinimal }:
 
 buildGoModule {
   pname = "dotfiles-webhook";
@@ -13,6 +13,8 @@ buildGoModule {
   ];
 
   env.CGO_ENABLED = "0";
+
+  nativeCheckInputs = [ gitMinimal ];
 
   meta = {
     description = "GitHub webhook listener to auto-sync dotfiles repo";

@@ -21,13 +21,14 @@
 //
 // envs:
 //
-// - PORT: listen port (default 8673)
-// - REPO: git working tree path (default /home/phlip9/dev/dotfiles)
-// - REMOTE: git remote name to fetch/reset (default upstream)
-// - BRANCH: branch name to track (default master)
-// - QUIET_MS: debounce quiet period in milliseconds (default 500)
-// - MAX_BACKOFF: max initial-sync backoff in milliseconds (default 30000)
-// - GITHUB_WEBHOOK_SECRET_PATH: required path to shared secret file
+// All are required and must be provided by the surrounding systemd unit.
+// - PORT: listen port
+// - REPO: git working tree path
+// - REMOTE: git remote name to fetch/reset
+// - BRANCH: branch name to track
+// - QUIET_MS: debounce quiet period in milliseconds
+// - MAX_BACKOFF_MS: max initial-sync backoff in milliseconds
+// - GITHUB_WEBHOOK_SECRET_PATH: path to shared secret file
 package main
 
 import (
@@ -127,24 +128,34 @@ func main() {
 	}
 }
 
-// loadConfig reads env vars and applies defaults.
+// loadConfig reads required env vars and validates them.
 func loadConfig() (config, error) {
 	var cfg config
 
-	cfg.Port = getenvDefault("PORT", "8673")
-	cfg.Repo = getenvDefault("REPO", "/home/phlip9/dev/dotfiles")
-	cfg.Remote = getenvDefault("REMOTE", "upstream")
-	cfg.Branch = getenvDefault("BRANCH", "master")
+	var err error
 
-	quietMs, err := getenvInt("QUIET_MS", 500)
+	if cfg.Port, err = requireEnv("PORT"); err != nil {
+		return cfg, err
+	}
+	if cfg.Repo, err = requireEnv("REPO"); err != nil {
+		return cfg, err
+	}
+	if cfg.Remote, err = requireEnv("REMOTE"); err != nil {
+		return cfg, err
+	}
+	if cfg.Branch, err = requireEnv("BRANCH"); err != nil {
+		return cfg, err
+	}
+
+	quietMs, err := requireEnvInt("QUIET_MS")
 	if err != nil {
 		return cfg, fmt.Errorf("invalid QUIET_MS: %w", err)
 	}
 	cfg.Quiet = time.Duration(quietMs) * time.Millisecond
 
-	maxBackoffMs, err := getenvInt("MAX_BACKOFF", 30000)
+	maxBackoffMs, err := requireEnvInt("MAX_BACKOFF_MS")
 	if err != nil {
-		return cfg, fmt.Errorf("invalid MAX_BACKOFF: %w", err)
+		return cfg, fmt.Errorf("invalid MAX_BACKOFF_MS: %w", err)
 	}
 	cfg.MaxBackoff = time.Duration(maxBackoffMs) * time.Millisecond
 
@@ -156,20 +167,20 @@ func loadConfig() (config, error) {
 	return cfg, nil
 }
 
-// getenvDefault returns env value or default if unset.
-func getenvDefault(key, def string) string {
-	val := os.Getenv(key)
-	if val != "" {
-		return val
-	}
-	return def
-}
-
-// getenvInt parses an int env var or returns provided default.
-func getenvInt(key string, def int) (int, error) {
+// requireEnv returns env value or errors if unset.
+func requireEnv(key string) (string, error) {
 	val := os.Getenv(key)
 	if val == "" {
-		return def, nil
+		return "", fmt.Errorf("%s is required", key)
+	}
+	return val, nil
+}
+
+// requireEnvInt parses a required int env var.
+func requireEnvInt(key string) (int, error) {
+	val, err := requireEnv(key)
+	if err != nil {
+		return 0, err
 	}
 	n, err := strconv.Atoi(val)
 	if err != nil {
@@ -246,7 +257,7 @@ func handleHealth(w http.ResponseWriter, _ *http.Request) {
 
 // initialSync retries fetch+reset with exponential backoff until success.
 func (a *app) initialSync(ctx context.Context) error {
-	backoff := time.Second
+	backoff := 5 * time.Second
 	for {
 		if err := a.run(ctx); err == nil {
 			return nil

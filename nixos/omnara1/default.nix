@@ -103,6 +103,7 @@
     ];
   };
 
-  # TODO(phlip9): remove
-  sops.secrets.testkey = { };
+  # phlip9/dotfiles updates -> receive webhook -> fetch+reset repo checkout
+  services.dotfiles-webhook.enable = true;
+  sops.secrets.dotfiles-github-webhook-secret = { };
 }
