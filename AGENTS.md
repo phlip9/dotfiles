@@ -50,6 +50,12 @@
 - structure changes and commits for reviewability. prefer small, focused commits
   that are easy to review. bulk changes or refactors should always be split out
   from primary changes into their own commit(s) for easier review.
+- comments: every non-trivial function/struct/module/type needs at least a short
+  comment. include short "guide post" comments in logic blocks for readers.
+  comments for non-trivial items should be longer, according to how complex or
+  surprising they are. future readers should not have to guess why something was
+  written.
+- names: almost always avoid single-character variable names.
 
 ## nixos
 
