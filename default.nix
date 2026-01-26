@@ -82,5 +82,14 @@ rec {
 
   # NixOS graphical installer .iso image
   nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;
+
+  deploy = import ./nix/deploy.nix {
+    inherit pkgs;
+    nodes = {
+      inherit (nixosConfigs)
+        omnara1
+        ;
+    };
+  };
 }
 // phlipPkgs

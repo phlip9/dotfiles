@@ -48,14 +48,14 @@ nvim-print-base-runtime-dir:
 qemu-bootloader:
     ./bin/qemu-bootloader.sh
 
-deploy-omnara1-nixos-anywhere:
+deploy-bootstrap cfg:
     #!/usr/bin/env bash
     set -euxo pipefail
 
     IFS=$'\n' paths=($(nix build -f . --print-out-paths --no-link \
         pkgsUnstable.nixos-anywhere \
-        nixosConfigs.omnara1.config.system.build.diskoScript \
-        nixosConfigs.omnara1.config.system.build.toplevel))
+        nixosConfigs.{{ cfg }}.config.system.build.diskoScript \
+        nixosConfigs.{{ cfg }}.config.system.build.toplevel))
 
     nixos_anywhere=${paths[0]}
     disko_script=${paths[1]}
@@ -63,13 +63,11 @@ deploy-omnara1-nixos-anywhere:
 
     "$nixos_anywhere/bin/nixos-anywhere" -L \
         --store-paths "$disko_script" "$toplevel" \
-        root@omnara1.phlip9.com
+        root@{{ cfg }}
 
-deploy-omnara1-nixos-rebuild args="switch":
-    nix shell -f . pkgsNixos.nixos-rebuild-ng --command \
-        nixos-rebuild -f . -A nixosConfigs.omnara1 \
-            --target-host omnara1 \
-            {{args}}
+deploy *args:
+    nix shell -f . pkgsNixos.deploy-rs --command \
+        deploy -f . {{ args }}
 
 # Update phlipPkgs package(s) with updateScript
 phlippkgs-update pkg="":
