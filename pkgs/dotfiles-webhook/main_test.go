@@ -6,6 +6,8 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,6 +30,14 @@ func TestVerifySignature(t *testing.T) {
 	if !verifySignature(secret, body, expected) {
 		t.Fatalf("expected signature to validate")
 	}
+}
+
+// failReader fails the test if Read is invoked.
+type failReader struct{ t *testing.T }
+
+func (r failReader) Read(_ []byte) (int, error) {
+	r.t.Fatalf("request body should not be read")
+	return 0, errors.New("read attempted")
 }
 
 // TestHandleWebhookTriggersSync ensures push webhook schedules a sync.
@@ -88,6 +98,75 @@ func TestHandleWebhookTriggersSync(t *testing.T) {
 	case <-done:
 	case <-time.After(200 * time.Millisecond):
 		t.Fatalf("debounced sync did not run")
+	}
+}
+
+// TestHandleWebhookPing accepts GitHub ping events after HMAC validation.
+func TestHandleWebhookPing(t *testing.T) {
+	secret := []byte("supersecret")
+	body := []byte(`{"zen":"Keep it logically awesome."}`)
+
+	cfg := config{
+		Port:       "0",
+		Repo:       "/tmp/irrelevant",
+		Remote:     "upstream",
+		Branch:     "master",
+		Quiet:      5 * time.Millisecond,
+		MaxBackoff: 50 * time.Millisecond,
+		SecretPath: "/dev/null",
+	}
+
+	app := &app{
+		cfg:    cfg,
+		secret: secret,
+		run:    func(context.Context) error { return nil },
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/webhooks/dotfiles",
+		bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Event", "ping")
+
+	mac := hmac.New(sha256.New, secret)
+	mac.Write(body)
+	req.Header.Set("X-Hub-Signature-256",
+		"sha256="+hex.EncodeToString(mac.Sum(nil)))
+
+	rr := httptest.NewRecorder()
+	app.handleWebhook(rr, req)
+
+	if status := rr.Result().StatusCode; status != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", status)
+	}
+}
+
+// TestUnsupportedEventShortCircuits ensures we reject before reading body.
+func TestUnsupportedEventShortCircuits(t *testing.T) {
+	cfg := config{
+		Port:       "0",
+		Repo:       "/tmp/irrelevant",
+		Remote:     "upstream",
+		Branch:     "master",
+		Quiet:      5 * time.Millisecond,
+		MaxBackoff: 50 * time.Millisecond,
+		SecretPath: "/dev/null",
+	}
+
+	app := &app{
+		cfg:    cfg,
+		secret: []byte("irrelevant"),
+		run:    func(context.Context) error { return nil },
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/webhooks/dotfiles", nil)
+	req.Body = io.NopCloser(failReader{t: t})
+	req.Header.Set("X-GitHub-Event", "issues")
+
+	rr := httptest.NewRecorder()
+	app.handleWebhook(rr, req)
+
+	if status := rr.Result().StatusCode; status != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", status)
 	}
 }
 

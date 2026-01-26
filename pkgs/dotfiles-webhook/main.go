@@ -194,7 +194,13 @@ func (a *app) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if event := r.Header.Get("X-GitHub-Event"); event != "push" {
+	event := r.Header.Get("X-GitHub-Event")
+	switch event {
+	case "":
+		http.Error(w, "missing X-GitHub-Event", http.StatusBadRequest)
+		return
+	case "push", "ping":
+	default:
 		http.Error(w, "unsupported event", http.StatusBadRequest)
 		return
 	}
@@ -211,14 +217,19 @@ func (a *app) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var event pushEvent
-	if err := json.Unmarshal(body, &event); err != nil {
+	if event == "ping" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	var payload pushEvent
+	if err := json.Unmarshal(body, &payload); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
 
 	expectedRef := "refs/heads/" + a.cfg.Branch
-	if event.Ref != expectedRef {
+	if payload.Ref != expectedRef {
 		http.Error(w, "unexpected ref", http.StatusBadRequest)
 		return
 	}
