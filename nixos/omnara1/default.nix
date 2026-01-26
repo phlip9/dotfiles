@@ -79,6 +79,64 @@
     "ntp3.hetzner.net"
   ];
 
+  # Expose HTTP/HTTPS for webhook ingress + ACME HTTP-01.
+  networking.firewall.allowedTCPPorts = [
+    80
+    443
+  ];
+
+  # ACME for omnara1.phlip9.com certificates.
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "philiphayes9@gmail.com";
+  };
+
+  # TLS terminates here; proxy to local dotfiles-webhook service.
+  services.nginx = {
+    enable = true;
+    recommendedProxySettings = true;
+    recommendedBrotliSettings = true;
+    recommendedGzipSettings = true;
+    recommendedOptimisation = true;
+    recommendedTlsSettings = true;
+
+    # Log to journald
+    logError = "syslog:server=unix:/dev/log,nohostname,tag=nginx_error warn";
+    commonHttpConfig = ''
+      log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+    '';
+    appendHttpConfig = ''
+      access_log syslog:server=unix:/dev/log,nohostname,tag=nginx,severity=info main;
+    '';
+
+    virtualHosts."omnara1.phlip9.com" = {
+      forceSSL = true;
+      enableACME = true;
+
+      extraConfig = ''
+        client_max_body_size 256k;
+      '';
+
+      locations."/webhooks/dotfiles" = {
+        proxyPass = "http://[::1]:8673/webhooks/dotfiles";
+        extraConfig = ''
+          proxy_read_timeout 5s;
+          proxy_connect_timeout 5s;
+        '';
+      };
+
+      locations."/healthz" = {
+        proxyPass = "http://[::1]:8673/healthz";
+        extraConfig = ''
+          proxy_read_timeout 5s;
+          proxy_connect_timeout 5s;
+        '';
+      };
+    };
+  };
+
   # users and groups are static and must be configured via nix
   users.mutableUsers = false;
 

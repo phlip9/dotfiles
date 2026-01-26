@@ -80,6 +80,13 @@ in
   config = lib.mkIf cfg.enable {
     assertions = [
       {
+        assertion = lib.hasAttr cfg.user config.users.users;
+        message = ''
+          services.dotfiles-webhook.user="${cfg.user}" is not defined in
+          config.users.users.
+        '';
+      }
+      {
         assertion = lib.hasAttr cfg.secretName secrets;
         message = ''
           services.dotfiles-webhook.secretName="${cfg.secretName}" is not
@@ -93,7 +100,15 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
       wantedBy = [ "multi-user.target" ];
-      path = [ pkgs.gitMinimal ];
+
+      path = [
+        pkgs.gitMinimal
+        pkgs.openssh
+      ];
+
+      unitConfig = {
+        ConditionPathExists = cfg.repo;
+      };
 
       environment = {
         PORT = builtins.toString cfg.port;
@@ -103,6 +118,9 @@ in
         QUIET_MS = builtins.toString cfg.quietMs;
         MAX_BACKOFF_MS = builtins.toString cfg.maxBackoffMs;
         GITHUB_WEBHOOK_SECRET_PATH = "%d/${cfg.secretName}";
+        # Use a private runtime dir so ssh IdentityAgent expansion works
+        # without a login session.
+        XDG_RUNTIME_DIR = "%t/dotfiles-webhook";
       }
       // cfg.extraEnvironment;
 
@@ -110,9 +128,10 @@ in
         ExecStart = "${cfg.package}/bin/dotfiles-webhook";
         User = cfg.user;
         WorkingDirectory = cfg.repo;
-        ConditionPathExists = cfg.repo;
         Restart = "on-failure";
         RestartSec = 5;
+        RuntimeDirectory = "dotfiles-webhook";
+        RuntimeDirectoryMode = "0700";
 
         LoadCredential = [
           "${cfg.secretName}:${config.sops.secrets.${cfg.secretName}.path}"
