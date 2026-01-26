@@ -74,6 +74,9 @@ in
   # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix { };
 
+  # rage-age-compat - provide an age shim to the rage binary
+  rage-age-compat = callPackage ./rage-age-compat.nix { };
+
   # sampling profiler written in Rust, with native firefox-profiler integration
   samply = callPackage ./samply.nix { };
 
