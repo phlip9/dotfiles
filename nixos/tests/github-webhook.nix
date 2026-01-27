@@ -5,52 +5,68 @@
 # - Simulated GitHub webhook POST requests
 # - Verification that commands execute on push events
 {
-  system ? builtins.currentSystem,
-  pkgs ? import <nixpkgs> { inherit system; },
+  lib,
+  pkgs,
+  sources,
 }:
 
 let
-  # Import our custom packages.
-  dotfilesPath = ../../.;
-  sources = import (dotfilesPath + "/npins") { };
+  # Import custom packages for the test
+  dotfilesPath = ../..;
   phlipPkgs = import (dotfilesPath + "/pkgs") {
     inherit pkgs sources;
   };
+
+  # Path to test fixtures directory in nix store
+  fixturesPath = pkgs.runCommand "test-fixtures" {} ''
+    mkdir -p $out
+    cp ${./fixtures/test_key} $out/test_key
+    cp ${./fixtures/test_key.pub} $out/test_key.pub
+    cp ${./fixtures/secrets.yaml} $out/secrets.yaml
+  '';
 in
 
-pkgs.nixosTest {
+{
   name = "github-webhook";
 
   nodes.machine =
     { config, lib, pkgs, ... }:
     {
-      # Import only the github-webhook module (not full module stack to avoid SOPS).
+      # Import github-webhook module and sops-nix
       imports = [
+        (sources.sops-nix + "/modules/sops/default.nix")
         ../mods/github-webhook.nix
-
-        # Mock SOPS by providing a minimal stub that satisfies module assertions.
-        (
-          { ... }:
-          {
-            options.sops.secrets = lib.mkOption {
-              type = lib.types.attrsOf (
-                lib.types.submodule {
-                  options.path = lib.mkOption { type = lib.types.str; };
-                }
-              );
-              default = { };
-            };
-          }
-        )
       ];
 
-      # Provide phlipPkgs to the module.
+      # Provide phlipPkgs to the module
       _module.args.phlipPkgs = phlipPkgs;
 
-      # Basic system config.
+      # Basic system config
       users.users.testuser.isNormalUser = true;
 
-      # Configure github-webhook service.
+      # SOPS configuration for test
+      sops = {
+        defaultSopsFile = fixturesPath + "/secrets.yaml";
+        age.keyFile = "/var/lib/sops-test-key";
+
+        secrets.test-webhook-secret = {
+          owner = "testuser";
+        };
+      };
+
+      # Create the SOPS key file in the VM filesystem before sops-nix runs
+      system.activationScripts.sopsTestKey = {
+        text = ''
+          mkdir -p /var/lib
+          cat > /var/lib/sops-test-key <<'EOF'
+          ${builtins.readFile (fixturesPath + "/test_key")}
+          EOF
+          chmod 600 /var/lib/sops-test-key
+        '';
+        deps = [ ];
+      };
+
+      # Configure github-webhook service
       services.github-webhook = {
         enable = true;
         user = "testuser";
@@ -86,21 +102,11 @@ pkgs.nixosTest {
         };
       };
 
-      # Create working directories.
+      # Create working directories
       systemd.tmpfiles.rules = [
         "d /tmp/repo1-work 0755 testuser users -"
         "d /tmp/repo2-work 0755 testuser users -"
       ];
-
-      # Declare the SOPS secret with its path.
-      sops.secrets.test-webhook-secret.path = "/run/credentials/github-webhook/test-webhook-secret";
-
-      # Create test secret file before service starts.
-      systemd.services.github-webhook.preStart = lib.mkBefore ''
-        mkdir -p /run/credentials/github-webhook
-        echo -n "test-secret-12345" > /run/credentials/github-webhook/test-webhook-secret
-        chmod 600 /run/credentials/github-webhook/test-webhook-secret
-      '';
     };
 
   testScript = ''
@@ -239,7 +245,10 @@ pkgs.nixosTest {
 
     # Test 7: Accept ping event.
     print("Test 7: Accept ping event...")
-    ping_payload = json.dumps({"zen": "Keep it simple."})
+    ping_payload = json.dumps({
+        "zen": "Keep it simple.",
+        "repository": {"full_name": "test/repo1"}
+    })
     ping_sig = make_signature(secret, ping_payload)
 
     response = machine.succeed(f"""
