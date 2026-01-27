@@ -1,8 +1,8 @@
 keys:
-  - &test_key age1sw9qk8gxfddk65z4g53ydztlly73hj2eufkv4hxmuu4cn6j5qfmse5p3dy
+  - &test_key age1fefpu5jnx920u7j6hd52v77wkdmwrn9my5znd7xgggx4ejufve8qkmtk9q
 
 creation_rules:
-  - path_regex: secrets\.yaml$
+  - path_regex: ^secrets\.yaml$
     key_groups:
       - age:
           - *test_key

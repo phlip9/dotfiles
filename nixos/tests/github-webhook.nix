@@ -5,52 +5,23 @@
 # - Simulated GitHub webhook POST requests
 # - Verification that commands execute on push events
 {
-  lib,
-  sources,
-}:
-
-let
-  # Path to test fixtures directory in nix store
-  fixturesPath = lib.fileset.toSource {
-    root = ./fixtures;
-    fileset = lib.fileset.unions [
-      ./fixtures/test_key
-      ./fixtures/test_key.pub
-      ./fixtures/secrets.yaml
-    ];
-  };
-in
-
-{
   name = "github-webhook";
 
+  globalTimeout = 60;
+
   nodes.machine =
-    { config, lib, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       # Basic system config
       users.users.testuser.isNormalUser = true;
 
-      # SOPS configuration for test
-      sops = {
-        defaultSopsFile = fixturesPath + "/secrets.yaml";
-        age.keyFile = "/var/lib/sops-test-key";
-
-        secrets.test-webhook-secret = {
-          owner = "testuser";
-        };
-      };
-
-      # Create the SOPS key file in the VM filesystem before sops-nix runs
-      system.activationScripts.sopsTestKey = {
-        text = ''
-          mkdir -p /var/lib
-          cat > /var/lib/sops-test-key <<'EOF'
-          ${builtins.readFile (fixturesPath + "/test_key")}
-          EOF
-          chmod 600 /var/lib/sops-test-key
-        '';
-        deps = [ ];
-      };
+      # sops secret from ./fixtures/secrets.yaml
+      sops.secrets.test-webhook-secret = { };
 
       # Configure github-webhook service
       services.github-webhook = {
@@ -80,7 +51,7 @@ in
           command = [
             "${pkgs.bash}/bin/bash"
             "-c"
-            "echo 'repo2 triggered on $GH_BRANCH' > /tmp/repo2-result"
+            "echo \"repo2 triggered on $GH_BRANCH\" > /tmp/repo2-result"
           ];
           workingDir = "/tmp/repo2-work";
           runOnStartup = false;
@@ -125,7 +96,7 @@ in
 
     # Test 3: Send push webhook for repo1 (main branch).
     print("Test 3: Send push webhook for repo1...")
-    secret = "test-secret-12345"
+    secret = "e166c93083dfde95614643dc805a2670f663b20544831a2a"
     payload = json.dumps({
         "ref": "refs/heads/main",
         "after": "abc123def456",

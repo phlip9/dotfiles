@@ -14,6 +14,8 @@
 //
 // config file structure (JSON):
 //
+// ```json
+//
 //	{
 //	  "port": "8673",
 //	  "repos": {
@@ -29,6 +31,11 @@
 //	  }
 //	}
 //
+// ```
+//
+//   - secret_path supports "%d/" prefix, which expands to
+//     `$CREDENTIALS_DIRECTORY/` (systemd credentials).
+//
 // environment variables passed to commands:
 //
 //   - GH_EVENT: event type (e.g., "push", "ping")
@@ -41,6 +48,7 @@
 // envs:
 //
 // - CONFIG_PATH: path to JSON configuration file
+// - CREDENTIALS_DIRECTORY: used when secret_path begins with "%d/"
 package main
 
 import (
@@ -57,6 +65,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -206,11 +215,32 @@ func loadConfig(path string) (Config, error) {
 
 // readSecret loads and trims a secret file.
 func readSecret(path string) ([]byte, error) {
-	raw, err := os.ReadFile(path)
+	expanded, err := expandSecretPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := os.ReadFile(expanded)
 	if err != nil {
 		return nil, err
 	}
 	return bytes.TrimSpace(raw), nil
+}
+
+// expandSecretPath resolves the %d/ prefix using CREDENTIALS_DIRECTORY.
+func expandSecretPath(path string) (string, error) {
+	if !strings.HasPrefix(path, "%d/") {
+		return path, nil
+	}
+
+	credDir := os.Getenv("CREDENTIALS_DIRECTORY")
+	if credDir == "" {
+		return "", fmt.Errorf(
+			"secret_path %q uses %%d/ but CREDENTIALS_DIRECTORY is empty", path)
+	}
+
+	rel := strings.TrimPrefix(path, "%d/")
+	return filepath.Join(credDir, rel), nil
 }
 
 // handleWebhook routes GitHub webhooks to appropriate repo handlers.

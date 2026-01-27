@@ -13,22 +13,21 @@ let
   secrets = lib.attrByPath [ "sops" "secrets" ] { } config;
 
   # Convert NixOS config to JSON format expected by Go service.
-  makeConfig = {
-    port,
-    repos,
-  }:
+  makeConfig =
+    {
+      port,
+      repos,
+    }:
     let
-      mkRepo =
-        repoFullName: repoCfg:
-        {
-          secret_path = "%d/${repoCfg.secretName}";
-          branches = repoCfg.branches;
-          command = repoCfg.command;
-          working_dir = repoCfg.workingDir;
-          quiet_ms = repoCfg.quietMs;
-          run_on_startup = repoCfg.runOnStartup;
-          timeout_ms = repoCfg.timeoutMs;
-        };
+      mkRepo = repoFullName: repoCfg: {
+        secret_path = "%d/${repoCfg.secretName}";
+        branches = repoCfg.branches;
+        command = repoCfg.command;
+        working_dir = repoCfg.workingDir;
+        quiet_ms = repoCfg.quietMs;
+        run_on_startup = repoCfg.runOnStartup;
+        timeout_ms = repoCfg.timeoutMs;
+      };
     in
     {
       port = toString port;
@@ -123,30 +122,29 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions =
-      [
-        {
-          assertion = lib.hasAttr cfg.user config.users.users;
-          message = ''
-            services.github-webhook.user="${cfg.user}" is not defined in
-            config.users.users.
-          '';
-        }
-      ]
-      ++ (lib.mapAttrsToList (repoId: repoCfg: {
-        assertion = builtins.pathExists repoCfg.workingDir || true;
+    assertions = [
+      {
+        assertion = lib.hasAttr cfg.user config.users.users;
         message = ''
-          services.github-webhook.repos.${repoId}.workingDir
-          "${repoCfg.workingDir}" will be checked at runtime via systemd ConditionPathExists.
+          services.github-webhook.user="${cfg.user}" is not defined in
+          config.users.users.
         '';
-      }) cfg.repos)
-      ++ (lib.mapAttrsToList (repoId: repoCfg: {
-        assertion = lib.hasAttr repoCfg.secretName secrets;
-        message = ''
-          services.github-webhook.repos.${repoId}.secretName="${repoCfg.secretName}"
-          is not defined in config.sops.secrets.
-        '';
-      }) cfg.repos);
+      }
+    ]
+    ++ (lib.mapAttrsToList (repoId: repoCfg: {
+      assertion = builtins.pathExists repoCfg.workingDir || true;
+      message = ''
+        services.github-webhook.repos.${repoId}.workingDir
+        "${repoCfg.workingDir}" will be checked at runtime via systemd ConditionPathExists.
+      '';
+    }) cfg.repos)
+    ++ (lib.mapAttrsToList (repoId: repoCfg: {
+      assertion = lib.hasAttr repoCfg.secretName secrets;
+      message = ''
+        services.github-webhook.repos.${repoId}.secretName="${repoCfg.secretName}"
+        is not defined in config.sops.secrets.
+      '';
+    }) cfg.repos);
 
     systemd.services.github-webhook =
       let
@@ -174,7 +172,7 @@ in
 
         unitConfig = {
           # Check that at least one working directory exists.
-          ConditionPathExists = lib.head workingDirs;
+          ConditionPathExists = workingDirs;
         };
 
         environment = {
@@ -182,7 +180,8 @@ in
           # Use a private runtime dir so ssh IdentityAgent expansion works
           # without a login session.
           XDG_RUNTIME_DIR = "%t/github-webhook";
-        } // cfg.extraEnvironment;
+        }
+        // cfg.extraEnvironment;
 
         serviceConfig = {
           ExecStart = "${cfg.package}/bin/github-webhook";
@@ -197,7 +196,6 @@ in
           # Hardening
           LockPersonality = true;
           NoNewPrivileges = true;
-          PrivateTmp = true;
           ProtectControlGroups = true;
           ProtectHome = "read-only";
           ProtectKernelModules = true;
