@@ -140,8 +140,8 @@ in
       # checkout a PR in the current repo
       pr = "!git switch $(git master) && git pull && gh pr checkout";
 
-      # Print the branch point of the current PR branch from the master branch.
-      pr-base = "!git merge-base HEAD $(git master)";
+      # Print the branch point of the current PR branch from origin/master
+      pr-base = "!git merge-base HEAD origin/$(git master)";
 
       # Print which files have changed on this PR branch since master.
       pr-files = "!git diff --name-only $(git pr-base)";
