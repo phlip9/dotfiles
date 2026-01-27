@@ -52,19 +52,15 @@ func TestHandleWebhookTriggersSync(t *testing.T) {
 
 	cfg := Config{
 		Port: "0",
-		Listeners: map[string]*Listener{
-			"test": {
-				SecretPath: secretPath,
-				Repos: map[string]*Repo{
-					"test/repo": {
-						Branches:     []string{"master"},
-						Command:      []string{"true"},
-						WorkingDir:   t.TempDir(),
-						QuietMs:      5,
-						RunOnStartup: false,
-						TimeoutMs:    1000,
-					},
-				},
+		Repos: map[string]*Repo{
+			"test/repo": {
+				SecretPath:   secretPath,
+				Branches:     []string{"master"},
+				Command:      []string{"true"},
+				WorkingDir:   t.TempDir(),
+				QuietMs:      5,
+				RunOnStartup: false,
+				TimeoutMs:    1000,
 			},
 		},
 	}
@@ -83,7 +79,7 @@ func TestHandleWebhookTriggersSync(t *testing.T) {
 	// Initialize handler manually for test.
 	handler := &repoHandler{
 		fullName: "test/repo",
-		repo:     *cfg.Listeners["test"].Repos["test/repo"],
+		repo:     *cfg.Repos["test/repo"],
 		secret:   secret,
 		timeout:  time.Second,
 	}
@@ -135,16 +131,12 @@ func TestHandleWebhookPing(t *testing.T) {
 
 	cfg := Config{
 		Port: "0",
-		Listeners: map[string]*Listener{
-			"test": {
+		Repos: map[string]*Repo{
+			"test/repo": {
 				SecretPath: secretPath,
-				Repos: map[string]*Repo{
-					"test/repo": {
-						Branches:   []string{"master"},
-						Command:    []string{"true"},
-						WorkingDir: t.TempDir(),
-					},
-				},
+				Branches:   []string{"master"},
+				Command:    []string{"true"},
+				WorkingDir: t.TempDir(),
 			},
 		},
 	}
@@ -157,7 +149,7 @@ func TestHandleWebhookPing(t *testing.T) {
 	// Initialize handler.
 	handler := &repoHandler{
 		fullName: "test/repo",
-		repo:     *cfg.Listeners["test"].Repos["test/repo"],
+		repo:     *cfg.Repos["test/repo"],
 		secret:   secret,
 		timeout:  time.Second,
 	}
@@ -212,16 +204,12 @@ func TestHandleWebhookWrongBranch(t *testing.T) {
 
 	cfg := Config{
 		Port: "0",
-		Listeners: map[string]*Listener{
-			"test": {
+		Repos: map[string]*Repo{
+			"test/repo": {
 				SecretPath: secretPath,
-				Repos: map[string]*Repo{
-					"test/repo": {
-						Branches:   []string{"master"},
-						Command:    []string{"true"},
-						WorkingDir: t.TempDir(),
-					},
-				},
+				Branches:   []string{"master"},
+				Command:    []string{"true"},
+				WorkingDir: t.TempDir(),
 			},
 		},
 	}
@@ -233,7 +221,7 @@ func TestHandleWebhookWrongBranch(t *testing.T) {
 
 	handler := &repoHandler{
 		fullName: "test/repo",
-		repo:     *cfg.Listeners["test"].Repos["test/repo"],
+		repo:     *cfg.Repos["test/repo"],
 		secret:   secret,
 		timeout:  time.Second,
 	}
@@ -291,19 +279,15 @@ func TestIntegrationFetchReset(t *testing.T) {
 	// Create JSON config file.
 	cfg := Config{
 		Port: "0",
-		Listeners: map[string]*Listener{
-			"test": {
-				SecretPath: secretPath,
-				Repos: map[string]*Repo{
-					"test/repo": {
-						Branches:     []string{"master"},
-						Command:      []string{"bash", "-c", "git fetch upstream && git reset --hard upstream/master"},
-						WorkingDir:   work,
-						QuietMs:      20,
-						RunOnStartup: true,
-						TimeoutMs:    5000,
-					},
-				},
+		Repos: map[string]*Repo{
+			"test/repo": {
+				SecretPath:   secretPath,
+				Branches:     []string{"master"},
+				Command:      []string{"bash", "-c", "git fetch upstream && git reset --hard upstream/master"},
+				WorkingDir:   work,
+				QuietMs:      20,
+				RunOnStartup: true,
+				TimeoutMs:    5000,
 			},
 		},
 	}
@@ -319,7 +303,7 @@ func TestIntegrationFetchReset(t *testing.T) {
 	// Initialize handler using actual runCommand.
 	handler := &repoHandler{
 		fullName: "test/repo",
-		repo:     *cfg.Listeners["test"].Repos["test/repo"],
+		repo:     *cfg.Repos["test/repo"],
 		secret:   secret,
 		timeout:  5 * time.Second,
 	}
@@ -392,19 +376,15 @@ func TestConfigLoading(t *testing.T) {
 
 	configData := `{
 		"port": "8080",
-		"listeners": {
-			"test-listener": {
+		"repos": {
+			"owner/repo": {
 				"secret_path": "/tmp/secret",
-				"repos": {
-					"owner/repo": {
-						"branches": ["main", "dev"],
-						"command": ["echo", "hello"],
-						"working_dir": "/tmp/work",
-						"quiet_ms": 1000,
-						"run_on_startup": true,
-						"timeout_ms": 60000
-					}
-				}
+				"branches": ["main", "dev"],
+				"command": ["echo", "hello"],
+				"working_dir": "/tmp/work",
+				"quiet_ms": 1000,
+				"run_on_startup": true,
+				"timeout_ms": 60000
 			}
 		}
 	}`
@@ -422,20 +402,11 @@ func TestConfigLoading(t *testing.T) {
 		t.Errorf("expected port 8080, got %s", cfg.Port)
 	}
 
-	if len(cfg.Listeners) != 1 {
-		t.Fatalf("expected 1 listener, got %d", len(cfg.Listeners))
+	if len(cfg.Repos) != 1 {
+		t.Fatalf("expected 1 repo, got %d", len(cfg.Repos))
 	}
 
-	listener, ok := cfg.Listeners["test-listener"]
-	if !ok {
-		t.Fatal("expected listener with key test-listener")
-	}
-
-	if len(listener.Repos) != 1 {
-		t.Fatalf("expected 1 repo, got %d", len(listener.Repos))
-	}
-
-	repo, ok := listener.Repos["owner/repo"]
+	repo, ok := cfg.Repos["owner/repo"]
 	if !ok {
 		t.Fatal("expected repo with key owner/repo")
 	}
@@ -459,21 +430,18 @@ func TestMultiRepoRouting(t *testing.T) {
 
 	cfg := Config{
 		Port: "0",
-		Listeners: map[string]*Listener{
-			"test": {
+		Repos: map[string]*Repo{
+			"owner/repo1": {
 				SecretPath: secretPath,
-				Repos: map[string]*Repo{
-					"owner/repo1": {
-						Branches:   []string{"main"},
-						Command:    []string{"echo", "repo1"},
-						WorkingDir: t.TempDir(),
-					},
-					"owner/repo2": {
-						Branches:   []string{"master"},
-						Command:    []string{"echo", "repo2"},
-						WorkingDir: t.TempDir(),
-					},
-				},
+				Branches:   []string{"main"},
+				Command:    []string{"echo", "repo1"},
+				WorkingDir: t.TempDir(),
+			},
+			"owner/repo2": {
+				SecretPath: secretPath,
+				Branches:   []string{"master"},
+				Command:    []string{"echo", "repo2"},
+				WorkingDir: t.TempDir(),
 			},
 		},
 	}
@@ -492,7 +460,7 @@ func TestMultiRepoRouting(t *testing.T) {
 	// Setup repo1 handler.
 	handler1 := &repoHandler{
 		fullName: "owner/repo1",
-		repo:     *cfg.Listeners["test"].Repos["owner/repo1"],
+		repo:     *cfg.Repos["owner/repo1"],
 		secret:   secret,
 		timeout:  time.Second,
 	}
@@ -508,7 +476,7 @@ func TestMultiRepoRouting(t *testing.T) {
 	// Setup repo2 handler.
 	handler2 := &repoHandler{
 		fullName: "owner/repo2",
-		repo:     *cfg.Listeners["test"].Repos["owner/repo2"],
+		repo:     *cfg.Repos["owner/repo2"],
 		secret:   secret,
 		timeout:  time.Second,
 	}
