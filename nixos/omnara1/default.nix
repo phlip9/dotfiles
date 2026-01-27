@@ -167,9 +167,13 @@
       secretName = "dotfiles-github-webhook-secret";
       branches = [ "master" ];
       command = [
-        "${pkgs.bash}/bin/bash"
-        "-c"
-        "git fetch upstream && git reset --hard upstream/master"
+        (builtins.toString (
+          pkgs.writeShellScript "phlip9-dotfiles-fetch-reset.sh" ''
+            set -euxo pipefail
+            git fetch upstream
+            git reset --hard upstream/master
+          ''
+        ))
       ];
       workingDir = "/home/phlip9/dev/dotfiles";
       runOnStartup = true;
