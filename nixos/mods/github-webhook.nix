@@ -1,0 +1,245 @@
+# systemd unit for github-webhook GitHub webhook service.
+# See: ../../pkgs/github-webhook/main.go
+{
+  config,
+  lib,
+  pkgs,
+  phlipPkgs,
+  ...
+}:
+
+let
+  cfg = config.services.github-webhook;
+  secrets = lib.attrByPath [ "sops" "secrets" ] { } config;
+
+  # Convert NixOS config to JSON format expected by Go service.
+  makeConfig = {
+    port,
+    listeners,
+  }:
+    let
+      mkListener =
+        id: listenerCfg:
+        let
+          mkRepo =
+            repoId: repoCfg:
+            {
+              full_name = repoCfg.fullName;
+              branches = repoCfg.branches;
+              command = repoCfg.command;
+              working_dir = repoCfg.workingDir;
+              quiet_ms = repoCfg.quietMs;
+              run_on_startup = repoCfg.runOnStartup;
+              timeout_ms = repoCfg.timeoutMs;
+            };
+        in
+        {
+          id = id;
+          secret_path = "%d/${listenerCfg.secretName}";
+          repos = lib.mapAttrsToList mkRepo listenerCfg.repos;
+        };
+    in
+    {
+      port = toString port;
+      listeners = lib.mapAttrsToList mkListener listeners;
+    };
+
+  configJson = builtins.toJSON (makeConfig {
+    inherit (cfg) port listeners;
+  });
+
+  configFile = pkgs.writeText "github-webhook-config.json" configJson;
+in
+{
+  options.services.github-webhook = {
+    enable = lib.mkEnableOption "GitHub webhook service";
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = phlipPkgs.github-webhook;
+      description = "github-webhook package to run.";
+    };
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 8673;
+      description = "TCP port to listen on.";
+    };
+
+    user = lib.mkOption {
+      type = lib.types.str;
+      default = "root";
+      description = "User account for the service.";
+    };
+
+    listeners = lib.mkOption {
+      default = { };
+      description = ''
+        Attribute set of webhook listeners. Each listener has its own secret
+        and can handle multiple repositories.
+      '';
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            secretName = lib.mkOption {
+              type = lib.types.str;
+              description = "SOPS secret name carrying the GitHub webhook secret.";
+            };
+
+            repos = lib.mkOption {
+              default = { };
+              description = "Repository configurations for this listener.";
+              type = lib.types.attrsOf (
+                lib.types.submodule {
+                  options = {
+                    fullName = lib.mkOption {
+                      type = lib.types.str;
+                      example = "phlip9/dotfiles";
+                      description = "GitHub repository full name (owner/repo).";
+                    };
+
+                    branches = lib.mkOption {
+                      type = lib.types.listOf lib.types.str;
+                      default = [ "master" ];
+                      description = "List of branch names to track.";
+                    };
+
+                    command = lib.mkOption {
+                      type = lib.types.listOf lib.types.str;
+                      description = "Command to execute on webhook event.";
+                    };
+
+                    workingDir = lib.mkOption {
+                      type = lib.types.str;
+                      description = "Working directory for command execution.";
+                    };
+
+                    quietMs = lib.mkOption {
+                      type = lib.types.int;
+                      default = 500;
+                      description = "Debounce window in milliseconds.";
+                    };
+
+                    runOnStartup = lib.mkOption {
+                      type = lib.types.bool;
+                      default = false;
+                      description = "Run command once on service startup.";
+                    };
+
+                    timeoutMs = lib.mkOption {
+                      type = lib.types.int;
+                      default = 3600000; # 1 hour
+                      description = "Command timeout in milliseconds.";
+                    };
+                  };
+                }
+              );
+            };
+          };
+        }
+      );
+    };
+
+    extraEnvironment = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "Extra environment variables for github-webhook.";
+    };
+  };
+
+  config = lib.mkIf cfg.enable {
+    assertions =
+      [
+        {
+          assertion = lib.hasAttr cfg.user config.users.users;
+          message = ''
+            services.github-webhook.user="${cfg.user}" is not defined in
+            config.users.users.
+          '';
+        }
+      ]
+      ++ (lib.flatten (
+        lib.mapAttrsToList (
+          listenerId: listenerCfg:
+          lib.mapAttrsToList (repoId: repoCfg: {
+            assertion = builtins.pathExists repoCfg.workingDir || true;
+            message = ''
+              services.github-webhook.listeners.${listenerId}.repos.${repoId}.workingDir
+              "${repoCfg.workingDir}" will be checked at runtime via systemd ConditionPathExists.
+            '';
+          }) listenerCfg.repos
+        ) cfg.listeners
+      ))
+      ++ (lib.mapAttrsToList (listenerId: listenerCfg: {
+        assertion = lib.hasAttr listenerCfg.secretName secrets;
+        message = ''
+          services.github-webhook.listeners.${listenerId}.secretName="${listenerCfg.secretName}"
+          is not defined in config.sops.secrets.
+        '';
+      }) cfg.listeners);
+
+    systemd.services.github-webhook =
+      let
+        # Collect all working directories for ConditionPathExists.
+        workingDirs = lib.unique (
+          lib.flatten (
+            lib.mapAttrsToList (
+              _: listenerCfg: lib.mapAttrsToList (_: repoCfg: repoCfg.workingDir) listenerCfg.repos
+            ) cfg.listeners
+          )
+        );
+
+        # Collect all secrets for LoadCredential.
+        credentialsList = lib.mapAttrsToList (
+          _: listenerCfg:
+          "${listenerCfg.secretName}:${config.sops.secrets.${listenerCfg.secretName}.path}"
+        ) cfg.listeners;
+      in
+      {
+        description = "GitHub webhook listener";
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+        wantedBy = [ "multi-user.target" ];
+
+        path = [
+          pkgs.gitMinimal
+          pkgs.openssh
+        ];
+
+        unitConfig = {
+          # Check that at least one working directory exists.
+          ConditionPathExists = lib.head workingDirs;
+        };
+
+        environment = {
+          CONFIG_PATH = configFile;
+          # Use a private runtime dir so ssh IdentityAgent expansion works
+          # without a login session.
+          XDG_RUNTIME_DIR = "%t/github-webhook";
+        } // cfg.extraEnvironment;
+
+        serviceConfig = {
+          ExecStart = "${cfg.package}/bin/github-webhook";
+          User = cfg.user;
+          Restart = "on-failure";
+          RestartSec = 5;
+          RuntimeDirectory = "github-webhook";
+          RuntimeDirectoryMode = "0700";
+
+          LoadCredential = credentialsList;
+
+          # Hardening
+          LockPersonality = true;
+          NoNewPrivileges = true;
+          PrivateTmp = true;
+          ProtectControlGroups = true;
+          ProtectHome = "read-only";
+          ProtectKernelModules = true;
+          ProtectKernelTunables = true;
+          ProtectSystem = "full";
+          ReadWritePaths = workingDirs;
+          RestrictSUIDSGID = true;
+        };
+      };
+  };
+}

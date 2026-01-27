@@ -5,8 +5,8 @@
 }:
 
 buildGoModule {
-  pname = "dotfiles-webhook";
-  version = "0.1.0";
+  pname = "github-webhook";
+  version = "0.2.0";
 
   src = lib.fileset.toSource {
     root = ./.;
@@ -28,8 +28,8 @@ buildGoModule {
   nativeCheckInputs = [ gitMinimal ];
 
   meta = {
-    description = "GitHub webhook listener to auto-sync dotfiles repo";
+    description = "GitHub webhook listener for multi-repo command execution";
     homepage = "https://github.com/phlip9/dotfiles";
-    mainProgram = "dotfiles-webhook";
+    mainProgram = "github-webhook";
   };
 }

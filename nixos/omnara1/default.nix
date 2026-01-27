@@ -119,8 +119,8 @@
         client_max_body_size 256k;
       '';
 
-      locations."/webhooks/dotfiles" = {
-        proxyPass = "http://[::1]:8673/webhooks/dotfiles";
+      locations."/webhooks/github" = {
+        proxyPass = "http://[::1]:8673/webhooks/github";
         extraConfig = ''
           proxy_read_timeout 5s;
           proxy_connect_timeout 5s;
@@ -160,6 +160,23 @@
   };
 
   # phlip9/dotfiles updates -> receive webhook -> fetch+reset repo checkout
-  services.dotfiles-webhook.enable = true;
+  services.github-webhook = {
+    enable = true;
+    user = "phlip9";
+    listeners.dotfiles = {
+      secretName = "dotfiles-github-webhook-secret";
+      repos.phlip9-dotfiles = {
+        fullName = "phlip9/dotfiles";
+        branches = [ "master" ];
+        command = [
+          "${pkgs.bash}/bin/bash"
+          "-c"
+          "git fetch upstream && git reset --hard upstream/master"
+        ];
+        workingDir = "/home/phlip9/dev/dotfiles";
+        runOnStartup = true;
+      };
+    };
+  };
   sops.secrets.dotfiles-github-webhook-secret = { };
 }
