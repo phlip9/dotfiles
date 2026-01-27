@@ -1,7 +1,5 @@
 # End-to-end NixOS VM test for github-webhook service.
 #
-# Run with: nix-build -f . nixosTests.github-webhook
-#
 # This test creates a VM with:
 # - The github-webhook service configured to watch multiple repos
 # - Simulated GitHub webhook POST requests
@@ -33,17 +31,7 @@ pkgs.nixosTest {
       _module.args.phlipPkgs = phlipPkgs;
 
       # Basic system config.
-      users.users.testuser = {
-        isNormalUser = true;
-        home = "/home/testuser";
-        createHome = true;
-      };
-
-      # Install packages.
-      environment.systemPackages = [
-        pkgs.gitMinimal
-        pkgs.curl
-      ];
+      users.users.testuser.isNormalUser = true;
 
       # Configure github-webhook service.
       services.github-webhook = {
@@ -54,8 +42,7 @@ pkgs.nixosTest {
         listeners.test = {
           secretName = "test-webhook-secret";
 
-          repos.test-repo1 = {
-            fullName = "test/repo1";
+          repos."test/repo1" = {
             branches = [ "main" ];
             command = [
               "${pkgs.bash}/bin/bash"
@@ -67,8 +54,7 @@ pkgs.nixosTest {
             quietMs = 100;
           };
 
-          repos.test-repo2 = {
-            fullName = "test/repo2";
+          repos."test/repo2" = {
             branches = [
               "master"
               "develop"

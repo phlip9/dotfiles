@@ -165,8 +165,7 @@
     user = "phlip9";
     listeners.dotfiles = {
       secretName = "dotfiles-github-webhook-secret";
-      repos.phlip9-dotfiles = {
-        fullName = "phlip9/dotfiles";
+      repos."phlip9/dotfiles" = {
         branches = [ "master" ];
         command = [
           "${pkgs.bash}/bin/bash"

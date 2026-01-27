@@ -16,13 +16,11 @@
 //
 //	{
 //	  "port": "8673",
-//	  "listeners": [
-//	    {
-//	      "id": "dotfiles",
+//	  "listeners": {
+//	    "dotfiles": {
 //	      "secret_path": "/run/credentials/github-webhook/dotfiles-secret",
-//	      "repos": [
-//	        {
-//	          "full_name": "phlip9/dotfiles",
+//	      "repos": {
+//	        "phlip9/dotfiles": {
 //	          "branches": ["master"],
 //	          "command": ["/path/to/script.sh"],
 //	          "working_dir": "/home/phlip9/dev/dotfiles",
@@ -30,9 +28,9 @@
 //	          "run_on_startup": true,
 //	          "timeout_ms": 3600000
 //	        }
-//	      ]
+//	      }
 //	    }
-//	  ]
+//	  }
 //	}
 //
 // environment variables passed to commands:
@@ -69,20 +67,18 @@ import (
 
 // Config is the top-level configuration structure.
 type Config struct {
-	Port      string     `json:"port"`
-	Listeners []Listener `json:"listeners"`
+	Port      string                `json:"port"`
+	Listeners map[string]*Listener `json:"listeners"`
 }
 
 // Listener represents a webhook listener with its own secret.
 type Listener struct {
-	ID         string `json:"id"`
-	SecretPath string `json:"secret_path"`
-	Repos      []Repo `json:"repos"`
+	SecretPath string           `json:"secret_path"`
+	Repos      map[string]*Repo `json:"repos"`
 }
 
 // Repo represents a repository configuration.
 type Repo struct {
-	FullName     string   `json:"full_name"`
 	Branches     []string `json:"branches"`
 	Command      []string `json:"command"`
 	WorkingDir   string   `json:"working_dir"`
@@ -99,10 +95,11 @@ type app struct {
 
 // repoHandler manages command execution for a single repository.
 type repoHandler struct {
-	repo    Repo
-	secret  []byte
-	deb     *debouncer
-	timeout time.Duration
+	fullName string
+	repo     Repo
+	secret   []byte
+	deb      *debouncer
+	timeout  time.Duration
 }
 
 // pushEvent models GitHub push webhook payload (minimal fields).
@@ -115,6 +112,13 @@ type pushEvent struct {
 	Sender struct {
 		Login string `json:"login"`
 	} `json:"sender"`
+}
+
+// pingEvent models GitHub ping webhook payload (minimal fields).
+type pingEvent struct {
+	Repository struct {
+		FullName string `json:"full_name"`
+	} `json:"repository"`
 }
 
 // main loads config, initializes handlers, runs startup commands, starts server.
@@ -140,48 +144,42 @@ func main() {
 	defer cancel()
 
 	// Initialize handlers for each repo across all listeners.
-	for _, listener := range cfg.Listeners {
+	for listenerID, listener := range cfg.Listeners {
 		secret, err := readSecret(listener.SecretPath)
 		if err != nil {
-			log.Fatalf("read secret for listener %s: %v", listener.ID, err)
+			log.Fatalf("read secret for listener %s: %v", listenerID, err)
 		}
 
-		for _, repo := range listener.Repos {
-			if _, exists := a.handlers[repo.FullName]; exists {
-				log.Fatalf("duplicate repo config: %s", repo.FullName)
+		for repoFullName, repo := range listener.Repos {
+			if _, exists := a.handlers[repoFullName]; exists {
+				log.Fatalf("duplicate repo config: %s", repoFullName)
 			}
 
 			timeout := time.Duration(repo.TimeoutMs) * time.Millisecond
-			if timeout == 0 {
-				timeout = 1 * time.Hour
-			}
-
 			quiet := time.Duration(repo.QuietMs) * time.Millisecond
-			if quiet == 0 {
-				quiet = 500 * time.Millisecond
-			}
 
 			handler := &repoHandler{
-				repo:    repo,
-				secret:  secret,
-				timeout: timeout,
+				fullName: repoFullName,
+				repo:     *repo,
+				secret:   secret,
+				timeout:  timeout,
 			}
 
 			handler.deb = newDebouncer(quiet, func(tctx triggerContext) error {
 				return handler.runCommand(ctx, tctx)
 			})
 
-			a.handlers[repo.FullName] = handler
+			a.handlers[repoFullName] = handler
 
 			// Start debouncer goroutine.
 			go handler.deb.run(ctx)
 
 			// Run startup command if configured.
 			if repo.RunOnStartup {
-				log.Printf("[%s] running startup command", repo.FullName)
+				log.Printf("[%s] running startup command", repoFullName)
 				tctx := triggerContext{event: "startup"}
 				if err := handler.runCommand(ctx, tctx); err != nil {
-					log.Printf("[%s] startup command failed: %v", repo.FullName, err)
+					log.Printf("[%s] startup command failed: %v", repoFullName, err)
 				}
 			}
 		}
@@ -254,31 +252,18 @@ func (a *app) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if event == "ping" {
-		// Ping events don't need routing, just verify any handler's signature.
-		if len(a.handlers) == 0 {
-			http.Error(w, "no handlers configured", http.StatusServiceUnavailable)
-			return
-		}
-		// Use first handler's secret for ping verification.
-		for _, handler := range a.handlers {
-			sigHeader := r.Header.Get("X-Hub-Signature-256")
-			if !verifySignature(handler.secret, body, sigHeader) {
-				http.Error(w, "invalid signature", http.StatusUnauthorized)
-				return
-			}
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+	// Parse payload to extract repository name (works for both push and ping).
+	var repoPayload struct {
+		Repository struct {
+			FullName string `json:"full_name"`
+		} `json:"repository"`
 	}
-
-	var payload pushEvent
-	if err := json.Unmarshal(body, &payload); err != nil {
+	if err := json.Unmarshal(body, &repoPayload); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
 
-	handler, exists := a.handlers[payload.Repository.FullName]
+	handler, exists := a.handlers[repoPayload.Repository.FullName]
 	if !exists {
 		http.Error(w, "repository not configured", http.StatusNotFound)
 		return
@@ -288,6 +273,19 @@ func (a *app) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	sigHeader := r.Header.Get("X-Hub-Signature-256")
 	if !verifySignature(handler.secret, body, sigHeader) {
 		http.Error(w, "invalid signature", http.StatusUnauthorized)
+		return
+	}
+
+	// Handle ping events (no further processing needed).
+	if event == "ping" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Handle push events.
+	var payload pushEvent
+	if err := json.Unmarshal(body, &payload); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
 
@@ -333,7 +331,7 @@ func (h *repoHandler) runCommand(ctx context.Context, tctx triggerContext) error
 	// Set environment variables with GitHub event context.
 	cmd.Env = append(os.Environ(),
 		"GH_EVENT="+tctx.event,
-		"GH_REPO="+h.repo.FullName,
+		"GH_REPO="+h.fullName,
 		"GH_REF="+tctx.ref,
 		"GH_BRANCH="+tctx.branch,
 		"GH_COMMIT="+tctx.commit,
@@ -346,7 +344,7 @@ func (h *repoHandler) runCommand(ctx context.Context, tctx triggerContext) error
 
 	err := cmd.Run()
 	log.Printf("[%s] cmd: %s\n%s",
-		h.repo.FullName,
+		h.fullName,
 		strings.Join(h.repo.Command, " "),
 		buf.String())
 
