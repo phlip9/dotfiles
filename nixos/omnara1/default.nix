@@ -159,25 +159,40 @@
     ];
   };
 
-  # phlip9/dotfiles updates -> receive webhook -> fetch+reset repo checkout
+  # repo updates -> receive webhook -> fetch+reset
   services.github-webhook = {
     enable = true;
     user = "phlip9";
-    repos."phlip9/dotfiles" = {
-      secretName = "dotfiles-github-webhook-secret";
-      branches = [ "master" ];
-      command = [
-        (builtins.toString (
+    repos =
+      let
+        cmdFetchReset = builtins.toString (
           pkgs.writeShellScript "phlip9-dotfiles-fetch-reset.sh" ''
             set -euxo pipefail
             git fetch upstream
             git reset --hard upstream/master
           ''
-        ))
-      ];
-      workingDir = "/home/phlip9/dev/dotfiles";
-      runOnStartup = true;
-    };
+        );
+      in
+      {
+        "phlip9/dotfiles" = {
+          secretName = "dotfiles-github-webhook-secret";
+          branches = [ "master" ];
+          command = [ cmdFetchReset ];
+          workingDir = "/home/phlip9/dev/dotfiles";
+          runOnStartup = true;
+        };
+
+        "lexe-app/lexe" = {
+          secretName = "lexe-github-webhook-secret";
+          branches = [ "master" ];
+          command = [ cmdFetchReset ];
+          workingDir = "/home/phlip9/dev/lexe";
+          runOnStartup = true;
+        };
+      };
   };
-  sops.secrets.dotfiles-github-webhook-secret = { };
+  sops.secrets = {
+    dotfiles-github-webhook-secret = { };
+    lexe-github-webhook-secret = { };
+  };
 }
