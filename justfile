@@ -24,6 +24,14 @@ nix-lint:
     nix shell -f . pkgs.nil --command \
         fd --extension "nix" --exec nil diagnostics
 
+go-test *args:
+    cd pkgs/github-webhook \
+        && mkdir -p /tmp/go-cache \
+        && GOCACHE=/tmp/go-cache GO111MODULE=off go test
+
+go-fmt:
+    fd --type file '^.*\.go$' --exec-batch gofmt -w {}
+
 nvim-update-extra-plugins:
     nix shell nixpkgs#vimPluginsUpdater --command \
         vim-plugins-updater \
@@ -84,6 +92,14 @@ sops-updatekeys:
 
     fd --type file --full-path --regex "(${combined_regex})" \
         --exec sops updatekeys {}
+
+sops-test-fixtures *args:
+    SOPS_AGE_KEY_FILE=./nixos/tests/fixtures/keys.txt sops {{ args }}
+
+sops-test-fixtures-edit:
+    just sops-test-fixtures \
+        --config nixos/tests/fixtures/.sops.yaml \
+        nixos/tests/fixtures/secrets.yaml
 
 ssh-updatekeys:
     curl https://github.com/phlip9.keys > nix/phlip9.keys

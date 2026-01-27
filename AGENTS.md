@@ -77,6 +77,7 @@
 - `just nix-lint` lint nix files
 - `just nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
 - `just nvim-print-base-runtime-path` print base nvim installation's runtime path
+- `just go-fmt`, `just go-test`
 
 ## nix
 

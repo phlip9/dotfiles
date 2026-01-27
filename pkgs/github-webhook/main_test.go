@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -29,6 +30,37 @@ func TestVerifySignature(t *testing.T) {
 
 	if !verifySignature(secret, body, expected) {
 		t.Fatalf("expected signature to validate")
+	}
+}
+
+// TestReadSecretExpandsCredentialsDirectory verifies %d/ expansion and trimming.
+func TestReadSecretExpandsCredentialsDirectory(t *testing.T) {
+	credDir := t.TempDir()
+	t.Setenv("CREDENTIALS_DIRECTORY", credDir)
+
+	secretPath := filepath.Join(credDir, "hook-secret")
+	if err := os.WriteFile(secretPath, []byte("supersecret\n"), 0o600); err != nil {
+		t.Fatalf("write secret: %v", err)
+	}
+
+	secret, err := readSecret("%d/hook-secret")
+	if err != nil {
+		t.Fatalf("readSecret: %v", err)
+	}
+
+	if got := string(secret); got != "supersecret" {
+		t.Fatalf("expected trimmed secret, got %q", got)
+	}
+}
+
+// TestReadSecretMissingCredentialsDirectory errors when %d/ used without env.
+func TestReadSecretMissingCredentialsDirectory(t *testing.T) {
+	t.Setenv("CREDENTIALS_DIRECTORY", "")
+
+	if _, err := readSecret("%d/hook-secret"); err == nil {
+		t.Fatalf("expected error when CREDENTIALS_DIRECTORY is empty")
+	} else if !strings.Contains(err.Error(), "CREDENTIALS_DIRECTORY") {
+		t.Fatalf("expected error mentioning CREDENTIALS_DIRECTORY, got %v", err)
 	}
 }
 
