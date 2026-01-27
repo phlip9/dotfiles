@@ -19,12 +19,11 @@ let
   }:
     let
       mkListener =
-        id: listenerCfg:
+        listenerCfg:
         let
           mkRepo =
-            repoId: repoCfg:
+            repoFullName: repoCfg:
             {
-              full_name = repoCfg.fullName;
               branches = repoCfg.branches;
               command = repoCfg.command;
               working_dir = repoCfg.workingDir;
@@ -34,14 +33,13 @@ let
             };
         in
         {
-          id = id;
           secret_path = "%d/${listenerCfg.secretName}";
-          repos = lib.mapAttrsToList mkRepo listenerCfg.repos;
+          repos = lib.mapAttrs mkRepo listenerCfg.repos;
         };
     in
     {
       port = toString port;
-      listeners = lib.mapAttrsToList mkListener listeners;
+      listeners = lib.mapAttrs (id: listener: mkListener listener) listeners;
     };
 
   configJson = builtins.toJSON (makeConfig {
@@ -88,16 +86,13 @@ in
 
             repos = lib.mkOption {
               default = { };
-              description = "Repository configurations for this listener.";
+              description = ''
+                Repository configurations for this listener. The attribute name
+                should be the full repository name (e.g., "phlip9/dotfiles").
+              '';
               type = lib.types.attrsOf (
                 lib.types.submodule {
                   options = {
-                    fullName = lib.mkOption {
-                      type = lib.types.str;
-                      example = "phlip9/dotfiles";
-                      description = "GitHub repository full name (owner/repo).";
-                    };
-
                     branches = lib.mkOption {
                       type = lib.types.listOf lib.types.str;
                       default = [ "master" ];
