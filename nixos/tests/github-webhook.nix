@@ -6,24 +6,19 @@
 # - Verification that commands execute on push events
 {
   lib,
-  pkgs,
   sources,
 }:
 
 let
-  # Import custom packages for the test
-  dotfilesPath = ../..;
-  phlipPkgs = import (dotfilesPath + "/pkgs") {
-    inherit pkgs sources;
-  };
-
   # Path to test fixtures directory in nix store
-  fixturesPath = pkgs.runCommand "test-fixtures" {} ''
-    mkdir -p $out
-    cp ${./fixtures/test_key} $out/test_key
-    cp ${./fixtures/test_key.pub} $out/test_key.pub
-    cp ${./fixtures/secrets.yaml} $out/secrets.yaml
-  '';
+  fixturesPath = lib.fileset.toSource {
+    root = ./fixtures;
+    fileset = lib.fileset.unions [
+      ./fixtures/test_key
+      ./fixtures/test_key.pub
+      ./fixtures/secrets.yaml
+    ];
+  };
 in
 
 {
@@ -32,15 +27,6 @@ in
   nodes.machine =
     { config, lib, pkgs, ... }:
     {
-      # Import github-webhook module and sops-nix
-      imports = [
-        (sources.sops-nix + "/modules/sops/default.nix")
-        ../mods/github-webhook.nix
-      ];
-
-      # Provide phlipPkgs to the module
-      _module.args.phlipPkgs = phlipPkgs;
-
       # Basic system config
       users.users.testuser.isNormalUser = true;
 

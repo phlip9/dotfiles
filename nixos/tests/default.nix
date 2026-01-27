@@ -6,14 +6,32 @@
 
 let
   nixpkgs = sources.nixos-unstable;
-  lib = import (nixpkgs + "/lib");
+  lib = pkgs.lib;
 
-  # Helper to create a NixOS test with proper setup
+  # Replicate nixosSystem setup but for tests
   mkNixosTest =
-    testModule:
-    import (nixpkgs + "/nixos/tests/make-test-python.nix") (testModule { inherit lib pkgs sources; });
+    testModuleFile:
+    let
+      # Import extraModules just like nixosSystem does
+      extraModules = import ../mods { inherit sources; };
+
+      testModule = import testModuleFile { inherit lib sources; };
+    in
+    import (nixpkgs + "/nixos/tests/make-test-python.nix") (
+      testModule
+      // {
+        nodes = lib.mapAttrs (
+          _name: nodeConfig:
+          { config, ... }:
+          {
+            imports = [ nodeConfig ] ++ extraModules;
+            _module.args.sources = sources;
+          }
+        ) testModule.nodes;
+      }
+    );
 in
 
 {
-  github-webhook = mkNixosTest (import ./github-webhook.nix);
+  github-webhook = mkNixosTest ./github-webhook.nix;
 }

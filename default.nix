@@ -85,7 +85,8 @@ rec {
 
   # NixOS VM tests
   nixosTests = import ./nixos/tests {
-    inherit pkgs sources;
+    inherit sources;
+    pkgs = pkgsUnstable;
   };
 
   deploy = import ./nix/deploy.nix {
