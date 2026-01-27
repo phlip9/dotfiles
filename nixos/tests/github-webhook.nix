@@ -25,7 +25,24 @@ pkgs.nixosTest {
     { config, lib, pkgs, ... }:
     {
       # Import only the github-webhook module (not full module stack to avoid SOPS).
-      imports = [ ../mods/github-webhook.nix ];
+      imports = [
+        ../mods/github-webhook.nix
+
+        # Mock SOPS by providing a minimal stub that satisfies module assertions.
+        (
+          { ... }:
+          {
+            options.sops.secrets = lib.mkOption {
+              type = lib.types.attrsOf (
+                lib.types.submodule {
+                  options.path = lib.mkOption { type = lib.types.str; };
+                }
+              );
+              default = { };
+            };
+          }
+        )
+      ];
 
       # Provide phlipPkgs to the module.
       _module.args.phlipPkgs = phlipPkgs;
@@ -39,35 +56,33 @@ pkgs.nixosTest {
         user = "testuser";
         port = 8673;
 
-        listeners.test = {
+        repos."test/repo1" = {
           secretName = "test-webhook-secret";
+          branches = [ "main" ];
+          command = [
+            "${pkgs.bash}/bin/bash"
+            "-c"
+            "echo 'repo1 triggered' > /tmp/repo1-result"
+          ];
+          workingDir = "/tmp/repo1-work";
+          runOnStartup = true;
+          quietMs = 100;
+        };
 
-          repos."test/repo1" = {
-            branches = [ "main" ];
-            command = [
-              "${pkgs.bash}/bin/bash"
-              "-c"
-              "echo 'repo1 triggered' > /tmp/repo1-result"
-            ];
-            workingDir = "/tmp/repo1-work";
-            runOnStartup = true;
-            quietMs = 100;
-          };
-
-          repos."test/repo2" = {
-            branches = [
-              "master"
-              "develop"
-            ];
-            command = [
-              "${pkgs.bash}/bin/bash"
-              "-c"
-              "echo 'repo2 triggered on $GH_BRANCH' > /tmp/repo2-result"
-            ];
-            workingDir = "/tmp/repo2-work";
-            runOnStartup = false;
-            quietMs = 100;
-          };
+        repos."test/repo2" = {
+          secretName = "test-webhook-secret";
+          branches = [
+            "master"
+            "develop"
+          ];
+          command = [
+            "${pkgs.bash}/bin/bash"
+            "-c"
+            "echo 'repo2 triggered on $GH_BRANCH' > /tmp/repo2-result"
+          ];
+          workingDir = "/tmp/repo2-work";
+          runOnStartup = false;
+          quietMs = 100;
         };
       };
 
@@ -77,11 +92,8 @@ pkgs.nixosTest {
         "d /tmp/repo2-work 0755 testuser users -"
       ];
 
-      # Mock the SOPS secret by creating it directly.
-      sops.secrets.test-webhook-secret = {
-        sopsFile = lib.mkDefault null;
-        path = "/run/credentials/github-webhook/test-webhook-secret";
-      };
+      # Declare the SOPS secret with its path.
+      sops.secrets.test-webhook-secret.path = "/run/credentials/github-webhook/test-webhook-secret";
 
       # Create test secret file before service starts.
       systemd.services.github-webhook.preStart = lib.mkBefore ''

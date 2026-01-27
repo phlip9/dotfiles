@@ -15,35 +15,28 @@ let
   # Convert NixOS config to JSON format expected by Go service.
   makeConfig = {
     port,
-    listeners,
+    repos,
   }:
     let
-      mkListener =
-        listenerCfg:
-        let
-          mkRepo =
-            repoFullName: repoCfg:
-            {
-              branches = repoCfg.branches;
-              command = repoCfg.command;
-              working_dir = repoCfg.workingDir;
-              quiet_ms = repoCfg.quietMs;
-              run_on_startup = repoCfg.runOnStartup;
-              timeout_ms = repoCfg.timeoutMs;
-            };
-        in
+      mkRepo =
+        repoFullName: repoCfg:
         {
-          secret_path = "%d/${listenerCfg.secretName}";
-          repos = lib.mapAttrs mkRepo listenerCfg.repos;
+          secret_path = "%d/${repoCfg.secretName}";
+          branches = repoCfg.branches;
+          command = repoCfg.command;
+          working_dir = repoCfg.workingDir;
+          quiet_ms = repoCfg.quietMs;
+          run_on_startup = repoCfg.runOnStartup;
+          timeout_ms = repoCfg.timeoutMs;
         };
     in
     {
       port = toString port;
-      listeners = lib.mapAttrs (id: listener: mkListener listener) listeners;
+      repos = lib.mapAttrs mkRepo repos;
     };
 
   configJson = builtins.toJSON (makeConfig {
-    inherit (cfg) port listeners;
+    inherit (cfg) port repos;
   });
 
   configFile = pkgs.writeText "github-webhook-config.json" configJson;
@@ -70,11 +63,11 @@ in
       description = "User account for the service.";
     };
 
-    listeners = lib.mkOption {
+    repos = lib.mkOption {
       default = { };
       description = ''
-        Attribute set of webhook listeners. Each listener has its own secret
-        and can handle multiple repositories.
+        Repository configurations. The attribute name should be the full
+        repository name (e.g., "phlip9/dotfiles").
       '';
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -84,51 +77,38 @@ in
               description = "SOPS secret name carrying the GitHub webhook secret.";
             };
 
-            repos = lib.mkOption {
-              default = { };
-              description = ''
-                Repository configurations for this listener. The attribute name
-                should be the full repository name (e.g., "phlip9/dotfiles").
-              '';
-              type = lib.types.attrsOf (
-                lib.types.submodule {
-                  options = {
-                    branches = lib.mkOption {
-                      type = lib.types.listOf lib.types.str;
-                      default = [ "master" ];
-                      description = "List of branch names to track.";
-                    };
+            branches = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ "master" ];
+              description = "List of branch names to track.";
+            };
 
-                    command = lib.mkOption {
-                      type = lib.types.listOf lib.types.str;
-                      description = "Command to execute on webhook event.";
-                    };
+            command = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              description = "Command to execute on webhook event.";
+            };
 
-                    workingDir = lib.mkOption {
-                      type = lib.types.str;
-                      description = "Working directory for command execution.";
-                    };
+            workingDir = lib.mkOption {
+              type = lib.types.str;
+              description = "Working directory for command execution.";
+            };
 
-                    quietMs = lib.mkOption {
-                      type = lib.types.int;
-                      default = 500;
-                      description = "Debounce window in milliseconds.";
-                    };
+            quietMs = lib.mkOption {
+              type = lib.types.int;
+              default = 500;
+              description = "Debounce window in milliseconds.";
+            };
 
-                    runOnStartup = lib.mkOption {
-                      type = lib.types.bool;
-                      default = false;
-                      description = "Run command once on service startup.";
-                    };
+            runOnStartup = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Run command once on service startup.";
+            };
 
-                    timeoutMs = lib.mkOption {
-                      type = lib.types.int;
-                      default = 3600000; # 1 hour
-                      description = "Command timeout in milliseconds.";
-                    };
-                  };
-                }
-              );
+            timeoutMs = lib.mkOption {
+              type = lib.types.int;
+              default = 3600000; # 1 hour
+              description = "Command timeout in milliseconds.";
             };
           };
         }
@@ -153,42 +133,33 @@ in
           '';
         }
       ]
-      ++ (lib.flatten (
-        lib.mapAttrsToList (
-          listenerId: listenerCfg:
-          lib.mapAttrsToList (repoId: repoCfg: {
-            assertion = builtins.pathExists repoCfg.workingDir || true;
-            message = ''
-              services.github-webhook.listeners.${listenerId}.repos.${repoId}.workingDir
-              "${repoCfg.workingDir}" will be checked at runtime via systemd ConditionPathExists.
-            '';
-          }) listenerCfg.repos
-        ) cfg.listeners
-      ))
-      ++ (lib.mapAttrsToList (listenerId: listenerCfg: {
-        assertion = lib.hasAttr listenerCfg.secretName secrets;
+      ++ (lib.mapAttrsToList (repoId: repoCfg: {
+        assertion = builtins.pathExists repoCfg.workingDir || true;
         message = ''
-          services.github-webhook.listeners.${listenerId}.secretName="${listenerCfg.secretName}"
+          services.github-webhook.repos.${repoId}.workingDir
+          "${repoCfg.workingDir}" will be checked at runtime via systemd ConditionPathExists.
+        '';
+      }) cfg.repos)
+      ++ (lib.mapAttrsToList (repoId: repoCfg: {
+        assertion = lib.hasAttr repoCfg.secretName secrets;
+        message = ''
+          services.github-webhook.repos.${repoId}.secretName="${repoCfg.secretName}"
           is not defined in config.sops.secrets.
         '';
-      }) cfg.listeners);
+      }) cfg.repos);
 
     systemd.services.github-webhook =
       let
         # Collect all working directories for ConditionPathExists.
         workingDirs = lib.unique (
-          lib.flatten (
-            lib.mapAttrsToList (
-              _: listenerCfg: lib.mapAttrsToList (_: repoCfg: repoCfg.workingDir) listenerCfg.repos
-            ) cfg.listeners
-          )
+          lib.mapAttrsToList (_: repoCfg: repoCfg.workingDir) cfg.repos
         );
 
         # Collect all secrets for LoadCredential.
         credentialsList = lib.mapAttrsToList (
-          _: listenerCfg:
-          "${listenerCfg.secretName}:${config.sops.secrets.${listenerCfg.secretName}.path}"
-        ) cfg.listeners;
+          _: repoCfg:
+          "${repoCfg.secretName}:${config.sops.secrets.${repoCfg.secretName}.path}"
+        ) cfg.repos;
       in
       {
         description = "GitHub webhook listener";

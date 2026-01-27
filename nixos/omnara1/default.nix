@@ -163,18 +163,16 @@
   services.github-webhook = {
     enable = true;
     user = "phlip9";
-    listeners.dotfiles = {
+    repos."phlip9/dotfiles" = {
       secretName = "dotfiles-github-webhook-secret";
-      repos."phlip9/dotfiles" = {
-        branches = [ "master" ];
-        command = [
-          "${pkgs.bash}/bin/bash"
-          "-c"
-          "git fetch upstream && git reset --hard upstream/master"
-        ];
-        workingDir = "/home/phlip9/dev/dotfiles";
-        runOnStartup = true;
-      };
+      branches = [ "master" ];
+      command = [
+        "${pkgs.bash}/bin/bash"
+        "-c"
+        "git fetch upstream && git reset --hard upstream/master"
+      ];
+      workingDir = "/home/phlip9/dev/dotfiles";
+      runOnStartup = true;
     };
   };
   sops.secrets.dotfiles-github-webhook-secret = { };

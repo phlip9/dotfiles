@@ -5,7 +5,7 @@
 //
 //   - single HTTP endpoint for all webhooks: POST /webhooks/github
 //   - JSON-based configuration loaded at startup
-//   - per-listener HMAC verification (each listener can have different secret)
+//   - per-repo HMAC verification (each repo can have different secret)
 //   - per-repo command execution with standard environment variables
 //   - per-repo debouncing to avoid overlapping commands (serial execution)
 //   - optional run-on-startup for initial sync
@@ -16,19 +16,15 @@
 //
 //	{
 //	  "port": "8673",
-//	  "listeners": {
-//	    "dotfiles": {
+//	  "repos": {
+//	    "phlip9/dotfiles": {
 //	      "secret_path": "/run/credentials/github-webhook/dotfiles-secret",
-//	      "repos": {
-//	        "phlip9/dotfiles": {
-//	          "branches": ["master"],
-//	          "command": ["/path/to/script.sh"],
-//	          "working_dir": "/home/phlip9/dev/dotfiles",
-//	          "quiet_ms": 500,
-//	          "run_on_startup": true,
-//	          "timeout_ms": 3600000
-//	        }
-//	      }
+//	      "branches": ["master"],
+//	      "command": ["/path/to/script.sh"],
+//	      "working_dir": "/home/phlip9/dev/dotfiles",
+//	      "quiet_ms": 500,
+//	      "run_on_startup": true,
+//	      "timeout_ms": 3600000
 //	    }
 //	  }
 //	}
@@ -67,18 +63,13 @@ import (
 
 // Config is the top-level configuration structure.
 type Config struct {
-	Port      string                `json:"port"`
-	Listeners map[string]*Listener `json:"listeners"`
-}
-
-// Listener represents a webhook listener with its own secret.
-type Listener struct {
-	SecretPath string           `json:"secret_path"`
-	Repos      map[string]*Repo `json:"repos"`
+	Port  string           `json:"port"`
+	Repos map[string]*Repo `json:"repos"`
 }
 
 // Repo represents a repository configuration.
 type Repo struct {
+	SecretPath   string   `json:"secret_path"`
 	Branches     []string `json:"branches"`
 	Command      []string `json:"command"`
 	WorkingDir   string   `json:"working_dir"`
@@ -143,44 +134,38 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Initialize handlers for each repo across all listeners.
-	for listenerID, listener := range cfg.Listeners {
-		secret, err := readSecret(listener.SecretPath)
+	// Initialize handlers for each repo.
+	for repoFullName, repo := range cfg.Repos {
+		secret, err := readSecret(repo.SecretPath)
 		if err != nil {
-			log.Fatalf("read secret for listener %s: %v", listenerID, err)
+			log.Fatalf("read secret for repo %s: %v", repoFullName, err)
 		}
 
-		for repoFullName, repo := range listener.Repos {
-			if _, exists := a.handlers[repoFullName]; exists {
-				log.Fatalf("duplicate repo config: %s", repoFullName)
-			}
+		timeout := time.Duration(repo.TimeoutMs) * time.Millisecond
+		quiet := time.Duration(repo.QuietMs) * time.Millisecond
 
-			timeout := time.Duration(repo.TimeoutMs) * time.Millisecond
-			quiet := time.Duration(repo.QuietMs) * time.Millisecond
+		handler := &repoHandler{
+			fullName: repoFullName,
+			repo:     *repo,
+			secret:   secret,
+			timeout:  timeout,
+		}
 
-			handler := &repoHandler{
-				fullName: repoFullName,
-				repo:     *repo,
-				secret:   secret,
-				timeout:  timeout,
-			}
+		handler.deb = newDebouncer(quiet, func(tctx triggerContext) error {
+			return handler.runCommand(ctx, tctx)
+		})
 
-			handler.deb = newDebouncer(quiet, func(tctx triggerContext) error {
-				return handler.runCommand(ctx, tctx)
-			})
+		a.handlers[repoFullName] = handler
 
-			a.handlers[repoFullName] = handler
+		// Start debouncer goroutine.
+		go handler.deb.run(ctx)
 
-			// Start debouncer goroutine.
-			go handler.deb.run(ctx)
-
-			// Run startup command if configured.
-			if repo.RunOnStartup {
-				log.Printf("[%s] running startup command", repoFullName)
-				tctx := triggerContext{event: "startup"}
-				if err := handler.runCommand(ctx, tctx); err != nil {
-					log.Printf("[%s] startup command failed: %v", repoFullName, err)
-				}
+		// Run startup command if configured.
+		if repo.RunOnStartup {
+			log.Printf("[%s] running startup command", repoFullName)
+			tctx := triggerContext{event: "startup"}
+			if err := handler.runCommand(ctx, tctx); err != nil {
+				log.Printf("[%s] startup command failed: %v", repoFullName, err)
 			}
 		}
 	}
