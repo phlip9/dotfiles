@@ -15,6 +15,6 @@
   (sources.sops-nix + "/modules/sops/default.nix")
   (sources.noctalia-shell + "/nix/nixos-module.nix")
   ./phlippkgs.nix
-  ./dotfiles-webhook.nix
+  ./github-webhook.nix
   ./xremap.nix
 ]

@@ -83,6 +83,6 @@ in
   # xremap - dynamic key remap for X11 and Wayland
   xremap = callPackage ./xremap.nix { };
 
-  # dotfiles webhook listener to keep omnara1 checkout in sync
-  dotfiles-webhook = callPackage ./dotfiles-webhook { };
+  # github webhook listener for multi-repo command execution
+  github-webhook = callPackage ./github-webhook { };
 }

@@ -83,6 +83,14 @@ rec {
   # NixOS graphical installer .iso image
   nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;
 
+  # NixOS VM tests
+  nixosTests = {
+    github-webhook = import ./nixos/tests/github-webhook.nix {
+      inherit pkgs;
+      system = pkgs.system;
+    };
+  };
+
   deploy = import ./nix/deploy.nix {
     inherit pkgs;
     nodes = {
