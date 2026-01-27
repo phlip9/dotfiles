@@ -85,6 +85,9 @@ sops-updatekeys:
     fd --type file --full-path --regex "(${combined_regex})" \
         --exec sops updatekeys {}
 
+ssh-updatekeys:
+    curl https://github.com/phlip9.keys > nix/phlip9.keys
+
 # Update phlipPkgs package(s) with updateScript
 phlippkgs-update pkg="":
     nix-shell pkgs/update.nix {{ if pkg != "" { "--argstr package " + pkg } else { "" } }}

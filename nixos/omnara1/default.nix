@@ -145,9 +145,7 @@
     isNormalUser = true;
     description = "Philip Kannegaard Hayes";
     extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [
-      "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIP/8j7BMuNsn+aXTjm3LP8mDR8q/GylbrkGVBn1PBrwhAAAABHNzaDo= phlip9-5ci-fips"
-    ];
+    openssh.authorizedKeys.keys = import ../../nix/ssh-pubkeys.nix;
 
     # Enable "linger" so that systemd will start the user service and all
     # `default.target`-triggered user services automatically on boot.
