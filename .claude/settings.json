@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(chmod:*)",
+      "Bash(git blame:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git status:*)",
+      "Bash(grep:*)",
+      "Bash(just --list:*)",
+      "Bash(just bash-lint:*)",
+      "Bash(just nvim-print-my-plugins-dir:*)",
+      "Bash(nix build:*)",
+      "Bash(nix eval:*)",
+      "Bash(nix-build:*)",
+      "Bash(nix-shell:*)",
+      "Bash(npins add:*)",
+      "Bash(nvim:*)",
+      "Bash(pkgs/codex/update.sh:*)",
+      "Bash(pkgs/omnara/update.sh:*)",
+      "Bash(rg:*)",
+      "Bash(shellcheck:*)",
+      "Bash(tree:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:hiphish.github.io)",
+      "WebSearch"
+    ],
+    "deny": []
+  }
+}

@@ -27,7 +27,7 @@ config/htop/htoprc
 /.vim/coc-settings.json
 
 # AI
-/.claude
+/.claude/settings.local.json
 /prompts
 /prompts.md
 /notes
