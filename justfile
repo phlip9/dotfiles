@@ -2,17 +2,33 @@
 default:
     just --list
 
+# --- top-level --- #
+
+ci: just-ci bash-ci nix-ci go-ci nvim-ci
+
 fmt: just-fmt nix-fmt go-fmt
 
 lint: bash-lint nix-lint nvim-lint
 
+# --- just --- #
+
+just-ci: just-fmt
+
 just-fmt:
     just --fmt --unstable
+
+# --- bash --- #
+
+bash-ci: bash-lint
 
 bash-lint:
     nix shell -f . pkgs.shellcheck pkgs.fd --command \
         fd --type file '^.*(hms|nos|bashrc|\.sh|\.bash)$' \
             --exec shellcheck {}
+
+# --- nix --- #
+
+nix-ci: nix-fmt nix-lint
 
 nix-fmt:
     nix shell -f . phlipPkgs.nixfmt pkgs.fd --command \
@@ -22,13 +38,25 @@ nix-lint:
     nix shell -f . pkgs.nil --command \
         fd --extension "nix" --exec nil diagnostics
 
+# Update phlipPkgs package(s) with updateScript
+phlippkgs-update pkg="":
+    nix-shell pkgs/update.nix {{ if pkg != "" { "--argstr package " + pkg } else { "" } }}
+
+# --- go --- #
+
+go-ci: go-fmt go-test
+
 go-fmt:
-    fd --type file '^.*\.go$' --exec-batch gofmt -w {}
+    nix shell -f . pkgs.go pkgs.fd --command \
+        fd --type file '^.*\.go$' --exec-batch gofmt -w {}
 
 go-test *args:
-    cd pkgs/github-webhook \
-        && mkdir -p /tmp/go-cache \
-        && GOCACHE=/tmp/go-cache GO111MODULE=off go test
+    nix shell -f . pkgs.go --command \
+        bash -c "cd pkgs/github-webhook && mkdir -p /tmp/go-cache && GOCACHE=/tmp/go-cache GO111MODULE=off go test"
+
+# --- neovim --- #
+
+nvim-ci: nvim-lint nvim-test
 
 nvim-lint:
     #!/usr/bin/env bash
@@ -71,6 +99,8 @@ nvim-print-base-runtime-dir:
 # Boot into Limine UEFI bootloader in a QEMU VM
 qemu-bootloader:
     ./bin/qemu-bootloader.sh
+
+# --- deployment --- #
 
 deploy-bootstrap cfg:
     #!/usr/bin/env bash
@@ -119,7 +149,3 @@ sops-test-fixtures-edit:
 
 ssh-updatekeys:
     curl https://github.com/phlip9.keys > nix/phlip9.keys
-
-# Update phlipPkgs package(s) with updateScript
-phlippkgs-update pkg="":
-    nix-shell pkgs/update.nix {{ if pkg != "" { "--argstr package " + pkg } else { "" } }}

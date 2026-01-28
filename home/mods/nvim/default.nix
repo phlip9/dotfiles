@@ -199,7 +199,8 @@ let
 
   # .luarc.json for CLI lua-language-server --check
   myLuarcJson = {
-    "$schema" = "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json";
+    "$schema" =
+      "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json";
     runtime = {
       version = "LuaJIT";
       pathStrict = true;

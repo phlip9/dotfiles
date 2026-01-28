@@ -71,14 +71,21 @@
 
 ## just commands (non-exhaustive)
 
-- `just just-fmt` format justfile
-- `just bash-lint` lint bash scripts
-- `just nix-fmt` format nix files
-- `just nix-lint` lint nix files
-- `just nvim-test` run nvim/lua/test tests
-- `just nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
-- `just nvim-print-base-runtime-path` print base nvim installation's runtime path
-- `just go-fmt`, `just go-test`
+(ex: `just nvim-test`)
+
+- `bash-lint` lint bash scripts
+- `go-ci`: `go-fmt`, `go-test` format go / test go packages
+- `just-fmt` format justfile
+- `nix-ci` run local nix CI checks (lint/format/test)
+- `nix-fmt` format nix files
+- `nix-lint` lint nix files
+- `nvim-lint` lint nvim/lua files
+- `nvim-print-base-runtime-path` print base nvim installation's runtime path
+- `nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
+- `nvim-test` run nvim/lua/test tests
+
+after making changes in an area and before presenting the results, run the
+relevant lint/format/test commands and fix any issues.
 
 ## nix
 
