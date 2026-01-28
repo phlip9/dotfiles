@@ -13,12 +13,13 @@
   versionCheckHook,
 }:
 let
+  hostPlatform = stdenvNoCC.hostPlatform;
   sources = lib.importJSON ./sources.json;
-  source = sources.${stdenvNoCC.hostPlatform.system};
+  source = sources.${hostPlatform.system};
 in
 stdenvNoCC.mkDerivation {
   pname = "omnara";
-  inherit (sources) version;
+  inherit (source) version;
 
   src = fetchurl {
     inherit (source) url hash;
@@ -32,7 +33,7 @@ stdenvNoCC.mkDerivation {
   nativeBuildInputs = [
     makeBinaryWrapper
   ]
-  ++ lib.optionals stdenvNoCC.hostPlatform.isLinux [
+  ++ lib.optionals hostPlatform.isLinux [
     autoPatchelfHook
   ];
 

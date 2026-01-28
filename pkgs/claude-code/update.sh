@@ -1,5 +1,6 @@
 #!/usr/bin/env nix
 #!nix shell nixpkgs#bash nixpkgs#nix-update nixpkgs#nodePackages.npm --command bash
+# shellcheck shell=bash
 
 set -euo pipefail
 
