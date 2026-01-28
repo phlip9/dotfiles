@@ -237,10 +237,12 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
 
         if not vim.b[buf].prev_fold_state then
             -- enable and save current state
+            ---@diagnostic disable: undefined-field
             vim.b[buf].prev_fold_state = {
                 foldmethod = vim.opt_local.foldmethod:get(),
                 foldexpr = vim.opt_local.foldexpr:get(),
             }
+            ---@diagnostic enable: undefined-field
 
             vim.opt_local.foldmethod = "expr"
             vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"

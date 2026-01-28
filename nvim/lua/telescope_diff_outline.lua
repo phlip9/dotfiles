@@ -8,15 +8,12 @@
 ---   diff_outline.coc_document_symbols({})
 ---   diff_outline.treesitter_symbols({})
 
-local actions = require("telescope.actions")
-local action_state = require("telescope.actions.state")
 local conf = require("telescope.config").values
 local finders = require("telescope.finders")
 local make_entry = require("telescope.make_entry")
 local pickers = require("telescope.pickers")
 local previewers = require("telescope.previewers")
 local entry_display = require("telescope.pickers.entry_display")
-local utils = require("telescope.utils")
 
 local M = {}
 
@@ -40,7 +37,6 @@ end
 --- @param hunk table Hunk: [old_start, old_count, new_start, new_count]
 --- @return boolean
 local function line_in_hunk(lnum, hunk)
-    local old_count = hunk[2]
     local new_start = hunk[3]
     local new_count = hunk[4]
 
@@ -99,11 +95,11 @@ end
 --------------------------------------------------------------------------------
 
 --- Create an entry maker that adds diff markers to symbol entries.
---- @param bufnr number Buffer number
 --- @param hunks table[] Hunks for the buffer
 --- @param opts table Options for the picker
 --- @return function entry_maker
-function M.make_diff_entry_maker(bufnr, hunks, opts)
+---@diagnostic disable-next-line: unused-local
+function M.make_diff_entry_maker(_bufnr, hunks, opts)
     local base_maker = make_entry.gen_from_lsp_symbols(opts)
 
     local displayer = entry_display.create({
@@ -137,16 +133,12 @@ function M.make_diff_entry_maker(bufnr, hunks, opts)
             end
 
             -- Get original display
-            local display_text, orig_highlights
+            local display_text
             if type(orig_display) == "function" then
-                display_text, orig_highlights = orig_display(e)
+                display_text = orig_display(e)
             else
                 display_text = orig_display
-                orig_highlights = {}
             end
-
-            -- Build new display with marker prefix
-            local marker_hl = hl_group and { { { 0, 1 }, hl_group } } or {}
 
             return displayer({
                 { marker, hl_group },
@@ -175,7 +167,8 @@ function M.make_diff_previewer(opts, hunks)
             return entry.filename
         end,
 
-        define_preview = function(self, entry, status)
+        ---@diagnostic disable-next-line: unused-local
+        define_preview = function(self, entry, _status)
             -- Use the built-in buffer previewer behavior
             conf.buffer_previewer_maker(entry.filename, self.state.bufnr, {
                 bufname = self.state.bufname,
@@ -322,20 +315,16 @@ function M.treesitter_symbols(opts)
     -- diff marker logic
     local builtin = require("telescope.builtin")
 
-    -- treesitter picker uses ts_utils internally, we need to replicate that
     local parsers = require("nvim-treesitter.parsers")
     if not parsers.has_parser(parsers.get_buf_lang()) then
         print("No treesitter parser for this buffer")
         return
     end
 
-    local ts_utils = require("telescope.builtin.__internal")
-
     -- Get treesitter entries
     local ts_entries = {}
     local filename = vim.api.nvim_buf_get_name(bufnr)
 
-    -- Use nvim-treesitter to get symbols
     local ts = vim.treesitter
     local lang = parsers.get_buf_lang()
     local parser = parsers.get_parser(bufnr, lang)

@@ -8,12 +8,12 @@ function M.nvim_open_tmp_buf(contents)
     vim.cmd("enew")
     local bufnr = vim.api.nvim_get_current_buf()
     -- don't list this buffer in the buffer list
-    vim.api.nvim_buf_set_option(bufnr, "buflisted", false)
+    vim.bo[bufnr].buflisted = false
     -- unload this buffer when it's no longer displayed in a window
-    vim.api.nvim_buf_set_option(bufnr, "bufhidden", "unload")
+    vim.bo[bufnr].bufhidden = "unload"
     -- not a real file, don't try to write or swap
-    vim.api.nvim_buf_set_option(bufnr, "buftype", "nofile")
-    vim.api.nvim_buf_set_option(bufnr, "filetype", "lua")
+    vim.bo[bufnr].buftype = "nofile"
+    vim.bo[bufnr].filetype = "lua"
 
     -- note: we can't set the buffer contents to a string with newlines, so we
     -- have to split first.
@@ -31,7 +31,8 @@ function M.get_loc()
     end
     info = info or me
     local source = info.source:sub(2)
-    source = vim.loop.fs_realpath(source) or source
+    ---@diagnostic disable-next-line: undefined-field
+    source = vim.uv.fs_realpath(source) or source
     return source .. ":" .. info.linedefined
 end
 
