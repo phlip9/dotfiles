@@ -59,6 +59,9 @@ in
   # niri - scrolling tiling wayland compositor
   niri = callPackage ./niri.nix { };
 
+  # neovim - wrapped neovim with plugins and tools
+  nvim = callPackage ./nvim { };
+
   # nixfmt - standard nix formatter
   # TODO(phlip9): change to `pkgs.nixfmt` after release-25.11
   nixfmt = pkgs.nixfmt-rfc-style;
