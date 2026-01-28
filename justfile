@@ -10,6 +10,8 @@ fmt: just-fmt nix-fmt go-fmt
 
 lint: bash-lint nix-lint nvim-lint
 
+test: go-test nvim-test
+
 # --- just --- #
 
 just-ci: just-fmt
@@ -75,17 +77,6 @@ nvim-test *args:
     nvim --headless \
         -c "PlenaryBustedDirectory nvim/lua/test {nvim_cmd = '$(which nvim)'}" \
         {{ args }}
-
-nvim-update-extra-plugins:
-    nix shell nixpkgs#vimPluginsUpdater --command \
-        vim-plugins-updater \
-            --input-names ./home/mods/nvim/nvim-extra-plugins.csv \
-            --out ./home/mods/nvim/nvim-extra-plugins.generated.nix \
-            --no-commit \
-            --debug DEBUG \
-            --nixpkgs ../nixpkgs \
-            update
-    just nix-fmt
 
 nvim-print-my-plugins-dir:
     nvim --headless \

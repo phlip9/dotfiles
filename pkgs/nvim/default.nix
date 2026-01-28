@@ -54,9 +54,9 @@ let
   # To update:
   #
   # ```bash
-  # just update-nvim-extra-plugins
+  # just phlippkgs-update nvim
   # ```
-  extraPluginsGenerated = callPackage ./nvim-extra-plugins.generated.nix {
+  extraPluginsGenerated = callPackage ./extra-plugins.generated.nix {
     buildVimPlugin = vimUtils.buildVimPlugin;
     buildNeovimPlugin = neovimUtils.buildNeovimPlugin;
   };
@@ -252,5 +252,6 @@ finalNeovimPackage.overrideAttrs (old: {
       dotfilesCocSettingsFile
       dotfilesLuarcJsonFile
       ;
+    updateScript = ./update.sh;
   };
 })
