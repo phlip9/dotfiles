@@ -33,23 +33,23 @@ prefetch_hash() {
 }
 
 LINUX_X64_HASH=$(prefetch_hash "linux-x64")
-DARWIN_ARM64_HASH=$(prefetch_hash "darwin-arm64")
+# DARWIN_ARM64_HASH=$(prefetch_hash "darwin-arm64")
+# --arg darwin_arm64_hash "$DARWIN_ARM64_HASH"
+# "aarch64-darwin": {
+#   target: "darwin-arm64",
+#   url: "https://releases.omnara.com/\($version)/omnara-darwin-arm64",
+#   hash: $darwin_arm64_hash
+# }
 
 jq -n \
   --arg version "$VERSION" \
   --arg linux_x64_hash "$LINUX_X64_HASH" \
-  --arg darwin_arm64_hash "$DARWIN_ARM64_HASH" \
   '{
     version: $version,
     "x86_64-linux": {
       target: "linux-x64",
       url: "https://releases.omnara.com/\($version)/omnara-linux-x64",
       hash: $linux_x64_hash
-    },
-    "aarch64-darwin": {
-      target: "darwin-arm64",
-      url: "https://releases.omnara.com/\($version)/omnara-darwin-arm64",
-      hash: $darwin_arm64_hash
     }
   }' > "$SOURCES_FILE"
 
