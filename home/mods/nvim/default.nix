@@ -192,6 +192,8 @@ let
   # Need a coc-settings.json specific to our dotfiles directory for good
   # autocompletion that includes all our plugins.
   myDotfilesSpecificCocSettings = {
+    "sumneko-lua.serverDir" =
+      "${pkgs.lua-language-server}/share/lua-language-server";
     "Lua.runtime.version" = "LuaJIT";
     "Lua.workspace.library" = map (x: "${x.plugin.outPath}/lua") luaPlugins;
   };
@@ -241,17 +243,6 @@ in
 
   # symlink ~/.config/nvim to `dotfiles/nvim` dir.
   xdg.configFile."nvim".source = mkOutOfStoreSymlink "${dotfilesDir}/nvim";
-
-  # symlink `~/.local/share/lua-language-server` to `${pkgs.lua-language-server}/share/lua-language-server`.
-  #
-  # ## Why:
-  #
-  # (1) I don't want to manage the `coc-settings.json` via nix, since then I lose
-  #     the extremely nice auto-complete for all the random settings.
-  # (2) `coc-sumneko-lua` can't seem to locate the lua LSP when it's in the
-  #     $PATH, so we need to place it somewhere fixed, like in ~/.local/...
-  xdg.dataFile."lua-language-server".source =
-    "${pkgs.lua-language-server}/share/lua-language-server";
 
   # Configure the lua LSP for local nvim plugin development.
   home.file."dev/dotfiles/.vim/coc-settings.json".source = "${

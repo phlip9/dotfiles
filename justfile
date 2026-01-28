@@ -64,7 +64,7 @@ nvim-lint:
     TMPDIR="$(mktemp -d)"
     trap 'rm -rf "$TMPDIR"' EXIT
 
-    ~/.local/share/lua-language-server/bin/lua-language-server \
+    "$(jq -r '."sumneko-lua.serverDir"' .vim/coc-settings.json)/bin/lua-language-server" \
         --check nvim/ \
         --checklevel Hint \
         --configpath "$PWD/.luarc.json" \
