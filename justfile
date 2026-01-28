@@ -29,6 +29,13 @@ go-test *args:
         && mkdir -p /tmp/go-cache \
         && GOCACHE=/tmp/go-cache GO111MODULE=off go test
 
+nvim-test *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    nvim --headless \
+        -c "PlenaryBustedDirectory nvim/lua/test {nvim_cmd = '$(which nvim)'}" \
+        {{ args }}
+
 go-fmt:
     fd --type file '^.*\.go$' --exec-batch gofmt -w {}
 

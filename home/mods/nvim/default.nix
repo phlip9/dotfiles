@@ -105,6 +105,9 @@ let
     # nvim-treesitter-textobjects - syntax aware text objs + motions
     { plugin = p.nvim-treesitter-textobjects; }
 
+    # plenary.nvim - missing std for neovim lua. testing utils.
+    { plugin = p.plenary-nvim; }
+
     # telescope.nvim - fuzzy picker framework
     { plugin = p.telescope-nvim; }
     # telescope-fzf-native - use native impl fzf algorithm to speed up matching

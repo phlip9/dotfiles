@@ -75,6 +75,7 @@
 - `just bash-lint` lint bash scripts
 - `just nix-fmt` format nix files
 - `just nix-lint` lint nix files
+- `just nvim-test` run nvim/lua/test tests
 - `just nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
 - `just nvim-print-base-runtime-path` print base nvim installation's runtime path
 - `just go-fmt`, `just go-test`

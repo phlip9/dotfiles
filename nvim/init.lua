@@ -479,10 +479,12 @@ if pcall(require, "telescope") then
 
     -- LSP
     local function show_outline()
+        local diff_outline = require_local("telescope_diff_outline")
+
         -- Use coc.nvim LSP document outline if available
         if vim.g.coc_service_initialized == 1 and vim.fn.CocHasProvider("documentSymbol") then
-            return coc.document_symbols({
-                -- don't show path in output
+            return diff_outline.coc_document_symbols({
+                -- don't show path in outline
                 path_display = "hidden",
             })
         end
@@ -490,7 +492,7 @@ if pcall(require, "telescope") then
         -- Use treesitter document outline if available
         local parsers = require("nvim-treesitter.parsers")
         if parsers.has_parser(parsers.get_buf_lang()) then
-            return builtin.treesitter({})
+            return diff_outline.treesitter_symbols({})
         end
 
         print("No coc.nvim LSP or treesitter parser for outline")
