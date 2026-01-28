@@ -78,6 +78,9 @@ nvim-test *args:
         -c "PlenaryBustedDirectory nvim/lua/test {nvim_cmd = '$(which nvim)'}" \
         {{ args }}
 
+nvim-test-nix:
+    nix build -f . phlipPkgs.nvim.tests.nvim-test
+
 nvim-print-my-plugins-dir:
     nvim --headless \
         -c 'lua print(vim.opt.runtimepath:get()[1] .. "/pack/myNeovimPackages/start")' \
