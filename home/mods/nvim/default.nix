@@ -197,6 +197,31 @@ let
   };
   myDotfilesSpecificCocSettingsFile = pkgs.writers.writeJSON "coc-settings.json" myDotfilesSpecificCocSettings;
 
+  # .luarc.json for CLI lua-language-server --check
+  myLuarcJson = {
+    "$schema" = "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json";
+    runtime = {
+      version = "LuaJIT";
+      pathStrict = true;
+    };
+    workspace = {
+      ignoreSubmodules = true;
+      checkThirdParty = false;
+      library =
+        # neovim runtime for vim.* types
+        [ "${pkgs.neovim-unwrapped}/share/nvim/runtime/lua" ]
+        # nvim lua plugin libraries
+        ++ map (x: "${x.plugin.outPath}/lua") luaPlugins;
+    };
+    diagnostics = {
+      libraryFiles = "Disable";
+      disable = [ "redefined-local" ];
+      # neovim globals
+      globals = [ "vim" ];
+    };
+  };
+  myLuarcJsonFile = pkgs.writers.writeJSON ".luarc.json" myLuarcJson;
+
   # The final, wrapped neovim package.
   finalNeovimPackage = pkgs.wrapNeovimUnstable pkgs.neovim-unwrapped neovimConfig;
 in
@@ -231,4 +256,7 @@ in
   home.file."dev/dotfiles/.vim/coc-settings.json".source = "${
     myDotfilesSpecificCocSettingsFile
   }";
+
+  # .luarc.json for CLI lua-language-server --check (used by `just nvim-lint`)
+  home.file."dev/dotfiles/.luarc.json".source = "${myLuarcJsonFile}";
 }

@@ -2,42 +2,51 @@
 default:
     just --list
 
-fmt: just-fmt nix-fmt
+fmt: just-fmt nix-fmt go-fmt
+
+lint: bash-lint nix-lint nvim-lint
 
 just-fmt:
     just --fmt --unstable
+
+bash-lint:
+    nix shell -f . pkgs.shellcheck pkgs.fd --command \
+        fd --type file '^.*(hms|nos|bashrc|\.sh|\.bash)$' \
+            --exec shellcheck {}
 
 nix-fmt:
     nix shell -f . phlipPkgs.nixfmt pkgs.fd --command \
         fd --extension "nix" --exec nixfmt --width 80 {}
 
-lint: bash-lint nix-lint
-
-bash-lint:
-    nix shell -f . pkgs.shellcheck pkgs.fd --command \
-        fd --type file '^.*(hms|nos|bashrc|\.sh)$' \
-            --exclude pkgs/claude-code \
-            --exclude pkgs/codex \
-            --exec shellcheck {}
-
 nix-lint:
     nix shell -f . pkgs.nil --command \
         fd --extension "nix" --exec nil diagnostics
+
+go-fmt:
+    fd --type file '^.*\.go$' --exec-batch gofmt -w {}
 
 go-test *args:
     cd pkgs/github-webhook \
         && mkdir -p /tmp/go-cache \
         && GOCACHE=/tmp/go-cache GO111MODULE=off go test
 
-nvim-test *args:
+nvim-lint:
     #!/usr/bin/env bash
     set -euo pipefail
+    TMPDIR="$(mktemp -d)"
+    trap 'rm -rf "$TMPDIR"' EXIT
+
+    ~/.local/share/lua-language-server/bin/lua-language-server \
+        --check nvim/ \
+        --checklevel Hint \
+        --configpath "$PWD/.luarc.json" \
+        --logpath "$TMPDIR/log" \
+        --metapath "$TMPDIR/meta"
+
+nvim-test *args:
     nvim --headless \
         -c "PlenaryBustedDirectory nvim/lua/test {nvim_cmd = '$(which nvim)'}" \
         {{ args }}
-
-go-fmt:
-    fd --type file '^.*\.go$' --exec-batch gofmt -w {}
 
 nvim-update-extra-plugins:
     nix shell nixpkgs#vimPluginsUpdater --command \

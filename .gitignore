@@ -23,8 +23,9 @@ config/htop/htoprc
 /result
 /result-*
 
-# home-manager generated coc-settings for this repo.
+# home-manager generated files in this repo.
 /.vim/coc-settings.json
+/.luarc.json
 
 # AI
 /.claude/settings.local.json
