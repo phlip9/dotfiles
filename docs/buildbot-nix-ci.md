@@ -1,6 +1,4 @@
-# Buildbot CI Setup for omnara1
-
-Research completed 2025-01-28. Implementation completed 2025-01-29.
+# Buildbot CI Setup for omnara1.phlip9.com
 
 ## Overview
 
@@ -24,13 +22,13 @@ https://ci.phlip9.com/webhooks/github-buildbot-ci
     ▼
 nginx (ci.phlip9.com:443)
     │
-    ├─► oauth2-proxy (127.0.0.1:4180) ─► buildbot-master (127.0.0.1:8010)
+    ├─► oauth2-proxy ([::1]:4180) ─► buildbot-master (127.0.0.1:8010)
     │   (skip-auth for /change_hook)        │
     │                                       ▼
-    │                                   buildbot-worker (10 workers)
+    │                                buildbot-worker (10 workers)
     │                                       │
     │                                       ▼ (post-build)
-    │                                   niks3 push
+    │                                  niks3 push
     │                                       │
     │                                       ▼
     └─► niks3 server ([::1]:5751) ─► Cloudflare R2
@@ -65,9 +63,8 @@ This simplifies our config and reduces potential for misconfiguration.
 
 ### 2. Single OAuth App
 
-With `fullyPrivate` mode, we only need **one** GitHub OAuth App (not two as the
-research doc originally suggested). The OAuth App is used by oauth2-proxy for
-user authentication.
+With `fullyPrivate` mode, we only need **one** GitHub OAuth App. The OAuth App
+is used by oauth2-proxy for user authentication.
 
 ### 3. Webhook Path Remapping
 
@@ -83,11 +80,10 @@ without authentication (they're verified by HMAC signature instead).
 
 ### 4. Flake Wrapper
 
-buildbot-nix requires a `flake.nix` with `.#checks` output. We added a minimal
+buildbot-nix requires a `flake.nix` with a `.#checks` output. We added a minimal
 wrapper that:
-- Has no flake inputs (everything from `default.nix` via npins)
-- Passes `localSystem = "x86_64-linux"` explicitly (required in pure flake mode)
-- Exposes `checks.x86_64-linux.{omnara1, nvim-test}` for CI
+- Has no flake inputs (everything comes from `default.nix` via npins)
+- Exposes `checks.${system}.{..}` for CI
 
 ## Configuration Reference
 
@@ -138,7 +134,7 @@ All secrets in `nixos/omnara1/secrets.yaml`:
 set -euo pipefail
 
 echo "=== Worker password ==="
-WORKER_PASS=$(openssl rand -base64 32 | tr -- '+/' '-_')
+WORKER_PASS=$(openssl rand -base64 32 | tr -- '+/' '-_' | tr -d '=\n')
 echo "$WORKER_PASS"
 
 echo -e "\n=== Workers JSON ==="
@@ -148,26 +144,26 @@ echo -e "\n=== GitHub webhook secret ==="
 openssl rand -hex 32
 
 echo -e "\n=== niks3 API token ==="
-openssl rand -base64 48
+openssl rand -base64 48 | tr -- '+/' '-_' | tr -d '=\n'
 
 echo -e "\n=== niks3 signing key ==="
-nix key generate-secret --key-name cache.phlip9.com-1
+nix key generate-secret --key-name cache.phlip9.com-1 | tee key && echo ""
+
+echo -e "\n=== niks3 signing pubkey (for nix clients) ==="
+nix key convert-secret-to-public < key && echo ""
 
 echo -e "\n=== oauth2-proxy cookie secret ==="
-openssl rand -base64 32 | tr -- '+/' '-_'
+openssl rand -base64 32 | tr -- '+/' '-_' | tr -d '=\n'
 
 echo -e "\n=== buildbot http basic auth password ==="
-openssl rand -base64 32
-
-echo -e "\n=== Public key (for nix clients) ==="
-echo "Run: echo 'SIGNING_KEY' | nix key convert-secret-to-public"
+openssl rand -base64 32 | tr -- '+/' '-_' | tr -d '=\n'
 ```
 
 ## Setup Instructions
 
 ### GitHub App Setup
 
-1. Go to https://github.com/settings/apps/new
+1. Go to <https://github.com/settings/apps/new>
 
 2. **Basic info**:
    - Name: `phlip9-buildbot-ci`
@@ -255,15 +251,15 @@ echo "Run: echo 'SIGNING_KEY' | nix key convert-secret-to-public"
 ## Adding New Repos
 
 1. Add `buildbot-phlip9` topic to the repo
-2. Install the GitHub App on the repo
+2. Install the `phlip9-buildbot-ci` GitHub App on the repo
 3. Ensure repo has `flake.nix` with `.#checks.<system>.<name>` outputs
 4. Push to trigger first build
 
 ## References
 
 **Upstream**:
-- https://github.com/nix-community/buildbot-nix
-- https://github.com/Mic92/niks3
+- <https://github.com/nix-community/buildbot-nix>
+- <https://github.com/Mic92/niks3>
 
 **Reference implementations**:
 - `/home/phlip9/dev/buildbot-nix/examples/master.nix`

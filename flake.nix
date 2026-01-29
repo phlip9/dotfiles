@@ -4,6 +4,7 @@
 # buildbot-nix evaluates `.#checks` to discover build targets.
 #
 # See: docs/buildbot-nix-ci.md
+# See: nixos/mods/buildbot-ci.nix
 {
   description = "phlip9's dotfiles";
 
@@ -12,20 +13,29 @@
 
   outputs =
     { self }:
-    let
-      # Import the main default.nix which handles all pinning via npins.
-      # Must pass system explicitly since flakes run in pure mode where
-      # builtins.currentSystem isn't available.
-      dotfiles = import ./default.nix { localSystem = "x86_64-linux"; };
-    in
     {
       # Expose checks for buildbot-nix to evaluate
-      checks.x86_64-linux = {
-        # NixOS system builds
-        omnara1 = dotfiles.nixosConfigs.omnara1.config.system.build.toplevel;
+      checks = {
+        x86_64-linux =
+          let
+            dotfiles = import ./default.nix { localSystem = "x86_64-linux"; };
+          in
+          {
+            # NixOS system builds
+            omnara1 = dotfiles.nixosConfigs.omnara1.config.system.build.toplevel;
 
-        # Package tests
-        nvim-test = dotfiles.phlipPkgs.nvim.tests.nvim-test;
+            # Package tests
+            nvim-test = dotfiles.phlipPkgs.nvim.tests.nvim-test;
+          };
+
+        aarch64-darwin =
+          let
+            dotfiles = import ./default.nix { localSystem = "aarch64-darwin"; };
+          in
+          {
+            # Package tests
+            nvim-test = dotfiles.phlipPkgs.nvim.tests.nvim-test;
+          };
       };
     };
 }

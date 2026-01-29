@@ -56,6 +56,9 @@ in
   # mpv with patched umpv
   mpv = callPackage ./mpv { };
 
+  # niks3 - S3-backed Nix binary cache with garbage collection
+  niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
+
   # niri - scrolling tiling wayland compositor
   niri = callPackage ./niri.nix { };
 

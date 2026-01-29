@@ -6,17 +6,19 @@
 # - oauth2-proxy (via buildbot-nix's fullyPrivate mode)
 # - nginx (TLS termination, routing - configured by buildbot-nix)
 #
-# Note: The buildbot-nix and niks3 NixOS modules are imported in
-# nixos/mods/default.nix since they need access to `sources`.
+# NOTE: The buildbot-nix and niks3 NixOS modules are imported in
+# nixos/mods/default.nix.
 #
 # See: docs/buildbot-nix-ci.md
-{ config, lib, pkgs, sources, ... }:
+{
+  config,
+  lib,
+  phlipPkgs,
+  ...
+}:
 
 let
   cfg = config.services.phlip9-buildbot-ci;
-
-  # Import niks3 package from source
-  niks3Pkg = pkgs.callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 in
 {
   options.services.phlip9-buildbot-ci = {
@@ -122,7 +124,8 @@ in
 
       # httpBasicAuth password is required for fullyPrivate mode
       # (used internally between oauth2-proxy and buildbot)
-      httpBasicAuthPasswordFile = config.sops.secrets.buildbot-http-basic-auth-password.path;
+      httpBasicAuthPasswordFile =
+        config.sops.secrets.buildbot-http-basic-auth-password.path;
 
       github = {
         enable = true;
@@ -144,7 +147,7 @@ in
         enable = true;
         serverUrl = "http://[::1]:5751";
         authTokenFile = config.sops.secrets.niks3-api-token.path;
-        package = niks3Pkg;
+        package = phlipPkgs.niks3;
       };
     };
 
@@ -169,7 +172,7 @@ in
       # Remap webhook path: external /webhooks/github-buildbot-ci -> internal
       # buildbot-nix's oauth2-proxy already has skip-auth-route for /change_hook
       locations."/webhooks/github-buildbot-ci" = {
-        proxyPass = "http://127.0.0.1:${toString config.services.buildbot-nix.master.accessMode.fullyPrivate.port}/change_hook/github";
+        proxyPass = "http://[::1]:${toString config.services.buildbot-nix.master.accessMode.fullyPrivate.port}/change_hook/github";
         extraConfig = ''
           proxy_connect_timeout 120s;
           proxy_send_timeout 120s;
@@ -182,7 +185,7 @@ in
     # Secrets
     # =========================================================================
     sops.secrets = {
-      # niks3 / R2
+      # niks3 / Cloudflare R2 (S3-compatible store)
       niks3-s3-access-key = { };
       niks3-s3-secret-key = { };
       niks3-api-token = { };
