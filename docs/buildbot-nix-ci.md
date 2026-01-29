@@ -174,13 +174,18 @@ openssl rand -base64 32 | tr -- '+/' '-_' | tr -d '=\n'
    - Secret: generate with `openssl rand -hex 32`
 
 4. **Repository permissions**:
-   - Contents: Read-only
    - Commit statuses: Read and write
+   - Contents: Read-only
+   - Metadata: Read-only (set by default)
    - Pull requests: Read-only
+   - Webhooks: Read and write
 
-5. **Events**: Push, Pull request
+5. **Organization permissions** (if app is for an org):
+   - Members: Read-only
 
-6. After creation:
+6. **Events**: Push, Pull request
+
+7. After creation:
    - Note the App ID
    - Generate and download private key (.pem)
    - Install on `phlip9/dotfiles`
