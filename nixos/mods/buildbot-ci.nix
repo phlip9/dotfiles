@@ -186,10 +186,10 @@ in
     # =========================================================================
     sops.secrets = {
       # niks3 / Cloudflare R2 (S3-compatible store)
-      niks3-s3-access-key = { };
-      niks3-s3-secret-key = { };
-      niks3-api-token = { };
-      niks3-signing-key = { };
+      niks3-s3-access-key.owner = "niks3";
+      niks3-s3-secret-key.owner = "niks3";
+      niks3-api-token.owner = "niks3";
+      niks3-signing-key.owner = "niks3";
 
       # buildbot
       buildbot-nix-workers = { };
