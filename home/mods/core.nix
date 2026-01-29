@@ -79,8 +79,8 @@
 
       # deploy
       phlipPkgs.rage-age-compat
+      phlipPkgs.sops
       pkgs.rage
-      pkgs.sops
       pkgs.ssh-to-age
       pkgs.yq-go
     ];
