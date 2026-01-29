@@ -5,6 +5,9 @@
   ...
 }:
 {
+  # Nix
+  phlip9.nix-cache.enable = true;
+
   #
   # Window/Display Manager
   #

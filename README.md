@@ -90,6 +90,12 @@ $ sudo cat >> /etc/nix/nix.conf << EOF
 extra-allowed-impure-host-deps = /usr/bin/ditto
 extra-sandbox-paths = /usr/bin/ditto
 EOF
+
+# Add phlip9's nix cache
+$ sudo cat >> /etc/nix/nix.conf << EOF
+extra-substituters = https://cache.phlip9.com
+extra-trusted-public-keys = cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=
+EOF
 ```
 
 NOTE: this is using the unofficial DeterminateSystems nix installer.
