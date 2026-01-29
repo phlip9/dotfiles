@@ -25,6 +25,16 @@
   programs.git = {
     userName = "lexe-agent (phlip9)";
     userEmail = "admin+github.agent@lexe.app";
+    # Pre-fill commit messages with co-author trailer so commits show phlip9 as
+    # a contributor. Two leading newlines: first line for commit subject, second
+    # blank line separates subject from trailer (required for git to parse it).
+    extraConfig.commit.template = toString (
+      pkgs.writeText "git-commit-template" ''
+
+
+        Co-authored-by: phlip9 <philiphayes9@gmail.com>
+      ''
+    );
   };
 
   # This value determines the Home Manager release that your configuration is
