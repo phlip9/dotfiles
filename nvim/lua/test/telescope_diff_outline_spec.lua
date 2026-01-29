@@ -20,7 +20,7 @@ describe("telescope_diff_outline", function()
             local hunks = { { 10, 0, 10, 5 } } -- lines 10-14 added
             eq("+", M.get_line_diff_status(10, hunks))
             eq("+", M.get_line_diff_status(12, hunks))
-            eq("+", M.get_line_diff_status(14, hunks))
+            eq("WRONG", M.get_line_diff_status(14, hunks)) -- intentionally broken
         end)
 
         it("returns ~ for modified lines", function()
