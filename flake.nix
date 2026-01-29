@@ -2,6 +2,8 @@
 #
 # This flake has no inputs - everything comes from default.nix which uses npins.
 # buildbot-nix evaluates `.#checks` to discover build targets.
+#
+# See: docs/buildbot-nix-ci.md
 {
   description = "phlip9's dotfiles";
 
@@ -24,12 +26,6 @@
 
         # Package tests
         nvim-test = dotfiles.phlipPkgs.nvim.tests.nvim-test;
-      };
-
-      # Expose nixosConfigurations for `nixos-rebuild --flake`
-      # Note: Only include configs that evaluate cleanly in pure flake mode.
-      nixosConfigurations = {
-        inherit (dotfiles.nixosConfigs) omnara1;
       };
     };
 }
