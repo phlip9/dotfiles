@@ -17,4 +17,10 @@
   ./phlippkgs.nix
   ./github-webhook.nix
   ./xremap.nix
+
+  # buildbot-ci module + its dependencies
+  (sources.buildbot-nix + "/nixosModules/master.nix")
+  (sources.buildbot-nix + "/nixosModules/worker.nix")
+  (sources.niks3 + "/nix/nixosModules/niks3.nix")
+  ./buildbot-ci.nix
 ]

@@ -195,4 +195,26 @@
     dotfiles-github-webhook-secret = { };
     lexe-github-webhook-secret = { };
   };
+
+  # =========================================================================
+  # Buildbot CI
+  # =========================================================================
+  services.phlip9-buildbot-ci = {
+    enable = true;
+    domain = "ci.phlip9.com";
+    cacheDomain = "cache.phlip9.com";
+
+    github = {
+      appId = 2746100;
+      # OAuth App Client ID for oauth2-proxy (fullyPrivate mode)
+      oauthClientId = "Ov23lipvJOGiZTG0aqv9";
+    };
+
+    cloudflare = {
+      accountId = "30faeb30dcb2a77a72fdc0948c99de62";
+      bucket = "phlip9-nix-cache";
+    };
+
+    cache.publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
+  };
 }
