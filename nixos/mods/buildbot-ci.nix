@@ -215,12 +215,5 @@ in
       oauth2-proxy-cookie-secret = { };
     };
 
-    # =========================================================================
-    # Use our cache for nix builds on this machine
-    # =========================================================================
-    nix.settings = {
-      extra-substituters = [ "https://${cfg.cacheDomain}" ];
-      extra-trusted-public-keys = [ cfg.cache.publicKey ];
-    };
   };
 }

@@ -104,6 +104,8 @@
   };
 
   # Nix
+  phlip9.nix-cache.enable = true;
+
   nix = {
     # Collect garbage weekly. deletes unused items in the `/nix/store`.
     gc = {
