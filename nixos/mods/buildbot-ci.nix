@@ -189,7 +189,7 @@ in
     # excessive permissions (full r/w access to all repos (?)). We only need
     # user identity. Patch the preStart script to use minimal scopes.
     systemd.services.oauth2-proxy.preStart = lib.mkAfter ''
-      ${lib.getExe pkgs.gnused} -i 's/scope = "read:user user:email repo"/scope = "read:user user:email"/' \
+      ${lib.getExe pkgs.gnused} -i 's/scope = "read:user user:email repo"/scope = "read:user user:email read:org"/' \
         "$CONFIGURATION_DIRECTORY/oauth2-proxy.toml"
     '';
 
