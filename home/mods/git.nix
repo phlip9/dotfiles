@@ -191,6 +191,7 @@ in
       ds = "diff --staged";
       fo = "fetch origin";
       fu = "fetch upstream";
+      fa = "fetch agent";
       last = "log -1 HEAD";
       lg = stripNewlines ''
         log --graph --abbrev-commit --decorate --all
@@ -211,12 +212,14 @@ in
       rbu = "!git rebase upstream/$(git master)";
       rs = "reset";
       rsh = "reset --hard";
+      rsha = "!git reset --hard agent/$(git branch --show-current)";
       rsho = "!git reset --hard origin/$(git branch --show-current)";
       rshom = "!git reset --hard origin/$(git master)";
       rshu = "!git reset --hard upstream/$(git branch --show-current)";
       rshum = "!git reset --hard upstream/$(git master)";
-      rso = "!git reset --hard origin/$(git master)";
-      rsu = "!git reset --hard upstream/$(git master)";
+      rsa = "!git reset origin/$(git master)";
+      rso = "!git reset origin/$(git master)";
+      rsu = "!git reset upstream/$(git master)";
       s = "status";
       sw = "switch";
       unwip = "!git reset --soft HEAD~1 && git restore --staged .";
