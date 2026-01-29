@@ -13,6 +13,7 @@
 {
   config,
   lib,
+  pkgs,
   phlipPkgs,
   ...
 }:
@@ -180,6 +181,17 @@ in
         '';
       };
     };
+
+    # =========================================================================
+    # oauth2-proxy
+    # =========================================================================
+    # buildbot-nix hardcodes scope="read:user user:email repo" which requests
+    # excessive permissions (full r/w access to all repos (?)). We only need
+    # user identity. Patch the preStart script to use minimal scopes.
+    systemd.services.oauth2-proxy.preStart = lib.mkAfter ''
+      ${lib.getExe pkgs.gnused} -i 's/scope = "read:user user:email repo"/scope = "read:user user:email"/' \
+        "$CONFIGURATION_DIRECTORY/oauth2-proxy.toml"
+    '';
 
     # =========================================================================
     # Secrets
