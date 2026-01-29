@@ -83,6 +83,9 @@ in
   # sampling profiler written in Rust, with native firefox-profiler integration
   samply = callPackage ./samply.nix { };
 
+  # sops wrapped with clean nvim (no plugins) for secret editing
+  sops = callPackage ./sops.nix { };
+
   # xremap - dynamic key remap for X11 and Wayland
   xremap = callPackage ./xremap.nix { };
 
