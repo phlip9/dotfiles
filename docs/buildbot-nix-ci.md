@@ -117,14 +117,14 @@ All secrets in `nixos/omnara1/secrets.yaml`:
 |--------|--------|
 | `niks3-s3-access-key` | Cloudflare R2 API token |
 | `niks3-s3-secret-key` | Cloudflare R2 API token |
-| `niks3-api-token` | `openssl rand -base64 48` |
-| `niks3-signing-key` | `nix key generate-secret --key-name cache.phlip9.com-1` |
+| `niks3-api-token` | - |
+| `niks3-signing-key` | - |
 | `oauth2-proxy-client-secret` | GitHub OAuth App secret |
-| `oauth2-proxy-cookie-secret` | `openssl rand -base64 32 \| tr -- '+/' '-_'` |
-| `buildbot-http-basic-auth-password` | `openssl rand -base64 32` |
+| `oauth2-proxy-cookie-secret` | must be 16, 24, or 32 bytes |
+| `buildbot-http-basic-auth-password` | - |
 | `buildbot-nix-workers` | JSON: `[{"name":"omnara1","pass":"...","cores":10}]` |
 | `buildbot-nix-worker-password` | Same password as in workers JSON |
-| `buildbot-github-webhook-secret` | `openssl rand -hex 32` (set in GitHub App) |
+| `buildbot-github-webhook-secret` | - |
 | `buildbot-github-app-secret-key` | GitHub App private key (.pem file) |
 
 ### Generating Secrets
@@ -153,7 +153,7 @@ echo -e "\n=== niks3 signing pubkey (for nix clients) ==="
 nix key convert-secret-to-public < key && echo ""
 
 echo -e "\n=== oauth2-proxy cookie secret ==="
-openssl rand -base64 32 | tr -- '+/' '-_' | tr -d '=\n'
+openssl rand -base64 64 | tr -- '+/' '-_' | tr -d '=\n' | cut -c1-32
 
 echo -e "\n=== buildbot http basic auth password ==="
 openssl rand -base64 32 | tr -- '+/' '-_' | tr -d '=\n'
