@@ -173,7 +173,7 @@ in
       # Remap webhook path: external /webhooks/github-buildbot-ci -> internal
       # buildbot-nix's oauth2-proxy already has skip-auth-route for /change_hook
       locations."/webhooks/github-buildbot-ci" = {
-        proxyPass = "http://[::1]:${toString config.services.buildbot-nix.master.accessMode.fullyPrivate.port}/change_hook/github";
+        proxyPass = "http://127.0.0.1:${toString config.services.buildbot-nix.master.accessMode.fullyPrivate.port}/change_hook/github";
         extraConfig = ''
           proxy_connect_timeout 120s;
           proxy_send_timeout 120s;
