@@ -217,4 +217,14 @@
 
     cache.publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
   };
+
+  # PostgreSQL for Buildbot CI
+  services.postgresql = {
+    # Pin the major version to avoid accidentally breaking the DB on nixos
+    # version update.
+    package = pkgs.postgresql_18;
+
+    # Don't need to expose the postgres to non-local connections
+    enableTCPIP = false;
+  };
 }
