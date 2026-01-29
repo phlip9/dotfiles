@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Appends co-author trailer to commit messages if not already present.
+
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+# COMMIT_SOURCE="$2"  # message, template, merge, squash, commit, or empty
+# SHA1="$3"           # only set for 'commit' source (amend)
+
+COAUTHOR="Co-authored-by: Philip Kannegaard Hayes <philiphayes9@gmail.com>"
+
+# Check if trailer already exists (case-insensitive)
+if grep -qi "^Co-authored-by:.*philiphayes9@gmail.com" "$COMMIT_MSG_FILE"; then
+    exit 0
+fi
+
+# Use git interpret-trailers to properly append the trailer. This handles all
+# edge cases: adds blank line separator if needed, joins with existing trailers.
+git interpret-trailers --in-place --trailer "$COAUTHOR" "$COMMIT_MSG_FILE"
