@@ -32,7 +32,7 @@
       pkgs.writeText "git-commit-template" ''
 
 
-        Co-authored-by: phlip9 <philiphayes9@gmail.com>
+        Co-authored-by: Philip Kannegaard Hayes <philiphayes9@gmail.com>
       ''
     );
   };
