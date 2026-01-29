@@ -9,7 +9,7 @@
 # Note: The buildbot-nix and niks3 NixOS modules are imported in
 # nixos/mods/default.nix since they need access to `sources`.
 #
-# See: docs/buildbot-ci-research.md
+# See: docs/buildbot-nix-ci.md
 { config, lib, pkgs, sources, ... }:
 
 let
