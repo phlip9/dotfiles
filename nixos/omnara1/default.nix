@@ -197,8 +197,10 @@
   };
 
   # =========================================================================
-  # Buildbot CI (see: docs/buildbot-nix-ci.md)
+  # Buildbot CI
   # =========================================================================
+  # see: docs/buildbot-nix-ci.md
+  # see: nixos/mods/buildbot-ci.nix
   services.phlip9-buildbot-ci = {
     enable = true;
     domain = "ci.phlip9.com";
@@ -217,7 +219,6 @@
 
     cache.publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
   };
-
   # PostgreSQL for Buildbot CI
   services.postgresql = {
     # Pin the major version to avoid accidentally breaking the DB on nixos
