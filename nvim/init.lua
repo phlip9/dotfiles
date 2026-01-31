@@ -104,6 +104,11 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
         },
         indent = {
             enable = true,
+            -- Disable for markdown: tree-sitter's indentexpr interferes with
+            -- gw/gq list continuation formatting. Vim's built-in formatter
+            -- uses autoindent+formatlistpat to indent continuation lines, but
+            -- when indentexpr is set, this is bypassed.
+            disable = { "markdown" },
         },
 
         -- nvim-treesitter-textobjects - syntax aware text objs + motions
