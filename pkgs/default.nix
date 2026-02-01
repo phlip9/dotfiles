@@ -26,8 +26,8 @@ in
   # dist - build and distribute binary releases
   dist = pkgs.cargo-dist;
 
-  # profiler.firefox.org but local
-  firefox-profiler = callPackage ./firefox-profiler.nix { };
+  # # profiler.firefox.org but local
+  # firefox-profiler = callPackage ./firefox-profiler.nix { };
 
   # restore fs mtimes from git
   git-restore-mtime = callPackage ./git-restore-mtime.nix { };
@@ -75,6 +75,8 @@ in
   # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
   noctalia-shell = callPackage (sources.noctalia-shell + "/nix/package.nix") {
     version = builtins.substring 1 100 sources.noctalia-shell.version;
+    # TODO(phlip9): unhack once we upgrade nixpkgs to latest stable
+    quickshell = pkgs.quickshell or (pkgs.runCommand "empty" { } "touch $out");
   };
 
   # omnara - Omnara CLI

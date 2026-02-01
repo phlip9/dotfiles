@@ -3,7 +3,7 @@
   dbus,
   fetchFromGitHub,
   fetchurl,
-  hostPlatform,
+  stdenv,
   lib,
   llvmPackages,
   oniguruma,
@@ -39,7 +39,7 @@ rustPlatform.buildRustPackage rec {
     zlib
     zstd
   ]
-  ++ lib.optionals hostPlatform.isLinux [
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
     dbus
     xorg.libxcb
   ];
@@ -50,7 +50,7 @@ rustPlatform.buildRustPackage rec {
     RUSTONIG_SYSTEM_LIBONIG = true;
     ZSTD_SYS_USE_PKG_CONFIG = true;
   }
-  // lib.optionalAttrs hostPlatform.isDarwin {
+  // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
     LIBCLANG_PATH = "${lib.getLib llvmPackages.libclang}/lib";
   };
 
