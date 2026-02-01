@@ -199,7 +199,7 @@
   # =========================================================================
   # Buildbot CI
   # =========================================================================
-  # see: docs/buildbot-nix-ci.md
+  # see: doc/buildbot-nix-ci.md
   # see: nixos/mods/buildbot-ci.nix
   services.phlip9-buildbot-ci = {
     enable = true;
