@@ -108,7 +108,6 @@ let
 
   # nixpkgs config tuned for CI eval
   nixpkgsConfig = (import ../config-unfree.nix) // {
-    allowAliases = false;
     allowUnsupportedSystem = true;
     checkMeta = true;
     inHydra = true;
@@ -160,8 +159,12 @@ let
 
   # Use currentSystem for meta inspection when possible.
   evalSystem =
-    if lib.elem builtins.currentSystem supportedSystems then
-      builtins.currentSystem
+    let
+      # builtins.currentSystem is unavailable in pure flake eval
+      current = builtins.currentSystem or null;
+    in
+    if current != null && lib.elem current supportedSystems then
+      current
     else
       builtins.elemAt supportedSystems 0;
 

@@ -32,6 +32,16 @@ bash-lint:
 
 nix-ci: nix-fmt nix-lint
 
+# Simulate buildbot-nix CI eval (nix-eval-jobs on flake checks)
+nix-ci-eval *args:
+    nix shell -f . pkgsUnstable.nix-eval-jobs --command \
+        nix-eval-jobs \
+            --option eval-cache false \
+            --force-recurse \
+            --check-cache-status \
+            --flake '.#checks.x86_64-linux' \
+            {{ args }}
+
 nix-fmt:
     nix shell -f . phlipPkgs.nixfmt pkgs.fd --command \
         fd --extension "nix" --exec nixfmt --width 80 {}
