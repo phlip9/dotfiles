@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   phlipPkgs,
   pkgs,
   ...
@@ -55,7 +56,7 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   networking.hostName = "phlipnixos";
-  networking.wireless.enable = false;
+  networking.wireless.enable = lib.mkForce false;
   networking.networkmanager.enable = true;
 
   time.timeZone = "America/Los_Angeles";
