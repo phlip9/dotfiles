@@ -54,7 +54,8 @@ in
   mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix { };
 
   # MOMW Tools Pack pre-built unstable
-  momw-tools-pack = callPackage ./momw-tools-pack.nix { };
+  # TODO(phlip9): GitLab CI artifacts expired, need to update URL
+  # momw-tools-pack = callPackage ./momw-tools-pack.nix { };
 
   # mpv with patched umpv
   mpv = callPackage ./mpv { };
