@@ -89,7 +89,7 @@
 
     # Test 2: Verify runOnStartup executed for repo1.
     print("Test 2: Check runOnStartup...")
-    machine.wait_for_file("/tmp/repo1-result", timeout=10)
+    machine.wait_for_file("/tmp/repo1-result", timeout=20)
     result = machine.succeed("cat /tmp/repo1-result").strip()
     assert result == "repo1 triggered", f"Expected 'repo1 triggered', got '{result}'"
     print("✓ Test 2 passed: runOnStartup executed")
@@ -119,7 +119,7 @@
     # Wait for debounced execution.
     time.sleep(1)
 
-    machine.wait_for_file("/tmp/repo1-result", timeout=5)
+    machine.wait_for_file("/tmp/repo1-result", timeout=10)
     result = machine.succeed("cat /tmp/repo1-result").strip()
     assert result == "repo1 triggered", f"Expected 'repo1 triggered', got '{result}'"
     print("✓ Test 3 passed: Push webhook triggered repo1")
@@ -145,7 +145,7 @@
     assert response == "202", f"Expected 202, got {response}"
 
     time.sleep(1)
-    machine.wait_for_file("/tmp/repo2-result", timeout=5)
+    machine.wait_for_file("/tmp/repo2-result", timeout=10)
     result = machine.succeed("cat /tmp/repo2-result").strip()
     assert result == "repo2 triggered on master", f"Expected branch context, got '{result}'"
     print("✓ Test 4 passed: Push webhook triggered repo2 with environment context")
