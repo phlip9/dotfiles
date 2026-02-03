@@ -74,7 +74,10 @@ rec {
   };
 
   # NixOS system configs
-  nixosConfigs = import ./nixos { inherit pkgs sources; };
+  nixosConfigs = import ./nixos {
+    inherit sources;
+    pkgs = pkgsUnstable;
+  };
 
   # convenient pkgs + phlipPkgs packages sets from nixos machine
   pkgsNixos = nixosConfigs.phlipnixos.pkgs;

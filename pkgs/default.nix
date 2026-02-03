@@ -77,7 +77,11 @@ in
   noctalia-shell = callPackage (sources.noctalia-shell + "/nix/package.nix") {
     version = builtins.substring 1 100 sources.noctalia-shell.version;
     # TODO(phlip9): unhack once we upgrade nixpkgs to latest stable
-    quickshell = pkgs.quickshell or (pkgs.runCommand "empty" { } "touch $out");
+    quickshell =
+      pkgs.quickshell or (pkgs.runCommand "empty" { } ''
+        mkdir -p $out/bin
+        touch $out/bin/qs
+      '');
   };
 
   # omnara - Omnara CLI
