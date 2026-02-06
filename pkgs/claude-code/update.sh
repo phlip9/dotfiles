@@ -1,16 +1,11 @@
 #!/usr/bin/env nix
-#!nix shell nixpkgs#bash nixpkgs#nix-update nixpkgs#nodePackages.npm --command bash
+#!nix shell nixpkgs#curl nixpkgs#bash --command bash
 # shellcheck shell=bash
 
 set -euo pipefail
 
-version=$(npm view @anthropic-ai/claude-code version)
+GCS_BUCKET="https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+VERSION="$(curl -fsSL "$GCS_BUCKET/latest")"
 
-# Generate updated lock file
-pushd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null
-npm i --package-lock-only @anthropic-ai/claude-code@"$version"
-rm -f package.json
-popd > /dev/null
-
-# Update version and hashes
-nix-update claude-code --version "$version"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+curl -fsSL "$GCS_BUCKET/$VERSION/manifest.json" -o "$SCRIPT_DIR/manifest.json"
