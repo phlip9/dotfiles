@@ -5,6 +5,7 @@
 }:
 let
   getBin = lib.getBin;
+  getExe' = lib.getExe';
   writeBash = pkgs.writers.writeBash;
 
   stripNewlines = str: builtins.replaceStrings [ "\n" ] [ "" ] str;
@@ -58,6 +59,8 @@ in
       # better quality diffs
       # see: <https://jvns.ca/blog/2024/02/16/popular-git-config-options/#diff-algorithm-histogram>
       diff.algorithm = "histogram";
+      # Render PEM certs as decoded x509 output in diffs.
+      diff.x509.textconv = "${getExe' pkgs.openssl "openssl"} x509 -noout -text -in";
 
       # before fetching, remove any remote-tracking refs that no longer exist
       # on the remote.
@@ -238,6 +241,12 @@ in
       "tags"
       ".idea"
       "/.vim"
+    ];
+
+    # global .gitattributes entries (~/.config/git/attributes)
+    attributes = [
+      # diff decoded cert contents
+      "*.cert.pem diff=x509"
     ];
   };
 }

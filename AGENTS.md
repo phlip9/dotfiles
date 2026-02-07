@@ -92,6 +92,9 @@ relevant lint/format/test commands and fix any issues.
 this repo does NOT use flakes. do not use e.g. `nix build .#samply` syntax, it
 will not work. instead, use `-f .` to point to the default.nix in this repo.
 
+to find store paths for our pinned `npins` nix inputs, use e.g.:
+`nix eval -f . sources.home-manager.outPath`.
+
 - ex: `nix build -f . samply` build `samply` (alias `phlipPkgs.samply`) package in `pkgs/samply.nix`
 - ex: `nix build -f . pkgs.lego` build `lego` package in from stable nixpkgs
 - ex: `nix build -f . homeConfigs.phlipdesk.activationPackage` build `phlipdesk` home-manager config
