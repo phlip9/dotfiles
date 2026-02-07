@@ -1,6 +1,7 @@
 {
   fetchurl,
   lib,
+  libcap,
   openssl,
   stdenv,
   versionCheckHook,
@@ -30,6 +31,7 @@ stdenv.mkDerivation {
     patchelf \
       --set-rpath "${
         lib.makeLibraryPath [
+          libcap
           stdenv.cc.cc
           stdenv.cc.libc
           openssl
