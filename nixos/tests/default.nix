@@ -35,10 +35,13 @@ let
           ];
         };
 
-        # Provide a deterministic host key for the test VM.
-        system.activationScripts.test-ssh-host-key.text = ''
-          install -Dm400 ${./fixtures/id_ed25519} /etc/ssh/ssh_host_ed25519_key
-        '';
+        # Provide a deterministic host key for the test VM. `environment.etc`
+        # is set up before sops `setupSecrets` runs, so sops can use this key
+        # on first boot.
+        environment.etc."ssh/ssh_host_ed25519_key" = {
+          source = ./fixtures/id_ed25519;
+          mode = "0400";
+        };
 
         # SOPS configuration for test
         sops = {

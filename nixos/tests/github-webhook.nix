@@ -13,7 +13,6 @@
     {
       config,
       lib,
-      pkgs,
       ...
     }:
     {
@@ -33,7 +32,7 @@
           secretName = "test-webhook-secret";
           branches = [ "main" ];
           command = [
-            "${pkgs.bash}/bin/bash"
+            "${config.nixpkgs.pkgs.bash}/bin/bash"
             "-c"
             "echo 'repo1 triggered' > /tmp/repo1-result"
           ];
@@ -49,7 +48,7 @@
             "develop"
           ];
           command = [
-            "${pkgs.bash}/bin/bash"
+            "${config.nixpkgs.pkgs.bash}/bin/bash"
             "-c"
             "echo \"repo2 triggered on $GH_BRANCH\" > /tmp/repo2-result"
           ];

@@ -153,11 +153,14 @@ in
           lib.mapAttrsToList (_: repoCfg: repoCfg.workingDir) cfg.repos
         );
 
-        # Collect all secrets for LoadCredential.
-        credentialsList = lib.mapAttrsToList (
-          _: repoCfg:
-          "${repoCfg.secretName}:${config.sops.secrets.${repoCfg.secretName}.path}"
-        ) cfg.repos;
+        # Collect all secrets for LoadCredential. Dedup entries so multiple
+        # repos can safely share one secret.
+        credentialsList = lib.unique (
+          lib.mapAttrsToList (
+            _: repoCfg:
+            "${repoCfg.secretName}:${config.sops.secrets.${repoCfg.secretName}.path}"
+          ) cfg.repos
+        );
       in
       {
         description = "GitHub webhook listener";
