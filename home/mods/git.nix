@@ -176,6 +176,9 @@ in
       # Pretty print PR commits for Github PR description
       pr-desc = "!git log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
 
+      # Print compact list of commits on this PR branch.
+      pr-cm-lg = "!git log --reverse --format='* %s' $(git pr-base)..";
+
       # Start rebase to review by commit
       pr-rv-by-commit = "!git rebase --interactive $(git pr-base)";
 
