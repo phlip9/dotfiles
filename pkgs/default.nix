@@ -74,15 +74,24 @@ in
   nixfmt = pkgs.nixfmt-rfc-style;
 
   # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
-  noctalia-shell = callPackage (sources.noctalia-shell + "/nix/package.nix") {
-    version = builtins.substring 1 100 sources.noctalia-shell.version;
-    # TODO(phlip9): unhack once we upgrade nixpkgs to latest stable
-    quickshell =
-      pkgs.quickshell or (pkgs.runCommand "empty" { } ''
-        mkdir -p $out/bin
-        touch $out/bin/qs
-      '');
-  };
+  noctalia-shell =
+    (callPackage (sources.noctalia-shell + "/nix/package.nix") {
+      version = builtins.substring 1 100 sources.noctalia-shell.version;
+      # TODO(phlip9): unhack once we upgrade nixpkgs to latest stable
+      quickshell =
+        pkgs.quickshell or (pkgs.runCommand "empty" { } ''
+          mkdir -p $out/bin
+          touch $out/bin/qs
+        '');
+    }).overrideAttrs
+      (final: {
+        meta = final.meta // {
+          platforms = [
+            "x86_64-linux"
+            "aarch64-linux"
+          ];
+        };
+      });
 
   # omnara - Omnara CLI
   omnara = callPackage ./omnara { };
