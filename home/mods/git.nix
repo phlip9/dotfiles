@@ -5,7 +5,7 @@
 }:
 let
   getBin = lib.getBin;
-  getExe' = lib.getExe';
+  # getExe' = lib.getExe';
   writeBash = pkgs.writers.writeBash;
 
   stripNewlines = str: builtins.replaceStrings [ "\n" ] [ "" ] str;
@@ -26,9 +26,6 @@ in
   programs.git = {
     enable = true;
 
-    userName = lib.mkDefault "Philip Kannegaard Hayes";
-    userEmail = lib.mkDefault "philiphayes9@gmail.com";
-
     # gpg commit signing
     signing = {
       # determine keypair to use by commit email. the name and email in the gpg
@@ -36,9 +33,16 @@ in
       key = null;
       # sign all commits by default
       signByDefault = true;
+      # TODO(phlip9): migrate away from gpg
+      format = "openpgp";
     };
 
-    extraConfig = {
+    settings.user = {
+      name = lib.mkDefault "Philip Kannegaard Hayes";
+      email = lib.mkDefault "philiphayes9@gmail.com";
+    };
+
+    settings.extraConfig = {
       core.editor = "nvim";
       init.defaultBranch = "master";
 
@@ -59,8 +63,6 @@ in
       # better quality diffs
       # see: <https://jvns.ca/blog/2024/02/16/popular-git-config-options/#diff-algorithm-histogram>
       diff.algorithm = "histogram";
-      # Render PEM certs as decoded x509 output in diffs.
-      diff.x509.textconv = "${getExe' pkgs.openssl "openssl"} x509 -noout -text -in";
 
       # before fetching, remove any remote-tracking refs that no longer exist
       # on the remote.
@@ -92,7 +94,7 @@ in
       stash.showPatch = true;
     };
 
-    aliases = {
+    settings.aliases = {
       #############
       # Utilities #
       #############
@@ -246,10 +248,15 @@ in
       "/.vim"
     ];
 
-    # global .gitattributes entries (~/.config/git/attributes)
-    attributes = [
-      # diff decoded cert contents
-      "*.cert.pem diff=x509"
-    ];
+    # TODO(phlip9): re-enable
+    # # Render PEM certs as decoded x509 output in diffs.
+    # settings.extraConfig.diff.x509.textconv =
+    #   "${getExe' pkgs.openssl "openssl"} x509 -noout -text -in";
+    #
+    # # global .gitattributes entries (~/.config/git/attributes)
+    # attributes = [
+    #   # diff decoded cert contents
+    #   "*.cert.pem diff=x509"
+    # ];
   };
 }

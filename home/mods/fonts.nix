@@ -1,6 +1,6 @@
 { pkgs, ... }:
 let
-  hostPlatform = pkgs.hostPlatform;
+  hostPlatform = pkgs.stdenv.hostPlatform;
 in
 {
   home.packages = [

@@ -26,8 +26,8 @@ let
 
   cfg = config.services.postgres;
   pkg = cfg.package;
-  # isDarwin = pkgs.hostPlatform.isDarwin;
-  isLinux = pkgs.hostPlatform.isLinux;
+  # isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
+  isLinux = pkgs.stdenv.hostPlatform.isLinux;
 
   postgresqlConf = pkgs.writeTextDir "postgresql.conf" ''
     # Connection settings

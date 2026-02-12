@@ -22,9 +22,9 @@
   home.homeDirectory = "/home/phlip9";
 
   # This dev machine uses its own GitHub account.
-  programs.git = {
-    userName = "lexe-agent (phlip9)";
-    userEmail = "admin+github.agent@lexe.app";
+  programs.git.settings = {
+    user.name = "lexe-agent (phlip9)";
+    user.email = "admin+github.agent@lexe.app";
     # Auto-append co-author trailer to all commits so they show phlip9 as a
     # contributor. Works with `git commit -m` unlike commit.template.
     hooks.prepare-commit-msg = ./omnara1/prepare-commit-msg;

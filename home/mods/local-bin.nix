@@ -6,7 +6,7 @@
 }:
 let
   dotfilesDir = config.home.dotfilesDir;
-  hostPlatform = pkgs.hostPlatform;
+  hostPlatform = pkgs.stdenv.hostPlatform;
   mkOutOfStoreSymlink = config.lib.file.mkOutOfStoreSymlink;
 in
 {

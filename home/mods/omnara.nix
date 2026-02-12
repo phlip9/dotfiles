@@ -7,8 +7,8 @@
   ...
 }:
 let
-  isLinux = pkgs.hostPlatform.isLinux;
-  isDarwin = pkgs.hostPlatform.isDarwin;
+  isLinux = pkgs.stdenv.hostPlatform.isLinux;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 
   omnara = phlipPkgs.omnara;
 

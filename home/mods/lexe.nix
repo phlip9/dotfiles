@@ -67,7 +67,7 @@ let
   # flutter/dart
   flutter = pkgs.flutter332;
 
-  isDarwin = pkgs.hostPlatform.isDarwin;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 in
 {
   home.packages = [

@@ -8,7 +8,7 @@
 {
   # Claude Desktop config
   home.file."Library/Application Support/Claude/claude_desktop_config.json" = {
-    enable = pkgs.hostPlatform.isDarwin;
+    enable = pkgs.stdenv.hostPlatform.isDarwin;
     source = pkgs.writers.writeJSON "claude_desktop_config.json" {
       mcpServers = {
         # fs access (with approval ofc)
