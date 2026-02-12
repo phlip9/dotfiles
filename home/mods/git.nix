@@ -5,7 +5,7 @@
 }:
 let
   getBin = lib.getBin;
-  # getExe' = lib.getExe';
+  getExe' = lib.getExe';
   writeBash = pkgs.writers.writeBash;
 
   stripNewlines = str: builtins.replaceStrings [ "\n" ] [ "" ] str;
@@ -37,14 +37,14 @@ in
       format = "openpgp";
     };
 
-    settings.user = {
-      name = lib.mkDefault "Philip Kannegaard Hayes";
-      email = lib.mkDefault "philiphayes9@gmail.com";
-    };
-
-    settings.extraConfig = {
+    settings = {
       core.editor = "nvim";
       init.defaultBranch = "master";
+
+      user = {
+        name = lib.mkDefault "Philip Kannegaard Hayes";
+        email = lib.mkDefault "philiphayes9@gmail.com";
+      };
 
       # silence annoying "detached head" warning
       advice.detachedHead = false;
@@ -94,7 +94,7 @@ in
       stash.showPatch = true;
     };
 
-    settings.aliases = {
+    settings.alias = {
       #############
       # Utilities #
       #############
@@ -248,15 +248,13 @@ in
       "/.vim"
     ];
 
-    # TODO(phlip9): re-enable
-    # # Render PEM certs as decoded x509 output in diffs.
-    # settings.extraConfig.diff.x509.textconv =
-    #   "${getExe' pkgs.openssl "openssl"} x509 -noout -text -in";
-    #
-    # # global .gitattributes entries (~/.config/git/attributes)
-    # attributes = [
-    #   # diff decoded cert contents
-    #   "*.cert.pem diff=x509"
-    # ];
+    # Render PEM certs as decoded x509 output in diffs.
+    settings.diff.x509.textconv = "${getExe' pkgs.openssl "openssl"} x509 -noout -text -in";
+
+    # global .gitattributes entries (~/.config/git/attributes)
+    attributes = [
+      # diff decoded cert contents
+      "*.cert.pem diff=x509"
+    ];
   };
 }
