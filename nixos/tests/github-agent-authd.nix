@@ -116,7 +116,10 @@
       '';
     in
     {
-      environment.systemPackages = [ config.phlipPkgs.github-agent-token ];
+      environment.systemPackages = [
+        config.phlipPkgs.github-agent-token
+        config.phlipPkgs.github-agent-git-credential-helper
+      ];
 
       users.users.testuser = {
         isNormalUser = true;
@@ -194,7 +197,34 @@
     assert token_mints == 1, f"expected 1 token mint, got {token_mints}"
     print("✓ Test 3 passed")
 
-    print("Test 4: missing repo uses negative cache...")
+    print("Test 4: git credential helper returns app credentials...")
+    helper_output = machine.succeed(
+        "runuser -u testuser -- bash -lc "
+        "\"printf 'protocol=https\\nhost=github.com\\npath=test/repo.git\\n\\n' "
+        "| github-agent-git-credential-helper get\""
+    )
+    helper_lines = helper_output.strip().splitlines()
+    helper_fields = {}
+    for line in helper_lines:
+        key, value = line.split("=", 1)
+        helper_fields[key] = value
+
+    assert helper_fields["protocol"] == "https", helper_output
+    assert helper_fields["host"] == "github.com", helper_output
+    assert helper_fields["username"] == "x-access-token", helper_output
+    assert helper_fields["password"] == "repo-token-1", helper_output
+    print("✓ Test 4 passed")
+
+    print("Test 5: helper cleanly misses unknown repo for git fallback...")
+    missing_helper_output = machine.succeed(
+        "runuser -u testuser -- bash -lc "
+        "\"printf 'protocol=https\\nhost=github.com\\npath=test/missing.git\\n\\n' "
+        "| github-agent-git-credential-helper get\""
+    )
+    assert missing_helper_output.strip() == "", missing_helper_output
+    print("✓ Test 5 passed")
+
+    print("Test 6: missing repo uses negative cache...")
     for _ in range(2):
         exit_code = machine.succeed(
             "runuser -u testuser -- bash -lc "
@@ -210,7 +240,7 @@
         "expected missing-installation negative cache hit; "
         f"lookup count was {install_missing}"
     )
-    print("✓ Test 4 passed")
+    print("✓ Test 6 passed")
 
     print("✅ All tests passed!")
   '';

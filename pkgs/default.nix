@@ -1,6 +1,7 @@
 { pkgs, sources }:
 let
   callPackage = pkgs.callPackage;
+  github-agent-token = callPackage ./github-agent-token { };
 in
 {
   _type = "pkgs";
@@ -32,14 +33,21 @@ in
   # restore fs mtimes from git
   git-restore-mtime = callPackage ./git-restore-mtime.nix { };
 
-  # github webhook listener for multi-repo command execution
-  github-webhook = callPackage ./github-webhook { };
-
   # GitHub App installation-token broker for agent VMs
   github-agent-authd = callPackage ./github-agent-authd { };
 
+  # Git credential helper for GitHub App installation tokens
+  github-agent-git-credential-helper =
+    callPackage ./github-agent-git-credential-helper
+      {
+        inherit github-agent-token;
+      };
+
   # GitHub App installation-token client for local authd socket API
-  github-agent-token = callPackage ./github-agent-token { };
+  github-agent-token = github-agent-token;
+
+  # github webhook listener for multi-repo command execution
+  github-webhook = callPackage ./github-webhook { };
 
   # block/goose - AI developer agent cli
   goose-cli = callPackage ./goose-cli.nix { };

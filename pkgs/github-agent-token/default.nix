@@ -9,13 +9,16 @@
 }:
 
 runCommandWith
-  {
+  rec {
     name = "github-agent-token";
     stdenv = stdenvNoCC;
     runLocal = true;
     derivationArgs = {
       curl = lib.getExe curl;
       jq = lib.getExe jq;
+      meta = {
+        mainProgram = name;
+      };
     };
   }
   ''
