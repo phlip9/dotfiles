@@ -21,17 +21,6 @@
   home.username = "phlip9";
   home.homeDirectory = "/home/phlip9";
 
-  programs.git = {
-    # This dev machine uses its own GitHub account.
-    settings = {
-      user.name = "lexe-agent (phlip9)";
-      user.email = "admin+github.agent@lexe.app";
-    };
-    # Auto-append co-author trailer to all commits so they show phlip9 as a
-    # contributor. Works with `git commit -m` unlike commit.template.
-    hooks.prepare-commit-msg = ./omnara1/prepare-commit-msg;
-  };
-
   # This value determines the Home Manager release that your configuration is
   # compatible with. This helps avoid breakage when a new Home Manager release
   # introduces backwards incompatible changes.
@@ -54,6 +43,7 @@
     ./mods/gdb.nix
     ./mods/gh.nix
     ./mods/git.nix
+    ./mods/github-agent.nix
     ./mods/gpg.nix
     ./mods/gpg-agent.nix
     ./mods/inputrc.nix
@@ -81,10 +71,11 @@
 
     pkgs.clangStdenv.cc
     pkgs.gh
+    pkgs.go
+    pkgs.htmlq
     pkgs.protobuf
     pkgs.rustup
     pkgs.uv
-    pkgs.htmlq
 
     # claude - AI cli
     phlipPkgs.claude-code
