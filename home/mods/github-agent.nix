@@ -6,6 +6,7 @@
 # The agent will be able to open PRs for these repos, but only under `agent/**`
 # branches.
 {
+  lib,
   phlipPkgs,
   ...
 }:
@@ -14,7 +15,7 @@
   # Configure our git credential helper
   programs.git = {
     settings.credential."https://github.com" = {
-      helper = "${phlipPkgs.github-agent-git-credential-helper}";
+      helper = "${lib.getExe phlipPkgs.github-agent-git-credential-helper}";
       useHttpPath = true;
     };
   };

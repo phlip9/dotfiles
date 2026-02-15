@@ -127,3 +127,5 @@ Create PRs using the `gh` CLI tool:
 ```bash
 $ gh pr create --repo phlip9/dotfiles --title "..." --body "..."
 ```
+
+Agents are only allowed to create branches and PRs off `agent/**` branches.

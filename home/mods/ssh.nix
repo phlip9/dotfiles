@@ -85,7 +85,7 @@
         user = "phlip9";
         hostname = "omnara1.phlip9.com";
         port = 22022;
-        forwardAgent = true;
+        # forwardAgent = true;
       };
     };
   };

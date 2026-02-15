@@ -171,10 +171,10 @@
     repos =
       let
         cmdFetchReset = builtins.toString (
-          pkgs.writeShellScript "phlip9-dotfiles-fetch-reset.sh" ''
+          pkgs.writeShellScript "fetch-reset-origin.sh" ''
             set -euxo pipefail
-            git fetch upstream
-            git reset --hard upstream/master
+            git fetch origin
+            git reset --hard origin/master
           ''
         );
       in
@@ -204,6 +204,7 @@
   # give agents running on this machine limited access to certain repos, so they
   # can only write to `agent/**` branches.
   services.github-agent-authd = {
+    enable = true;
     appId = "2870304";
     appKeyPath = config.sops.secrets.phlip9-github-agent-app-secret-key.path;
   };
