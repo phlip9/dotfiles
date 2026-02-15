@@ -117,8 +117,9 @@
     in
     {
       environment.systemPackages = [
-        config.phlipPkgs.github-agent-token
+        config.phlipPkgs.github-agent-gh
         config.phlipPkgs.github-agent-git-credential-helper
+        config.phlipPkgs.github-agent-token
       ];
 
       users.users.testuser = {
@@ -215,16 +216,30 @@
     assert helper_fields["password"] == "repo-token-1", helper_output
     print("✓ Test 4 passed")
 
-    print("Test 5: helper cleanly misses unknown repo for git fallback...")
+    print("Test 5: github-agent-gh injects token and execs gh...")
+    machine.succeed(
+        "runuser -u testuser -- "
+        "github-agent-gh --repo test/repo help >/dev/null"
+    )
+    token_mints_after_gh = int(
+        machine.succeed("cat /tmp/fake-gh-token-mints").strip()
+    )
+    assert token_mints_after_gh == 1, (
+        "expected wrapper to reuse cached token for test/repo; "
+        f"mint count was {token_mints_after_gh}"
+    )
+    print("✓ Test 5 passed")
+
+    print("Test 6: helper cleanly misses unknown repo for git fallback...")
     missing_helper_output = machine.succeed(
         "runuser -u testuser -- bash -lc "
         "\"printf 'protocol=https\\nhost=github.com\\npath=test/missing.git\\n\\n' "
         "| github-agent-git-credential-helper get\""
     )
     assert missing_helper_output.strip() == "", missing_helper_output
-    print("✓ Test 5 passed")
+    print("✓ Test 6 passed")
 
-    print("Test 6: missing repo uses negative cache...")
+    print("Test 7: missing repo uses negative cache...")
     for _ in range(2):
         exit_code = machine.succeed(
             "runuser -u testuser -- bash -lc "
@@ -240,7 +255,7 @@
         "expected missing-installation negative cache hit; "
         f"lookup count was {install_missing}"
     )
-    print("✓ Test 6 passed")
+    print("✓ Test 7 passed")
 
     print("✅ All tests passed!")
   '';

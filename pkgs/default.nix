@@ -36,6 +36,9 @@ in
   # GitHub App installation-token broker for agent VMs
   github-agent-authd = callPackage ./github-agent-authd { };
 
+  # gh wrapper that injects GitHub App installation tokens per invocation
+  github-agent-gh = callPackage ./github-agent-gh { inherit github-agent-token; };
+
   # Git credential helper for GitHub App installation tokens
   github-agent-git-credential-helper =
     callPackage ./github-agent-git-credential-helper
