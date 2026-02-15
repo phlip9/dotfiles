@@ -56,6 +56,7 @@
   surprising they are. future readers should not have to guess why something was
   written.
 - names: almost always avoid single-character variable names.
+- nix package names should be snake-case. ex: `github-agent-authd`.
 
 ## nixos
 

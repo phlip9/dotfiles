@@ -25,8 +25,8 @@ Set exactly these values:
 | Page field | Value |
 |---|---|
 | `GitHub App name` | `phlip9-github-agent` |
-| `Description` | `Autonomous coding agent identity for PR-based repo updates` |
-| `Homepage URL` | `https://github.com/phlip9` |
+| `Description` | `Autonomous coding agent identity that can only make PRs to agent/** branches` |
+| `Homepage URL` | `https://github.com/phlip9/dotfiles/blob/master/doc/github-agent-access/01-overview.md` |
 | `Callback URL` | leave blank |
 | `Expire user authorization tokens` | checked |
 | `Request user authorization (OAuth) during installation` | unchecked |
@@ -49,9 +49,6 @@ Repository permissions (set exactly):
 
 Account permissions:
 - all account permissions: `No access`
-
-Subscribe to events:
-- none (webhook is disabled)
 
 Then click `Create GitHub App`.
 

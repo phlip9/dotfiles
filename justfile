@@ -158,3 +158,9 @@ sops-test-fixtures-edit:
 
 ssh-updatekeys:
     curl https://github.com/phlip9.keys > nix/phlip9.keys
+
+# --- github-agent --- #
+
+# Set GitHub repo ruleset to deny agents access to non-`agents/**` branches.
+github-agent-post-repo-ruleset repo:
+    ./just/github-agent-post-repo-ruleset.sh {{ repo }}
