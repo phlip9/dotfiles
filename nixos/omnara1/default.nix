@@ -5,10 +5,12 @@
 # - IPv4: 95.217.195.225
 # - IPv6: 2a01:4f9:4a:52de::2
 {
+  config,
   lib,
   pkgs,
   ...
 }:
+
 {
   imports = [
     ./hardware.nix
@@ -144,7 +146,10 @@
   users.users.phlip9 = {
     isNormalUser = true;
     description = "Philip Kannegaard Hayes";
-    extraGroups = [ "wheel" ];
+    extraGroups = [
+      "wheel"
+      "github-agent" # github-agent-authd group
+    ];
     openssh.authorizedKeys.keys = import ../../nix/ssh-pubkeys.nix;
 
     # Enable "linger" so that systemd will start the user service and all
@@ -195,6 +200,14 @@
     dotfiles-github-webhook-secret = { };
     lexe-github-webhook-secret = { };
   };
+
+  # give agents running on this machine limited access to certain repos, so they
+  # can only write to `agent/**` branches.
+  services.github-agent-authd = {
+    appId = "2870304";
+    appKeyPath = config.sops.secrets.phlip9-github-agent-app-secret-key.path;
+  };
+  sops.secrets.phlip9-github-agent-app-secret-key = { };
 
   # =========================================================================
   # Buildbot CI
