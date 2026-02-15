@@ -10,6 +10,13 @@ Implementation target:
 - Go service in `pkgs/github-agent-authd`
 - packaged via Nix, similar conventions as `pkgs/github-webhook`
 
+Primary files:
+- pkgs/github-agent-authd/default.nix
+- pkgs/github-agent-authd/main.go
+- pkgs/github-agent-authd/main_test.go
+- nixos/mods/github-agent-authd.nix
+- nixos/tests/github-agent-authd.nix
+
 Responsibilities:
 - load app private key + app ID
 - resolve installation for target repo on demand
@@ -20,6 +27,7 @@ Runtime model:
 - `github-agent-authd.socket` listens on local Unix socket
 - `github-agent-authd.service` starts only when a client connects
 - service performs no GitHub calls until a token request arrives
+- service shutdown after 30min idle timeout
 
 ## 2. Local Access Control
 
@@ -37,16 +45,16 @@ Systemd socket requirements:
 - `ListenStream=/run/github-agent-authd/socket`
 - `SocketMode=0660`
 - `SocketGroup=github-agent`
-- `DirectoryMode=0750`
+- `DirectoryMode=0755`
 
 ## 3. Service Config example
 
 ```env
 GITHUB_API_BASE="https://api.github.com"
 APP_ID="1234567"
-APP_KEY_PATH=/run/XXX/github-app-key.pem # via LoadCredential
+APP_KEY_PATH="%d/app-key" # via LoadCredential=app-key:/path/to/key.pem
 INSTALLATION_CACHE_TTL=5m
-INSTALLATION_NEGATIVE_CACHE_TTL=5m
+IDLE_SHUTDOWN_TIMEOUT=30m
 ```
 
 Notes:
@@ -177,10 +185,10 @@ Hardening settings:
 Structured log fields:
 - repo
 - installation_id
-- token_expires_at
 - cache_outcome (`positive_hit`, `negative_hit`, `miss`)
 - latency_ms
-- error_class
+- kind (`unknown_installation`, `app_auth_failure`,
+  `github_api_failure`, `stale_installation`, `invalid_request`, `internal`)
 
 Never log:
 - raw token

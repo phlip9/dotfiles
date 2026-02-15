@@ -113,12 +113,6 @@ in
         }
       );
     };
-
-    extraEnvironment = lib.mkOption {
-      type = lib.types.attrsOf lib.types.str;
-      default = { };
-      description = "Extra environment variables for github-webhook.";
-    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -183,8 +177,7 @@ in
           # Use a private runtime dir so ssh IdentityAgent expansion works
           # without a login session.
           XDG_RUNTIME_DIR = "%t/github-webhook";
-        }
-        // cfg.extraEnvironment;
+        };
 
         serviceConfig = {
           ExecStart = "${cfg.package}/bin/github-webhook";

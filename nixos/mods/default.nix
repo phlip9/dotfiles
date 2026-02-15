@@ -16,6 +16,7 @@
   (sources.noctalia-shell + "/nix/nixos-module.nix")
   ./nix-cache.nix
   ./phlippkgs.nix
+  ./github-agent-authd.nix
   ./github-webhook.nix
   ./xremap.nix
 

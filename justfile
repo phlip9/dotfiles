@@ -64,7 +64,12 @@ go-fmt:
 
 go-test *args:
     nix shell -f . pkgs.go --command \
-        bash -c "cd pkgs/github-webhook && mkdir -p /tmp/go-cache && GOCACHE=/tmp/go-cache GO111MODULE=off go test"
+        just go-test-inner
+
+go-test-inner:
+    mkdir -p /tmp/go-cache
+    cd pkgs/github-webhook && GOCACHE=/tmp/go-cache GO111MODULE=off go test
+    cd pkgs/github-agent-authd && GOCACHE=/tmp/go-cache GO111MODULE=off go test
 
 # --- neovim --- #
 

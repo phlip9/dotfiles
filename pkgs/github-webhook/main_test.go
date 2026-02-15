@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -105,8 +104,7 @@ func TestHandleWebhookTriggersSync(t *testing.T) {
 		handlers: make(map[string]*repoHandler),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// Initialize handler manually for test.
 	handler := &repoHandler{
@@ -329,8 +327,7 @@ func TestIntegrationFetchReset(t *testing.T) {
 		handlers: make(map[string]*repoHandler),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	// Initialize handler using actual runCommand.
 	handler := &repoHandler{
@@ -483,8 +480,7 @@ func TestMultiRepoRouting(t *testing.T) {
 		handlers: make(map[string]*repoHandler),
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	var repo1Runs, repo2Runs int
 	var mu sync.Mutex

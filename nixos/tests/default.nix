@@ -52,5 +52,6 @@ let
 in
 
 {
+  github-agent-authd = runNixOSTest ./github-agent-authd.nix;
   github-webhook = runNixOSTest ./github-webhook.nix;
 }

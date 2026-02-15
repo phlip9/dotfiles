@@ -35,6 +35,9 @@ in
   # github webhook listener for multi-repo command execution
   github-webhook = callPackage ./github-webhook { };
 
+  # GitHub App installation-token broker for agent VMs
+  github-agent-authd = callPackage ./github-agent-authd { };
+
   # block/goose - AI developer agent cli
   goose-cli = callPackage ./goose-cli.nix { };
 
