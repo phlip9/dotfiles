@@ -116,6 +116,8 @@
       '';
     in
     {
+      environment.systemPackages = [ config.phlipPkgs.github-agent-token ];
+
       users.users.testuser = {
         isNormalUser = true;
         extraGroups = [ "github-agent" ];
@@ -147,8 +149,6 @@
     };
 
   testScript = ''
-    import json
-
     machine.start()
     machine.wait_for_unit("multi-user.target")
     machine.wait_for_unit("fake-github-api.service")
@@ -176,20 +176,16 @@
     print("✓ Test 2 passed")
 
     print("Test 3: token retrieval and cache reuse...")
-    token1_raw = machine.succeed(
+    token1 = machine.succeed(
         "runuser -u testuser -- "
-        "curl --unix-socket /run/github-agent-authd/socket "
-        "-fsS http://localhost/repos/test/repo/token"
-    )
-    token1 = json.loads(token1_raw)["token"]
+        "github-agent-token --repo test/repo"
+    ).strip()
     assert token1 == "repo-token-1", f"unexpected token1: {token1}"
 
-    token2_raw = machine.succeed(
+    token2 = machine.succeed(
         "runuser -u testuser -- "
-        "curl --unix-socket /run/github-agent-authd/socket "
-        "-fsS http://localhost/repos/test/repo/token"
-    )
-    token2 = json.loads(token2_raw)["token"]
+        "github-agent-token --repo test/repo"
+    ).strip()
     assert token2 == "repo-token-1", f"expected cache hit token, got {token2}"
 
     install_repo = int(machine.succeed("cat /tmp/fake-gh-install-repo").strip())
@@ -200,13 +196,12 @@
 
     print("Test 4: missing repo uses negative cache...")
     for _ in range(2):
-        status = machine.succeed(
-            "runuser -u testuser -- "
-            "curl --unix-socket /run/github-agent-authd/socket "
-            "-s -o /dev/null -w '%{http_code}' "
-            "http://localhost/repos/test/missing/token"
+        exit_code = machine.succeed(
+            "runuser -u testuser -- bash -lc "
+            "\"github-agent-token --repo test/missing >/dev/null 2>&1; "
+            "echo \\$?\""
         ).strip()
-        assert status == "404", f"expected 404, got {status}"
+        assert exit_code == "10", f"expected exit code 10, got {exit_code}"
 
     install_missing = int(
         machine.succeed("cat /tmp/fake-gh-install-missing").strip()

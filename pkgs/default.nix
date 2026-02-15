@@ -38,6 +38,9 @@ in
   # GitHub App installation-token broker for agent VMs
   github-agent-authd = callPackage ./github-agent-authd { };
 
+  # GitHub App installation-token client for local authd socket API
+  github-agent-token = callPackage ./github-agent-token { };
+
   # block/goose - AI developer agent cli
   goose-cli = callPackage ./goose-cli.nix { };
 
