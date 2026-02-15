@@ -5,6 +5,7 @@
   openssl,
   stdenv,
   versionCheckHook,
+  zlib,
 }:
 let
   sources = lib.importJSON ./sources.json;
@@ -35,6 +36,7 @@ stdenv.mkDerivation {
           stdenv.cc.cc
           stdenv.cc.libc
           openssl
+          zlib
         ]
       }" \
       --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
