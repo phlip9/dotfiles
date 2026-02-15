@@ -60,7 +60,7 @@ Continuous reconciliation/drift automation is OPTIONAL for now.
 
 Long-lived credentials on VMs MUST be limited to:
 - app private key (or equivalent secret material)
-- app ID and installation mapping metadata
+- app ID and broker runtime configuration metadata
 
 Short-lived tokens MUST NOT be persisted longer than needed.
 

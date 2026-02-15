@@ -6,9 +6,9 @@
 
 ## Purpose
 
-Define a production design for replacing per-engineer GitHub user identities with
-one shared GitHub App identity, while constraining agent writes to
-`agent/**` branches and preserving PR-based review for protected branches.
+Define a production design for replacing per-engineer GitHub user identities
+with one shared GitHub App identity, while constraining agent writes to
+`agent/**` branches.
 
 ## Problem Summary
 
@@ -55,7 +55,7 @@ repository access, plus repository rulesets.
 
 - Branches created by agents: `refs/heads/agent/<engineer>/<task>`.
 - Local token API (design contract):
-  - `github-agent-token --repo OWNER/REPO --format raw|env|json`
+  - `github-agent-token --repo OWNER/REPO`
 - Git credential helper contract:
   - returns username `x-access-token` and password `<installation_token>`.
 - `gh` auth contract:
@@ -65,6 +65,7 @@ repository access, plus repository rulesets.
 
 - Shared app installs are repo-scoped (`Only select repositories`).
 - Installation tokens are short-lived (1 hour) and auto-refreshed.
+- Installation resolution uses per-repo auto-discovery with in-memory caching.
 - Long-lived secret on VM is the GitHub App private key only.
 
 ## Sources

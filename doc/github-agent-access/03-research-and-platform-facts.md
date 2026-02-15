@@ -72,8 +72,8 @@ Fact:
 - Rulesets can target branches, tags, and push events.
 
 Implication:
-- We can layer: global non-agent constraints + agent-branch allow policy +
-  critical-branch PR policy.
+- We can layer: non-agent deny constraints (RS2) + optional critical-branch
+  PR policy (RS1), without a default explicit allow ruleset.
 
 Source:
 - <https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets>

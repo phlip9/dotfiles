@@ -33,7 +33,7 @@ Preconditions:
 
 Steps:
 1. place app private key secret in host secret file
-2. deploy `github-agent-authd` systemd unit
+2. deploy `github-agent-authd` systemd socket + service units
 3. configure `git` credential helper
 4. configure `gh` wrapper integration
 5. run smoke tests
@@ -42,7 +42,7 @@ Smoke tests:
 
 ```bash
 # token retrieval
-github-agent-token --repo OWNER/REPO --format json
+github-agent-token --repo OWNER/REPO
 
 # git write to allowed namespace
 git checkout -b agent/phlip9/smoke-$(date +%s)
@@ -100,13 +100,12 @@ Required follow-up:
 Steps:
 1. remove repo from app installation scope
 2. delete/disable repo-specific rulesets if no longer needed
-3. remove repo from broker installation mapping
-4. verify token mint fails for repo
+3. verify token mint fails for repo (stale cache must self-heal)
 
 Verification:
 
 ```bash
-github-agent-token --repo OWNER/REPO --format raw
+github-agent-token --repo OWNER/REPO
 # expected: non-zero exit (unknown repo/installation)
 ```
 

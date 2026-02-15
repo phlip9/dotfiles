@@ -1,5 +1,5 @@
 Clarify requirements, research, and write a fully fleshed out series of design
-documents in doc/agent-github-access/.
+documents in doc/github-agent-access/.
 
 Context:
 
@@ -38,13 +38,13 @@ Requirements:
 
 Here's some comments and feedback on our design doc:
 
-doc/agent-github-access/04-architecture.md:
+doc/github-agent-access/04-architecture.md:
 
 * (Ruleset drift) adding a ruleset-drift-check job is probably overkill for now.
   As far as I can tell, we're not hard-coding any branch names other than
   `agent/**`.
 
-doc/agent-github-access/05-github-control-plane.md:
+doc/github-agent-access/05-github-control-plane.md:
 
 * (1.2 App repository permissions) Just to make sure we're on the same page,
   agents also need to be able to _Read_ issues, actions status and logs, and
@@ -56,7 +56,7 @@ doc/agent-github-access/05-github-control-plane.md:
   give explicit allow create/update/delete in RS3.? Is it because we're not
   giving branch R/W in the App permissions?
 
-doc/agent-github-access/06-vm-auth-and-cli-integration.md:
+doc/github-agent-access/06-vm-auth-and-cli-integration.md:
 
 * (`agent-github-authd`): First, let's rename this to `github-agent-authd`.
 
@@ -97,7 +97,44 @@ doc/agent-github-access/06-vm-auth-and-cli-integration.md:
 * (`gh` Integration): quickly remark that we'll nix package this `gh` wrapper
   in pkgs/ and add it to `home/omnara1.nix`'s home-manager config.
 
-doc/agent-github-access/07-provisioning-and-automation.md:
+doc/github-agent-access/07-provisioning-and-automation.md:
 
 * Fetch/diff/reconcile is too complicated. Let's just POST with consistent
   ruleset names if possible.
+
+---
+
+doc/agent-github-access/07-provisioning-and-automation.md:
+
+* (2. One-Time Bootstrap) these steps need to be fully specified, i.e., exactly
+  specify all options to set on the https://github.com/settings/apps/new page.
+
+---
+
+Let's continue iterating on our plan:
+
+doc/github-agent-access/06-vm-auth-and-cli-integration.md:
+
+* (github-agent-authd) Help me understand the GitHub App "installation"
+  requirements so we can see if there is potential room to simplify.
+
+  I originally assumed we wouldn't need to do any "auto-discovery" or anything.
+  Isn't the GitHub App installed for a "user", where they then select which
+  repos they want it connected to?
+
+  The service is running on a per-engineer VM, so it's only used for a single
+  "user" connection right?
+
+---
+
+Great. Let's update the spec with these decisions.
+
+* Let's just remove the `--format json` and `--format env` modes entirely,
+  since all our clients are just grabbing the token directly from stdout.
+
+* Yeah, let's cache the OWNER/REPO -> installation_id with a reasonable TTL.
+  We'll also want to negative cache OWNER/REPO -> (none).
+
+* If at all possible, it would be nice to use a `systemd` `DynamicUser` for
+  the service and use socket activation so the service doesn't do anything
+  if there are no clients using it.

@@ -13,7 +13,7 @@
 │      │                       │
 │      ▼                       │
 │  github-agent-authd          │
-│  (systemd service)           │
+│  (systemd socket + service)  │
 │      │  app JWT + install    │
 │      │  token mint           │
 └──────┼───────────────────────┘
@@ -47,8 +47,12 @@ Responsibilities:
 
 Responsibilities:
 - Load long-lived app private key from secret store.
+- Resolve installation for `OWNER/REPO` on demand.
 - Mint short-lived installation token on demand.
 - Cache tokens until refresh threshold.
+- Cache installation discovery results (`OWNER/REPO -> installation_id`) and
+  negative misses with bounded TTL.
+- Downscope minted installation tokens to requested repo.
 - Provide local credential interface to `git`/`gh` clients.
 
 ### 4. CLI Integration Layer
@@ -64,7 +68,7 @@ Responsibilities:
 Inside VM only:
 - app private key
 - app ID
-- optional static defaults for owner/repo behavior
+- broker runtime configuration metadata
 
 Controls:
 - sops-managed secret material
@@ -95,7 +99,8 @@ Controls:
 
 1. Agent runs `git push origin agent/phlip9/task-x`.
 2. git credential helper requests token for `OWNER/REPO` from broker.
-3. Broker resolves installation and mints/refreshes installation token.
+3. Broker resolves (or cache-hits) installation and mints/refreshes a
+   repo-scoped installation token.
 4. Helper returns:
    - `username=x-access-token`
    - `password=<installation_token>`
