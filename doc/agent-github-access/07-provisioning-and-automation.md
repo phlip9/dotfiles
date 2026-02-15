@@ -17,14 +17,54 @@ Operator auth requirements:
 
 ### 2.1 Create shared GitHub App
 
-Primary path:
-- create app in GitHub UI
-- set permissions from `05-github-control-plane.md`
-- generate private key
+Open:
+- <https://github.com/settings/apps/new>
+
+Set exactly these values:
+
+| Page field | Value |
+|---|---|
+| `GitHub App name` | `phlip9-github-agent` |
+| `Description` | `Autonomous coding agent identity for PR-based repo updates` |
+| `Homepage URL` | `https://github.com/phlip9` |
+| `Callback URL` | leave blank |
+| `Expire user authorization tokens` | checked |
+| `Request user authorization (OAuth) during installation` | unchecked |
+| `Setup URL` | leave blank |
+| `Redirect on update` | unchecked |
+| `Webhook` / `Active` | unchecked |
+| `Webhook URL` | leave blank |
+| `Webhook secret` | leave blank |
+| `Where can this GitHub App be installed?` | `Any account` |
+
+Repository permissions (set exactly):
+- `Actions`: `Read-only`
+- `Checks`: `Read-only`
+- `Commit statuses`: `Read-only`
+- `Contents`: `Read and write`
+- `Issues`: `Read-only`
+- `Metadata`: `Read-only`
+- `Pull requests`: `Read and write`
+- all other repository permissions: `No access`
+
+Account permissions:
+- all account permissions: `No access`
+
+Subscribe to events:
+- none (webhook is disabled)
+
+Then click `Create GitHub App`.
+
+Post-create actions:
+1. record `App ID` and app slug from app settings
+2. generate and download private key (`.pem`)
+3. store key in sops secrets for VM deployment
 
 ### 2.2 Install app on selected repositories
 
-MUST choose `Only select repositories` and approve target repos.
+From app settings, install app with:
+- repository access: `Only select repositories`
+- select each target repo explicitly
 
 ## 3. Repo Onboarding (POST baseline)
 
@@ -107,6 +147,8 @@ Automation package SHOULD include:
 
 ## Sources
 
+- Registering GitHub Apps:
+  <https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app>
 - Rulesets REST API:
   <https://docs.github.com/en/rest/repos/rules>
 - Rules for a branch API:
