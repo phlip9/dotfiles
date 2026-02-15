@@ -1,6 +1,6 @@
 # Provisioning and Automation
 
-This doc defines API-first provisioning and reconciliation.
+This doc defines simple API-first onboarding.
 
 ## 1. Inputs
 
@@ -8,30 +8,25 @@ Required inputs:
 - `OWNER` (org or user)
 - `REPO`
 - `APP_ID`
-- `APP_SLUG`
 - optional `MAINTAINERS_TEAM_SLUG` (strict org mode)
 
 Operator auth requirements:
-- human admin token with repository/ruleset admin rights
-- `gh` CLI authenticated as operator account
+- admin-capable operator account in `gh`
 
 ## 2. One-Time Bootstrap
 
 ### 2.1 Create shared GitHub App
 
 Primary path:
-- Create app once in GitHub UI.
-- Set permissions from `05-github-control-plane.md`.
-- Generate private key.
-
-Rationale:
-- App bootstrap API flow is less ergonomic than repository policy automation.
+- create app in GitHub UI
+- set permissions from `05-github-control-plane.md`
+- generate private key
 
 ### 2.2 Install app on selected repositories
 
 MUST choose `Only select repositories` and approve target repos.
 
-## 3. Repo Onboarding (API-first)
+## 3. Repo Onboarding (POST baseline)
 
 ### 3.1 Preflight checks
 
@@ -42,65 +37,39 @@ REPO="my-repo"
 # repo reachable
 gh api "/repos/$OWNER/$REPO" >/dev/null
 
-# rulesets API available for repo
+# rulesets API reachable
 gh api "/repos/$OWNER/$REPO/rulesets" >/dev/null
 ```
 
-### 3.2 Discover actor IDs
+### 3.2 Apply baseline rulesets
 
-```bash
-# App actor id is app id for Integration bypass actors.
-APP_ID="1234567"
+Use stable names and POST baseline payloads.
 
-# Optional: team actor id for human bypass path (org strict mode).
-TEAM_ID="$(gh api "/orgs/$OWNER/teams/maintainers" --jq '.id')"
-```
+Strict org mode baseline:
+- `deny-non-agent-updates` (required)
+- `critical-branches-pr-only` (recommended, not required)
 
-### 3.3 Apply rulesets idempotently
-
-Pattern:
-1. `GET /repos/{owner}/{repo}/rulesets`
-2. map by `name`
-3. `POST` missing rulesets
-4. `PATCH` existing rulesets to desired payload
-
-Example list rulesets:
-
-```bash
-gh api "/repos/$OWNER/$REPO/rulesets" --jq '.[] | {id,name,enforcement,target}'
-```
-
-Example create:
+Example:
 
 ```bash
 gh api \
   --method POST \
   -H "Accept: application/vnd.github+json" \
   "/repos/$OWNER/$REPO/rulesets" \
-  --input rs3-allow-agent-namespace.json
+  --input rs2-deny-non-agent-updates.json
+
+# optional recommended RS1
+gh api \
+  --method POST \
+  -H "Accept: application/vnd.github+json" \
+  "/repos/$OWNER/$REPO/rulesets" \
+  --input rs1-critical-branches-pr-only.json
 ```
 
-## 4. Desired State Payload Files
+If a ruleset with the same intent already exists and blocks POST by policy,
+manually delete stale one and re-POST the baseline payload.
 
-Keep versioned JSON payload templates:
-- `rs1-critical-branches-pr-only.json`
-- `rs2-deny-non-agent-updates.json`
-- `rs3-allow-agent-namespace.json`
-
-Templatize with environment substitution for actor IDs.
-
-## 5. Reconciliation Job
-
-Schedule periodic job (e.g., hourly):
-1. enumerate managed repos
-2. fetch rulesets
-3. diff against desired JSON (normalized)
-4. fail on drift and emit actionable diff
-5. optionally auto-remediate with `PATCH`
-
-## 6. Effective Policy Verification
-
-Verify branch outcomes, not only config objects.
+### 3.3 Verify effective behavior
 
 ```bash
 for branch in master release/1.0 agent/phlip9/smoke feature/foo; do
@@ -109,27 +78,32 @@ for branch in master release/1.0 agent/phlip9/smoke feature/foo; do
 done
 ```
 
-## 7. Reduced Mode Automation
+## 4. Payload Files
+
+Keep versioned JSON payload templates:
+- `rs2-deny-non-agent-updates.json` (required strict mode)
+- `rs1-critical-branches-pr-only.json` (recommended, not required)
+
+## 5. Reduced Mode Automation
 
 For personal repos where strict mode is unavailable:
-- apply critical branch protection ruleset only
-- mark repo mode in inventory as `reduced`
-- enable extra monitoring and periodic push-attribution audits
+- apply critical branch PR policy for `master` and `release/**`
+- mark repo mode as `reduced`
+- run periodic manual audit checks
 
-## 8. Rollback
+## 6. Rollback
 
 Rollback strategy:
-1. disable newly applied ruleset (`enforcement=disabled`)
-2. restore last-known-good payload
-3. re-run verification suite
+1. disable or delete newly posted ruleset
+2. re-POST prior known-good payload
+3. re-run verification checks
 
-## 9. Deliverables
+## 7. Deliverables
 
 Automation package SHOULD include:
-- one idempotent onboarding command
-- one reconciliation command
-- one verification command
-- JSON templates under version control
+- one onboarding command/script (`post-baseline-rulesets`)
+- one verification command/script (`verify-branch-rules`)
+- versioned JSON payload templates
 
 ## Sources
 

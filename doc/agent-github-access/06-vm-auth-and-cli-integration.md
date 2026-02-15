@@ -1,50 +1,85 @@
 # VM Auth and CLI Integration
 
-This doc specifies the Linux VM runtime for automated credentials.
+This doc specifies Linux/NixOS runtime auth for automated agent credentials.
 
 ## 1. Service Model
 
-Component: `agent-github-authd` (systemd service)
+Component: `github-agent-authd` (systemd service)
+
+Implementation target:
+- Go service in `pkgs/github-agent-authd`
+- packaged via Nix, similar conventions as `pkgs/github-webhook`
 
 Responsibilities:
-- load long-lived app private key and app ID
-- resolve installation ID for target repo
-- mint and cache short-lived installation tokens
-- expose local credential interfaces for `git` and `gh`
+- load app private key + app ID
+- resolve installation for target repo
+- mint/cache short-lived installation tokens
+- serve local token API over Unix domain socket
 
-Recommended deployment:
-- system service for single-agent VM host
-- optional user service for per-user isolation
+## 2. Local Access Control
 
-## 2. Secret Inputs
+Socket policy:
+- path: `/run/github-agent-authd/socket`
+- mode: `0660`
+- owner: service user
+- group: `github-agent`
 
-Long-lived inputs:
-- `githubAppId`
-- `githubAppPrivateKey` (PEM)
-- optional static repo->installation map
+Access model:
+- only local users in `github-agent` group can query tokens
+- example: add `phlip9` to `github-agent` group in VM NixOS config
 
-Storage requirements:
-- manage with sops/sops-nix
-- file mode `0400` where practical
-- service user must be least privilege
+Systemd configuration requirements:
+- `RuntimeDirectory=github-agent-authd`
+- `RuntimeDirectoryMode=0750`
+- socket file mode `0660`
 
-## 3. Broker Contract
+## 3. Service Config example
 
-CLI contract:
-
-```bash
-agent-gh-token --repo OWNER/REPO --format raw
-agent-gh-token --repo OWNER/REPO --format env
-agent-gh-token --repo OWNER/REPO --format json
+```env
+GITHUB_API_BASE="https://api.github.com"
+APP_ID="1234567"
+APP_KEY_PATH=/run/XXX/github-app-key.pem # via LoadCredential
+DEFAULT_OWNER=phlip9
+ALLOW_INSTALLATION_AUTO_DISCOVERY=1
 ```
 
-Output contract:
-- `raw`: token only
-- `env`: `GH_TOKEN=<token>`
-- `json`:
-  - `token`
-  - `expires_at`
-  - `repo`
+- default to auto-discovery (`GET /repos/{owner}/{repo}/installation`).
+- static installation map to support testing
+
+## 4. Token API Protocol
+
+Transport:
+- HTTP over Unix domain socket
+
+Endpoints:
+- `GET /repos/OWNER/REPO/token`
+- `GET /healthz`
+
+`/repos/OWNER/REPO/token` response:
+
+```json
+{
+  "token": "<redacted>",
+  "expires_at": "2026-02-15T13:45:00Z",
+}
+```
+
+This protocol is simple enough for shell clients via `curl --unix-socket` and
+`jq`, so a thin bash client is acceptable.
+
+## 5. Client Binary Contract
+
+User-facing token command:
+
+```bash
+github-agent-token --repo OWNER/REPO --format raw
+github-agent-token --repo OWNER/REPO --format env
+github-agent-token --repo OWNER/REPO --format json
+```
+
+Behavior:
+- reads token from `github-agent-authd` Unix socket API
+- no direct GitHub API calls from this client
 
 Exit codes:
 - `0`: success
@@ -53,55 +88,55 @@ Exit codes:
 - `12`: GitHub API failure
 - `13`: policy denied
 
-## 4. Token Lifecycle
+## 6. Token Lifecycle
 
-- Token TTL target: 1 hour (platform default).
-- Refresh threshold: renew when remaining TTL < 10 minutes.
-- JWT lifetime for app auth: <= 10 minutes.
+- installation token TTL: 1 hour (platform default)
+- refresh when remaining TTL < 10 minutes
+- app JWT validity: <= 10 minutes
 
 Caching:
-- in-memory cache keyed by `(installation_id, permissions, repository_set)`
-- optional short-lived runtime cache file under `/run`
+- in-memory cache keyed by installation ID (+ permission scope)
+- no persistent token file
 
-## 5. `git` Integration
+## 7. `git` Integration
 
-Use a credential helper that requests token per host+repo.
+Credential helper name:
+- `github-agent-git-credential-helper`
 
-Example helper behavior:
-- parse git credential protocol input (`protocol`, `host`, `path`)
-- map `path` -> `OWNER/REPO`
-- call `agent-gh-token --repo OWNER/REPO --format raw`
-- return:
-  - `username=x-access-token`
-  - `password=<token>`
+Behavior:
+- parse git credential protocol input
+- map `path` to `OWNER/REPO`
+- call `github-agent-token --repo OWNER/REPO --format raw`
+- return `username=x-access-token`, `password=<token>`
 
-Suggested git config:
+Non-configured repo behavior:
+- try auto-discovery through service
+- if repo has no app installation, helper should fail cleanly and allow git
+  fallback behavior (including anonymous clone for public repos)
 
-```ini
-[credential "https://github.com"]
-    helper = !agent-git-credential-helper
-    useHttpPath = true
+Home Manager config:
+
+```nix
+programs.git.settings.credential."https://github.com" = {
+  helper = "${phlipPkgs.github-agent-git-credential-helper}";
+  useHttpPath = true;
+};
 ```
 
-## 6. `gh` Integration
+## 8. `gh` Integration
 
-`gh` should get token per invocation through `GH_TOKEN`.
+`gh` wrapper should fetch token per invocation and export `GH_TOKEN`.
 
-Wrapper contract:
+Packaging:
+- nix package in `pkgs/` (for example `pkgs/github-agent-gh`)
+- add wrapper package to `home/omnara1.nix` `home.packages`
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-repo="${AGENT_GH_DEFAULT_REPO:-$(git remote get-url origin | sed -E 's#.*github.com[:/]([^/]+/[^/.]+)(\\.git)?#\\1#')}"
-export GH_TOKEN="$(agent-gh-token --repo "$repo" --format raw)"
-exec /run/current-system/sw/bin/gh "$@"
-```
+Wrapper behavior:
+- derive repo from CLI context (`--repo`, git remote, or env default)
+- fetch token via `github-agent-token`
+- exec real `gh` with unchanged args
 
-Notes:
-- Keep behavior identical to standard `gh` CLI arguments.
-- Avoid writing token to disk or shell history.
-
-## 7. systemd Hardening
+## 9. systemd Hardening
 
 Minimum hardening settings:
 - `NoNewPrivileges=true`
@@ -113,11 +148,7 @@ Minimum hardening settings:
 - `RestrictSUIDSGID=true`
 - `MemoryDenyWriteExecute=true` (if runtime allows)
 
-Runtime dirs:
-- `RuntimeDirectory=agent-github-authd`
-- Unix socket mode `0600`
-
-## 8. Observability
+## 10. Observability
 
 Structured log fields:
 - repo
@@ -132,29 +163,30 @@ Never log:
 - private key bytes
 - JWT payload
 
-## 9. Failure Handling
+## 11. Failure Handling
 
 ### Expired token mid-flight
 
-- Git operation fails with auth error.
-- Next helper call fetches fresh token automatically.
+- current git/gh call may fail
+- next invocation gets refreshed token automatically
 
 ### App key rotated
 
-- service picks up new secret on restart/reload.
-- old key mint attempts fail closed.
+- service reload/restart picks up new key
+- old key mint attempts fail closed
 
 ### Repo not installed
 
-- broker returns `unknown repo/installation` with non-zero exit.
+- token endpoint returns `unknown repo/installation` error
+- helper/wrapper surfaces actionable error
 
 ## Sources
 
 - App JWT and token auth:
   <https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app>
-- Installation auth and git usage:
+- Installation auth and installation discovery:
   <https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-as-a-github-app-installation>
 - Git with app tokens (`x-access-token`):
   <https://docs.github.com/en/apps/creating-github-apps/writing-code-for-a-github-app/building-ci-checks-with-a-github-app>
-- `gh` environment auth variables:
+- `gh` auth environment variables:
   <https://cli.github.com/manual/gh_help_environment>

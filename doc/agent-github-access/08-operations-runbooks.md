@@ -33,7 +33,7 @@ Preconditions:
 
 Steps:
 1. place app private key secret in host secret file
-2. deploy `agent-github-authd` systemd unit
+2. deploy `github-agent-authd` systemd unit
 3. configure `git` credential helper
 4. configure `gh` wrapper integration
 5. run smoke tests
@@ -42,7 +42,7 @@ Smoke tests:
 
 ```bash
 # token retrieval
-agent-gh-token --repo OWNER/REPO --format json
+github-agent-token --repo OWNER/REPO --format json
 
 # git write to allowed namespace
 git checkout -b agent/phlip9/smoke-$(date +%s)
@@ -59,7 +59,7 @@ Goal: rotate without agent downtime beyond token refresh window.
 Steps:
 1. generate new key in GitHub App settings
 2. add new key to secrets management
-3. redeploy/reload `agent-github-authd` on VMs
+3. redeploy/reload `github-agent-authd` on VMs
 4. validate token mint with new key
 5. revoke old key in app settings
 6. run push/PR smoke tests
@@ -92,7 +92,7 @@ Allowed actions:
 
 Required follow-up:
 1. revert temporary bypass/disable
-2. reconcile back to desired state
+2. re-POST baseline rulesets from versioned payloads
 3. attach audit trail (who/when/why)
 
 ## 6. Decommission Repository from Agent Access
@@ -106,23 +106,9 @@ Steps:
 Verification:
 
 ```bash
-agent-gh-token --repo OWNER/REPO --format raw
+github-agent-token --repo OWNER/REPO --format raw
 # expected: non-zero exit (unknown repo/installation)
 ```
-
-## 7. Scheduled Maintenance Checklist
-
-Weekly:
-- run ruleset drift reconciliation
-- sample effective branch rule checks
-
-Monthly:
-- verify app installation inventory
-- review reduced-mode repos and remediation options
-
-Quarterly:
-- rotate app private key
-- run incident-response tabletop exercise
 
 ## Sources
 

@@ -50,13 +50,12 @@ repository access, plus repository rulesets.
 6. `06-vm-auth-and-cli-integration.md`
 7. `07-provisioning-and-automation.md`
 8. `08-operations-runbooks.md`
-9. `09-validation-rollout-and-risk-register.md`
 
 ## Key Interface Contracts
 
 - Branches created by agents: `refs/heads/agent/<engineer>/<task>`.
 - Local token API (design contract):
-  - `agent-gh-token --repo OWNER/REPO --format raw|env|json`
+  - `github-agent-token --repo OWNER/REPO --format raw|env|json`
 - Git credential helper contract:
   - returns username `x-access-token` and password `<installation_token>`.
 - `gh` auth contract:

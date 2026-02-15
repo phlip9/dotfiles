@@ -1,6 +1,6 @@
 # GitHub Control Plane
 
-This doc defines the GitHub-side policy and app configuration.
+This doc defines GitHub-side app and ruleset configuration.
 
 ## 1. Shared App Configuration
 
@@ -9,22 +9,25 @@ This doc defines the GitHub-side policy and app configuration.
 MUST use `Only select repositories` installs.
 
 Rationale:
-- Limits blast radius of a compromised VM/app key.
+- limits blast radius if app key or VM is compromised.
 
 ### 1.2 App repository permissions
 
-Minimum required permissions for agent workflow:
-- `Contents`: `Read and write` (push/fetch via git)
-- `Pull requests`: `Read and write` (create/edit PRs)
+Required for normal unprivileged engineer-like workflows plus agent writes:
+- `Contents`: `Read and write` (git fetch/push)
+- `Pull requests`: `Read and write` (PR create/edit)
+- `Issues`: `Read` (issue context)
+- `Actions`: `Read` (workflow status/log visibility)
+- `Checks`: `Read` (check run/check suite visibility)
+- `Commit statuses`: `Read` (legacy status context)
 - `Metadata`: `Read` (default)
 
-Do not grant unrelated write scopes (issues, actions, admin, etc.) unless a
-specific documented workflow requires them.
+Do not grant unrelated write scopes (repo admin, issues write, actions write,
+secrets, webhooks) unless a separate documented workflow needs them.
 
 ### 1.3 Events
 
-No webhook subscription is required for the core push/PR workflow in this
-design.
+No webhook subscription is required for core `git` + `gh` usage.
 
 ## 2. Branch Contract
 
@@ -37,25 +40,9 @@ Examples:
 
 ## 3. Strict Mode (org repos)
 
-Strict mode is required by default on organization repositories.
+Strict mode is required by default on organization repos.
 
-### RS1. Critical branch protection
-
-Name: `critical-branches-pr-only`
-
-Target refs:
-- include: `refs/heads/master`, `refs/heads/release/**`
-
-Rules (minimum):
-- `pull_request`
-- `non_fast_forward`
-- `deletion`
-
-Bypass actors:
-- humans only (org owners/admins as needed)
-- MUST NOT include app integration actor
-
-### RS2. Non-agent deny for app identity
+### RS2. Non-agent deny for app identity (required)
 
 Name: `deny-non-agent-updates`
 
@@ -73,73 +60,77 @@ Bypass actors:
 - MUST NOT include app integration actor
 
 Effect:
-- App cannot create/update/delete non-agent refs.
+- app cannot create/update/delete non-`agent/**` refs.
+- app can still write `agent/**` because those refs are excluded from this deny
+  ruleset.
 
-### RS3. Agent branch allow
+### RS1. Critical branch PR policy (recommended, not required)
 
-Name: `allow-agent-namespace`
+Name: `critical-branches-pr-only`
 
 Target refs:
-- include: `refs/heads/agent/**`
+- include: `refs/heads/master`, `refs/heads/release/**`
 
-Rules:
-- `creation`
-- `update`
-- `deletion` (optional, but recommended for stale branch cleanup)
+Rules (minimum):
+- `pull_request`
+- `non_fast_forward`
+- `deletion`
 
-Bypass actors:
-- include GitHub App integration actor (`actor_type=Integration`)
-- include humans as needed for manual interventions
+Purpose:
+- governance protection for all actors, not only the app identity.
 
-Effect:
-- App can write only `agent/**` refs.
+### Why no separate RS3 allow rule by default
 
-### 3.1 Why RS2 excludes `agent/**`
+We do not need an explicit allow ruleset for `agent/**` in this model.
 
-Rulesets layer on matching refs. Excluding `agent/**` from RS2 avoids
-self-conflict so RS3 can grant app writes only where intended.
+Reason:
+- RS2 denies only non-`agent/**` refs.
+- app already has `Contents: Read and write` permission.
+- refs not denied by rulesets are writable by normal permission checks.
 
-## 4. Reduced Mode (personal repos fallback)
+Add explicit `allow-agent-namespace` only if your repo policy later adopts a
+broader deny-by-default pattern that also blocks `agent/**`.
 
-Use only if strict actor controls cannot be enforced.
+## 4. Reduced Mode (personal repo fallback)
+
+Use only if strict actor controls cannot be fully enforced.
 
 Minimum controls:
-- Protect `master` and `release/**` with PR-required rules.
-- Keep app install scope limited to selected repositories.
-- Enforce local branch naming and pre-push checks on VM.
-- Run frequent audit checks for app-attributed ref updates.
+- protect `master` and `release/**` with PR-required policy.
+- keep app install scope limited to selected repositories.
+- enforce local branch naming and pre-push checks on VM.
+- perform periodic manual audit of app-attributed ref updates.
 
 Residual risk:
-- App may retain broader write ability than strict mode guarantees.
-- This risk MUST be recorded in the repo risk register.
+- app may retain broader write ability than strict mode guarantees.
+- this risk MUST be recorded in the repo risk register.
 
-## 5. API-First Desired State Management
+## 5. API-First Provisioning (simple POST flow)
 
-Use admin-maintained automation with `gh api`.
+Use operator `gh api` commands with stable ruleset names.
 
-### 5.1 Create/update rulesets
+### 5.1 Create rulesets
 
 Endpoint:
 - `POST /repos/{owner}/{repo}/rulesets`
-- `PATCH /repos/{owner}/{repo}/rulesets/{ruleset_id}`
 
-Template payload (RS3, agent allow):
+Base payload (RS2):
 
 ```json
 {
-  "name": "allow-agent-namespace",
+  "name": "deny-non-agent-updates",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
     "ref_name": {
-      "include": ["refs/heads/agent/**"],
-      "exclude": []
+      "include": ["~ALL"],
+      "exclude": ["refs/heads/agent/**"]
     }
   },
   "bypass_actors": [
     {
-      "actor_id": 1234567,
-      "actor_type": "Integration",
+      "actor_id": 0,
+      "actor_type": "OrganizationAdmin",
       "bypass_mode": "always"
     }
   ],
@@ -151,35 +142,25 @@ Template payload (RS3, agent allow):
 }
 ```
 
-### 5.2 Determine actor IDs
+If name collisions occur, operator can delete old ruleset and re-POST baseline
+payload.
 
-- GitHub App actor ID: app ID from app settings (`Integration.actor_id`).
-- Team actor ID (optional): `GET /orgs/{org}/teams/{team_slug}`.
-
-### 5.3 Verify effective rules
+### 5.2 Verify effective rules
 
 Use:
 - `GET /repos/{owner}/{repo}/rules/branches/{branch}`
 
-Examples:
+Check at least:
 - `master`
 - `release/1.2.3`
 - `agent/phlip9/smoke`
 - `feature/non-agent`
 
-## 6. Drift Detection Requirements
-
-A scheduled control-plane check MUST validate:
-- app is installed only on approved repos
-- required rulesets exist and are `active`
-- bypass actor lists match desired state
-- effective rules for sample branches match expectations
-
 ## Sources
 
 - About rulesets:
   <https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets>
-- Rulesets REST API (rules, bypass actors, enforcement):
+- Rulesets REST API:
   <https://docs.github.com/en/rest/repos/rules>
 - Rules for a branch API:
   <https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch>

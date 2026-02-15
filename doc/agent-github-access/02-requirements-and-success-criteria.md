@@ -49,8 +49,10 @@ documented.
 
 ### R7. Auditability
 
-The design MUST include periodic policy drift checks for app installation scope
-and repository ruleset state.
+The design MUST include onboarding and change-time verification of app
+installation scope and effective branch policy state.
+
+Continuous reconciliation/drift automation is OPTIONAL for now.
 
 ## Security Requirements
 
@@ -110,7 +112,7 @@ compensating controls.
 | A5 | `gh pr create` from `agent/**` | succeeds with brokered token |
 | A6 | token expiry rollover | no manual intervention; commands keep working |
 | A7 | uninstall app from repo | subsequent push attempts fail |
-| A8 | ruleset drift introduced | drift job detects mismatch |
+| A8 | ruleset mismatch introduced | verification checklist detects mismatch |
 
 ## Sources
 

@@ -12,7 +12,7 @@
 │  credential helper/wrapper   │
 │      │                       │
 │      ▼                       │
-│  agent-github-authd          │
+│  github-agent-authd          │
 │  (systemd service)           │
 │      │  app JWT + install    │
 │      │  token mint           │
@@ -34,22 +34,22 @@
 Responsibilities:
 - Represents all agent writes.
 - Installed only on selected repositories.
-- Holds minimal repo permissions.
+- Holds least-privilege repo permissions for read + agent write workflows.
 
 ### 2. Repository Rulesets
 
 Responsibilities:
-- Enforce branch write boundaries.
-- Prevent direct app writes to critical branches.
-- Constrain app writes to `agent/**` in strict mode.
+- Enforce branch write boundaries for the app identity.
+- Keep app writes restricted to `agent/**` in strict mode.
+- Optionally enforce PR-only integration flow on critical branches.
 
-### 3. VM Token Broker (`agent-github-authd`)
+### 3. VM Token Broker (`github-agent-authd`)
 
 Responsibilities:
 - Load long-lived app private key from secret store.
 - Mint short-lived installation token on demand.
 - Cache tokens until refresh threshold.
-- Provide local credential interface to `git`/`gh`.
+- Provide local credential interface to `git`/`gh` clients.
 
 ### 4. CLI Integration Layer
 
@@ -62,9 +62,9 @@ Responsibilities:
 ### Boundary A: Long-lived secret material
 
 Inside VM only:
-- App private key
-- App ID
-- Repo -> installation mapping metadata
+- app private key
+- app ID
+- optional static defaults for owner/repo behavior
 
 Controls:
 - sops-managed secret material
@@ -75,7 +75,7 @@ Controls:
 
 Characteristics:
 - 1-hour TTL installation tokens
-- local memory + short-lived cache file/socket only
+- local memory + short-lived runtime transport only
 
 Controls:
 - never committed to disk as static config
@@ -85,23 +85,22 @@ Controls:
 
 Characteristics:
 - app installation scope
-- ruleset definitions
+- branch rulesets for strict/reduced mode
 
 Controls:
-- idempotent API-managed desired state
-- periodic drift detector
+- deterministic onboarding script with stable ruleset names
+- manual verification checks after provisioning changes
 
 ## Runtime Data Flow
 
 1. Agent runs `git push origin agent/phlip9/task-x`.
-2. Git credential helper requests token from broker for `OWNER/REPO`.
-3. Broker resolves installation ID and mints/refreshes installation token.
+2. git credential helper requests token for `OWNER/REPO` from broker.
+3. Broker resolves installation and mints/refreshes installation token.
 4. Helper returns:
    - `username=x-access-token`
    - `password=<installation_token>`
-5. GitHub accepts push if rulesets allow branch/ref update.
-6. Agent runs `gh pr create`; wrapper injects `GH_TOKEN` from broker and execs
-   real `gh`.
+5. GitHub accepts/refuses push based on ruleset policy.
+6. Agent runs `gh pr create`; wrapper injects `GH_TOKEN` and execs real `gh`.
 
 ## Failure Modes and Handling
 
@@ -110,31 +109,31 @@ Controls:
 Likely causes:
 - expired/invalid app key
 - app removed from repo
-- wrong installation ID mapping
+- wrong repo installation discovery behavior
 
 Handling:
 - broker returns explicit error code
 - caller retries with bounded backoff
-- alert on repeated failures
+- operator validates app install + key
 
-### Ruleset drift
+### Policy mismatch
 
 Likely causes:
 - manual UI edits
-- repo transfer or plan changes
+- repo transfer or ownership changes
 
 Handling:
-- reconciliation job diffs desired vs actual rulesets
-- blocks new VM onboarding until corrected in strict mode
+- rerun onboarding POST flow to reapply named rulesets
+- run effective-rule checks for `master`, `release/**`, `agent/**`
 
 ### Reduced-mode gaps (personal repos)
 
 Likely causes:
-- missing actor controls or bypass semantics for strict model
+- strict actor controls unavailable
 
 Handling:
 - explicit reduced-mode declaration per repo
-- compensating controls + extra audit checks
+- compensating controls + periodic manual audit
 
 ## Threat Model
 
@@ -155,15 +154,15 @@ Mitigations:
 ### T3. Policy bypass via misconfigured rulesets
 
 Mitigations:
-- strict-mode onboarding preflight
-- effective-rule introspection checks
-- deny-by-default non-agent writes for app identity
+- strict-mode onboarding checks
+- effective-rule branch verification
+- keep deny-non-agent ruleset simple and stable
 
 ### T4. Over-broad app install scope
 
 Mitigations:
 - install app with selected repositories only
-- periodic installation inventory check
+- periodic installation inventory review
 
 ## Design Defaults
 
