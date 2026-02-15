@@ -52,6 +52,14 @@
     // "rust-analyzer.trace.server": "verbose",
     "dart.showTodos": false,
     "languageserver": {
+        "go": {
+            "command": "gopls",
+            "rootPatterns": ["go.work", "go.mod", ".git/"],
+            "filetypes": ["go"],
+            "initializationOptions": {
+                "usePlaceholders": true
+            }
+        },
         "nix": {
             "command": "nil",
             "filetypes": ["nix"],

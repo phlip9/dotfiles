@@ -20,6 +20,7 @@
   alejandra,
   bat,
   fd,
+  gopls,
   lua-language-server,
   nil,
   nixfmt-rfc-style,
@@ -34,6 +35,9 @@ let
     bat
     fd
     ripgrep
+
+    # Go LSP
+    gopls
 
     # semi-functioning nix language server.
     # maybe someday nix users won't have to live in fucking squalor...
