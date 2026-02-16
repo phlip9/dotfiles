@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# When in China on a GFWd WiFi, tell Signal to use the local V2RayU HTTP proxy.
+
+http_proxy=http://127.0.0.1:1087 \
+https_proxy=http://127.0.0.1:1087 \
+ALL_PROXY=socks5://127.0.0.1:1080 \
+exec open -a \
+    /Applications/Signal.app/Contents/MacOS/Signal
