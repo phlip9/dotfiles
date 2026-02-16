@@ -120,6 +120,7 @@
         config.phlipPkgs.github-agent-gh
         config.phlipPkgs.github-agent-git-credential-helper
         config.phlipPkgs.github-agent-token
+        pkgs.gitMinimal
       ];
 
       users.users.testuser = {
@@ -217,9 +218,18 @@
     print("✓ Test 4 passed")
 
     print("Test 5: github-agent-gh injects token and execs gh...")
+    # Set up a git repo with origin so the wrapper auto-detects test/repo.
     machine.succeed(
-        "runuser -u testuser -- "
-        "github-agent-gh --repo test/repo help >/dev/null"
+        "runuser -u testuser -- bash -lc '"
+        "cd /tmp && mkdir gh-test && cd gh-test && "
+        "git init -q && "
+        "git remote add origin https://github.com/test/repo.git"
+        "'"
+    )
+    machine.succeed(
+        "runuser -u testuser -- bash -lc '"
+        "cd /tmp/gh-test && github-agent-gh help >/dev/null"
+        "'"
     )
     token_mints_after_gh = int(
         machine.succeed("cat /tmp/fake-gh-token-mints").strip()

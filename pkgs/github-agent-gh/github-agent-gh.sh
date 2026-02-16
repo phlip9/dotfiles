@@ -200,4 +200,12 @@ if ! token="$($github_agent_token --repo "$owner_repo")"; then
 fi
 
 export GH_TOKEN="$token"
-exec "$gh" "${gh_args[@]}"
+
+# Only forward --repo when the caller explicitly provided it. When the repo was
+# auto-detected from git, gh can do its own remote detection and not all
+# subcommands accept --repo (e.g., `gh help`).
+if [[ -n "$repo_arg" ]]; then
+  exec "$gh" --repo "$owner_repo" "${gh_args[@]}"
+else
+  exec "$gh" "${gh_args[@]}"
+fi
