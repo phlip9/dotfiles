@@ -71,8 +71,8 @@ let
   # The _lua_ plugins we're actually using. These are separated out so we can
   # add these the lua LSP config when we're working on our nvim config.
   luaPlugins = [
-    # copilot.vim
-    { plugin = p.copilot-vim; }
+    # # copilot.vim
+    # { plugin = p.copilot-vim; }
 
     # kanagawa - neovim colorscheme
     { plugin = p.kanagawa-nvim; }
