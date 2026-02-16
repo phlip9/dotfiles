@@ -86,25 +86,15 @@ Strict org mode baseline:
 - `deny-non-agent-updates` (required)
 - `critical-branches-pr-only` (recommended, not required)
 
-Example:
+Implemented script:
+- `just/github-agent-post-repo-ruleset.sh OWNER/REPO`
 
-```bash
-gh api \
-  --method POST \
-  -H "Accept: application/vnd.github+json" \
-  "/repos/$OWNER/$REPO/rulesets" \
-  --input rs2-deny-non-agent-updates.json
-
-# optional recommended RS1
-gh api \
-  --method POST \
-  -H "Accept: application/vnd.github+json" \
-  "/repos/$OWNER/$REPO/rulesets" \
-  --input rs1-critical-branches-pr-only.json
-```
+The script creates the `deny-non-agent-updates` ruleset in `disabled`
+enforcement with empty bypass actors. After creation it prints the settings URL
+so the operator can add bypass actors and enable the ruleset manually.
 
 If a ruleset with the same intent already exists and blocks POST by policy,
-manually delete stale one and re-POST the baseline payload.
+manually delete stale one and re-POST.
 
 ### 3.3 Verify effective behavior
 
@@ -138,7 +128,7 @@ Rollback strategy:
 ## 7. Deliverables
 
 Automation package SHOULD include:
-- one onboarding command/script (`post-baseline-rulesets`)
+- one onboarding command/script (`just/github-agent-post-repo-ruleset.sh`)
 - one verification command/script (`verify-branch-rules`)
 - versioned JSON payload templates
 

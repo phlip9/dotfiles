@@ -101,8 +101,9 @@ Exit codes:
 - `0`: success
 - `10`: unknown repo/installation
 - `11`: app auth failure (JWT/key)
-- `12`: GitHub API failure
-- `13`: policy denied
+- `12`: general failure (catch-all: invalid args, socket errors, GitHub API
+  failures, unexpected daemon errors)
+- `13`: policy denied (HTTP 403 from daemon)
 
 ## 6. Token Lifecycle
 
@@ -120,7 +121,7 @@ Caching:
 
 Token scope:
 - authd always mints downscoped installation tokens for requested repo only
-  (`repositories` / `repository_ids`)
+  (`repositories` field in the access token request body)
 
 ## 7. `git` Integration
 
@@ -129,7 +130,8 @@ Credential helper name:
 
 Behavior:
 - parse git credential protocol input
-- map `path` to `OWNER/REPO`
+- extract `OWNER/REPO` from `path` field, or fall back to parsing the `url`
+  field if `path` is absent
 - call `github-agent-token --repo OWNER/REPO`
 - return `username=x-access-token`, `password=<token>`
 
@@ -142,7 +144,7 @@ Home Manager config:
 
 ```nix
 programs.git.settings.credential."https://github.com" = {
-  helper = "${phlipPkgs.github-agent-git-credential-helper}";
+  helper = "${lib.getExe phlipPkgs.github-agent-git-credential-helper}";
   useHttpPath = true;
 };
 ```
@@ -152,16 +154,23 @@ programs.git.settings.credential."https://github.com" = {
 `gh` wrapper should fetch token per invocation and export `GH_TOKEN`.
 
 Packaging:
-- nix package in `pkgs/` (for example `pkgs/github-agent-gh`)
-- add wrapper package to `home/omnara1.nix` `home.packages`
+- nix package in `pkgs/github-agent-gh`
+- integrated via `home/mods/github-agent.nix` as `programs.gh.package`
+  (replaces default `gh`), with `gitCredentialHelper.enable = false`
 
 Wrapper behavior:
 - derive repo in this order:
-  1. explicit `--repo`
-  2. current git remote
+  1. explicit `--repo`/`-R` argument
+  2. current git remote (upstream tracking branch, then origin, then first
+     remote)
   3. fail with actionable error (no implicit repo default)
+- normalize `--repo`/`-R` to `OWNER/REPO` for token resolution
 - fetch token via `github-agent-token --repo OWNER/REPO`
-- exec real `gh` with unchanged args
+- if caller passed `--repo`/`-R`: forward normalized `--repo OWNER/REPO`
+  to `gh` (not all subcommands accept `--repo`, e.g. `gh help`)
+- if repo was auto-detected from git: exec `gh` without `--repo` and let
+  `gh` do its own remote detection
+- `GH_TOKEN` exported in both cases
 
 ## 9. systemd Runtime and Hardening
 
@@ -171,14 +180,16 @@ Service unit requirements:
 - socket activation via paired `.socket` unit
 
 Hardening settings:
+- `LockPersonality=true`
+- `MemoryDenyWriteExecute=true`
 - `NoNewPrivileges=true`
 - `PrivateTmp=true`
-- `ProtectSystem=strict`
-- `ProtectHome=read-only` (or tighter)
-- `ProtectKernelTunables=true`
 - `ProtectControlGroups=true`
+- `ProtectHome=read-only`
+- `ProtectKernelModules=true`
+- `ProtectKernelTunables=true`
+- `ProtectSystem=strict`
 - `RestrictSUIDSGID=true`
-- `MemoryDenyWriteExecute=true` (if runtime allows)
 
 ## 10. Observability
 
