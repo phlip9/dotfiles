@@ -1,7 +1,7 @@
 # systemd socket + service for github-agent-authd token broker.
 #
 # See also:
-#   - doc/github-agent-access/06-vm-auth-and-cli-integration.md
+#   - doc/github-agent-access/02-implementation.md
 #   - nixos/tests/github-agent-authd.nix
 #   - pkgs/github-agent-authd/main.go
 #   - pkgs/github-agent-authd/default.nix

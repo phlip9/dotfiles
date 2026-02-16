@@ -1,72 +1,128 @@
-# GitHub App Agent Access Design
+# GitHub App Agent Access
 
-- status: draft design spec
-- date: 2026-02-15
-- scope: Linux-only autonomous agent VMs using `git` and `gh`
+## Problem
 
-## Purpose
+One GitHub user account per engineer/agent VM. Downsides: higher per-head
+cost for private repos, more credential lifecycle overhead, harder policy
+consistency across repos.
 
-Define a production design for replacing per-engineer GitHub user identities
-with one shared GitHub App identity, while constraining agent writes to
-`agent/**` branches.
+## Solution
 
-## Problem Summary
+One shared GitHub App identity installed per repo with selected repository
+access, plus repository rulesets constraining agent writes to `agent/**`
+branches.
 
-Current model: one GitHub user account per engineer/agent VM.
+## Decisions
 
-Downsides:
-- Higher per-head cost for private repos and related services.
-- More credential lifecycle overhead.
-- Harder policy consistency across repos.
-
-Target model: one shared GitHub App identity, installed per repo with selected
-repository access, plus repository rulesets.
-
-## Decision Summary
-
-1. One shared GitHub App for agent writes.
+1. One shared GitHub App (`phlip9-github-agent`) for all agent writes.
 2. Branch contract: `agent/<engineer>/<task>`.
-3. VM auth model: local token broker daemon (systemd) with app private key and
-   automated installation-token minting.
-4. Provisioning model: API-first (`gh api`/REST), UI fallback only.
-5. Repo scope: both org-owned and personal-owned repositories.
+3. VM auth: local token broker daemon (`github-agent-authd`) with app
+   private key and automated installation-token minting.
+4. Provisioning: API-first (`gh api`/REST), UI fallback only.
+5. Scope: both org-owned and personal-owned repositories.
 6. Enforcement modes:
-   - strict mode: org repos with full ruleset/bypass actor controls.
-   - reduced mode: personal repos when strict actor controls are unavailable.
+   - strict: org repos with full ruleset/bypass actor controls.
+   - reduced: personal repos when strict actor controls are unavailable.
 
 ## Non-Goals
 
 - Windows/macOS agent support.
-- Using personal access tokens as the primary auth model.
-- Allowing direct app writes to protected branches (`master`, `release/**`).
+- Personal access tokens as primary auth model.
+- Direct app writes to protected branches (`master`, `release/**`).
+
+## Architecture
+
+```text
+┌──────────────────────────────┐
+│ Agent VM (NixOS/Linux)       │
+│                              │
+│  git, gh, coding agent       │
+│      │                       │
+│      ▼                       │
+│  credential helper/wrapper   │
+│      │                       │
+│      ▼                       │
+│  github-agent-authd          │
+│  (systemd socket + service)  │
+│      │  app JWT + install    │
+│      │  token mint           │
+└──────┼───────────────────────┘
+       │ HTTPS API
+       ▼
+┌──────────────────────────────┐
+│ GitHub                       │
+│  - shared GitHub App         │
+│  - selected repo installs    │
+│  - repo rulesets             │
+└──────────────────────────────┘
+```
+
+### Components
+
+1. **Shared GitHub App** — represents all agent writes. Installed only on
+   selected repositories. Least-privilege permissions.
+
+2. **Repository Rulesets** — enforce branch write boundaries. Keep app
+   writes restricted to `agent/**` in strict mode. Optional PR-only
+   integration on critical branches.
+
+3. **`github-agent-authd`** — systemd socket-activated token broker.
+   Loads app private key, resolves installations, mints repo-downscoped
+   tokens, caches installation lookups and tokens in memory.
+
+4. **CLI Integration** — `git` credential helper and `gh` wrapper inject
+   short-lived tokens from the broker.
+
+### Runtime Data Flow
+
+1. Agent runs `git push origin agent/phlip9/task-x`.
+2. git credential helper requests token from broker for `OWNER/REPO`.
+3. Broker resolves (or cache-hits) installation and mints/refreshes a
+   repo-scoped installation token.
+4. Helper returns `username=x-access-token`, `password=<token>`.
+5. GitHub accepts/refuses push based on ruleset policy.
+6. Agent runs `gh pr create`; wrapper injects `GH_TOKEN` and execs `gh`.
+
+## Trust Boundaries
+
+### Long-lived secret material (VM only)
+
+- app private key (sops-managed, `LoadCredential`)
+- app ID and broker config metadata
+
+Controls: restricted file/socket permissions, systemd hardening.
+
+### Short-lived tokens
+
+- 1-hour TTL installation tokens, in-memory only.
+- Never committed to disk. Sanitized logs (no token output).
+
+### GitHub policy state
+
+- app installation scope, branch rulesets.
+- Deterministic onboarding script with stable ruleset names.
+- Manual verification checks after provisioning changes.
+
+## Threat Model
+
+**T1. Token exfiltration** — per-command injection only, no shell history
+writes, no token logging.
+
+**T2. App private key theft** — restricted secret path ownership/mode,
+systemd sandboxing, key rotation runbook.
+
+**T3. Ruleset misconfiguration** — strict-mode onboarding checks,
+effective-rule branch verification, simple/stable deny ruleset.
+
+**T4. Over-broad app install scope** — selected repositories only,
+periodic installation inventory review.
 
 ## Document Index
 
-1. `01-overview.md` (this doc)
-2. `02-requirements-and-success-criteria.md`
-3. `03-research-and-platform-facts.md`
-4. `04-architecture.md`
-5. `05-github-control-plane.md`
-6. `06-vm-auth-and-cli-integration.md`
-7. `07-provisioning-and-automation.md`
-8. `08-operations-runbooks.md`
-
-## Key Interface Contracts
-
-- Branches created by agents: `refs/heads/agent/<engineer>/<task>`.
-- Local token API (design contract):
-  - `github-agent-token --repo OWNER/REPO`
-- Git credential helper contract:
-  - returns username `x-access-token` and password `<installation_token>`.
-- `gh` auth contract:
-  - per invocation, export `GH_TOKEN` from broker before executing `gh`.
-
-## Defaults
-
-- Shared app installs are repo-scoped (`Only select repositories`).
-- Installation tokens are short-lived (1 hour) and auto-refreshed.
-- Installation resolution uses per-repo auto-discovery with in-memory caching.
-- Long-lived secret on VM is the GitHub App private key only.
+1. `01-overview.md` — this doc
+2. `02-implementation.md` — daemon, CLI tools, GitHub config
+3. `03-runbooks.md` — provisioning, onboarding, operations
+4. `04-appendix.md` — requirements, platform research
 
 ## Sources
 
