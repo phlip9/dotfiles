@@ -228,7 +228,7 @@
     )
     machine.succeed(
         "runuser -u testuser -- bash -lc '"
-        "cd /tmp/gh-test && github-agent-gh help >/dev/null"
+        "cd /tmp/gh-test && gh help >/dev/null"
         "'"
     )
     token_mints_after_gh = int(
