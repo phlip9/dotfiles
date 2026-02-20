@@ -167,13 +167,33 @@ in
       cm-stat = "!git diff --stat HEAD~1";
 
       # Open all changed files in `nvim` with gitgutter diff'ed against master.
-      pr-rv = "!nvim $(git pr-files) +\"let g:gitgutter_diff_base = '$(git pr-base)'\"";
+      # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
+      pr-rv =
+        let
+          script = writeBash "git-pr-rv" ''
+            set -euo pipefail
+            PR_BASE="$(git pr-base)"
+            mapfile -t -d "" files < <(git diff --name-only -z "$PR_BASE")
+            nvim "''${files[@]}" +"let g:gitgutter_diff_base = '$PR_BASE'"
+          '';
+        in
+        "!${script}";
 
       # Open only one specific changed file just like `git pr-review`
       pr-rvo = "!nvim +\"let g:gitgutter_diff_base = '$(git pr-base)'\"";
 
       # Single commit: open all changed files in `nvim` with gitgutter diff.
-      cm-rv = "!nvim $(git cm-files) +\"let g:gitgutter_diff_base = '$(git rev-parse HEAD~1)'\"";
+      # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
+      cm-rv =
+        let
+          script = writeBash "git-cm-rv" ''
+            set -euo pipefail
+            DIFF_BASE="$(git rev-parse HEAD~1)"
+            mapfile -t -d "" files < <(git diff --name-only -z "$DIFF_BASE")
+            nvim "''${files[@]}" +"let g:gitgutter_diff_base = '$DIFF_BASE'"
+          '';
+        in
+        "!${script}";
 
       # Pretty print PR commits for Github PR description
       pr-desc = "!git log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
