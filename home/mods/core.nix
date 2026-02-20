@@ -101,6 +101,15 @@
       git = true;
     };
 
+    # Periodically expire old home-manager generations to avoid disk
+    # bloat. Removes generations older than 30 days via systemd timer
+    # (Linux) or launchd agent (macOS). The current active generation
+    # is never removed.
+    services.home-manager.autoExpire = {
+      enable = true;
+      frequency = "weekly";
+    };
+
     programs.bash.shellAliases = {
       ks = "eza";
       sl = "eza";
