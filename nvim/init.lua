@@ -977,6 +977,40 @@ do  -- Recover.vim - Show a diff when recovering swp files {{{
     -- :FinishRecovery
 end -- Recover.vim }}}
 
+do  -- worklog - quickly open and manage daily work logs {{{
+    -- Mappings:
+    --   <space>wo - telescope picker for all worklog files
+    --  <leader>wol - open lexe worklog
+    --  <leader>wod - open dotfiles worklog
+    --   <leader>wd - insert today's entry heading
+
+    local worklog = require_local("worklog")
+
+    vim.keymap.set("n", "<space>wo", worklog.pick,
+        M.with_desc("pick worklog file"))
+    vim.keymap.set("n", "<leader>wol", function() worklog.open("lexe") end,
+        M.with_desc("open lexe worklog"))
+    vim.keymap.set("n", "<leader>wod", function() worklog.open("dotfiles") end,
+        M.with_desc("open dotfiles worklog"))
+    vim.keymap.set("n", "<leader>wd", worklog.insert_today,
+        M.with_desc("insert today's worklog heading"))
+
+    -- Enable treesitter folding for worklog files specifically.
+    -- Collapse day entries (## headings) but keep the year heading open.
+    local worklog_group = vim.api.nvim_create_augroup("WorklogFolding", {})
+    vim.api.nvim_create_autocmd("BufRead", {
+        pattern = vim.env.HOME .. "/dev/notes/*/log/*.md",
+        group = worklog_group,
+        desc = "Enable treesitter folding for worklog files",
+        callback = function()
+            vim.opt_local.foldmethod = "expr"
+            vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"
+            -- Collapse ## day entries but keep # year heading open.
+            vim.opt_local.foldlevel = 1
+        end,
+    })
+end -- worklog }}}
+
 -- PLUGINS }}}
 
 do -- GENERAL {{{
