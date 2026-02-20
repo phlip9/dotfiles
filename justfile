@@ -88,13 +88,9 @@ nvim-lint:
         --logpath "$TMPDIR/log" \
         --metapath "$TMPDIR/meta"
 
-nvim-test *args:
-    nvim --headless \
-        -c "PlenaryBustedDirectory nvim/lua/test {nvim_cmd = '$(which nvim)'}" \
-        {{ args }}
-
-nvim-test-nix:
-    nix build -f . phlipPkgs.nvim.tests.nvim-test
+# TODO(phlip9): figure out how to run tests/files individually
+nvim-test:
+    nix build -f . --no-link phlipPkgs.nvim.tests.nvim-test
 
 nvim-print-my-plugins-dir:
     nvim --headless \
