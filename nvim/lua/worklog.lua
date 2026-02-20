@@ -29,7 +29,7 @@ M.DEFAULT_NOTES_DIR = vim.env.HOME .. "/dev/notes"
 M.notes_dir = M.DEFAULT_NOTES_DIR
 
 --- Set the notes root directory.
----@param dir string
+---@param opts? { notes_dir?: string }
 function M.setup(opts)
     opts = opts or {}
     if opts.notes_dir then
@@ -166,7 +166,7 @@ end
 ---@param project string
 ---@param year? number override year for testing
 function M.open(project, year)
-    year = year or tonumber(os.date("%Y"))
+    year = year or tonumber(os.date("%Y")) --[[@as number]]
     local path = M.log_path(project, year)
 
     -- Create parent dirs if needed.
@@ -236,7 +236,7 @@ function M.pick()
             end,
         }),
         sorter = conf.generic_sorter({}),
-        attach_mappings = function(prompt_bufnr, _map)
+        attach_mappings = function(prompt_bufnr)
             actions.select_default:replace(function()
                 actions.close(prompt_bufnr)
                 local selection = action_state.get_selected_entry()

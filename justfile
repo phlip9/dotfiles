@@ -90,7 +90,7 @@ nvim-lint:
 
 # TODO(phlip9): figure out how to run tests/files individually
 nvim-test:
-    nix build -f . --no-link phlipPkgs.nvim.tests.nvim-test
+    nix build -f . -L --no-link phlipPkgs.nvim.tests.nvim-test
 
 nvim-print-my-plugins-dir:
     nvim --headless \

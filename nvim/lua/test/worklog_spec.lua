@@ -2,10 +2,6 @@
 ---
 --- Run with: nvim --headless -c 'PlenaryBustedFile nvim/lua/test/worklog_spec.lua'
 
--- Ensure nvim/lua/ is on the lua require path when running from the
--- repo root (plenary child processes only add '.' to rtp, not './nvim').
-vim.opt.rtp:prepend("nvim")
-
 local eq = assert.are.same
 
 --- Create a temp directory for test notes.
@@ -325,7 +321,7 @@ describe("worklog", function()
             local dir = temp_dir .. "/lexe/log"
             vim.fn.mkdir(dir, "p")
             local path = dir .. "/2026.md"
-            local fd = io.open(path, "w")
+            local fd = assert(io.open(path, "w"))
             fd:write("existing content\n")
             fd:close()
 
@@ -353,15 +349,15 @@ describe("worklog", function()
             vim.fn.mkdir(temp_dir .. "/lexe/log", "p")
             vim.fn.mkdir(temp_dir .. "/dotfiles/log", "p")
 
-            local fd1 = io.open(temp_dir .. "/lexe/log/2026.md", "w")
+            local fd1 = assert(io.open(temp_dir .. "/lexe/log/2026.md", "w"))
             fd1:write("a")
             fd1:close()
 
-            local fd2 = io.open(temp_dir .. "/lexe/log/2025.md", "w")
+            local fd2 = assert(io.open(temp_dir .. "/lexe/log/2025.md", "w"))
             fd2:write("b")
             fd2:close()
 
-            local fd3 = io.open(temp_dir .. "/dotfiles/log/2026.md", "w")
+            local fd3 = assert(io.open(temp_dir .. "/dotfiles/log/2026.md", "w"))
             fd3:write("c")
             fd3:close()
 
@@ -371,7 +367,7 @@ describe("worklog", function()
             -- Should be reverse-sorted (newest first).
             assert(
                 files[1]:find("lexe/log/2026.md$")
-                    or files[1]:find("dotfiles/log/2026.md$"),
+                or files[1]:find("dotfiles/log/2026.md$"),
                 "first entry should be a 2026 file"
             )
         end)
