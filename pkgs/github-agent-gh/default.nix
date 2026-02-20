@@ -10,7 +10,7 @@
 }:
 
 runCommandWith
-  rec {
+  {
     name = "github-agent-gh";
     stdenv = stdenvNoCC;
     runLocal = true;
@@ -19,12 +19,12 @@ runCommandWith
       git = lib.getExe git;
       githubAgentToken = lib.getExe github-agent-token;
       meta = {
-        mainProgram = name;
+        mainProgram = "gh";
       };
     };
   }
   ''
     mkdir -p $out/bin
-    substituteAll ${./github-agent-gh.sh} $out/bin/github-agent-gh
-    chmod +x $out/bin/github-agent-gh
+    substituteAll ${./gh.sh} $out/bin/gh
+    chmod +x $out/bin/gh
   ''

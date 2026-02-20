@@ -70,7 +70,6 @@
     pkgs.lm_sensors
 
     pkgs.clangStdenv.cc
-    pkgs.gh
     pkgs.go
     pkgs.htmlq
     pkgs.protobuf

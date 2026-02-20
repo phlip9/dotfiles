@@ -16,14 +16,13 @@ Repo resolution order:
   1. explicit --repo/-R argument
   2. current git remote
 
-Examples:
-  github-agent-gh --repo OWNER/REPO pr create --fill
-  github-agent-gh pr status
+--- original unwrapped gh ---
+
 USAGE
 }
 
 fail() {
-  echo "github-agent-gh: $*" >&2
+  echo "$*" >&2
   exit 1
 }
 
