@@ -236,6 +236,7 @@ function M.pick()
             end,
         }),
         sorter = conf.generic_sorter({}),
+        previewer = conf.file_previewer({}),
         attach_mappings = function(prompt_bufnr)
             actions.select_default:replace(function()
                 actions.close(prompt_bufnr)
