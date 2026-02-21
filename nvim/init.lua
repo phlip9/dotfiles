@@ -988,15 +988,13 @@ do  -- worklog - quickly open and manage daily work logs {{{
     -- TODO(phlip9): <leader>wd should work outside log file by detecting the
     --               relevant project from the path
 
-    local worklog = require_local("worklog")
-
-    vim.keymap.set("n", "<space>wo", worklog.pick,
+    vim.keymap.set("n", "<space>wo", function() require_local("worklog").pick() end,
         M.with_desc("pick worklog file"))
-    vim.keymap.set("n", "<leader>wol", function() worklog.open("lexe") end,
+    vim.keymap.set("n", "<leader>wol", function() require_local("worklog").open("lexe") end,
         M.with_desc("open lexe worklog"))
-    vim.keymap.set("n", "<leader>wod", function() worklog.open("dotfiles") end,
+    vim.keymap.set("n", "<leader>wod", function() require_local("worklog").open("dotfiles") end,
         M.with_desc("open dotfiles worklog"))
-    vim.keymap.set("n", "<leader>wd", worklog.insert_today,
+    vim.keymap.set("n", "<leader>wd", require_local("worklog").insert_today,
         M.with_desc("insert today's worklog heading"))
 
     -- Enable treesitter folding for worklog files specifically.
