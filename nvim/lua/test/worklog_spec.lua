@@ -163,6 +163,32 @@ describe("worklog", function()
         end)
     end)
 
+    describe("find_today_heading", function()
+        it("returns line number when heading exists", function()
+            local date = test_date()
+            local bufnr = buf_with_lines({
+                "# log 2026",
+                "",
+                "## 2026-02-20 Fri",
+                "",
+            })
+            eq(3, worklog.find_today_heading(bufnr, date))
+            buf_delete(bufnr)
+        end)
+
+        it("returns nil when heading is missing", function()
+            local date = test_date()
+            local bufnr = buf_with_lines({
+                "# log 2026",
+                "",
+                "## 2026-02-18 Wed",
+                "",
+            })
+            eq(nil, worklog.find_today_heading(bufnr, date))
+            buf_delete(bufnr)
+        end)
+    end)
+
     describe("has_today_heading", function()
         it("returns true when heading exists", function()
             local date = test_date()
@@ -282,6 +308,29 @@ describe("worklog", function()
 
             -- Buffer should be unchanged.
             eq(lines, buf_lines(bufnr))
+            buf_delete(bufnr)
+        end)
+
+        it("jumps to existing heading when already present", function()
+            local date = test_date()
+            local bufnr = buf_with_lines({
+                "# log 2026",
+                "",
+                "",
+                "## 2026-02-20 Fri",
+                "",
+                "Already here.",
+            })
+
+            -- Start cursor at top of buffer.
+            vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+            worklog.insert_today(date)
+
+            -- Cursor should jump to the heading line.
+            local cursor = vim.api.nvim_win_get_cursor(0)
+            eq({ 4, 0 }, cursor)
+
             buf_delete(bufnr)
         end)
     end)
