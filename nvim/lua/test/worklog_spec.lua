@@ -425,4 +425,114 @@ describe("worklog", function()
             eq({}, worklog.list_worklogs())
         end)
     end)
+
+    describe("folding", function()
+        --- Enable treesitter markdown folding matching the worklog
+        --- BufRead autocmd in init.lua.
+        ---@param bufnr number
+        local function setup_md_folding(bufnr)
+            vim.bo[bufnr].filetype = "markdown"
+            -- Parse treesitter before enabling foldexpr.
+            vim.treesitter.get_parser(bufnr, "markdown"):parse()
+            vim.opt_local.foldmethod = "expr"
+            vim.opt_local.foldexpr =
+                "nvim_treesitter#foldexpr()"
+            -- Collapse ## day entries but keep # year heading open.
+            vim.opt_local.foldlevel = 1
+            -- Recompute folds.
+            vim.cmd("normal! zx")
+        end
+
+        --- Render the buffer as it appears with folds applied.
+        --- Normal lines appear as-is. Fold summary lines show
+        --- the first line text followed by " ··· +N lines".
+        ---@param bufnr number
+        ---@return string[]
+        local function render_folded_view(bufnr)
+            local count = vim.api.nvim_buf_line_count(bufnr)
+            local result = {}
+            local lnum = 1
+            while lnum <= count do
+                local fc = vim.fn.foldclosed(lnum)
+                if fc == -1 then
+                    -- Not in a closed fold: show as-is.
+                    local text = vim.api.nvim_buf_get_lines(
+                        bufnr, lnum - 1, lnum, false
+                    )[1]
+                    table.insert(result, text)
+                    lnum = lnum + 1
+                elseif fc == lnum then
+                    -- First line of closed fold: summary.
+                    local text = vim.api.nvim_buf_get_lines(
+                        bufnr, lnum - 1, lnum, false
+                    )[1]
+                    local fold_end = vim.fn.foldclosedend(lnum)
+                    local hidden = fold_end - lnum
+                    table.insert(result,
+                        text .. " ··· +" .. hidden .. " lines")
+                    lnum = fold_end + 1
+                else
+                    -- Hidden inside a closed fold: skip.
+                    lnum = lnum + 1
+                end
+            end
+            return result
+        end
+
+        it("collapses ## day entries, keeps frontmatter "
+            .. "and # heading open, blank lines between "
+            .. "sections stay visible", function()
+            local bufnr = buf_with_lines({
+                "---",
+                "publish: false",
+                "tags: []",
+                "date: 2026-02-20",
+                "---",
+                "",
+                "# log 2026",
+                "",
+                "",
+                "## 2026-02-20 Fri",
+                "",
+                "- Review PRs",
+                "",
+                "Publishing to Apple App Store",
+                "- Release app",
+                "- Await review",
+                "- Publish",
+                "",
+                "",
+                "## 2026-02-19 Thu",
+                "",
+                "- CNY family stuff",
+                "",
+                "",
+                "## 2026-02-18 Wed",
+                "",
+                "- More stuff",
+            })
+            setup_md_folding(bufnr)
+
+            eq({
+                "---",
+                "publish: false",
+                "tags: []",
+                "date: 2026-02-20",
+                "---",
+                "",
+                "# log 2026",
+                "",
+                "",
+                "## 2026-02-20 Fri ··· +7 lines",
+                "",
+                "",
+                "## 2026-02-19 Thu ··· +2 lines",
+                "",
+                "",
+                "## 2026-02-18 Wed ··· +2 lines",
+            }, render_folded_view(bufnr))
+
+            buf_delete(bufnr)
+        end)
+    end)
 end)
