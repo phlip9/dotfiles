@@ -985,7 +985,6 @@ do  -- worklog - quickly open and manage daily work logs {{{
     --  <leader>wd  - insert today's entry heading
     --
     -- TODO(phlip9): folding does not work well
-    -- TODO(phlip9): <leader>wd should jump to today's heading if exists
     -- TODO(phlip9): <leader>wd should work outside log file by detecting the
     --               relevant project from the path
 

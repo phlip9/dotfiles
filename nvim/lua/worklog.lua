@@ -103,19 +103,28 @@ function M.find_year_heading(bufnr)
     return nil
 end
 
+--- Find today's heading line number in the buffer.
+--- Returns nil if not found.
+---@param bufnr number
+---@param date? osdate
+---@return number? line 1-indexed line number
+function M.find_today_heading(bufnr, date)
+    local heading = M.day_heading(date)
+    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    for idx, line in ipairs(lines) do
+        if line == heading then
+            return idx
+        end
+    end
+    return nil
+end
+
 --- Check if today's heading already exists in the buffer.
 ---@param bufnr number
 ---@param date? osdate
 ---@return boolean
 function M.has_today_heading(bufnr, date)
-    local heading = M.day_heading(date)
-    local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    for _, line in ipairs(lines) do
-        if line == heading then
-            return true
-        end
-    end
-    return false
+    return M.find_today_heading(bufnr, date) ~= nil
 end
 
 --- Insert today's day heading into the current buffer.
@@ -123,14 +132,16 @@ end
 --- Inserts after the `# log <year>` heading, before any existing day
 --- entries. Positions cursor on the blank line after the new heading.
 ---
---- Does nothing if today's heading already exists.
+--- If today's heading already exists, jumps to it and centers the view.
 ---@param date? osdate override for testing
 function M.insert_today(date)
     local bufnr = vim.api.nvim_get_current_buf()
 
-    -- Don't insert if already present.
-    if M.has_today_heading(bufnr, date) then
-        vim.notify("Today's heading already exists", vim.log.levels.INFO)
+    -- Jump to existing heading if already present.
+    local existing = M.find_today_heading(bufnr, date)
+    if existing then
+        vim.api.nvim_win_set_cursor(0, { existing, 0 })
+        vim.cmd("normal! zz")
         return
     end
 
