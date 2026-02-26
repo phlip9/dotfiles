@@ -35,9 +35,9 @@
       },
       "branch": "release-25.11",
       "submodules": false,
-      "revision": "cb6c151f5c9db4df0b69d06894dc8484de1f16a0",
-      "url": "https://github.com/nix-community/home-manager/archive/cb6c151f5c9db4df0b69d06894dc8484de1f16a0.tar.gz",
-      "hash": "07xxcbm86fp0zxljd9d4n12qdjvihvzdcpp664k4041ch3wy4chh"
+      "revision": "36e38ca0d9afe4c55405fdf22179a5212243eecc",
+      "url": "https://github.com/nix-community/home-manager/archive/36e38ca0d9afe4c55405fdf22179a5212243eecc.tar.gz",
+      "hash": "1a1bwc6jqgik6by6wwx5x00kacwajd2mdqczl16af2b9cgf6b83a"
     },
     "niks3": {
       "type": "Git",
@@ -61,8 +61,8 @@
     "nixpkgs": {
       "type": "Channel",
       "name": "nixos-25.11",
-      "url": "https://releases.nixos.org/nixos/25.11/nixos-25.11.6327.c217913993d6/nixexprs.tar.xz",
-      "hash": "1fgzx8vs5yzp8hdxvwh3mwz6g8qrahkqfzfmkf5jvzxhdmg1c47a"
+      "url": "https://releases.nixos.org/nixos/25.11/nixos-25.11.6495.e764fc9a4058/nixexprs.tar.xz",
+      "hash": "0hb7q63629a15p8sy6v66890pirbrnnjm0npg02x6ah611d3qh4c"
     },
     "nixpkgs-yubikey": {
       "type": "Channel",
