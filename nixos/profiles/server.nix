@@ -36,14 +36,16 @@
 
     # Enable hardware-integrated systemd watchdog.
     # See: <https://0pointer.de/blog/projects/watchdog.html>
+    # See: <https://www.freedesktop.org/software/systemd/man/latest/systemd-system.conf.html#Hardware%20Watchdog>
     settings.Manager = {
       # systemd will send a signal to the hardware watchdog at half the interval
       # defined here, so every 7.5s. If the hardware watchdog does not get a
       # signal for 15s, it will forcefully reboot the system.
       RuntimeWatchdogSec = lib.mkDefault "15s";
       # Forcefully reboot if the final stage of the reboot hangs without
-      # progress for more than 30s.
-      # See: <https://utcc.utoronto.ca/~cks/space/blog/linux/SystemdShutdownWatchdog>
+      # progress for more than 30s. This final stage is after all regular
+      # services have already terminated, and after the system and service
+      # manager process (PID 1) are replaced by the systemd-shutdown binary.
       RebootWatchdogSec = lib.mkDefault "30s";
       # Forcefully reboot when a host hangs after kexec. This may be the case
       # when the firmware does not support kexec.
@@ -97,6 +99,9 @@
       KexAlgorithms = [
         "curve25519-sha256"
         "curve25519-sha256@libssh.org"
+        # add PQ-secure hybrid handshake so openssl client will STFU.
+        # TODO(phlip9): set only this once all dev clients 100% support it
+        "mlkem768x25519-sha256"
       ];
       Macs = [ "hmac-sha2-256-etm@openssh.com" ];
       Ciphers = [ "aes128-gcm@openssh.com" ];
