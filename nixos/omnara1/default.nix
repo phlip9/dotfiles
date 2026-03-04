@@ -105,9 +105,11 @@
     # Log to journald
     logError = "syslog:server=unix:/dev/log,nohostname,tag=nginx_error warn";
     commonHttpConfig = ''
-      log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent" "$http_x_forwarded_for"';
+      log_format main '$status $request - '
+                      'ip=$remote_addr from="$http_user_agent" '
+                      'rx=$request_length tx=$body_bytes_sent '
+                      't=$request_time ms '
+                      'ref="$http_referer"';
     '';
     appendHttpConfig = ''
       access_log syslog:server=unix:/dev/log,nohostname,tag=nginx,severity=info main;
