@@ -134,7 +134,9 @@
       # We'll optimise on a schedule, see above.
       auto-optimise-store = false;
 
-      # Avoid disk full issues
+      # When free space available drops below `min-free` during a build/deploy
+      # trigger a GC until `max-free` bytes are available or there is no more
+      # garbage.
       max-free = lib.mkDefault (5 * 1024 * 1024 * 1024); # 5 GiB
       min-free = lib.mkDefault (512 * 1024 * 1024); # 0.5 GiB
 
