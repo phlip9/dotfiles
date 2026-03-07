@@ -86,20 +86,10 @@ in
   # neovim - wrapped neovim with plugins and tools
   nvim = callPackage ./nvim { };
 
-  # nixfmt - standard nix formatter
-  # TODO(phlip9): change to `pkgs.nixfmt` after release-25.11
-  nixfmt = pkgs.nixfmt-rfc-style;
-
   # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
   noctalia-shell =
     (callPackage (sources.noctalia-shell + "/nix/package.nix") {
       version = builtins.substring 1 100 sources.noctalia-shell.version;
-      # TODO(phlip9): unhack once we upgrade nixpkgs to latest stable
-      quickshell =
-        pkgs.quickshell or (pkgs.runCommand "empty" { } ''
-          mkdir -p $out/bin
-          touch $out/bin/qs
-        '');
     }).overrideAttrs
       (final: {
         meta = final.meta // {
@@ -124,7 +114,4 @@ in
 
   # sops wrapped with clean nvim (no plugins) for secret editing
   sops = callPackage ./sops.nix { };
-
-  # xremap - dynamic key remap for X11 and Wayland
-  xremap = callPackage ./xremap.nix { };
 }

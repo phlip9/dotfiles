@@ -131,7 +131,7 @@ echo "Updated $OUT_FILE"
 
 # Format the generated file
 echo "Formatting..."
-nix shell -f "$DOTFILES_DIR" phlipPkgs.nixfmt \
+nix shell -f "$DOTFILES_DIR" pkgs.nixfmt \
     --command nixfmt --width 80 "$OUT_FILE"
 
 echo "Done!"

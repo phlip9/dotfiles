@@ -28,9 +28,6 @@
   # release notes.
   home.stateVersion = "25.11"; # Please read the comment before changing.
 
-  # TODO(phlip9): remove
-  home.enableNixpkgsReleaseCheck = false;
-
   imports = [
     ./mods/core.nix
 

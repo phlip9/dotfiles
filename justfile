@@ -43,7 +43,7 @@ nix-ci-eval *args:
             {{ args }}
 
 nix-fmt:
-    nix shell -f . phlipPkgs.nixfmt pkgs.fd --command \
+    nix shell -f . pkgs.nixfmt pkgs.fd --command \
         fd --extension "nix" --exec nixfmt --width 80 {}
 
 nix-lint:

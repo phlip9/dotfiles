@@ -23,7 +23,7 @@
   gopls,
   lua-language-server,
   nil,
-  nixfmt-rfc-style,
+  nixfmt,
   ripgrep,
 }:
 let
@@ -46,8 +46,7 @@ let
     # preferred nix formatter
     alejandra
     # nixpkgs repo formatter
-    # TODO(phlip9): change to `nixfmt` after release-25.11
-    nixfmt-rfc-style
+    nixfmt
   ];
   extraPkgsPath = lib.makeBinPath extraPkgs;
 

@@ -70,7 +70,7 @@
 - machine: nixos/phlipnixos/default.nix - main desktop
 - machine: nixos/omnara1/default.nix - Hetzner dev machine
 - priorities: reliable, beautiful, secure, performant, minimalist
-- full-disk encryption, single-user install, auto-login (TODO: secure boot)
+- full-disk encryption, single-user install, auto-login, secure boot
 
 - server: nixos/profiles/server.nix
 - desktop: nixos/profiles/desktop.nix
