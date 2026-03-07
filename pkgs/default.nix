@@ -2,6 +2,9 @@
 let
   callPackage = pkgs.callPackage;
   github-agent-token = callPackage ./github-agent-token { };
+  noctalia-qs = callPackage sources.noctalia-qs {
+    gitRev = sources.noctalia-qs.revision;
+  };
 in
 {
   _type = "pkgs";
@@ -86,10 +89,14 @@ in
   # neovim - wrapped neovim with plugins and tools
   nvim = callPackage ./nvim { };
 
+  # noctalia-qs - noctalia QT quickshell fork
+  noctalia-qs = noctalia-qs;
+
   # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
   noctalia-shell =
     (callPackage (sources.noctalia-shell + "/nix/package.nix") {
       version = builtins.substring 1 100 sources.noctalia-shell.version;
+      quickshell = noctalia-qs;
     }).overrideAttrs
       (final: {
         meta = final.meta // {

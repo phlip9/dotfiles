@@ -70,6 +70,19 @@
       "url": "https://releases.nixos.org/nixos/24.05/nixos-24.05.7376.b134951a4c9f/nixexprs.tar.xz",
       "hash": "1f8j7fh0nl4qmqlxn6lis8zf7dnckm6jri4rwmj0qm1qivhr58lv"
     },
+    "noctalia-qs": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "noctalia-dev",
+        "repo": "noctalia-qs"
+      },
+      "branch": "master",
+      "submodules": false,
+      "revision": "f54b85075c42a291a07a70fb751a651acb8fa498",
+      "url": "https://github.com/noctalia-dev/noctalia-qs/archive/f54b85075c42a291a07a70fb751a651acb8fa498.tar.gz",
+      "hash": "1bgmmn8q990l2d6r9y17whiqjnpfjfw7qzihhxammdmnjy95yjmz"
+    },
     "noctalia-shell": {
       "type": "GitRelease",
       "repository": {
@@ -81,10 +94,10 @@
       "version_upper_bound": null,
       "release_prefix": null,
       "submodules": false,
-      "version": "v3.7.5",
-      "revision": "33ac782ecf72b90efa5108865547c5c31f82c7f9",
-      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v3.7.5",
-      "hash": "0lpbx4zlv4i7ygl66hiqmm7rvlr46w0f63qhblnc1yx75xhyq6jc"
+      "version": "v4.6.4",
+      "revision": "b455dbb11fb0fbb58d3b334cffe5c2e037b5ae27",
+      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v4.6.4",
+      "hash": "15wparllynq251fcx1r0l7pzbhzcywxpzfak199xhflgwkipr20g"
     },
     "sops-nix": {
       "type": "Git",
