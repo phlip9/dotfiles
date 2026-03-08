@@ -81,9 +81,9 @@ let
             cat <<EOF | tee config.toml
             [config]
 
-            [templates.alacritty]
-            input_path = "$templates/matugen/alacritty.toml"
-            output_path = "$out/config/alacritty/colors/$name.toml"
+            # [templates.alacritty]
+            # input_path = "$templates/matugen/alacritty.toml"
+            # output_path = "$out/config/alacritty/colors/$name.toml"
 
             [templates.fuzzel]
             input_path = "$templates/matugen/fuzzel.ini"
