@@ -2,10 +2,23 @@
 let
   callPackage = pkgs.callPackage;
   github-agent-token = callPackage ./github-agent-token { };
-  matugen = callPackage ./matugen.nix { };
+  matugen = callPackage ./matugen.nix { inherit noctalia-shell; };
   noctalia-qs = callPackage sources.noctalia-qs {
     gitRev = sources.noctalia-qs.revision;
   };
+  noctalia-shell =
+    (callPackage (sources.noctalia-shell + "/nix/package.nix") {
+      version = builtins.substring 1 100 sources.noctalia-shell.version;
+      quickshell = noctalia-qs;
+    }).overrideAttrs
+      (final: {
+        meta = final.meta // {
+          platforms = [
+            "x86_64-linux"
+            "aarch64-linux"
+          ];
+        };
+      });
 in
 {
   _type = "pkgs";
@@ -97,19 +110,7 @@ in
   noctalia-qs = noctalia-qs;
 
   # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
-  noctalia-shell =
-    (callPackage (sources.noctalia-shell + "/nix/package.nix") {
-      version = builtins.substring 1 100 sources.noctalia-shell.version;
-      quickshell = noctalia-qs;
-    }).overrideAttrs
-      (final: {
-        meta = final.meta // {
-          platforms = [
-            "x86_64-linux"
-            "aarch64-linux"
-          ];
-        };
-      });
+  noctalia-shell = noctalia-shell;
 
   # omnara - Omnara CLI
   omnara = callPackage ./omnara { };
