@@ -29,10 +29,10 @@
   # Systemd
   systemd = {
     # Servers run 24/7.
-    sleep.extraConfig = ''
-      AllowSuspend=no
-      AllowHibernation=no
-    '';
+    sleep.settings.Sleep = {
+      AllowSuspend = false;
+      AllowHibernation = false;
+    };
 
     # Enable hardware-integrated systemd watchdog.
     # See: <https://0pointer.de/blog/projects/watchdog.html>

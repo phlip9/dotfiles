@@ -26,7 +26,7 @@
       maxGenerations = 8;
 
       style = {
-        wallpapers = [ phlipPkgs.wallpapers.sand-dunes ];
+        wallpapers = [ phlipPkgs.wallpapers.dunes ];
         wallpaperStyle = "centered";
         backdrop = "DEC0B2";
         interface.brandingColor = 7;
