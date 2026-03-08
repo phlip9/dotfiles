@@ -54,6 +54,9 @@ nix-lint:
 phlippkgs-update pkg="":
     nix-shell pkgs/update.nix {{ if pkg != "" { "--argstr package " + pkg } else { "" } }}
 
+wallpaper-colors name="default":
+    ./just/wallpaper-colors.sh {{ name }}
+
 # --- go --- #
 
 go-ci: go-fmt go-test

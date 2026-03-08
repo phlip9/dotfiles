@@ -2,6 +2,7 @@
 let
   callPackage = pkgs.callPackage;
   github-agent-token = callPackage ./github-agent-token { };
+  matugen = callPackage ./matugen.nix { };
   noctalia-qs = callPackage sources.noctalia-qs {
     gitRev = sources.noctalia-qs.revision;
   };
@@ -80,6 +81,9 @@ in
   # mpv with patched umpv
   mpv = callPackage ./mpv { };
 
+  # matugen - material you color generation tool
+  matugen = matugen;
+
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
@@ -121,4 +125,7 @@ in
 
   # sops wrapped with clean nvim (no plugins) for secret editing
   sops = callPackage ./sops.nix { };
+
+  # my wallpapers
+  wallpapers = callPackage ./wallpapers.nix { inherit matugen; };
 }

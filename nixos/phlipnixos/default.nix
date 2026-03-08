@@ -26,12 +26,7 @@
       maxGenerations = 8;
 
       style = {
-        wallpapers = [
-          (pkgs.fetchurl {
-            url = "https://phlip9.com/notes/__pub/sand_dunes_cropped.jpeg";
-            hash = "sha256-PITohebOHZ68rWOXUbpcXYy8rqHq7/atdY66zff91cQ=";
-          })
-        ];
+        wallpapers = [ phlipPkgs.wallpapers.sand-dunes ];
         wallpaperStyle = "centered";
         backdrop = "DEC0B2";
         interface.brandingColor = 7;
