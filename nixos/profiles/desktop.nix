@@ -54,6 +54,9 @@
     enable = true;
     package = phlipPkgs.noctalia-shell;
   };
+  systemd.user.services.noctalia-shell = {
+    restartIfChanged = true;
+  };
 
   # desktop environment packages
   environment.systemPackages = [
