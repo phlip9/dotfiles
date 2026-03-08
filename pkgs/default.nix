@@ -1,26 +1,16 @@
 { pkgs, sources }:
 let
   callPackage = pkgs.callPackage;
-  github-agent-token = callPackage ./github-agent-token { };
-  matugen = callPackage ./matugen.nix { inherit noctalia-shell; };
-  noctalia-qs = callPackage sources.noctalia-qs {
-    gitRev = sources.noctalia-qs.revision;
-  };
-  noctalia-shell =
-    (callPackage (sources.noctalia-shell + "/nix/package.nix") {
-      version = builtins.substring 1 100 sources.noctalia-shell.version;
-      quickshell = noctalia-qs;
-    }).overrideAttrs
-      (final: {
-        meta = final.meta // {
-          platforms = [
-            "x86_64-linux"
-            "aarch64-linux"
-          ];
-        };
-      });
+
+  fix =
+    f:
+    let
+      x = f x;
+    in
+    x;
 in
-{
+
+fix (phlipPkgs: {
   _type = "pkgs";
 
   # aider - AI developer agent cli
@@ -54,17 +44,19 @@ in
   github-agent-authd = callPackage ./github-agent-authd { };
 
   # gh wrapper that injects GitHub App installation tokens per invocation
-  github-agent-gh = callPackage ./github-agent-gh { inherit github-agent-token; };
+  github-agent-gh = callPackage ./github-agent-gh {
+    inherit (phlipPkgs) github-agent-token;
+  };
 
   # Git credential helper for GitHub App installation tokens
   github-agent-git-credential-helper =
     callPackage ./github-agent-git-credential-helper
       {
-        inherit github-agent-token;
+        inherit (phlipPkgs) github-agent-token;
       };
 
   # GitHub App installation-token client for local authd socket API
-  github-agent-token = github-agent-token;
+  github-agent-token = callPackage ./github-agent-token { };
 
   # github webhook listener for multi-repo command execution
   github-webhook = callPackage ./github-webhook { };
@@ -95,7 +87,7 @@ in
   mpv = callPackage ./mpv { };
 
   # matugen - material you color generation tool
-  matugen = matugen;
+  matugen = callPackage ./matugen.nix { inherit (phlipPkgs) noctalia-shell; };
 
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
@@ -107,10 +99,24 @@ in
   nvim = callPackage ./nvim { };
 
   # noctalia-qs - noctalia QT quickshell fork
-  noctalia-qs = noctalia-qs;
+  noctalia-qs = callPackage sources.noctalia-qs {
+    gitRev = sources.noctalia-qs.revision;
+  };
 
   # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
-  noctalia-shell = noctalia-shell;
+  noctalia-shell =
+    (callPackage (sources.noctalia-shell + "/nix/package.nix") {
+      version = builtins.substring 1 100 sources.noctalia-shell.version;
+      quickshell = phlipPkgs.noctalia-qs;
+    }).overrideAttrs
+      (final: {
+        meta = final.meta // {
+          platforms = [
+            "x86_64-linux"
+            "aarch64-linux"
+          ];
+        };
+      });
 
   # omnara - Omnara CLI
   omnara = callPackage ./omnara { };
@@ -128,5 +134,5 @@ in
   sops = callPackage ./sops.nix { };
 
   # my wallpapers
-  wallpapers = callPackage ./wallpapers.nix { inherit matugen; };
-}
+  wallpapers = callPackage ./wallpapers.nix { inherit (phlipPkgs) matugen; };
+})
