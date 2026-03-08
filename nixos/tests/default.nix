@@ -54,4 +54,5 @@ in
 {
   github-agent-authd = runNixOSTest ./github-agent-authd.nix;
   github-webhook = runNixOSTest ./github-webhook.nix;
+  o11y = runNixOSTest ./o11y.nix;
 }
