@@ -1,10 +1,10 @@
-# NixOS VM test for the o11y (observability) stack.
+# NixOS VM test for the phlip9-o11y module.
 #
 # Single VM with VictoriaMetrics + node-exporter + Grafana.
 # Verifies scraping, querying, and Grafana datasource provisioning.
 #
-# Grafana secrets are injected via systemd LoadCredential and read
-# via $__file{} providers.
+# In production, sops-nix provides the secret file paths. Here we
+# pass writeText files directly to the module's *File options.
 {
   name = "o11y";
 
@@ -15,11 +15,7 @@
     let
       grafanaAdminPassword = "gf-admin-testpwd";
       grafanaAdminPasswordFile = pkgs.writeText "gf-admin-pwd" grafanaAdminPassword;
-      grafanaSecretKey = "gf-secret-testkey-0123456789abcdef";
-      grafanaSecretKeyFile = pkgs.writeText "gf-secret-key" grafanaSecretKey;
-
-      # Credentials directory for the grafana.service unit.
-      gfCreds = "/run/credentials/grafana.service";
+      grafanaSecretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key-0123456789abcdef";
     in
     {
       environment.systemPackages = [
@@ -27,84 +23,18 @@
         pkgs.curl
       ];
 
-      # -- VictoriaMetrics --
-      services.victoriametrics = {
+      services.phlip9-o11y = {
         enable = true;
-        listenAddress = "127.0.0.1:8428";
         retentionPeriod = "1d";
-        prometheusConfig = {
-          global.scrape_interval = "2s";
-          scrape_configs = [
-            {
-              job_name = "victoriametrics";
-              static_configs = [
-                { targets = [ "127.0.0.1:8428" ]; }
-              ];
-            }
-            {
-              job_name = "node-exporter";
-              static_configs = [
-                { targets = [ "127.0.0.1:9100" ]; }
-              ];
-            }
-          ];
-        };
+        grafana.adminPasswordFile = grafanaAdminPasswordFile;
+        grafana.secretKeyFile = grafanaSecretKeyFile;
       };
 
-      # -- prometheus-node-exporter --
-      services.prometheus.exporters.node = {
-        enable = true;
-        listenAddress = "127.0.0.1";
-        port = 9100;
-      };
+      # Use a fast scrape interval for tests.
+      services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
 
-      # -- Grafana --
-      #
-      # Secrets are injected via systemd LoadCredential into
-      # /run/credentials/grafana.service/, then referenced using
-      # Grafana's $__file{path} provider.
-      services.grafana = {
-        enable = true;
-        provision.enable = true;
-
-        settings = {
-          analytics.reporting_enabled = false;
-
-          server = {
-            http_addr = "127.0.0.1";
-            http_port = 3000;
-            domain = "localhost";
-          };
-
-          security = {
-            admin_user = "testadmin";
-            admin_password = "$__file{${gfCreds}/admin-password}";
-            secret_key = "$__file{${gfCreds}/secret-key}";
-          };
-        };
-
-        # Provision VictoriaMetrics as a Prometheus-type datasource.
-        provision.datasources.settings = {
-          apiVersion = 1;
-          datasources = [
-            {
-              name = "VictoriaMetrics";
-              type = "prometheus";
-              access = "proxy";
-              uid = "victoriametrics";
-              url = "http://127.0.0.1:8428";
-              isDefault = true;
-              editable = false;
-            }
-          ];
-        };
-      };
-
-      # Inject Grafana secrets via LoadCredential.
-      systemd.services.grafana.serviceConfig.LoadCredential = [
-        "admin-password:${grafanaAdminPasswordFile}"
-        "secret-key:${grafanaSecretKeyFile}"
-      ];
+      # Override admin user for test assertions.
+      services.grafana.settings.security.admin_user = "testadmin";
     };
 
   testScript = ''
@@ -149,10 +79,12 @@
     # Grafana credentials directory exists with secrets.
     with subtest("Grafana LoadCredential"):
         machine.succeed(
-            "test -f /run/credentials/grafana.service/admin-password"
+            "test -f /run/credentials/"
+            "grafana.service/admin-password"
         )
         machine.succeed(
-            "test -f /run/credentials/grafana.service/secret-key"
+            "test -f /run/credentials/"
+            "grafana.service/secret-key"
         )
 
     # Grafana starts and API is accessible.
@@ -169,11 +101,12 @@
     with subtest("Grafana datasource provisioned"):
         machine.succeed(
             "curl -sf -u testadmin:gf-admin-testpwd "
-            "http://127.0.0.1:3000/api/datasources/uid/victoriametrics "
+            "http://127.0.0.1:3000/api/datasources"
+            "/uid/victoriametrics "
             "| jq -e '.name == \"VictoriaMetrics\"'"
         )
 
-    # Grafana can query VictoriaMetrics through the datasource.
+    # Grafana can query VictoriaMetrics through datasource.
     with subtest("Grafana queries VictoriaMetrics"):
         machine.wait_until_succeeds(
             "curl -sf -u testadmin:gf-admin-testpwd "
