@@ -6,7 +6,7 @@
   phlipPkgs,
   # nixpkgs.lib
   # lib,
-  # inputs,
+  # sources,
   ...
 }:
 {

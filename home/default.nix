@@ -12,7 +12,7 @@
     extraSpecialArgs = {
       # force hm to use one pkgs eval to reduce eval time by 600ms
       inherit phlipPkgs pkgs;
-      inputs = sources;
+      inherit sources;
       pkgsUnfree = pkgs;
       pkgsYubikey = pkgs;
     };
@@ -24,7 +24,7 @@
     extraSpecialArgs = {
       # force hm to use one pkgs eval to reduce eval time by 600ms
       inherit phlipPkgs pkgs pkgsYubikey;
-      inputs = sources;
+      inherit sources;
       pkgsUnfree = pkgs;
     };
   };
@@ -35,7 +35,7 @@
     extraSpecialArgs = {
       # force hm to use one pkgs eval to reduce eval time by 600ms
       inherit phlipPkgs pkgs;
-      inputs = sources;
+      inherit sources;
       pkgsUnfree = pkgs;
       pkgsYubikey = pkgs;
     };
@@ -47,7 +47,7 @@
     extraSpecialArgs = {
       # force hm to use one pkgs eval to reduce eval time by 600ms
       inherit phlipPkgs pkgs;
-      inputs = sources;
+      inherit sources;
       pkgsUnfree = pkgs;
       pkgsYubikey = pkgs;
     };
@@ -58,7 +58,7 @@
     modules = [ ./omnara1.nix ];
     extraSpecialArgs = {
       inherit phlipPkgs pkgs;
-      inputs = sources;
+      inherit sources;
       pkgsUnfree = pkgs;
       pkgsYubikey = pkgs;
     };

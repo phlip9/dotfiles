@@ -4,8 +4,7 @@
   lib,
   phlipPkgs,
   pkgs,
-  # TODO(phlip9): rename inputs -> sources
-  inputs,
+  sources,
   ...
 }:
 {
@@ -29,14 +28,14 @@
       # one we're using for our home-manager setup, which saves time and disk
       # space.
       registry = {
-        nixpkgs.flake = inputs.nixpkgs;
-        home-manager.flake = inputs.home-manager;
+        nixpkgs.flake = sources.nixpkgs;
+        home-manager.flake = sources.home-manager;
       };
 
       # Let <nixpkgs>, <home-manager> work with our pinned sources instead of
       # the imperative `nix-channel` thing.
       channels = {
-        inherit (inputs) nixpkgs home-manager;
+        inherit (sources) nixpkgs home-manager;
       };
     };
 

@@ -8,8 +8,8 @@
   phlipPkgs,
   # nixpkgs.lib
   # lib,
-  # # flake inputs passed in via `extraSpecialArgs`
-  # inputs,
+  # # npins sources passed in via `extraSpecialArgs`
+  # sources,
   ...
 }:
 {
