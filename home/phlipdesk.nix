@@ -106,8 +106,8 @@
     # samply - sampling CPU profiler for Linux and macOS
     phlipPkgs.samply
 
-    # imgen - OpenAI API image generator cli
-    phlipPkgs.imgen
+    # # imgen - OpenAI API image generator cli
+    # phlipPkgs.imgen
 
     # io_uring man pages
     pkgs.liburing.man
