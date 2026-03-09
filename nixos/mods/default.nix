@@ -19,6 +19,7 @@
   ./github-agent-authd.nix
   ./github-webhook.nix
   ./xremap.nix
+  ./o11y.nix
 
   # buildbot-ci module + its dependencies (buildbot-nix and niks3)
   (sources.buildbot-nix + "/nixosModules/master.nix")
