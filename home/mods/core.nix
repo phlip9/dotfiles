@@ -33,9 +33,11 @@
         home-manager.flake = inputs.home-manager;
       };
 
-      # Let <nixpkgs>, <home-manager>, etc... work with our pinned sources
-      # instead of the imperative `nix-channel` thing.
-      channels = inputs;
+      # Let <nixpkgs>, <home-manager> work with our pinned sources instead of
+      # the imperative `nix-channel` thing.
+      channels = {
+        inherit (inputs) nixpkgs home-manager;
+      };
     };
 
     home.packages = [
