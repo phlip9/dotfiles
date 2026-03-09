@@ -44,6 +44,8 @@
       pkgs.file
       pkgs.findutils
       pkgs.gawk
+      pkgs.gnugrep
+      pkgs.gnupatch
       pkgs.gnused
       pkgs.parallel
       pkgs.which
