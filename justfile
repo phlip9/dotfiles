@@ -145,7 +145,7 @@ sops-updatekeys:
     [ -z "$combined_regex" ] && exit 0
 
     fd --type file --full-path --regex "(${combined_regex})" \
-        --exec bash -c 'yes | sops updatekeys {}'
+        --exec bash -c 'sops updatekeys --yes {}'
 
 sops-test-fixtures *args:
     SOPS_AGE_KEY_FILE=./nixos/tests/fixtures/keys.txt sops {{ args }}
