@@ -2,6 +2,7 @@
 
 keys:
   - &omnara1 age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
+  - &phlipnixos age1dgacrt20yhg9dhc76ggq3s9l7x2nw2htaf3zqa9638elkvmkeqdqr2jzra
   - &phliptop-mbp age1mvqd856lguk3n2qzs73q6xcj7etgx6le5zy0ceyd96s9xpd36pasfakgcy
   - &phliptop-nitro age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
 
@@ -10,5 +11,6 @@ creation_rules:
     key_groups:
       - age:
         - *omnara1
+        - *phlipnixos
         - *phliptop-mbp
         - *phliptop-nitro
