@@ -15,11 +15,24 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 
 let
+  inherit (builtins) toString;
+
   cfg = config.services.phlip9-o11y;
+
+  cfgVm = config.services.victoriametrics;
+  cfgGf = config.services.grafana;
+  cfgGfSrv = cfgGf.settings.server;
+  gfAddr = "${cfgGfSrv.http_addr}:${toString cfgGfSrv.http_port}";
+
+  exporterAddr = exporter: "${exporter.listenAddress}:${toString exporter.port}";
+  exporterTargets = exporter: [
+    { targets = [ (exporterAddr exporter) ]; }
+  ];
 
   # Credentials directory for the grafana.service unit.
   gfCredsDir = "/run/credentials/grafana.service";
@@ -80,28 +93,24 @@ in
           {
             job_name = "victoriametrics";
             static_configs = [
-              { targets = [ "127.0.0.1:8428" ]; }
+              { targets = [ cfgVm.listenAddress ]; }
             ];
           }
           {
             job_name = "node-exporter";
-            static_configs = [
-              { targets = [ "127.0.0.1:9100" ]; }
-            ];
+            static_configs = exporterTargets config.services.prometheus.exporters.node;
           }
           {
             job_name = "grafana";
             static_configs = [
-              { targets = [ "127.0.0.1:3000" ]; }
+              { targets = [ gfAddr ]; }
             ];
           }
         ]
         ++ lib.optionals config.services.nginx.enable [
           {
             job_name = "nginx-exporter";
-            static_configs = [
-              { targets = [ "127.0.0.1:9113" ]; }
-            ];
+            static_configs = exporterTargets config.services.prometheus.exporters.nginx;
           }
         ];
       };
@@ -140,10 +149,28 @@ in
       settings = {
         analytics.reporting_enabled = false;
 
+        # explicitly disable anonymous access
+        "auth.anonymous" = {
+          enable = false;
+          # don't advertise our current version
+          hide_version = true;
+        };
+
         server = {
           http_addr = "127.0.0.1";
           http_port = 3000;
+
+          # configure public DNS name (if exposed publicly)
           domain = lib.mkIf (cfg.grafana.domain != null) cfg.grafana.domain;
+          root_url = lib.mkIf (
+            cfg.grafana.domain != null
+          ) "https://${cfg.grafana.domain}/";
+
+          # reject requests via ip addr, alt. hostnames, or bad proxy config
+          enforce_domain = cfg.grafana.domain != null;
+
+          # HTTPS-only browser
+          cookie_secure = cfg.grafana.domain != null;
         };
 
         security = {
@@ -151,29 +178,56 @@ in
           admin_password = "$__file{${gfCredsDir}/admin-password}";
           secret_key = "$__file{${gfCredsDir}/secret-key}";
           disable_gravatar = true;
+
+          # NOTE(phlip9): can break OAuth/SAML/cross-site login
+          cookie_samesite = "strict";
+
+          # NOTE(phlip9): can break some plugins or HTML-heavy panels
+          content_security_policy = true;
+
+          # explicitly add datasources via `provision.datasources`
+          data_source_proxy_whitelist = [
+            cfgVm.listenAddress
+          ];
         };
 
         users = {
           allow_sign_up = false;
           allow_org_create = false;
         };
+
+        # just take a screenshot lol
+        snapshots.enable = false;
       };
 
       # Provision VictoriaMetrics as a Prometheus-type datasource.
-      provision.datasources.settings = {
-        apiVersion = 1;
-        datasources = [
-          {
-            name = "VictoriaMetrics";
-            type = "prometheus";
-            access = "proxy";
-            uid = "victoriametrics";
-            url = "http://127.0.0.1:8428";
-            isDefault = true;
-            editable = false;
-          }
-        ];
+      provision.datasources = {
+        settings = {
+          apiVersion = 1;
+          # Removing a datasource below will also remove it from Grafana after
+          # we deploy.
+          prune = true;
+          datasources = [
+            {
+              name = "VictoriaMetrics";
+              type = "prometheus";
+              access = "proxy";
+              uid = "victoriametrics";
+              url = "http://${cfgVm.listenAddress}";
+              isDefault = true;
+              editable = false;
+            }
+          ];
+        };
       };
+
+      # Only allow installing grafana plugins via nix
+      declarativePlugins = with pkgs.grafanaPlugins; [
+        grafana-exploretraces-app
+        grafana-lokiexplore-app
+        grafana-metricsdrilldown-app
+        grafana-pyroscope-app
+      ];
     };
 
     # Inject Grafana secrets via systemd LoadCredential. The
@@ -192,8 +246,14 @@ in
         forceSSL = true;
         enableACME = true;
 
+        # Advertise HTTPS-only access for Grafana without committing all
+        # subdomains to HSTS or browser preload lists.
+        extraConfig = ''
+          add_header Strict-Transport-Security "max-age=31536000" always;
+        '';
+
         locations."/" = {
-          proxyPass = "http://127.0.0.1:3000";
+          proxyPass = "http://${gfAddr}";
           proxyWebsockets = true;
         };
       };
