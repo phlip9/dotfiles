@@ -198,10 +198,8 @@
         };
       };
   };
-  sops.secrets = {
-    dotfiles-github-webhook-secret = { };
-    lexe-github-webhook-secret = { };
-  };
+  sops.secrets.dotfiles-github-webhook-secret = { };
+  sops.secrets.lexe-github-webhook-secret = { };
 
   # give agents running on this machine limited access to certain repos, so they
   # can only write to `agent/**` branches.
@@ -244,4 +242,23 @@
     # Don't need to expose the postgres to non-local connections
     enableTCPIP = false;
   };
+
+  # =========================================================================
+  # Observability (o11y)
+  # =========================================================================
+  # Grafana + VictoriaMetrics + prometheus-*-exporter(s)
+  # see: doc/o11y/README.md
+  # see: nixos/mods/o11y.nix
+  # see: nixos/tests/o11y.nix
+  services.phlip9-o11y = {
+    enable = true;
+    retentionPeriod = "3"; # months
+    grafana = {
+      domain = "grafana.phlip9.com";
+      adminPasswordFile = config.sops.secrets.grafana-admin-password.path;
+      secretKeyFile = config.sops.secrets.grafana-secret-key.path;
+    };
+  };
+  sops.secrets.grafana-admin-password = { };
+  sops.secrets.grafana-secret-key = { };
 }

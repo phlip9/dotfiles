@@ -22,21 +22,11 @@ let
   cfg = config.services.phlip9-o11y;
 
   # Credentials directory for the grafana.service unit.
-  gfCreds = "/run/credentials/grafana.service";
+  gfCredsDir = "/run/credentials/grafana.service";
 in
 {
   options.services.phlip9-o11y = {
     enable = lib.mkEnableOption "phlip9 metrics observability stack";
-
-    grafana.domain = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      example = "grafana.phlip9.com";
-      description = ''
-        Public domain for Grafana. When set, creates an nginx
-        virtualHost with TLS (ACME) proxying to Grafana.
-      '';
-    };
 
     retentionPeriod = lib.mkOption {
       type = lib.types.str;
@@ -47,20 +37,32 @@ in
       '';
     };
 
-    grafana.adminPasswordFile = lib.mkOption {
-      type = lib.types.path;
-      description = ''
-        Path to a file containing the Grafana admin password.
-        In production, use config.sops.secrets.*.path.
-      '';
-    };
+    grafana = {
+      domain = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "grafana.phlip9.com";
+        description = ''
+          Public domain for Grafana. When set, creates an nginx
+          virtualHost with TLS (ACME) proxying to Grafana.
+        '';
+      };
 
-    grafana.secretKeyFile = lib.mkOption {
-      type = lib.types.path;
-      description = ''
-        Path to a file containing the Grafana secret signing key.
-        In production, use config.sops.secrets.*.path.
-      '';
+      adminPasswordFile = lib.mkOption {
+        type = lib.types.path;
+        description = ''
+          Path to a file containing the Grafana admin password.
+          In production, use config.sops.secrets.*.path.
+        '';
+      };
+
+      secretKeyFile = lib.mkOption {
+        type = lib.types.path;
+        description = ''
+          Path to a file containing the Grafana secret signing key.
+          In production, use config.sops.secrets.*.path.
+        '';
+      };
     };
   };
 
@@ -146,8 +148,8 @@ in
 
         security = {
           admin_user = lib.mkDefault "admin";
-          admin_password = "$__file{${gfCreds}/admin-password}";
-          secret_key = "$__file{${gfCreds}/secret-key}";
+          admin_password = "$__file{${gfCredsDir}/admin-password}";
+          secret_key = "$__file{${gfCredsDir}/secret-key}";
           disable_gravatar = true;
         };
 
