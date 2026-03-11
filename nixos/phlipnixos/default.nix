@@ -102,13 +102,16 @@
     })
   ];
 
-  # Run non-NixOS binaries
+  # Run non-NixOS games/binaries
   programs.nix-ld = {
     enable = true;
-    libraries = [
+    libraries = with pkgs; [
       config.hardware.nvidia.package
-      pkgs.alsa-lib
-      pkgs.libglvnd
+      alsa-lib
+      libglvnd
+
+      wayland
+      libxkbcommon
     ];
   };
 
