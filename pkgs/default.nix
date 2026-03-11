@@ -133,6 +133,18 @@ fix (phlipPkgs: {
   # sops wrapped with clean nvim (no plugins) for secret editing
   sops = callPackage ./sops.nix { };
 
+  # unified launcher for Windows games on Linux
+  umu-launcher =
+    callPackage (sources.umu-launcher + "/packaging/nix/package.nix")
+      {
+        inherit (phlipPkgs) umu-launcher-unwrapped;
+      };
+  umu-launcher-unwrapped =
+    callPackage (sources.umu-launcher + "/packaging/nix/unwrapped.nix")
+      {
+        lastModifiedDate = "20260311";
+      };
+
   # my wallpapers
   wallpapers = callPackage ./wallpapers.nix { inherit (phlipPkgs) matugen; };
 })

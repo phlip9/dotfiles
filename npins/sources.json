@@ -111,6 +111,19 @@
       "revision": "c8e69670b316d6788e435a3aa0bda74eb1b82cc0",
       "url": "https://github.com/Mic92/sops-nix/archive/c8e69670b316d6788e435a3aa0bda74eb1b82cc0.tar.gz",
       "hash": "01p6c21djlxv3ccgpdlwy9sjaz826gxxv6glp5g71r7bvm4yqg65"
+    },
+    "umu-launcher": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "Open-Wine-Components",
+        "repo": "umu-launcher"
+      },
+      "branch": "main",
+      "submodules": false,
+      "revision": "c0efc4ce0cf162f5db107c1f920f5897bba02373",
+      "url": "https://github.com/Open-Wine-Components/umu-launcher/archive/c0efc4ce0cf162f5db107c1f920f5897bba02373.tar.gz",
+      "hash": "11sg0m76xzki8vi63fm2ii07brx5py47lavq8q0mjb094wwvxj2d"
     }
   },
   "version": 5

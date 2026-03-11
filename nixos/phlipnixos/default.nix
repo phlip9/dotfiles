@@ -280,6 +280,9 @@
 
     # video player
     phlipPkgs.mpv
+
+    # run windows games
+    phlipPkgs.umu-launcher
   ];
 
   # enable 1Password
