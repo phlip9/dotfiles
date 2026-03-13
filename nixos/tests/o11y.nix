@@ -103,7 +103,7 @@
             "curl -sf -u testadmin:gf-admin-testpwd "
             "http://127.0.0.1:3000/api/datasources"
             "/uid/victoriametrics "
-            "| jq -e '.name == \"VictoriaMetrics\"'"
+            "| jq -e '.name == \"VictoriaMetrics (Plugin)\"'"
         )
 
     # Grafana can query VictoriaMetrics through datasource.
@@ -113,6 +113,16 @@
             "'http://127.0.0.1:3000/api/datasources/proxy"
             "/uid/victoriametrics/api/v1/query?query=up' "
             "| jq -e '.data.result | length > 0'",
+            timeout=30,
+        )
+
+    # Grafana can list available metrics from VictoriaMetrics.
+    with subtest("Grafana lists available VictoriaMetrics metrics"):
+        machine.wait_until_succeeds(
+            "curl -sf -u testadmin:gf-admin-testpwd "
+            "'http://127.0.0.1:3000/api/datasources/proxy"
+            "/uid/victoriametrics/api/v1/label/__name__/values' "
+            "| jq -e '.data | any(index(\"vm_app_version\"))'",
             timeout=30,
         )
   '';

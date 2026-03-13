@@ -209,7 +209,7 @@ in
           prune = true;
           datasources = [
             {
-              name = "VictoriaMetrics";
+              name = "VictoriaMetrics (Plugin)";
               type = "victoriametrics-metrics-datasource";
               access = "proxy";
               uid = "victoriametrics";
@@ -220,6 +220,15 @@ in
             # TODO(phlip9): to use alerting via grafana (?) we might need to
             # configure a separate VM datasource but using type=prometheus:
             # <https://github.com/VictoriaMetrics/victoriametrics-datasource/issues/59#issuecomment-1541456768>
+            # {
+            #   name = "VictoriaMetrics (PromQL)";
+            #   type = "prometheus";
+            #   access = "proxy";
+            #   uid = "victoriametrics-prometheus";
+            #   url = "http://${cfgVm.listenAddress}";
+            #   isDefault = false;
+            #   editable = false;
+            # }
           ];
         };
       };
