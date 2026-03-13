@@ -27,26 +27,34 @@ nginx (443, TLS/ACME)
     │
     ▼
 grafana (127.0.0.1:3000)
-    │ PromQL queries
+    │ MetricsQL queries
     ▼
 victoriametrics (127.0.0.1:8428)
     │ promscrape (15s interval)
     ├── victoriametrics   localhost:8428/metrics
+    ├── grafana           localhost:3000/metrics
     ├── node-exporter     localhost:9100/metrics
-    ├── nginx-exporter    localhost:9113/metrics
-    └── grafana           localhost:3000/metrics
+    │   ...
+    └── nginx-exporter    localhost:9113/metrics
 ```
 
 Target machine: `omnara1` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0)
 DNS: `grafana.phlip9.com`
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `nixos/mods/o11y.nix` | NixOS module: VM + Grafana + exporters |
+| `nixos/tests/o11y.nix` | NixOS VM test |
+| `nixos/omnara1/default.nix` | NixOS machine config |
 
 ## Components
 
 ### VictoriaMetrics (metrics storage + scraper)
 
 Single-node binary that handles ingestion, storage, and querying.
-Prometheus-compatible API — works as a drop-in Grafana datasource
-using the Prometheus type.
+Prometheus-compatible API.
 
 NixOS module: `services.victoriametrics`
 
@@ -75,8 +83,7 @@ NixOS module: `services.grafana`
 Config:
 - Listen: `127.0.0.1:3000`
 - Database: sqlite3 (single user, no need for postgres)
-- Provisioned datasource: VictoriaMetrics as Prometheus type
-- Provisioned dashboards: node-exporter, VictoriaMetrics
+- Provisioned datasource: VictoriaMetrics
 - Admin password: sops secret via `$__file{path}` provider
 - Secret key: sops secret via `$__file{path}` provider
 - Disable sign-up, disable gravatar, disable analytics
@@ -105,20 +112,7 @@ for `grafana.phlip9.com` with:
 - `forceSSL = true`, `enableACME = true`
 - Proxy to `http://127.0.0.1:3000`
 
-## Implementation Files
-
-| File | Purpose |
-|------|---------|
-| `nixos/mods/o11y.nix` | NixOS module: VM + Grafana + exporters |
-| `nixos/mods/default.nix` | Import o11y module |
-| `nixos/tests/o11y.nix` | NixOS VM test |
-| `nixos/omnara1/default.nix` | Enable `services.phlip9-o11y` |
-| `nixos/omnara1/secrets.yaml` | sops secrets for Grafana |
-| `doc/o11y/README.md` | This document |
-
 ## Secrets
-
-Two new sops secrets in `nixos/omnara1/secrets.yaml`:
 
 | Secret | Owner | Purpose |
 |--------|-------|---------|
@@ -136,27 +130,6 @@ services.grafana.settings.security = {
 };
 ```
 
-## Scrape Config
-
-```yaml
-scrape_configs:
-  - job_name: victoriametrics
-    static_configs:
-      - targets: ["127.0.0.1:8428"]
-
-  - job_name: node-exporter
-    static_configs:
-      - targets: ["127.0.0.1:9100"]
-
-  - job_name: nginx-exporter
-    static_configs:
-      - targets: ["127.0.0.1:9113"]
-
-  - job_name: grafana
-    static_configs:
-      - targets: ["127.0.0.1:3000"]
-```
-
 ## Default Dashboards
 
 Provisioned via Grafana's dashboard provisioning:
@@ -171,38 +144,6 @@ Provisioned via Grafana's dashboard provisioning:
 
 Both downloaded at build time and provisioned as JSON files.
 
-## Implementation Plan
-
-### Phase 1: VM test (nixos/tests/o11y.nix)
-
-Single-VM test with VictoriaMetrics + node-exporter + Grafana.
-No nginx, no TLS, no oauth2-proxy — those are production concerns
-tested upstream.
-
-Verifications:
-1. All services start (`wait_for_unit`)
-2. VictoriaMetrics `/ping` responds
-3. node-exporter metrics visible: query `up{job="node-exporter"}`
-4. Grafana API accessible as admin
-5. Provisioned datasource healthy (`/api/datasources/uid/*/health`)
-
-### Phase 2: NixOS module (nixos/mods/o11y.nix)
-
-Options:
-- `services.phlip9-o11y.enable`
-- `services.phlip9-o11y.grafana.domain`
-
-Configures all components. nginx vhost only created when
-`grafana.domain` is set.
-
-### Phase 3: omnara1 deployment
-
-1. Add sops secrets for Grafana
-2. Enable module in `nixos/omnara1/default.nix`
-3. Enable `nginx.statusPage` for nginx-exporter
-4. DNS: point `grafana.phlip9.com` to omnara1
-5. Deploy via `just deploy`
-
 ### Future Work
 
 - **oauth2-proxy**: Protect Grafana behind GitHub OAuth. Either
@@ -213,3 +154,40 @@ Configures all components. nginx vhost only created when
 - **Additional exporters**: postgres-exporter, systemd-exporter,
   blackbox-exporter for endpoint probing.
 - **Log aggregation**: Loki + promtail, separate from metrics.
+
+## Runbooks
+
+### Setup
+
+1. Add the `phlip9-o11y` service
+
+2. Re-deploy: (ex: `just deploy omnara1`)
+
+3. Open grafana (ex: <https://grafana.phlip9.com>)
+
+4. For setup, login with username=admin and the admin password from sops
+   secrets.yaml:
+
+   ```bash
+   $ sops --decrypt nixos/omnara1/secrets.yaml | yq -r '.grafana-admin-password' | wl-copy
+   ```
+
+5. Create `phlip9` user
+
+   * Grafana > Administration > Users and access > Users > New user
+
+     Name: Philip Kannegaard Hayes
+     Email: philiphayes9@gmail.com
+     Username: phlip9
+     Password: (redacted)
+
+     > Create user
+
+     Permissions > Grafana Admin > Change > Yes
+
+6. Logout and Login as `phlip9`
+
+7. Update settings:
+
+   Administration > General > Default preferences
+   * Interface theme: Gilded grove

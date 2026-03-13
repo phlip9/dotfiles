@@ -200,7 +200,7 @@ in
         snapshots.enable = false;
       };
 
-      # Provision VictoriaMetrics as a Prometheus-type datasource.
+      # Provision VictoriaMetrics as a datasource using their Grafana plugin.
       provision.datasources = {
         settings = {
           apiVersion = 1;
@@ -210,13 +210,16 @@ in
           datasources = [
             {
               name = "VictoriaMetrics";
-              type = "prometheus";
+              type = "victoriametrics-metrics-datasource";
               access = "proxy";
               uid = "victoriametrics";
               url = "http://${cfgVm.listenAddress}";
               isDefault = true;
               editable = false;
             }
+            # TODO(phlip9): to use alerting via grafana (?) we might need to
+            # configure a separate VM datasource but using type=prometheus:
+            # <https://github.com/VictoriaMetrics/victoriametrics-datasource/issues/59#issuecomment-1541456768>
           ];
         };
       };
@@ -227,6 +230,7 @@ in
         grafana-lokiexplore-app
         grafana-metricsdrilldown-app
         grafana-pyroscope-app
+        victoriametrics-metrics-datasource
       ];
     };
 
