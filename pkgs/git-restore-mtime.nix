@@ -1,19 +1,20 @@
 # git-restore-mtime: Restore original modification time of files based on the
 # date of the most recent commit that modified them.
 {
-  stdenv,
   fetchFromGitHub,
+  nix-update-script,
   python3,
+  stdenvNoCC,
 }:
-stdenv.mkDerivation {
-  name = "git-restore-mtime";
-  version = "2024-09-27";
+stdenvNoCC.mkDerivation (finalAttrs: {
+  pname = "git-restore-mtime";
+  version = "2025.08";
 
   src = fetchFromGitHub {
     owner = "MestreLion";
     repo = "git-tools";
-    rev = "669837eb02f78a75ed250c5d670d9bd7bfc5a51b";
-    hash = "sha256-owGWQ3CqyurlVg3NswH0xedeEW/MIJiiU2+5NR1W1jo=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-DuhvepcDXk+UTFbvmv5V/EGP9ZEnHBYk7ARm/z0gTLY=";
   };
 
   buildInputs = [ python3 ];
@@ -22,4 +23,6 @@ stdenv.mkDerivation {
     mkdir $out
     install -D -t $out/bin $src/git-restore-mtime
   '';
-}
+
+  passthru.updateScript = nix-update-script { };
+})
