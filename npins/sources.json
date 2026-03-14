@@ -22,9 +22,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "916506443ecd0d0b4a0f4cf9d40a3c22ce39b378",
-      "url": "https://github.com/nix-community/disko/archive/916506443ecd0d0b4a0f4cf9d40a3c22ce39b378.tar.gz",
-      "hash": "1bp5hqzqqz99qgx55r50dbqz1b6x4i8q15xnxb0sj31ykbxhqj9z"
+      "revision": "878ec37d6a8f52c6c801d0e2a2ad554c75b9353c",
+      "url": "https://github.com/nix-community/disko/archive/878ec37d6a8f52c6c801d0e2a2ad554c75b9353c.tar.gz",
+      "hash": "07867b4mar8zlb8m3d7jx8cicvb28zwdamz7phlz4sk988nrnqm9"
     },
     "home-manager": {
       "type": "Git",
@@ -37,7 +37,8 @@
       "submodules": false,
       "revision": "36e38ca0d9afe4c55405fdf22179a5212243eecc",
       "url": "https://github.com/nix-community/home-manager/archive/36e38ca0d9afe4c55405fdf22179a5212243eecc.tar.gz",
-      "hash": "1a1bwc6jqgik6by6wwx5x00kacwajd2mdqczl16af2b9cgf6b83a"
+      "hash": "1a1bwc6jqgik6by6wwx5x00kacwajd2mdqczl16af2b9cgf6b83a",
+      "frozen": true
     },
     "niks3": {
       "type": "Git",
@@ -48,40 +49,46 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "1d944b98cb0ae7592e7fb7a49263872bcace63dd",
-      "url": "https://github.com/Mic92/niks3/archive/1d944b98cb0ae7592e7fb7a49263872bcace63dd.tar.gz",
-      "hash": "0jgcps3z8fhb2d7vb3hxgz48rw6wr3nw3xvrfx448cl3dnz4j7vp"
+      "revision": "64dafb438b637d776467602ee00af5cb7fc6a2a9",
+      "url": "https://github.com/Mic92/niks3/archive/64dafb438b637d776467602ee00af5cb7fc6a2a9.tar.gz",
+      "hash": "0x9swjxaahg5n2jvdp7lj38xwlldyandpr531ljrkglg172aknxb"
     },
     "nixos-unstable": {
       "type": "Channel",
       "name": "nixos-unstable",
       "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre962285.fe416aaedd39/nixexprs.tar.xz",
-      "hash": "1rkxybcvsm3nn446kmkjc6mri50fxb0w9ysp9wacbjwf77lv8mx0"
+      "hash": "1rkxybcvsm3nn446kmkjc6mri50fxb0w9ysp9wacbjwf77lv8mx0",
+      "frozen": true
     },
     "nixpkgs": {
       "type": "Channel",
       "name": "nixos-25.11",
       "url": "https://releases.nixos.org/nixos/25.11/nixos-25.11.6495.e764fc9a4058/nixexprs.tar.xz",
-      "hash": "0hb7q63629a15p8sy6v66890pirbrnnjm0npg02x6ah611d3qh4c"
+      "hash": "0hb7q63629a15p8sy6v66890pirbrnnjm0npg02x6ah611d3qh4c",
+      "frozen": true
     },
     "nixpkgs-yubikey": {
       "type": "Channel",
       "name": "nixos-24.05",
       "url": "https://releases.nixos.org/nixos/24.05/nixos-24.05.7376.b134951a4c9f/nixexprs.tar.xz",
-      "hash": "1f8j7fh0nl4qmqlxn6lis8zf7dnckm6jri4rwmj0qm1qivhr58lv"
+      "hash": "1f8j7fh0nl4qmqlxn6lis8zf7dnckm6jri4rwmj0qm1qivhr58lv",
+      "frozen": true
     },
     "noctalia-qs": {
-      "type": "Git",
+      "type": "GitRelease",
       "repository": {
         "type": "GitHub",
         "owner": "noctalia-dev",
         "repo": "noctalia-qs"
       },
-      "branch": "master",
+      "pre_releases": false,
+      "version_upper_bound": null,
+      "release_prefix": null,
       "submodules": false,
-      "revision": "f54b85075c42a291a07a70fb751a651acb8fa498",
-      "url": "https://github.com/noctalia-dev/noctalia-qs/archive/f54b85075c42a291a07a70fb751a651acb8fa498.tar.gz",
-      "hash": "1bgmmn8q990l2d6r9y17whiqjnpfjfw7qzihhxammdmnjy95yjmz"
+      "version": "v0.0.8",
+      "revision": "d5209a6b5fe8c6dff8d530e820c96f09830011e3",
+      "url": "https://api.github.com/repos/noctalia-dev/noctalia-qs/tarball/v0.0.8",
+      "hash": "0pyakmaq2bwdhnnqnrsqm9g1mjf5spij6hsvmlw058kxj8xkbbd4"
     },
     "noctalia-shell": {
       "type": "GitRelease",
@@ -94,10 +101,10 @@
       "version_upper_bound": null,
       "release_prefix": null,
       "submodules": false,
-      "version": "v4.6.4",
-      "revision": "b455dbb11fb0fbb58d3b334cffe5c2e037b5ae27",
-      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v4.6.4",
-      "hash": "15wparllynq251fcx1r0l7pzbhzcywxpzfak199xhflgwkipr20g"
+      "version": "v4.6.7",
+      "revision": "da221445187b8de728c0be36ec318f0be2b7c88e",
+      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v4.6.7",
+      "hash": "1kks8m8l6m0d93clq4nlqq9hca2kjpg811d706zhdfirbxzv3yz9"
     },
     "sops-nix": {
       "type": "Git",
@@ -108,9 +115,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "c8e69670b316d6788e435a3aa0bda74eb1b82cc0",
-      "url": "https://github.com/Mic92/sops-nix/archive/c8e69670b316d6788e435a3aa0bda74eb1b82cc0.tar.gz",
-      "hash": "01p6c21djlxv3ccgpdlwy9sjaz826gxxv6glp5g71r7bvm4yqg65"
+      "revision": "d1ff3b1034d5bab5d7d8086a7803c5a5968cd784",
+      "url": "https://github.com/Mic92/sops-nix/archive/d1ff3b1034d5bab5d7d8086a7803c5a5968cd784.tar.gz",
+      "hash": "0274wvqvgxxiabdngdxrafdqy74l1ww9lgm7rrxm04jfmygc8z1k"
     },
     "umu-launcher": {
       "type": "Git",
@@ -121,9 +128,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "c0efc4ce0cf162f5db107c1f920f5897bba02373",
-      "url": "https://github.com/Open-Wine-Components/umu-launcher/archive/c0efc4ce0cf162f5db107c1f920f5897bba02373.tar.gz",
-      "hash": "11sg0m76xzki8vi63fm2ii07brx5py47lavq8q0mjb094wwvxj2d"
+      "revision": "cfa9df7a069b792cb06c5fe5e13a7e6020570010",
+      "url": "https://github.com/Open-Wine-Components/umu-launcher/archive/cfa9df7a069b792cb06c5fe5e13a7e6020570010.tar.gz",
+      "hash": "0l87rba3bnqv3dfsxndbibwv0bg6iv0b3yyvkr0w5cny8ch5q18j"
     }
   },
   "version": 5

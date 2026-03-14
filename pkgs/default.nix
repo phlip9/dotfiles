@@ -102,7 +102,8 @@ fix (phlipPkgs: {
   nvim = callPackage ./nvim { };
 
   # noctalia-qs - noctalia QT quickshell fork
-  noctalia-qs = callPackage sources.noctalia-qs {
+  noctalia-qs = callPackage (sources.noctalia-qs + "/nix/package.nix") {
+    version = builtins.substring 1 100 sources.noctalia-qs.version;
     gitRev = sources.noctalia-qs.revision;
   };
 

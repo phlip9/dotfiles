@@ -55,6 +55,7 @@
     package = phlipPkgs.noctalia-shell;
   };
   systemd.user.services.noctalia-shell = {
+    restartTriggers = lib.mkForce [ ];
     restartIfChanged = true;
   };
 
