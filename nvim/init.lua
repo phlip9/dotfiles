@@ -1001,6 +1001,41 @@ do  -- worklog - quickly open and manage daily work logs {{{
     })
 end -- worklog }}}
 
+do  -- shellopen - shell command -> open files/quickfix {{{
+    -- Commands:
+    -- :Sho  {cmd} - shell -> open, newline-delimited stdout
+    -- :Shoz {cmd} - shell -> open, NUL-delimited stdout
+    -- :Shq  {cmd} - shell -> quickfix, newline-delimited stdout
+    -- :Shqz {cmd} - shell -> quickfix, NUL-delimited stdout
+    --
+    -- Examples:
+    -- :Sho  git diff --name-only | grep Cargo
+    -- :Shoz git diff --name-only -z
+    -- :Shq  rg --files | grep Cargo
+    -- :Shqz fd -0 Cargo
+
+    vim.api.nvim_create_user_command(
+        "Sho",
+        function(opts) require_local("shellopen").sho(opts.args) end,
+        { nargs = "+", complete = "shellcmdline", desc = "Shell -> open" }
+    )
+    vim.api.nvim_create_user_command(
+        "Shoz",
+        function(opts) require_local("shellopen").shoz(opts.args) end,
+        { nargs = "+", complete = "shellcmdline", desc = "Shell -> open (NUL-delimited)" }
+    )
+    vim.api.nvim_create_user_command(
+        "Shq",
+        function(opts) require_local("shellopen").shq(opts.args) end,
+        { nargs = "+", complete = "shellcmdline", desc = "Shell -> quickfix" }
+    )
+    vim.api.nvim_create_user_command(
+        "Shqz",
+        function(opts) require_local("shellopen").shqz(opts.args) end,
+        { nargs = "+", complete = "shellcmdline", desc = "Shell -> quickfix (NUL-delimited)" }
+    )
+end -- shellopn }}}
+
 -- PLUGINS }}}
 
 do -- GENERAL {{{
