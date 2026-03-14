@@ -2,19 +2,24 @@
 {
   rustPlatform,
   fetchFromGitHub,
+  nix-update-script,
 }:
-rustPlatform.buildRustPackage {
+rustPlatform.buildRustPackage (finalAttrs: {
   pname = "samply";
-  version = "0.13.1-unstable-20250124";
+  version = "0.13.1-unstable-${builtins.substring 0 8 finalAttrs.src.rev}";
 
   src = fetchFromGitHub {
     owner = "mstange";
     repo = "samply";
-    rev = "52e453d3df1ea1f52005897b7887576be4a129ae";
-    hash = "sha256-LEJL3t2ceT5QPZodY/9YupxqX8L/pT0L2znwzgNyn68=";
+    rev = "884f982d304f8a3b1f9fc13efeecb5932003a522";
+    hash = "sha256-yFHostcN2O2H4tg4ZNr4ftAvItKA1UPipCiDG4n3cUo=";
   };
 
-  cargoHash = "sha256-8Oht/hK6/yqs5+l4gHKPHjIjFNqhD58fQEv49VEPwik=";
+  cargoHash = "sha256-5gXQggMxyGrivTsWALUSOudyKUkguYfBljeKf+8Ya+c=";
 
   cargoBuildFlags = "-p samply --bin samply";
-}
+
+  passthru.updateScript = nix-update-script {
+    extraArgs = [ "--version=branch=main" ];
+  };
+})
