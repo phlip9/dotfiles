@@ -89,6 +89,9 @@ fix (phlipPkgs: {
   # matugen - material you color generation tool
   matugen = callPackage ./matugen.nix { inherit (phlipPkgs) noctalia-shell; };
 
+  # matugen-themes - config templates for matugen-generated color schemes
+  matugen-themes = callPackage ./matugen-themes.nix { };
+
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 

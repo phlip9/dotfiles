@@ -6,18 +6,24 @@
 let
   dotfiles = import ../. { };
   inherit (dotfiles) lib pkgs;
+  inherit (builtins)
+    filter
+    listToAttrs
+    removeAttrs
+    toJSON
+    toString
+    tryEval
+    ;
 
   # Path to local pkgs directory
   pkgsDir = toString ./.;
 
   # Packages that can't be evaluated (missing deps, use abort which tryEval
   # can't catch)
-  skipPackages = [
-    "noctalia-shell" # requires quickshell which isn't in standard package set
-  ];
+  skipPackages = [ ];
 
   # All phlipPkgs except skipped ones
-  phlipPkgs = builtins.removeAttrs dotfiles.phlipPkgs skipPackages;
+  phlipPkgs = removeAttrs dotfiles.phlipPkgs skipPackages;
 
   # Check if package is defined in local pkgs/ directory via meta.position
   isLocalPackage =
@@ -34,7 +40,7 @@ let
   tryGetPackageWithUpdateScript =
     name:
     let
-      result = builtins.tryEval (
+      result = tryEval (
         let
           pkg = phlipPkgs.${name};
         in
@@ -53,8 +59,8 @@ let
       null;
 
   # Find all packages with updateScript (filter out nulls from failed evals)
-  packagesWithUpdateScript = builtins.listToAttrs (
-    builtins.filter (x: x != null) (
+  packagesWithUpdateScript = listToAttrs (
+    filter (x: x != null) (
       map (
         name:
         let
@@ -90,7 +96,7 @@ let
     let
       script = pkg.updateScript;
     in
-    map builtins.toString (lib.toList (script.command or script));
+    map toString (lib.toList (script.command or script));
 
   # Build package data for runner
   packageData = lib.mapAttrs (name: pkg: {
@@ -102,14 +108,16 @@ let
   }) packages;
 
   packagesJson = pkgs.writeText "packages.json" (
-    builtins.toJSON (lib.attrValues packageData)
+    toJSON (lib.attrValues packageData)
   );
 
 in
 pkgs.mkShellNoCC {
-  packages = [
-    pkgs.jq
-    pkgs.bash
+  packages = with pkgs; [
+    bash
+    curl
+    jq
+    ripgrep
   ];
   shellHook = ''
     exec ${./update.sh} ${packagesJson}

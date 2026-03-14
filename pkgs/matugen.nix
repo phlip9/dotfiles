@@ -1,6 +1,11 @@
+# A cross-platform material you and base16 color generation tool
+#
+# See: pkgs/matugen-themes.nix
 {
   fetchFromGitHub,
   linkFarm,
+  matugen-themes,
+  nix-update-script,
   noctalia-shell,
   runCommand,
   rustPlatform,
@@ -27,20 +32,7 @@ let
     };
 
     passthru = {
-      # matugen-provided color templates
-      matugen-templates = fetchFromGitHub {
-        name = "matugen-templates";
-        owner = "InioX";
-        repo = "matugen-themes";
-        rev = "dd6fd47ad87d82172da2339da3e985136502fb3b";
-        hash = "sha256-J6imkjKcsxsxo6bGYQKVqYa7lcA1G+UM9r9Ay32Cok0=";
-        postFetch = ''
-          mv $out/templates $TMPDIR/templates
-          rm -rf $out
-          mkdir $out
-          cp -r $TMPDIR/templates/. $out/
-        '';
-      };
+      updateScript = nix-update-script { };
 
       # noctalia-shell color templates
       noctalia-templates =
@@ -55,7 +47,7 @@ let
 
       # collect all templates
       templates = linkFarm "templates" {
-        matugen = finalAttrs.passthru.matugen-templates;
+        matugen = finalAttrs.passthru.matugen-themes;
         noctalia = finalAttrs.passthru.noctalia-templates;
       };
 
