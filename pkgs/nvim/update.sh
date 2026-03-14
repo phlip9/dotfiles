@@ -1,14 +1,11 @@
-#!/usr/bin/env nix
-#!nix shell nixpkgs#bash nixpkgs#curl nixpkgs#jq nixpkgs#nix --command bash
-# shellcheck shell=bash
-#
+#!/usr/bin/env bash
+set -euo pipefail
+
 # Update extra vim plugins from extra-plugins.csv
 #
 # The nixpkgs vim-plugins-updater doesn't work well outside nixpkgs since it
 # tries to merge with all existing nixpkgs vim plugins. This script is a
 # simpler alternative that just updates our small set of extra plugins.
-
-set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"

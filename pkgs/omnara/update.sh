@@ -1,7 +1,4 @@
-#!/usr/bin/env nix
-#!nix shell nixpkgs#bash nixpkgs#curl nixpkgs#jq nixpkgs#nix nixpkgs#ripgrep --command bash
-# shellcheck shell=bash
-
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
