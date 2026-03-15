@@ -107,12 +107,14 @@ in
             ];
           }
         ]
-        ++ lib.optionals config.services.nginx.enable [
-          {
-            job_name = "nginx-exporter";
-            static_configs = exporterTargets config.services.prometheus.exporters.nginx;
-          }
-        ];
+        ++ lib.optional config.services.prometheus.exporters.nginx.enable ({
+          job_name = "nginx-exporter";
+          static_configs = exporterTargets config.services.prometheus.exporters.nginx;
+        })
+        ++ lib.optional config.services.prometheus.exporters.postgres.enable ({
+          job_name = "postgres-exporter";
+          static_configs = exporterTargets config.services.prometheus.exporters.postgres;
+        });
       };
     };
 
@@ -123,6 +125,10 @@ in
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9100;
+      enabledCollectors = [
+        "systemd"
+        "processes"
+      ];
     };
 
     # ===================================================================
@@ -135,6 +141,18 @@ in
     };
     # nginx-exporter needs stub_status exposed on localhost.
     services.nginx.statusPage = lib.mkIf config.services.nginx.enable true;
+
+    # ===================================================================
+    # prometheus-postgres-exporter - postgres metrics
+    # ===================================================================
+    services.prometheus.exporters.postgres =
+      lib.mkIf config.services.postgresql.enable
+        {
+          enable = true;
+          listenAddress = "127.0.0.1";
+          port = 9187;
+          runAsLocalSuperUser = true;
+        };
 
     # ===================================================================
     # Grafana - visualization + dashboards
