@@ -191,3 +191,17 @@ Both downloaded at build time and provisioned as JSON files.
 
    Administration > General > Default preferences
    * Interface theme: Gilded grove
+
+
+### Dashboards
+
+After importing a new dashboard, change the datasource type under "Variables"
+to `victoriametrics-metrics-datasource`.
+
+* [Node Exporter Full](https://github.com/rfmoz/grafana-dashboards/blob/master/prometheus/node-exporter-full.json)
+
+* [NGINX](https://github.com/nginx/nginx-prometheus-exporter/blob/main/grafana/dashboard.json)
+
+* [Postgres Overview](https://github.com/prometheus-community/postgres_exporter/blob/master/postgres_mixin/dashboards/postgres-overview.json)
+
+* [VictoriaMetrics - single-node (VM)](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/dashboards/vm/victoriametrics.json)
