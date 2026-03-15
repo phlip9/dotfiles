@@ -25,6 +25,18 @@
       secureBoot.enable = true;
       maxGenerations = 8;
 
+      # # To run memtest86, disable secure boot first (clear all registered
+      # # pubkeys in the BIOS).
+      # additionalFiles = {
+      #   "efi/memtest86/memtest86.efi" = pkgs.memtest86plus.efi;
+      # };
+      # extraEntries = ''
+      #   /memtest86
+      #     comment: REMEMBER: disable secure boot before running this!!
+      #     protocol: efi
+      #     path: boot():/limine/efi/memtest86/memtest86.efi
+      # '';
+
       style = {
         wallpapers = [ phlipPkgs.wallpapers.dunes ];
         wallpaperStyle = "centered";
