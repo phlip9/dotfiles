@@ -5,6 +5,11 @@ do -- PRELUDE {{{
     -- Rebind mapleader to something more accessible.
     vim.g.mapleader = ","
 
+    -- Disable netrw. Its buffers don't close properly with :bd and we
+    -- don't use it as a file browser.
+    vim.g.loaded_netrw = 1
+    vim.g.loaded_netrwPlugin = 1
+
     -- Track the "generation" number for sourcing `init.lua`.
     -- Used to ensure re-sourcing will re-run "one-time" init in various places.
     if _G.my_init_generation == nil then
