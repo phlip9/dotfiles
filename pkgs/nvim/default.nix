@@ -167,8 +167,8 @@ let
     { plugin = p.coc-json; }
     { plugin = p.coc-rust-analyzer; }
     { plugin = p.coc-sumneko-lua; }
-    { plugin = p.coc-toml; }
-    { plugin = p.coc-vimlsp; }
+    # { plugin = p.coc-toml; } # old and unmaintained
+    # { plugin = p.coc-vimlsp; } # don't use viml anymore
     { plugin = p.coc-yaml; }
 
     # goyo.vim - distraction free editing
