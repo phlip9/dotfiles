@@ -243,6 +243,7 @@ in
       rbc = "rebase --continue";
       rbe = "rebase --edit-todo";
       rbo = "!git rebase origin/$(git master)";
+      rboi = "!git rebase origin/$(git master) -i";
       rbu = "!git rebase upstream/$(git master)";
       rs = "reset";
       rsh = "reset --hard";
