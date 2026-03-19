@@ -46,6 +46,12 @@ in
         email = lib.mkDefault "philiphayes9@gmail.com";
       };
 
+      # one fixup per commit is easier to review than one fixup per change
+      absorb.oneFixupPerCommit = true;
+
+      # allow working on other people's branches
+      absorb.forceAuthor = true;
+
       # silence annoying "detached head" warning
       advice.detachedHead = false;
 
@@ -209,8 +215,8 @@ in
       # #############
 
       a = "add";
-      ab = "absorb";
-      abr = "absorb --and-rebase";
+      ab = "!git absorb --base $(git pr-base)";
+      abr = "!git absorb --base $(git pr-base) --and-rebase";
       b = "branch";
       cm = "commit";
       cma = "commit --amend";
