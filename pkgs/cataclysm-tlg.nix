@@ -22,13 +22,13 @@ let
   # Unwrapped build of Cataclysm: The Last Generation
   unwrapped = stdenv.mkDerivation (final: {
     pname = "cataclysm-tlg";
-    version = "1.0-2025-12-22-1410";
+    version = "1.0-2026-03-15-0632";
 
     src = fetchFromGitHub {
       owner = "Cataclysm-TLG";
       repo = "Cataclysm-TLG";
       tag = "cataclysm-tlg-${final.version}";
-      hash = "sha256-SMXfusQnIE0Ehwtfiy8QJ0Q8qXp4ETVuyxrCa6N9xj4=";
+      hash = "sha256-yrrKIAoU1Xl3jfD3r+r0TKXibzf+yaaGQjp6kNKV4Tg=";
     };
 
     postPatch = ''

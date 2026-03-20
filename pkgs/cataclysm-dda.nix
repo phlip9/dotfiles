@@ -22,13 +22,13 @@ let
   # Unwrapped build of Cataclysm: Dark Days Ahead
   unwrapped = stdenv.mkDerivation (final: {
     pname = "cataclysm-dda";
-    version = "2025-12-25-1628";
+    version = "2026-03-15-1328";
 
     src = fetchFromGitHub {
       owner = "CleverRaven";
       repo = "Cataclysm-DDA";
-      rev = "665e5a775cba9c6414a8b9cf7fc15757310c3dfe";
-      hash = "sha256-C6XgoX/JgxuTKtbJVTtuCPP6yb8jdPCpVyQW3Mg6vl8=";
+      rev = "cdda-experimental-${final.version}";
+      hash = "sha256-+scyPpsGpW7eMPxvmgIxCtpp0njqZZn/CrbhyrP7c7s=";
     };
 
     postPatch = ''
@@ -94,10 +94,10 @@ let
     # MshockXotto+ tileset
     MshockXotto = cataclysmDDA.buildTileSet rec {
       modName = "MshockXotto+";
-      version = "2025-12-21";
+      version = "2026-03-15";
       src = fetchzip {
         url = "https://github.com/I-am-Erk/CDDA-Tilesets/releases/download/${version}/${modName}.zip";
-        hash = "sha256-aTe3GhAes6u50U4ZsYGCMDhSRUwauKWUcM05JF2oCGY=";
+        hash = "sha256-jrq6VVlht8YmvbWKElC6CBX+OUUg9QnuDH9iWjdjr/c=";
       };
     };
   };
