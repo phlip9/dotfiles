@@ -3,7 +3,6 @@
   phlipPkgs,
   pkgs,
   pkgsUnfree,
-  pkgsYubikey,
   ...
 }:
 let
@@ -81,7 +80,7 @@ in
     pkgs.rage
     pkgs.toml-cli
     pkgs.uv
-    pkgsYubikey.age-plugin-yubikey
+    pkgs.age-plugin-yubikey
   ]
   ++ (lib.optionals isDarwin [
     pkgs.cocoapods

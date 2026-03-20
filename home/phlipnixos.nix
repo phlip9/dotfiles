@@ -46,7 +46,7 @@
     ./mods/git.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
-    # ./mods/lexe.nix
+    ./mods/lexe.nix
     ./mods/local-bin.nix
     # ./mods/lsyncd.nix
     ./mods/mpv.nix
