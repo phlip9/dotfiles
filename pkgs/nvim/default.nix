@@ -25,6 +25,7 @@
   nil,
   nixfmt,
   ripgrep,
+  ty,
 }:
 let
   inherit (builtins) map;
@@ -38,6 +39,9 @@ let
 
     # Go LSP
     gopls
+
+    # Python LSP
+    ty
 
     # semi-functioning nix language server.
     # maybe someday nix users won't have to live in fucking squalor...

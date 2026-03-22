@@ -54,8 +54,8 @@
     "languageserver": {
         "go": {
             "command": "gopls",
-            "rootPatterns": ["go.work", "go.mod", ".git/"],
             "filetypes": ["go"],
+            "rootPatterns": ["go.work", "go.mod", ".git/"],
             "initializationOptions": {
                 "usePlaceholders": true
             }
@@ -74,6 +74,12 @@
                     }
                 }
             }
+        },
+        "python": {
+            "command": "ty",
+            "args": ["server"],
+            "filetypes": ["python"],
+            "rootPatterns": ["ty.toml", "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git/"],
         }
     }
 }
