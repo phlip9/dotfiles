@@ -199,6 +199,8 @@ in
 
         Service = {
           Type = "notify";
+          RuntimeDirectory = "postgres";
+          RuntimeDirectoryMode = "0700";
 
           Environment = [
             "PATH=${
@@ -274,7 +276,8 @@ in
           ReadWritePaths = [ cfg.dataDir ];
           DevicePolicy = "closed";
           PrivateTmp = true;
-          ProtectHome = true;
+          # `ProtectHome=yes` makes both `/home` and `/run/user` inaccessible,
+          ProtectHome = "read-only";
           ProtectSystem = "strict";
           MemoryDenyWriteExecute = true;
           NoNewPrivileges = true;
