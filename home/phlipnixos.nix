@@ -54,7 +54,7 @@
     ./mods/noctalia.nix
     ./mods/nvim/default.nix
     # ./mods/omnara.nix
-    # ./mods/postgres.nix
+    ./mods/postgres.nix
     ./mods/python.nix
     ./mods/ssh.nix
     ./mods/ssh-agent.nix
@@ -170,11 +170,11 @@
   # Services
   #
 
-  # # per-user postgres systemd service: ./mods/postgres.nix
-  # services.postgres = {
-  #   enable = true;
-  #   ensureDatabases = ["lexe-dev"];
-  # };
+  # per-user postgres systemd service: ./mods/postgres.nix
+  services.postgres = {
+    enable = true;
+    ensureDatabases = [ "lexe-dev" ];
+  };
 
   #
   # Misc
