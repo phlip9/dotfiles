@@ -75,7 +75,13 @@
                 }
             }
         },
-        "python": {
+        "python-ruff": {
+            "command": "ruff",
+            "args": ["server"],
+            "filetypes": ["python"],
+            "rootPatterns": ["ruff.toml", ".ruff.toml", "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git/"],
+        },
+        "python-ty": {
             "command": "ty",
             "args": ["server"],
             "filetypes": ["python"],

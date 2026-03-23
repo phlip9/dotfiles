@@ -25,6 +25,7 @@
   nil,
   nixfmt,
   ripgrep,
+  ruff,
   ty,
 }:
 let
@@ -40,7 +41,8 @@ let
     # Go LSP
     gopls
 
-    # Python LSP
+    # Python LSP(s)
+    ruff
     ty
 
     # semi-functioning nix language server.
