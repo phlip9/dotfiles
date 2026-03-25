@@ -60,18 +60,19 @@
   };
 
   # desktop environment packages
-  environment.systemPackages = [
-    pkgs.adwaita-icon-theme # mouse cursor and icons
-    pkgs.app2unit # have noctalia-shell launcher open apps in their own units
-    pkgs.apple-cursor # macOS-looking cursor
-    pkgs.ffmpegthumbnailer # nautilus uses this for video thumbnails
-    pkgs.fuzzel # application launcher
-    pkgs.gnome-themes-extra # dark adwaita theme
-    pkgs.gradia # pretty screenshots
-    pkgs.nautilus # file chooser
-    pkgs.oculante # fast and simple image viewer and editor
-    pkgs.wl-clipboard # clipboard support
-    pkgs.xwayland-satellite # niri will support X11 apps if this is in PATH
+  environment.systemPackages = with pkgs; [
+    adwaita-icon-theme # mouse cursor and icons
+    app2unit # have noctalia-shell launcher open apps in their own units
+    apple-cursor # macOS-looking cursor
+    ffmpegthumbnailer # nautilus uses this for video thumbnails
+    fuzzel # application launcher
+    gnome-themes-extra # dark adwaita theme
+    gradia # pretty screenshots
+    libnotify # send desktop notifications from CLI
+    nautilus # file chooser
+    oculante # fast and simple image viewer and editor
+    wl-clipboard # clipboard support
+    xwayland-satellite # niri will support X11 apps if this is in PATH
   ];
 
   # change system power/performance profiles
