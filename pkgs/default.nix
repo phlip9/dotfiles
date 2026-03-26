@@ -87,7 +87,9 @@ fix (phlipPkgs: {
   mpv = callPackage ./mpv { };
 
   # matugen - material you color generation tool
-  matugen = callPackage ./matugen.nix { inherit (phlipPkgs) noctalia-shell; };
+  matugen = callPackage ./matugen.nix {
+    inherit (phlipPkgs) matugen-themes noctalia-shell;
+  };
 
   # matugen-themes - config templates for matugen-generated color schemes
   matugen-themes = callPackage ./matugen-themes.nix { };

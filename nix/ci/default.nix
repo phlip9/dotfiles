@@ -268,11 +268,11 @@ in
   nixosTests = nixosTests;
   homeConfigs = homeConfigs;
 
-  _dbg = {
-    inherit
-      packagePlatforms
-      supportedMatches
-      phlipPkgsTests
-      ;
-  };
+  # _dbg = {
+  #   inherit
+  #     packagePlatforms
+  #     supportedMatches
+  #     phlipPkgsTests
+  #     ;
+  # };
 }
