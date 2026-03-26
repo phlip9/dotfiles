@@ -281,6 +281,9 @@
     # terminal
     pkgs.alacritty
 
+    # discord
+    pkgs.discord
+
     # copy/paste
     pkgs.wl-clipboard
 
