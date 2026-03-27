@@ -55,14 +55,11 @@ update_platform() {
 }
 
 LINUX_X64=$(update_platform "x86_64-linux" "linux-x64")
-DARWIN_ARM64=$(update_platform "aarch64-darwin" "darwin-arm64")
 
 jq -n \
   --argjson linux_x64 "$LINUX_X64" \
-  --argjson darwin_arm64 "$DARWIN_ARM64" \
   '{
     "x86_64-linux": $linux_x64,
-    "aarch64-darwin": $darwin_arm64
   }' > "$SOURCES_FILE"
 
 echo "Updated $SOURCES_FILE"

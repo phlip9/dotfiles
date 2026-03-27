@@ -15,8 +15,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   src = fetchFromGitHub {
     owner = "InioX";
     repo = "matugen-themes";
-    rev = "e213a4ce7da91c69af91e1152390bf5cca346636";
-    hash = "sha256-J6imkjKcsxsxo6bGYQKVqYa7lcA1G+UM9r9Ay32Cok0=";
+    rev = "d880aeec9209ce56134c661c085535f8db5fa332";
+    hash = "sha256-aGj3jokh7vcbbQNkjLWHoJddbEbzPvNEM41Yc3lZKEI=";
     postFetch = ''
       mv $out/templates $TMPDIR/templates
       rm -rf $out
