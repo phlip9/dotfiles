@@ -9,9 +9,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "d8dd88a717560304b659743e204901dd4c0e434c",
-      "url": "https://github.com/nix-community/buildbot-nix/archive/d8dd88a717560304b659743e204901dd4c0e434c.tar.gz",
-      "hash": "04fjyk3hw705rbgvg06r6dmfqjq2y82rnlgscpq2byvm94a0fdrp"
+      "revision": "0239dd9a76c14ed7baa2ca40ae89c498e8dac6e7",
+      "url": "https://github.com/nix-community/buildbot-nix/archive/0239dd9a76c14ed7baa2ca40ae89c498e8dac6e7.tar.gz",
+      "hash": "0pfb2zlb3filayj6vikx68fb2nxwy2y42g7mdqarycmgw64sg2pj"
     },
     "disko": {
       "type": "Git",
@@ -22,9 +22,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "878ec37d6a8f52c6c801d0e2a2ad554c75b9353c",
-      "url": "https://github.com/nix-community/disko/archive/878ec37d6a8f52c6c801d0e2a2ad554c75b9353c.tar.gz",
-      "hash": "07867b4mar8zlb8m3d7jx8cicvb28zwdamz7phlz4sk988nrnqm9"
+      "revision": "5ad85c82cc52264f4beddc934ba57f3789f28347",
+      "url": "https://github.com/nix-community/disko/archive/5ad85c82cc52264f4beddc934ba57f3789f28347.tar.gz",
+      "hash": "035nyq47jvhxf2d00frd983h5rn56zs84bk41fax88sjq2gb02iw"
     },
     "home-manager": {
       "type": "Git",
@@ -49,9 +49,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "64dafb438b637d776467602ee00af5cb7fc6a2a9",
-      "url": "https://github.com/Mic92/niks3/archive/64dafb438b637d776467602ee00af5cb7fc6a2a9.tar.gz",
-      "hash": "0x9swjxaahg5n2jvdp7lj38xwlldyandpr531ljrkglg172aknxb"
+      "revision": "38ce7d2162da633514087ec51bc589e9a92631e6",
+      "url": "https://github.com/Mic92/niks3/archive/38ce7d2162da633514087ec51bc589e9a92631e6.tar.gz",
+      "hash": "0z88r7c084n9dlsg8jdkkx9mj17xrwm9sfv8wpd96nd0q1h60pz0"
     },
     "nixos-unstable": {
       "type": "Channel",
@@ -85,10 +85,10 @@
       "version_upper_bound": null,
       "release_prefix": null,
       "submodules": false,
-      "version": "v0.0.8",
-      "revision": "d5209a6b5fe8c6dff8d530e820c96f09830011e3",
-      "url": "https://api.github.com/repos/noctalia-dev/noctalia-qs/tarball/v0.0.8",
-      "hash": "0pyakmaq2bwdhnnqnrsqm9g1mjf5spij6hsvmlw058kxj8xkbbd4"
+      "version": "v0.0.10",
+      "revision": "12dba9653ae2c0dd24bf2633e2572a8093b0df5e",
+      "url": "https://api.github.com/repos/noctalia-dev/noctalia-qs/tarball/v0.0.10",
+      "hash": "1zly09mdpsqv220q5bi6vg70a6h2bpmd3f0badv2wzn1v1h19ixn"
     },
     "noctalia-shell": {
       "type": "GitRelease",
@@ -101,10 +101,10 @@
       "version_upper_bound": null,
       "release_prefix": null,
       "submodules": false,
-      "version": "v4.6.7",
-      "revision": "da221445187b8de728c0be36ec318f0be2b7c88e",
-      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v4.6.7",
-      "hash": "1kks8m8l6m0d93clq4nlqq9hca2kjpg811d706zhdfirbxzv3yz9"
+      "version": "v4.7.1",
+      "revision": "0b8b4fec43a7a5a685aa761b576f7bc09624d717",
+      "url": "https://api.github.com/repos/noctalia-dev/noctalia-shell/tarball/v4.7.1",
+      "hash": "0q9p9jl0iixf20bgwlray59rywgw4c1xq1pkp57zbbg0d1acr647"
     },
     "sops-nix": {
       "type": "Git",
@@ -115,9 +115,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "d1ff3b1034d5bab5d7d8086a7803c5a5968cd784",
-      "url": "https://github.com/Mic92/sops-nix/archive/d1ff3b1034d5bab5d7d8086a7803c5a5968cd784.tar.gz",
-      "hash": "0274wvqvgxxiabdngdxrafdqy74l1ww9lgm7rrxm04jfmygc8z1k"
+      "revision": "614e256310e0a4f8a9ccae3fa80c11844fba7042",
+      "url": "https://github.com/Mic92/sops-nix/archive/614e256310e0a4f8a9ccae3fa80c11844fba7042.tar.gz",
+      "hash": "09zy236xxrj2i85lwzcl4agmdfkf7hxnxiz5nyq350hb0wjbh4by"
     },
     "umu-launcher": {
       "type": "Git",
@@ -128,9 +128,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "cfa9df7a069b792cb06c5fe5e13a7e6020570010",
-      "url": "https://github.com/Open-Wine-Components/umu-launcher/archive/cfa9df7a069b792cb06c5fe5e13a7e6020570010.tar.gz",
-      "hash": "0l87rba3bnqv3dfsxndbibwv0bg6iv0b3yyvkr0w5cny8ch5q18j"
+      "revision": "e17b257d4e6c06295e2ff607a6e9865d2033db43",
+      "url": "https://github.com/Open-Wine-Components/umu-launcher/archive/e17b257d4e6c06295e2ff607a6e9865d2033db43.tar.gz",
+      "hash": "0i6waf859j95jagw8scrakzpk25hdwbwz2zv8y6ps8h043z405zc"
     }
   },
   "version": 5
