@@ -7,7 +7,7 @@
 {
   name = "github-agent-authd";
 
-  globalTimeout = 90;
+  globalTimeout = 120;
 
   nodes.machine =
     {

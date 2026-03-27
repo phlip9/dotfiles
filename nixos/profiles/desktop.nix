@@ -70,7 +70,8 @@
     gradia # pretty screenshots
     libnotify # send desktop notifications from CLI
     nautilus # file chooser
-    oculante # fast and simple image viewer and editor
+    # TODO(phlip9): reenable
+    # oculante # fast and simple image viewer and editor
     wl-clipboard # clipboard support
     xwayland-satellite # niri will support X11 apps if this is in PATH
   ];

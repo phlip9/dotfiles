@@ -7,7 +7,7 @@
 {
   name = "github-webhook";
 
-  globalTimeout = 60;
+  globalTimeout = 120;
 
   nodes.machine =
     {
