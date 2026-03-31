@@ -1,10 +1,12 @@
-# Lazy-loaded PostgreSQL home-manager service tuned for integration tests
+# PostgreSQL home-manager service tuned for integration tests
 #
-# Connect via: `PGHOST=$XDG_RUNTIME_DIR`
+# Connect via:
+# - (Linux) `PGHOST=$XDG_RUNTIME_DIR`
+# - (macOS) `PGHOST=$HOME/.local/run/postgres`
 #
-# 1. Use `systemd` socket activation and `systemd-socket-proxyd` to make
-#    postgres lazy load on-demand only when needed. The DB then spins down
-#    after 10 min of inactivity.
+# 1. (Linux) Use `systemd` socket activation and `systemd-socket-proxyd` to make
+#    postgres lazy load on-demand only when needed. The DB then spins down after
+#    10 min of inactivity.
 # 2. Tune the DB for running integration tests with max speed and min
 #    safety+durability.
 #
@@ -26,8 +28,11 @@ let
 
   cfg = config.services.postgres;
   pkg = cfg.package;
-  # isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
   isLinux = pkgs.stdenv.hostPlatform.isLinux;
+
+  # macOS has no XDG_RUNTIME_DIR; use a fixed path for the unix socket
+  darwinSocketDir = "${config.home.homeDirectory}/.local/run/postgres";
 
   postgresqlConf = pkgs.writeTextDir "postgresql.conf" ''
     # Connection settings
@@ -63,7 +68,7 @@ let
 
     # Tune query planner
     random_page_cost = 1.0          # assume everything is in memory
-    effective_io_concurrency = 200  # NVMe can handle lots of concurrent I/O
+    ${optionalString isLinux "effective_io_concurrency = 200"} # NVMe can handle lots of concurrent I/O
     seq_page_cost = 1.0             # sequential read cost
     jit = off                       # disable JIT compilation
 
@@ -113,9 +118,17 @@ let
     local   all  all                      reject
   '';
 
-  shellHook = ''
-    export PGHOST=$XDG_RUNTIME_DIR
-  '';
+  shellHook =
+    if isLinux then
+      ''
+        export PGHOST=$XDG_RUNTIME_DIR
+      ''
+    else if isDarwin then
+      ''
+        export PGHOST="${darwinSocketDir}"
+      ''
+    else
+      "";
 in
 {
   options = {
@@ -189,6 +202,7 @@ in
     programs.bash.initExtra = shellHook;
 
     # Linux systemd user service
+    # - uses socket activation
     systemd.user = mkIf isLinux {
       services.postgres = {
         Unit = {
@@ -227,14 +241,17 @@ in
                   rm -f "$PGDATA/*.conf"
 
                   # init the database
-                  initdb ${builtins.concatStringsSep " " cfg.initdbArgs} -D "$PGDATA"
+                  initdb ${builtins.concatStringsSep " " cfg.initdbArgs} \
+                    -D "$PGDATA"
 
                   # See ExecStartPost
                   touch "$PGDATA/.first_startup"
                 fi
 
-                ln -sfn "${postgresqlConf}/postgresql.conf" "$PGDATA/postgresql.conf"
-                ln -sfn "${pgHbaConf}/pg_hba.conf" "$PGDATA/pg_hba.conf"
+                ln -sfn "${postgresqlConf}/postgresql.conf" \
+                        "$PGDATA/postgresql.conf"
+                ln -sfn "${pgHbaConf}/pg_hba.conf" \
+                        "$PGDATA/pg_hba.conf"
               '';
             in
             "+${script}";
@@ -327,6 +344,89 @@ in
           ];
           PrivateTmp = true;
         };
+      };
+    };
+
+    # macOS launchd postgres service
+    # launchd sucks, so we have to suffer with:
+    # - postgres runs all the time, consuming resources
+    # - no socket activation
+    # - no sandboxing
+    launchd.agents.postgres = mkIf isDarwin {
+      enable = true;
+      config = {
+        Program =
+          let
+            run-postgres = pkgs.writeShellScript "run-postgres" ''
+              set -euxo pipefail
+
+              export PATH="${
+                lib.makeBinPath [
+                  pkg
+                  pkgs.coreutils
+                  pkgs.gnugrep
+                ]
+              }"
+              export PGDATA="${cfg.dataDir}"
+              export PGHOST="${darwinSocketDir}"
+
+              mkdir -p "$PGDATA" && chmod 700 "$PGDATA"
+              mkdir -p "$PGHOST" && chmod 700 "$PGHOST"
+
+              if [[ ! -e "$PGDATA/PG_VERSION" ]]; then
+                # cleanup the data dir
+                rm -f "$PGDATA/*.conf"
+
+                # init the database
+                initdb ${builtins.concatStringsSep " " cfg.initdbArgs} \
+                  -D "$PGDATA"
+
+                # See below
+                touch "$PGDATA/.first_startup"
+              fi
+
+              ln -sfn "${postgresqlConf}/postgresql.conf" \
+                      "$PGDATA/postgresql.conf"
+              ln -sfn "${pgHbaConf}/pg_hba.conf" \
+                      "$PGDATA/pg_hba.conf"
+
+              # start postgres in background
+              postgres --unix_socket_directories="$PGHOST" &
+              PG_PID=$!
+              trap 'kill -INT $PG_PID; wait $PG_PID' TERM INT
+
+              # wait for postgres to be ready (retry since it just forked)
+              for _i in $(seq 1 15); do
+                pg_isready -d template1 --timeout=1 && break
+                sleep 0.5
+              done
+
+              # run the initial script on first startup if set
+              if [[ -e "$PGDATA/.first_startup" ]]; then
+                ${optionalString (
+                  cfg.initialScript != null
+                ) "psql -d postgres -f \"${cfg.initialScript}\""}
+                rm "$PGDATA/.first_startup"
+              fi
+
+              # ensure databases exist
+              for db in ${lib.concatStringsSep " " cfg.ensureDatabases}; do
+                psql -d postgres -tAc \
+                  "SELECT 1 FROM pg_database WHERE datname = '$db'" \
+                    | grep -q 1 \
+                  || psql -d postgres -tAc "CREATE DATABASE \"$db\""
+              done
+
+              # Wait for postgres to exit
+              wait $PG_PID
+            '';
+          in
+          "${run-postgres}";
+        KeepAlive = true;
+        RunAtLoad = true;
+        ProcessType = "Background";
+        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/postgres/stdout.log";
+        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/postgres/stderr.log";
       };
     };
   };

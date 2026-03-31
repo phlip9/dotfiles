@@ -50,6 +50,7 @@
     # ./mods/mpv.nix
     ./mods/nvim/default.nix
     # ./mods/omnara.nix
+    ./mods/postgres.nix
     ./mods/python.nix
     ./mods/ssh.nix
     ./mods/ssh-agent.nix
@@ -122,4 +123,14 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
+
+  #
+  # Services
+  #
+
+  # per-user postgres systemd service: ./mods/postgres.nix
+  services.postgres = {
+    enable = true;
+    ensureDatabases = [ "lexe-dev" ];
+  };
 }
