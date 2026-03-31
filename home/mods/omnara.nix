@@ -8,7 +8,6 @@
 }:
 let
   isLinux = pkgs.stdenv.hostPlatform.isLinux;
-  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 
   omnara = phlipPkgs.omnara;
 
@@ -40,22 +39,6 @@ in
       Restart = "on-failure";
       RestartSec = 5;
       WorkingDirectory = homeDir;
-    };
-  };
-
-  # macOS - launchd agent
-  launchd.agents.omnara = lib.mkIf isDarwin {
-    enable = true;
-    config = {
-      ProcessType = "Background";
-      ProgramArguments = execStart;
-      WorkingDirectory = homeDir;
-      RunAtLoad = true;
-      KeepAlive = {
-        SuccessfulExit = false;
-        Crashed = true;
-      };
-      ThrottleInterval = 5;
     };
   };
 }
