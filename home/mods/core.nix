@@ -51,8 +51,9 @@
       pkgs.parallel
       pkgs.which
 
-      # archives
+      # archives/compression
       pkgs.gnutar
+      pkgs.gzip
       pkgs.unzip
       pkgs.xz
       pkgs.zip
