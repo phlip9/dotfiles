@@ -200,6 +200,10 @@
     execWheelOnly = true;
   };
 
+  # pcscd - for yubikey
+  services.pcscd.enable = true;
+  services.udev.packages = [ pkgs.yubikey-personalization ];
+
   # FDE + single-user => can just use auto-login
   services.displayManager.autoLogin = {
     enable = true;
@@ -278,6 +282,9 @@
 
   # list packages installed in system profile
   environment.systemPackages = [
+    # need age-plugin-yubikey compatible with pcscd version above
+    pkgs.age-plugin-yubikey
+
     # terminal
     pkgs.alacritty
 

@@ -80,7 +80,6 @@ in
     pkgs.rage
     pkgs.toml-cli
     pkgs.uv
-    pkgs.age-plugin-yubikey
   ]
   ++ (lib.optionals isDarwin [
     pkgs.cocoapods
