@@ -2,8 +2,6 @@
 ---
 --- These tests verify that continuation lines in markdown lists are properly
 --- indented to align with text after the list marker (bullet or number).
----
---- Run with: nvim --headless -c 'PlenaryBustedFile nvim/lua/test/markdown_format_spec.lua'
 
 local eq = assert.are.same
 

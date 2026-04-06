@@ -1,6 +1,4 @@
 --- Tests for telescope_diff_outline module.
----
---- Run with: nvim --headless -c 'PlenaryBustedFile nvim/lua/test/telescope_diff_outline_spec.lua'
 
 local eq = assert.are.same
 
@@ -46,7 +44,7 @@ describe("telescope_diff_outline", function()
 
         it("handles multiple hunks", function()
             local hunks = {
-                { 5, 0, 5, 2 },   -- lines 5-6 added
+                { 5,  0, 5,  2 }, -- lines 5-6 added
                 { 15, 2, 15, 3 }, -- lines 15-17 modified
                 { 25, 0, 28, 1 }, -- line 28 added
             }
@@ -71,7 +69,7 @@ describe("telescope_diff_outline", function()
     describe("get_hunk_for_line", function()
         it("returns the hunk containing the line", function()
             local hunks = {
-                { 5, 0, 5, 2 },
+                { 5,  0, 5,  2 },
                 { 15, 2, 15, 3 },
             }
             eq({ 5, 0, 5, 2 }, M.get_hunk_for_line(5, hunks))

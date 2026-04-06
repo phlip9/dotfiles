@@ -2,8 +2,6 @@
 ---
 --- Tests run against an ephemeral git repo using the real
 --- :GitGutterDiffOrig command from the vim-gitgutter plugin.
----
---- Run with: nvim --headless -c 'PlenaryBustedFile nvim/lua/test/gitgutter_difforig_spec.lua'
 
 local eq = assert.are.same
 
@@ -48,7 +46,7 @@ local function gitgutter_process_sync()
         callback = function() done = true end,
     })
     vim.cmd("GitGutter")
-    local ok = vim.wait(5000, function() return done end)
+    local ok = vim.wait(5000, function() return done end, 50)
     pcall(vim.api.nvim_del_autocmd, au)
     assert.is_true(ok, "gitgutter did not finish processing in time")
 end
@@ -113,7 +111,7 @@ describe("gitgutter_difforig", function()
 
         local second_diff = vim.b.gitgutter_difforig_bufnr
         assert.is_truthy(second_diff)
-        assert.are_not.equal(first_diff, second_diff)
+        assert.are.not_equal(first_diff, second_diff)
         eq(true, vim.wo.diff)
     end)
 

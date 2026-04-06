@@ -1,6 +1,4 @@
 --- Tests for worklog module.
----
---- Run with: nvim --headless -c 'PlenaryBustedFile nvim/lua/test/worklog_spec.lua'
 
 local eq = assert.are.same
 
@@ -435,8 +433,7 @@ describe("worklog", function()
             -- Parse treesitter before enabling foldexpr.
             vim.treesitter.get_parser(bufnr, "markdown"):parse()
             vim.opt_local.foldmethod = "expr"
-            vim.opt_local.foldexpr =
-                "nvim_treesitter#foldexpr()"
+            vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"
             -- Collapse ## day entries but keep # year heading open.
             vim.opt_local.foldlevel = 1
             -- Recompute folds.
@@ -481,58 +478,60 @@ describe("worklog", function()
 
         it("collapses ## day entries, keeps frontmatter "
             .. "and # heading open, blank lines between "
-            .. "sections stay visible", function()
-            local bufnr = buf_with_lines({
-                "---",
-                "publish: false",
-                "tags: []",
-                "date: 2026-02-20",
-                "---",
-                "",
-                "# log 2026",
-                "",
-                "",
-                "## 2026-02-20 Fri",
-                "",
-                "- Review PRs",
-                "",
-                "Publishing to Apple App Store",
-                "- Release app",
-                "- Await review",
-                "- Publish",
-                "",
-                "",
-                "## 2026-02-19 Thu",
-                "",
-                "- CNY family stuff",
-                "",
-                "",
-                "## 2026-02-18 Wed",
-                "",
-                "- More stuff",
-            })
-            setup_md_folding(bufnr)
+            .. "sections stay visible",
+            function()
+                local bufnr = buf_with_lines({
+                    "---",
+                    "publish: false",
+                    "tags: []",
+                    "date: 2026-02-20",
+                    "---",
+                    "",
+                    "# log 2026",
+                    "",
+                    "",
+                    "## 2026-02-20 Fri",
+                    "",
+                    "- Review PRs",
+                    "",
+                    "Publishing to Apple App Store",
+                    "- Release app",
+                    "- Await review",
+                    "- Publish",
+                    "",
+                    "",
+                    "## 2026-02-19 Thu",
+                    "",
+                    "- CNY family stuff",
+                    "",
+                    "",
+                    "## 2026-02-18 Wed",
+                    "",
+                    "- More stuff",
+                })
+                setup_md_folding(bufnr)
 
-            eq({
-                "---",
-                "publish: false",
-                "tags: []",
-                "date: 2026-02-20",
-                "---",
-                "",
-                "# log 2026",
-                "",
-                "",
-                "## 2026-02-20 Fri ··· +7 lines",
-                "",
-                "",
-                "## 2026-02-19 Thu ··· +2 lines",
-                "",
-                "",
-                "## 2026-02-18 Wed ··· +2 lines",
-            }, render_folded_view(bufnr))
+                eq({
+                    "---",
+                    "publish: false",
+                    "tags: []",
+                    "date: 2026-02-20",
+                    "---",
+                    "",
+                    "# log 2026",
+                    "",
+                    "",
+                    "## 2026-02-20 Fri ··· +7 lines",
+                    "",
+                    "",
+                    "## 2026-02-19 Thu ··· +2 lines",
+                    "",
+                    "",
+                    "## 2026-02-18 Wed ··· +2 lines",
+                }, render_folded_view(bufnr))
 
-            buf_delete(bufnr)
-        end)
+                buf_delete(bufnr)
+            end
+        )
     end)
 end)
