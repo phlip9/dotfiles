@@ -584,7 +584,7 @@ do  -- vim-gitgutter - Show git diff in the gutter {{{
     -- <leader>ggt - Toggle git gutter
     -- <leader>hs - Stage hunk
     -- <leader>hr - Undo hunk
-    -- <leader>hd - open git diff split pane for current file
+    -- <leader>hd - toggle git diff split pane for current file
     -- <leader>hv - open popup preview for current hunk
     -- ]h - Move forward one hunk
     -- [h - Move backward one hunk
@@ -600,7 +600,9 @@ do  -- vim-gitgutter - Show git diff in the gutter {{{
     vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, M.with_desc("stage git hunk"))
     vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, M.with_desc("reset git hunk"))
     vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, M.with_desc("preview git hunk in popup"))
-    vim.keymap.set("n", "<leader>hd", vim.cmd.GitGutterDiffOrig, M.with_desc("show full hunk diff in split window"))
+    vim.keymap.set("n", "<leader>hd", function()
+        require_local("gitgutter_difforig").toggle()
+    end, M.with_desc("toggle full hunk diff in split window"))
 
     -- Make GitGutter(Next|Prev)Hunk repeatable
     local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
