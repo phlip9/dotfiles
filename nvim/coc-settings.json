@@ -37,7 +37,11 @@
     "sumneko-lua.checkUpdate": false,
     "sumneko-lua.logPath": "${userHome}/.cache/lua-language-server/log",
     "sumneko-lua.serverDir": "${userHome}/.local/share/lua-language-server",
-    "sumneko-lua.enableNvimLuaDev": true,
+    // // When this is turned on, coc-sumneko-lua appears to pull in like 2
+    // // extra synthetic/out-of-date vim interfaces that confuse
+    // // goto_definition. Plus, everything seems to work just fine without
+    // // this.
+    // "sumneko-lua.enableNvimLuaDev": true,
     "rust-analyzer.checkOnSave": true,
     "rust-analyzer.diagnostics.disabled": [
         "macro-error",
