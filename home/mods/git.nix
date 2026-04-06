@@ -151,7 +151,7 @@ in
       # checkout a PR in the current repo
       pr = "!git switch $(git master) && git pull && gh pr checkout";
 
-      # Print the branch point of the current PR branch from origin/master
+      # Print the branch point of the current PR from origin/master
       pr-base = stripNewlines ''
         !if [ -n "$PR_BASE" ]; then
             echo "$PR_BASE";
@@ -160,14 +160,17 @@ in
           fi
       '';
 
-      # Print which files have changed on this PR branch since master.
+      # Print which files have changed in this PR since master.
       pr-files = "!git diff --name-only $(git pr-base)";
 
-      # Print which files have changed on this PR branch in the current commit.
+      # Print which files have changed in this PR in the current commit.
       cm-files = "!git diff --name-only HEAD~1";
 
-      # Print the diff stat for the files changed on this PR branch.
+      # Print the diff stat for the files changed in this PR.
       pr-stat = "!git diff --stat $(git pr-base)";
+
+      # Print the diff stat (+ commit metadata) for each commit in this PR.
+      pr-stat-by-commit = "!git --no-pager log --stat $(git pr-base)..";
 
       # Print the diff stat for this commit.
       cm-stat = "!git diff --stat HEAD~1";
@@ -202,10 +205,10 @@ in
         "!${script}";
 
       # Pretty print PR commits for Github PR description
-      pr-desc = "!git log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
+      pr-desc = "!git --no-pager log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
 
       # Print compact list of commits on this PR branch.
-      pr-cm-lg = "!git log --reverse --format='* %s' $(git pr-base)..";
+      pr-lg = "!git --no-pager log --reverse --format='* %s' $(git pr-base)..";
 
       # Start rebase to review by commit
       pr-rv-by-commit = "!git rebase --interactive $(git pr-base)";
