@@ -49,9 +49,11 @@ runCommandLocal "nvim-test"
     cp "${nvim.dotfilesCocSettingsFile}" .vim/coc-settings.json
     cp "${nvim.dotfilesLuarcJsonFile}" .luarc.json
 
-    # Run plenary busted tests
+    # Run plenary busted tests.
+    # Pass `init` so plenary child processes load our init.lua and
+    # plugins (without it, plenary defaults to --noplugin).
     nvim --headless \
-      -c "PlenaryBustedDirectory $XDG_CONFIG_HOME/nvim/lua/test {nvim_cmd = '$(which nvim)'}"
+      -c "PlenaryBustedDirectory $XDG_CONFIG_HOME/nvim/lua/test {nvim_cmd = '$(which nvim)', init = '$XDG_CONFIG_HOME/nvim/init.lua'}"
 
     touch "$out"
   ''
