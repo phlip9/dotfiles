@@ -1,16 +1,9 @@
 --- Tests for telescope_diff_outline module.
 
 local eq = assert.are.same
+local M = require("telescope_diff_outline")
 
 describe("telescope_diff_outline", function()
-    local M
-
-    before_each(function()
-        -- Fresh require for each test
-        package.loaded["telescope_diff_outline"] = nil
-        M = require("telescope_diff_outline")
-    end)
-
     describe("get_line_diff_status", function()
         it("returns + for added lines", function()
             -- Hunk format: [old_start, old_count, new_start, new_count]

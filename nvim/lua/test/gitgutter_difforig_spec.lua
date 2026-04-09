@@ -4,6 +4,7 @@
 --- :GitGutterDiffOrig command from the vim-gitgutter plugin.
 
 local eq = assert.are.same
+local M = require("gitgutter_difforig")
 
 --- Create an ephemeral git repo with a committed file and unstaged edits.
 ---@return string dir repo root
@@ -52,13 +53,9 @@ local function gitgutter_process_sync()
 end
 
 describe("gitgutter_difforig", function()
-    local M
     local test_dir
 
     before_each(function()
-        package.loaded["gitgutter_difforig"] = nil
-        M = require("gitgutter_difforig")
-
         local test_file
         test_dir, test_file = make_test_repo()
         vim.cmd.edit(test_file)
