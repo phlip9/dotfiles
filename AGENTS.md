@@ -132,8 +132,10 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 ### lua tests
 
 - tests go in `nvim/lua/test/*_spec.lua`
-- tests use Plenary/Busted and run via `just nvim-test` (`nix build -f .
-  --no-link phlipPkgs.nvim.tests.nvim-test`).
+- tests use Plenary/Busted and run via `just nvim-test`.
+- `just nvim-test` runs the full `nvim/lua/test` suite in a nix sandbox.
+- `just nvim-test <path>` runs a specific file or directory relative to
+  `nvim/` (ex: `just nvim-test lua/test/my_mod_spec.lua`).
 - prefer narrow unit tests for pure helpers; however, don't shy away from
   full integration tests when necessary.
 - make tests deterministic: use fixed dates, explicit buffer contents, temp

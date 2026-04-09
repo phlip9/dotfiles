@@ -211,9 +211,6 @@ let
     ];
   };
 
-  # The wrapped neovim package.
-  wrappedNvimPkg = wrapNeovimUnstable neovim-unwrapped neovimConfig;
-
   # Lua plugin library paths for lua LSP workspace.library config.
   luaPluginLibraryPaths = map (x: "${x.plugin.outPath}/lua") luaPlugins;
 
@@ -251,8 +248,13 @@ let
   };
   dotfilesLuarcJsonFile = writers.writeJSON ".luarc.json" dotfilesLuarcJson;
 
-  # The final nvim package with passthru attrs.
-  finalNvimPkg = wrappedNvimPkg.overrideAttrs (prev: {
+  # The wrapped neovim package.
+  wrappedNvimPkg = wrapNeovimUnstable neovim-unwrapped neovimConfig;
+in
+
+# The final nvim package with passthru attrs.
+wrappedNvimPkg.overrideAttrs (
+  final: prev: {
     passthru = (prev.passthru or { }) // {
       inherit
         luaPlugins
@@ -262,11 +264,9 @@ let
       updateScript = ./update.sh;
       tests = {
         nvim-test = callPackage ./nvim-test.nix {
-          nvim = finalNvimPkg;
+          nvim = final.finalPackage;
         };
       };
     };
-  });
-in
-
-finalNvimPkg
+  }
+)
