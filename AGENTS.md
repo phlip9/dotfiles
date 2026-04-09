@@ -54,6 +54,7 @@
     init at 0.13.4`
 - commits: rarely add a commit message body, unless the change is complex or
   non-obvious.
+- commits: ABSOLUTELY NEVER add a "Co-Authored-By: " trailer.
 - structure changes and commits for reviewability. prefer small, focused
   commits that are easy to review. bulk changes or refactors should always be
   split out from primary changes into their own commit(s) for easier review.
@@ -90,8 +91,8 @@
 - `nvim-print-base-runtime-path` print base nvim installation's runtime path
 - `nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
 
-after making changes in an area and before presenting the results, run the
-relevant lint/format/test commands and fix any issues.
+before presenting changes, run the relevant lint/format/test commands and fix
+any issues.
 
 ## nix
 
@@ -126,13 +127,29 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 ### lua
 
 - use `require_local("module")` when importing modules from `nvim/lua/`
+- prefer stateless modules when possible
+
+### lua tests
+
+- tests go in `nvim/lua/test/*_spec.lua`
+- tests use Plenary/Busted and run via `just nvim-test` (`nix build -f .
+  --no-link phlipPkgs.nvim.tests.nvim-test`).
+- prefer narrow unit tests for pure helpers; however, don't shy away from
+  full integration tests when necessary.
+- make tests deterministic: use fixed dates, explicit buffer contents, temp
+  dirs/repos, and never depend on the user's local environment or editor state
+- clean up all nvim and filesystem state created by a test: temp buffers,
+  windows, autocmds, files, dirs, and any mutated globals/options
+- mirror the existing spec style: top-level file comment, short helper
+  comments, `local eq = assert.are.same`, and `describe()` / `it()` structure
+
 
 ## creating PRs
+
+you are only allowed to create branches and PRs off `agent/**` branches.
 
 create PRs using the `gh` CLI tool:
 
 ```bash
 $ gh pr create --repo phlip9/dotfiles --title "..." --body "..."
 ```
-
-agents are only allowed to create branches and PRs off `agent/**` branches.
