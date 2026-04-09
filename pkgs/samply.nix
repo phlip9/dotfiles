@@ -11,11 +11,11 @@ rustPlatform.buildRustPackage (finalAttrs: {
   src = fetchFromGitHub {
     owner = "mstange";
     repo = "samply";
-    rev = "d44c4938a77050a34faebaa0426cc9ff75d31897";
-    hash = "sha256-Gn6DhSFoMhxV3ISJU6YLwZCxH70FmFCaWibaIMJYeqc=";
+    rev = "30eb7ee586f11789ac7598f5898441630711ed1f";
+    hash = "sha256-JOLTqDiO/pP3qeW6i4QFgrTg7YS47kwUGK79ZoiycNY=";
   };
 
-  cargoHash = "sha256-HRDDGEijh/QrwKbRe0H+BabnK3HvfIL4J/mdUji4lpI=";
+  cargoHash = "sha256-SKir+N/SyRJc3kPr3OxPraj3eBkzAacnDkwjRl6FUv0=";
 
   cargoBuildFlags = "-p samply --bin samply";
 
