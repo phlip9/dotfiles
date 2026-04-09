@@ -91,9 +91,8 @@ nvim-lint:
         --logpath "$TMPDIR/log" \
         --metapath "$TMPDIR/meta"
 
-# TODO(phlip9): figure out how to run tests/files individually
-nvim-test:
-    nix build -f . -L --no-link phlipPkgs.nvim.tests.nvim-test
+nvim-test *args:
+    ./just/nvim-test.sh {{ args }}
 
 nvim-print-my-plugins-dir:
     nvim --headless \
