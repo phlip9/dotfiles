@@ -1,7 +1,8 @@
 --- Toggle GitGutterDiffOrig split view.
 ---
 --- Tracks the diff buffer via `b:gitgutter_difforig_bufnr` on the source
---- buffer. Opening calls `:GitGutterDiffOrig`; closing wipes the diff
+--- buffer, and a reverse reference `b:gitgutter_difforig_src_bufnr` on the
+--- diff buffer. Opening calls `:GitGutterDiffOrig`. Closing wipes the diff
 --- buffer and runs `:diffoff` on the source window.
 ---
 --- Usage:
@@ -53,8 +54,9 @@ function M.open(src_bufnr)
     -- Find the newly-created window and record its buffer.
     for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         if not wins_before[w] then
-            vim.b[src_bufnr].gitgutter_difforig_bufnr =
-                vim.api.nvim_win_get_buf(w)
+            local diff_bufnr = vim.api.nvim_win_get_buf(w)
+            vim.b[src_bufnr].gitgutter_difforig_bufnr = diff_bufnr
+            vim.b[diff_bufnr].gitgutter_difforig_src_bufnr = src_bufnr
             return
         end
     end
@@ -63,6 +65,19 @@ end
 --- Toggle the GitGutterDiffOrig split for the current buffer.
 function M.toggle()
     local bufnr = vim.api.nvim_get_current_buf()
+
+    -- Don't accidentally open a new split if we're in the diff window.
+    local src_bufnr = vim.b[bufnr].gitgutter_difforig_src_bufnr
+    if src_bufnr then
+        if vim.api.nvim_buf_is_valid(src_bufnr) then
+            M.close(src_bufnr)
+        else
+            -- Source buffer is gone. Just wipe the orphaned diff buffer.
+            vim.api.nvim_buf_delete(bufnr, { force = true })
+        end
+        return
+    end
+
     if not M.close(bufnr) then
         M.open(bufnr)
     end

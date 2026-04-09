@@ -89,6 +89,15 @@ describe("gitgutter_difforig", function()
         eq("nofile", vim.bo[diff_bufnr].buftype)
     end)
 
+    it("diff buffer records reverse reference to source", function()
+        local src_bufnr = vim.api.nvim_get_current_buf()
+        M.toggle()
+
+        local diff_bufnr = vim.b[src_bufnr].gitgutter_difforig_bufnr
+        assert.is_truthy(diff_bufnr)
+        eq(src_bufnr, vim.b[diff_bufnr].gitgutter_difforig_src_bufnr)
+    end)
+
     it("closes diff split on second toggle", function()
         M.toggle() -- open
         local win_count = #vim.api.nvim_tabpage_list_wins(0)
@@ -98,6 +107,36 @@ describe("gitgutter_difforig", function()
         eq(win_count - 1, #vim.api.nvim_tabpage_list_wins(0))
         eq(false, vim.wo.diff)
         eq(nil, vim.b.gitgutter_difforig_bufnr)
+    end)
+
+    it("closes diff split when toggled from the diff window", function()
+        local src_bufnr = vim.api.nvim_get_current_buf()
+        M.toggle() -- open
+
+        local diff_bufnr = vim.b[src_bufnr].gitgutter_difforig_bufnr
+        assert.is_truthy(diff_bufnr)
+
+        -- Move focus to the diff window.
+        ---@type integer?
+        local diff_win = nil
+        for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            if vim.api.nvim_win_get_buf(w) == diff_bufnr then
+                diff_win = w
+                break
+            end
+        end
+        assert(diff_win ~= nil, "expected diff window to exist")
+        vim.api.nvim_set_current_win(diff_win)
+        eq(diff_bufnr, vim.api.nvim_get_current_buf())
+
+        local win_count = #vim.api.nvim_tabpage_list_wins(0)
+
+        M.toggle() -- close from diff window
+
+        eq(win_count - 1, #vim.api.nvim_tabpage_list_wins(0))
+        eq(src_bufnr, vim.api.nvim_get_current_buf())
+        eq(false, vim.wo.diff)
+        eq(nil, vim.b[src_bufnr].gitgutter_difforig_bufnr)
     end)
 
     it("re-opens after diff buffer is manually closed", function()
