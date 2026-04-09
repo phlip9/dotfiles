@@ -85,9 +85,10 @@
     pkgs.toml-cli
     pkgsYubikey.age-plugin-yubikey
 
-    # pkgs.openssl
-    # pkgs.openssl.dev
-    # pkgs.pkg-config
+    # TODO(phlip9): remove
+    pkgs.openssl
+    pkgs.openssl.dev
+    pkgs.pkg-config
 
     pkgs.go
 
@@ -108,6 +109,14 @@
     #   echo "Hello, ${config.home.username}!"
     # '')
   ];
+
+  # TODO(phlip9): remove
+  home.sessionVariablesExtra = ''
+    export PKG_CONFIG_PATH=${config.home.profileDirectory}/lib/pkgconfig
+  '';
+  programs.bash.initExtra = ''
+    export PKG_CONFIG_PATH=${config.home.profileDirectory}/lib/pkgconfig
+  '';
 
   # programs.bash.initExtra = lib.mkAfter ''
   #   export PKG_CONFIG_PATH="$HOME/.nix-profile/lib/pkgconfig"
