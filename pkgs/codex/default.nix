@@ -1,7 +1,9 @@
 {
+  bubblewrap,
   fetchurl,
   lib,
   libcap,
+  makeBinaryWrapper,
   openssl,
   stdenv,
   versionCheckHook,
@@ -21,11 +23,18 @@ stdenv.mkDerivation {
 
   sourceRoot = ".";
 
+  nativeBuildInputs = [ makeBinaryWrapper ];
+
   installPhase = ''
     runHook preInstall
     mkdir -p $out/bin
-    cp codex-${source.target} $out/bin/codex
+    cp codex-${source.target} $out/bin/${if stdenv.hostPlatform.isLinux then "codex-unwrapped" else "codex"}
     runHook postInstall
+  '';
+
+  postInstall = lib.optionalString stdenv.hostPlatform.isLinux ''
+    makeBinaryWrapper $out/bin/codex-unwrapped $out/bin/codex \
+      --prefix PATH : ${lib.makeBinPath [ bubblewrap ]}
   '';
 
   fixupPhase = lib.optionalString stdenv.hostPlatform.isLinux ''
@@ -40,7 +49,7 @@ stdenv.mkDerivation {
         ]
       }" \
       --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-      "$out/bin/codex"
+      "$out/bin/codex-unwrapped"
   '';
 
   nativeInstallCheckInputs = [ versionCheckHook ];
