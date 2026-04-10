@@ -509,6 +509,23 @@ function M.path_to_repo_rel(picker_cwd, path, repo_root)
     return absolute:sub(#prefix + 1)
 end
 
+--- Return true when the marker cache for cwd+diff_base is populated and
+--- within TTL. Callers can skip the async subscribe/refresh path when
+--- lookup_marker will already return correct results synchronously.
+---
+--- @param cwd string
+--- @param diff_base string
+--- @return boolean
+function M.is_cache_fresh(cwd, diff_base)
+    local norm_cwd = normalize_path(cwd)
+    local repo_root = M._repo_by_cwd[norm_cwd]
+    if type(repo_root) ~= "string" then
+        return false
+    end
+    local entry = get_entry(repo_root, diff_base)
+    return entry ~= nil and not is_stale(entry)
+end
+
 --- @param cwd string
 --- @param diff_base string
 --- @param entry_path string

@@ -141,6 +141,28 @@ describe("git_file_status", function()
         eq(nil, M.path_to_repo_rel(cwd, "[No Name]", repo))
     end)
 
+    it("is_cache_fresh reflects repo root and TTL state", function()
+        eq(false, M.is_cache_fresh("/unknown", "HEAD"))
+
+        -- Simulate a populated cache entry.
+        M._repo_by_cwd["/repo"] = "/repo"
+        M._entry = {
+            repo_root = "/repo",
+            diff_base = "HEAD",
+            markers = { ["f.txt"] = "+" },
+            updated_at_ms = vim.uv.now(),
+            inflight = false,
+            subscribers = {},
+        }
+
+        eq(true, M.is_cache_fresh("/repo", "HEAD"))
+        eq(false, M.is_cache_fresh("/repo", "origin/main"))
+
+        -- Force staleness.
+        M._entry.updated_at_ms = 0
+        eq(false, M.is_cache_fresh("/repo", "HEAD"))
+    end)
+
     it("dedupes concurrent refreshes while one refresh is inflight", function()
         local calls = 0
         local done_fn

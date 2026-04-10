@@ -14,7 +14,10 @@
 --- UX guarantees:
 ---   - marker data fetch is asynchronous and off the critical path
 ---   - pickers open immediately even when git status is slow (large repos)
----   - cached marker snapshots render first; background refresh repaints later
+---   - when the cache is fresh, markers render synchronously with no
+---     subscription or refresh overhead
+---   - when the cache is cold (first open), markers are filled in after
+---     the finder completes to avoid disrupting the oneshot fd process
 
 local api = vim.api
 local uv = vim.uv
@@ -108,8 +111,17 @@ function M.make_marked_entry_maker(base_entry_maker, picker_cwd, diff_base)
     end
 end
 
---- Compose picker attach_mappings to include async marker refresh and optional
---- user mappings.
+--- Compose picker attach_mappings to include async marker refresh and
+--- optional user mappings.
+---
+--- When the marker cache is already fresh, lookup_marker works
+--- synchronously in the display function and no subscription is needed.
+---
+--- When the cache is cold (first open), marker data arrives
+--- asynchronously. Refreshing the picker while the oneshot finder (fd)
+--- is still running would close and re-use it, producing an empty result
+--- set. To avoid this, we defer the refresh until the finder's initial
+--- completion via `register_completion_callback`.
 ---
 --- @param picker_cwd string
 --- @param diff_base string
@@ -117,34 +129,11 @@ end
 --- @return fun(prompt_bufnr: integer, map: function): boolean
 function M.make_attach_mappings(picker_cwd, diff_base, user_attach)
     return function(prompt_bufnr, map)
-        local function redraw_picker()
-            local picker = action_state.get_current_picker(prompt_bufnr)
-            if picker == nil then
-                return
-            end
-            local ok, err = pcall(picker.refresh, picker, picker.finder, {
-                reset_prompt = false,
-            })
-            if not ok then
-                vim.notify(
-                    "telescope_git_file_status: refresh error: "
-                        .. tostring(err),
-                    vim.log.levels.WARN
-                )
-            end
+        -- When the cache is fresh, display functions already get correct
+        -- markers synchronously. Skip the subscription entirely.
+        if not git_file_status.is_cache_fresh(picker_cwd, diff_base) then
+            M._attach_async_refresh(prompt_bufnr, picker_cwd, diff_base)
         end
-
-        local unsubscribe = git_file_status.subscribe(
-            picker_cwd,
-            diff_base,
-            vim.schedule_wrap(redraw_picker)
-        )
-
-        api.nvim_create_autocmd("BufWipeout", {
-            buffer = prompt_bufnr,
-            once = true,
-            callback = unsubscribe,
-        })
 
         local user_ok = true
         if type(user_attach) == "function" then
@@ -152,6 +141,70 @@ function M.make_attach_mappings(picker_cwd, diff_base, user_attach)
         end
         return user_ok
     end
+end
+
+--- Subscribe to async marker updates and wire up a deferred picker
+--- refresh. Only called when the marker cache is cold.
+---
+--- @param prompt_bufnr integer
+--- @param picker_cwd string
+--- @param diff_base string
+function M._attach_async_refresh(prompt_bufnr, picker_cwd, diff_base)
+    local finder_complete = false
+    local markers_pending = false
+
+    local function redraw_picker()
+        local picker = action_state.get_current_picker(prompt_bufnr)
+        if picker == nil then
+            return
+        end
+        -- Pass nil for the finder so telescope re-renders entries
+        -- through the existing (completed) finder without closing it.
+        local ok, err = pcall(picker.refresh, picker, nil, {
+            reset_prompt = false,
+        })
+        if not ok then
+            vim.notify(
+                "telescope_git_file_status: refresh error: "
+                    .. tostring(err),
+                vim.log.levels.WARN
+            )
+        end
+    end
+
+    -- Detect when the finder's initial result set is ready.
+    local picker = action_state.get_current_picker(prompt_bufnr)
+    if picker ~= nil then
+        picker:register_completion_callback(function()
+            finder_complete = true
+            if markers_pending then
+                markers_pending = false
+                -- Schedule after process_complete finishes its own
+                -- housekeeping (cursor placement, status, etc.).
+                vim.schedule(redraw_picker)
+            end
+        end)
+    end
+
+    local function on_markers_updated()
+        if finder_complete then
+            redraw_picker()
+        else
+            markers_pending = true
+        end
+    end
+
+    local unsubscribe = git_file_status.subscribe(
+        picker_cwd,
+        diff_base,
+        vim.schedule_wrap(on_markers_updated)
+    )
+
+    api.nvim_create_autocmd("BufWipeout", {
+        buffer = prompt_bufnr,
+        once = true,
+        callback = unsubscribe,
+    })
 end
 
 --- Wrapper around builtin.find_files with git marker column.
