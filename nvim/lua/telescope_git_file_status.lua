@@ -86,16 +86,21 @@ function M.make_marked_entry_maker(base_entry_maker, picker_cwd, diff_base)
                 diff_base,
                 M.get_entry_path(e)
             )
-            local display_text
+            local display_text, orig_hl
             if type(orig_display) == "function" then
-                display_text = orig_display(e)
+                display_text, orig_hl = orig_display(e)
             else
                 display_text = orig_display
             end
 
             return displayer({
                 { marker or " ", marker_hl_group(marker) },
-                display_text,
+                {
+                    display_text,
+                    function()
+                        return orig_hl or {}
+                    end,
+                },
             })
         end
 
