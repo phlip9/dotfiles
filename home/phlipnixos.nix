@@ -44,6 +44,7 @@
     ./mods/gpg-agent.nix
     # ./mods/gh.nix
     ./mods/git.nix
+    ./mods/hol-light-dev.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
     ./mods/lexe.nix

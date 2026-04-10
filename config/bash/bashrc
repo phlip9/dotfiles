@@ -269,6 +269,9 @@ fi
 pathappend "$HOME/.cargo/bin"
 pathappend "$HOME/.local/bin"
 
+# ocaml
+[[ -r "$HOME/.opam/opam-init/init.sh" ]] && source "$HOME/.opam/opam-init/init.sh"
+
 ## ENV VARS }}}
 
 ## COMPLETIONS {{{
