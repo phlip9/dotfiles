@@ -90,7 +90,7 @@ let
     backend_flush_after = 0     # Disable backend flush
 
     # Statement
-    statement_timeout = 10s                    # kill long-running test queries
+    statement_timeout = 120s                   # kill long-running test queries
     lock_timeout = 10s                         # don't wait long for locks
     idle_in_transaction_session_timeout = 10s  # kill idle transactions
 
