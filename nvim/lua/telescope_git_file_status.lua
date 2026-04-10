@@ -151,7 +151,7 @@ function M.make_attach_mappings(picker_cwd, diff_base, user_attach)
             })
         end
 
-        local subscriber_id = git_file_status.subscribe(
+        local unsubscribe = git_file_status.subscribe(
             picker_cwd,
             diff_base,
             vim.schedule_wrap(redraw_picker)
@@ -160,13 +160,7 @@ function M.make_attach_mappings(picker_cwd, diff_base, user_attach)
         api.nvim_create_autocmd("BufWipeout", {
             buffer = prompt_bufnr,
             once = true,
-            callback = function()
-                git_file_status.unsubscribe(
-                    picker_cwd,
-                    diff_base,
-                    subscriber_id
-                )
-            end,
+            callback = unsubscribe,
         })
 
         local user_ok = true

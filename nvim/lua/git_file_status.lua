@@ -383,16 +383,23 @@ function M.resolve_repo_root_async(cwd, callback)
     )
 end
 
+--- Subscribe to marker updates for a given cwd and diff base.
+---
+--- Returns an unsubscribe function. Calling it cancels the subscription,
+--- even if the async repo-root resolution hasn't completed yet (avoiding
+--- a leaked subscriber when the picker closes before git responds).
+---
 --- @param cwd string
 --- @param diff_base string
 --- @param callback fun()
---- @return integer subscriber_id
+--- @return fun() unsubscribe
 function M.subscribe(cwd, diff_base, callback)
     local subscriber_id = M._next_subscriber_id
     M._next_subscriber_id = M._next_subscriber_id + 1
+    local cancelled = false
 
     M.resolve_repo_root_async(cwd, function(repo_root)
-        if repo_root == nil then
+        if repo_root == nil or cancelled then
             return
         end
 
@@ -404,24 +411,19 @@ function M.subscribe(cwd, diff_base, callback)
         end
     end)
 
-    return subscriber_id
-end
-
---- @param cwd string
---- @param diff_base string
---- @param subscriber_id integer
-function M.unsubscribe(cwd, diff_base, subscriber_id)
-    local norm_cwd = normalize_path(cwd)
-    local repo_root = M._repo_by_cwd[norm_cwd]
-    if type(repo_root) ~= "string" then
-        return
+    return function()
+        cancelled = true
+        -- Also remove if already registered.
+        local norm_cwd = normalize_path(cwd)
+        local repo_root = M._repo_by_cwd[norm_cwd]
+        if type(repo_root) ~= "string" then
+            return
+        end
+        local entry = get_entry(repo_root, diff_base)
+        if entry ~= nil then
+            entry.subscribers[subscriber_id] = nil
+        end
     end
-
-    local entry = get_entry(repo_root, diff_base)
-    if entry == nil then
-        return
-    end
-    entry.subscribers[subscriber_id] = nil
 end
 
 --- @param picker_cwd string

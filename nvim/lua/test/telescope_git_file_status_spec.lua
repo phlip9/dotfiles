@@ -63,29 +63,20 @@ describe("telescope_git_file_status", function()
         function()
             ---@type {cwd:string, diff_base:string}?
             local subscribe_args = nil
-            ---@type {cwd:string, diff_base:string, id:integer}?
-            local unsubscribe_args = nil
+            local unsubscribe_called = false
             ---@type function?
             local subscribed_cb = nil
 
             local orig_subscribe = git_file_status.subscribe
-            local orig_unsubscribe = git_file_status.unsubscribe
             local orig_get_current_picker = action_state.get_current_picker
 
             ---@diagnostic disable-next-line: duplicate-set-field
             git_file_status.subscribe = function(cwd, diff_base, cb)
                 subscribe_args = { cwd = cwd, diff_base = diff_base }
                 subscribed_cb = cb
-                return 42
-            end
-
-            ---@diagnostic disable-next-line: duplicate-set-field
-            git_file_status.unsubscribe = function(cwd, diff_base, id)
-                unsubscribe_args = {
-                    cwd = cwd,
-                    diff_base = diff_base,
-                    id = id,
-                }
+                return function()
+                    unsubscribe_called = true
+                end
             end
 
             local refresh_count = 0
@@ -122,17 +113,12 @@ describe("telescope_git_file_status", function()
 
             ok = vim.wait(
                 1000,
-                function() return unsubscribe_args ~= nil end,
+                function() return unsubscribe_called end,
                 20
             )
             assert.is_true(ok, "expected unsubscribe on prompt buffer wipe")
-            local got_unsubscribe = assert(unsubscribe_args)
-            eq(42, got_unsubscribe.id)
-            eq("/repo", got_unsubscribe.cwd)
-            eq("HEAD", got_unsubscribe.diff_base)
 
             git_file_status.subscribe = orig_subscribe
-            git_file_status.unsubscribe = orig_unsubscribe
             action_state.get_current_picker = orig_get_current_picker
         end
     )

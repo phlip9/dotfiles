@@ -28,8 +28,10 @@ Race sequence:
 Practical impact is low (the leaked callback is a scheduled no-op since the
 picker buffer is gone), but it accumulates over many open/close cycles.
 
-Fix: track a `cancelled` flag that `unsubscribe` sets and the async
-`subscribe` callback checks before registering.
+**Fixed:** `subscribe` now returns an unsubscribe closure that captures a
+`cancelled` flag. The async callback checks this flag before registering.
+`M.unsubscribe` removed as a public API — callers just call the returned
+function. New test exercises the race (unsubscribe before repo root resolves).
 
 ### 2. Medium — Sequential git commands (easy parallelism)
 

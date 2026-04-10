@@ -181,6 +181,47 @@ describe("git_file_status", function()
         end
     )
 
+    it("unsubscribe before repo root resolves prevents leaked subscriber", function()
+        local callback_calls = 0
+
+        local original_resolve = M.resolve_repo_root_async
+        local original_collect = M.collect_markers_async
+
+        -- Capture the resolve callback so we can fire it after unsubscribe.
+        local resolve_cb
+        M.resolve_repo_root_async = function(_, cb)
+            resolve_cb = cb
+        end
+
+        local done_fn
+        M.collect_markers_async = function(_, _, done)
+            done_fn = done
+        end
+
+        local unsubscribe = M.subscribe("/repo", "HEAD", function()
+            callback_calls = callback_calls + 1
+        end)
+
+        -- Unsubscribe before repo root resolves (simulates fast picker close).
+        unsubscribe()
+
+        -- Now the repo root resolves — the cancelled subscriber must not be
+        -- registered.
+        resolve_cb("/repo")
+
+        -- If a refresh happened to fire, it should not call the subscriber.
+        if done_fn then
+            done_fn({ ["f.lua"] = "~" })
+        end
+
+        -- Give any scheduled callbacks a chance to run.
+        vim.wait(100, function() return false end, 10)
+        eq(0, callback_calls)
+
+        M.resolve_repo_root_async = original_resolve
+        M.collect_markers_async = original_collect
+    end)
+
     it("collects staged, unstaged, deleted, and untracked markers", function()
         local repo = make_repo()
 
