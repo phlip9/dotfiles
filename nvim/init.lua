@@ -473,10 +473,10 @@ if pcall(require, "telescope") then
         require_local("telescope_git_file_status").find_files({})
     end, M.with_desc("search files"))
     vim.keymap.set("n", "<space>O", function()
-        require_local("telescope_git_file_status").find_files({
-            no_ignore = true,
-        })
-    end,
+            require_local("telescope_git_file_status").find_files({
+                no_ignore = true,
+            })
+        end,
         M.with_desc("find files (no gitignore)"))
     vim.keymap.set("n", "<space>/", builtin.live_grep, M.with_desc("repo grep"))
     vim.keymap.set({ "n", "x" }, "<space>'", builtin.grep_string, M.with_desc("repo grep word under cursor"))

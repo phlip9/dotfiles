@@ -172,6 +172,47 @@ describe("telescope_git_file_status", function()
         assert.is_true(ok, "expected unsubscribe on prompt buffer wipe")
     end)
 
+    -- Reproduce: telescope's `apply_config` shallow-copies opts before
+    -- passing to the builtin. The builtin sets `bufnr_width` on the
+    -- copy. Without pre-computation, our entry maker closure captures
+    -- the original opts, so `gen_from_buffer(opts)` never sees
+    -- `bufnr_width` and crashes with "attempt to perform arithmetic
+    -- on field 'bufnr_width'".
+    --
+    -- The fix: M.buffers pre-computes bufnr_width on the original
+    -- opts before gen_from_buffer captures them.
+    it("buffers pre-computes bufnr_width for gen_from_buffer", function()
+        local make_entry_mod = require("telescope.make_entry")
+        local orig_gen = make_entry_mod.gen_from_buffer
+
+        -- Intercept gen_from_buffer to capture the opts it receives.
+        local captured_opts
+        ---@diagnostic disable-next-line: duplicate-set-field
+        make_entry_mod.gen_from_buffer = function(opts)
+            captured_opts = opts
+            -- Return a dummy entry maker; we only care about opts.
+            return function()
+                return nil
+            end
+        end
+
+        local builtin = require("telescope.builtin")
+        local orig_builtin_buffers = builtin.buffers
+        ---@diagnostic disable-next-line: duplicate-set-field
+        builtin.buffers = function() end
+
+        M.buffers({})
+
+        make_entry_mod.gen_from_buffer = orig_gen
+        builtin.buffers = orig_builtin_buffers
+
+        assert(captured_opts, "gen_from_buffer should be called")
+        assert(
+            captured_opts.bufnr_width,
+            "opts.bufnr_width must be set before gen_from_buffer"
+        )
+    end)
+
     it("refreshes immediately when markers arrive after finder", function()
         ---@type function?
         local subscribed_cb = nil

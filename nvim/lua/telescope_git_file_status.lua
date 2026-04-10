@@ -166,7 +166,7 @@ function M._attach_async_refresh(prompt_bufnr, picker_cwd, diff_base)
         if not ok then
             vim.notify(
                 "telescope_git_file_status: refresh error: "
-                    .. tostring(err),
+                .. tostring(err),
                 vim.log.levels.WARN
             )
         end
@@ -240,12 +240,30 @@ end
 --- `pickers.new` automatically composes our `attach_mappings` with the
 --- builtin's (which adds `<M-d>` delete-buffer and returns `true`).
 ---
+--- `gen_from_buffer` reads `opts.bufnr_width` at construction time and
+--- inside each entry's display function. Normally the builtin computes
+--- this, but telescope's `apply_config` shallow-copies opts before the
+--- builtin runs, so the builtin's assignment never reaches the table
+--- our closure captured. We pre-compute `bufnr_width` here so it's on
+--- the original opts and propagates through the copy.
+---
 --- @param opts? table
 function M.buffers(opts)
     opts = opts or {}
 
     local picker_cwd = vim.fs.normalize(opts.cwd or cwd())
     local diff_base = git_file_status.effective_diff_base()
+
+    -- Pre-compute bufnr_width so gen_from_buffer sees it on the
+    -- original opts table (see module comment above).
+    if not opts.bufnr_width then
+        local bufs = vim.tbl_filter(function(bufnr)
+            return vim.fn.buflisted(bufnr) == 1
+        end, vim.api.nvim_list_bufs())
+        if #bufs > 0 then
+            opts.bufnr_width = #tostring(math.max(unpack(bufs)))
+        end
+    end
 
     local user_attach = opts.attach_mappings
     local base_entry_maker = opts.entry_maker

@@ -324,14 +324,14 @@ function M.collect_markers_async(repo_root, diff_base, done)
             if diff_res.code ~= 0 then
                 vim.notify(
                     "git_file_status: git diff failed: "
-                        .. (diff_res.stderr or ""),
+                    .. (diff_res.stderr or ""),
                     vim.log.levels.DEBUG
                 )
             end
             if untracked_res.code ~= 0 then
                 vim.notify(
                     "git_file_status: git ls-files failed: "
-                        .. (untracked_res.stderr or ""),
+                    .. (untracked_res.stderr or ""),
                     vim.log.levels.DEBUG
                 )
             end
