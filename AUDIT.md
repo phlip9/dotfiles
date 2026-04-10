@@ -74,6 +74,9 @@ instead of `picker_cwd` (derived from `opts.cwd`). This may be intentional
 (matching upstream Telescope behavior) but is inconsistent with the picker's
 configured cwd used for git markers.
 
+**Fixed:** both `cwd_only` and non-`cwd_only` branches now filter against
+`picker_cwd` instead of the runtime `cwd()`.
+
 ### 6. Medium — Cache over-engineered for actual usage
 
 `_cache` is a dict keyed by `(repo_root, diff_base)`. In practice only one
@@ -82,6 +85,8 @@ The dict adds complexity (composite key construction, unbounded growth,
 multi-entry eviction concerns) for no practical benefit.
 
 Fix: replace with a single MRU entry.
+
+**Fixed:** replaced with single MRU entry (see "Cache simplification" below).
 
 ### 7. Low — `cached_markers()` is dead code
 

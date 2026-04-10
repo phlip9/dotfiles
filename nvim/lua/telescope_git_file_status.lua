@@ -227,13 +227,13 @@ function M.buffers(opts)
         end
 
         local bufname = api.nvim_buf_get_name(bufnr)
-        if opts.cwd_only and not buf_in_cwd(bufname, cwd()) then
+        if opts.cwd_only and not buf_in_cwd(bufname, picker_cwd) then
             return false
         end
 
         if not opts.cwd_only
             and opts.cwd
-            and not buf_in_cwd(bufname, opts.cwd)
+            and not buf_in_cwd(bufname, picker_cwd)
         then
             return false
         end
