@@ -39,6 +39,10 @@ function. New test exercises the race (unsubscribe before repo root resolves).
 before launching `git ls-files --others`. These are independent — running
 them in parallel halves wall-clock latency on the first render.
 
+**Fixed:** `collect_markers_async` now launches both `git diff --numstat` and
+`git ls-files --others` concurrently. A shared `remaining` counter drives
+`try_finish`, which merges results and calls `done` once both complete.
+
 ### 3. Medium — `adds=0, deletes=0` produces no marker
 
 `git diff --numstat` reports `0\t0\tfile` for mode-only changes (permission

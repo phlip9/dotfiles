@@ -297,33 +297,48 @@ end
 --- @param diff_base string
 --- @param done fun(markers:table<string, string>|nil)
 function M.collect_markers_async(repo_root, diff_base, done)
-    local diff_cmd = {
-        "git", "-C", repo_root,
-        "diff", "--numstat", "-z", diff_base, "--",
-    }
+    local diff_res, untracked_res
+    local remaining = 2
 
-    vim.system(diff_cmd, { text = false }, function(diff_res)
-        if diff_res.code ~= 0 then
+    -- Both commands are independent; run them in parallel and merge when
+    -- both complete.
+    local function try_finish()
+        remaining = remaining - 1
+        if remaining > 0 then
+            return
+        end
+        if diff_res.code ~= 0 or untracked_res.code ~= 0 then
             done(nil)
             return
         end
+        local numstat = M.parse_numstat_z(diff_res.stdout)
+        local untracked = M.parse_untracked_z(untracked_res.stdout)
+        done(M.reduce_markers(numstat, untracked))
+    end
 
-        local untracked_cmd = {
+    vim.system(
+        {
+            "git", "-C", repo_root,
+            "diff", "--numstat", "-z", diff_base, "--",
+        },
+        { text = false },
+        function(res)
+            diff_res = res
+            try_finish()
+        end
+    )
+
+    vim.system(
+        {
             "git", "-C", repo_root,
             "ls-files", "--others", "--exclude-standard", "-z",
-        }
-
-        vim.system(untracked_cmd, { text = false }, function(untracked_res)
-            if untracked_res.code ~= 0 then
-                done(nil)
-                return
-            end
-
-            local numstat = M.parse_numstat_z(diff_res.stdout)
-            local untracked = M.parse_untracked_z(untracked_res.stdout)
-            done(M.reduce_markers(numstat, untracked))
-        end)
-    end)
+        },
+        { text = false },
+        function(res)
+            untracked_res = res
+            try_finish()
+        end
+    )
 end
 
 --- @param repo_root string
