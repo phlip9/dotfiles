@@ -287,7 +287,13 @@ local function notify_subscribers(entry)
         snapshot[id] = callback
     end
     for _, callback in pairs(snapshot) do
-        pcall(callback)
+        local ok, err = pcall(callback)
+        if not ok then
+            vim.notify(
+                "git_file_status: subscriber error: " .. tostring(err),
+                vim.log.levels.WARN
+            )
+        end
     end
 end
 

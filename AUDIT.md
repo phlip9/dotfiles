@@ -11,31 +11,10 @@ closure. The displayer's hl-function path (lines 112-115 in
 
 ---
 
-### 2. `pcall` swallows errors silently in two places
+### 2. ~~`pcall` swallows errors silently in two places~~
 
-**File:** `git_file_status.lua:289`, `telescope_git_file_status.lua:149`
-
-```lua
--- git_file_status.lua:289
-pcall(callback)
-
--- telescope_git_file_status.lua:149
-pcall(picker.refresh, picker, picker.finder, { ... })
-```
-
-Both discard the error return. If a subscriber throws or `picker:refresh`
-fails, the failure is invisible. This makes debugging painful — marker updates
-silently stop working with no log output.
-
-Fix: log on failure.
-
-```lua
-local ok, err = pcall(callback)
-if not ok then
-    vim.notify("git_file_status: subscriber error: " .. tostring(err),
-        vim.log.levels.WARN)
-end
-```
+**FIXED.** Both `pcall` sites now capture `(ok, err)` and log on failure via
+`vim.notify` at `WARN` level.
 
 ---
 
