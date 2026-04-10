@@ -132,6 +132,14 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
   about Windows.
 - keymaps should try to be lazy to reduce startup time. a module is ideally
   only imported the first time we actually use it.
+- when wrapping a function, preserve its full return contract. lua
+  multi-return silently truncates: `local x = f()` drops the second value.
+  ex: telescope displayers return `(string, highlights)` — capture both.
+- never use bare `pcall(fn)` that discards the error. always capture and log:
+  `local ok, err = pcall(fn); if not ok then vim.notify(...) end`
+- always `vim.schedule_wrap` `vim.system` callbacks that touch nvim APIs
+  (`vim.notify`, `nvim_*`, etc). neovim's internal schedule-wrapping is an
+  implementation detail, not an API guarantee.
 
 ### lua tests
 
