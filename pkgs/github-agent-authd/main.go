@@ -322,7 +322,7 @@ func (s *apiServer) startIdleShutdownMonitor(server shutdowner) {
 		return
 	}
 
-	checkInterval := min(s.idleShutdownTimeout, 1 * time.Minute)
+	checkInterval := min(s.idleShutdownTimeout, 1*time.Minute)
 
 	go func() {
 		ticker := time.NewTicker(checkInterval)

@@ -6,7 +6,7 @@ default:
 
 ci: just-ci bash-ci nix-ci go-ci nvim-ci
 
-fmt: just-fmt nix-fmt go-fmt
+fmt: just-fmt nix-fmt go-fmt nvim-fmt
 
 lint: bash-lint nix-lint nvim-lint
 
@@ -76,7 +76,11 @@ go-test-inner:
 
 # --- neovim --- #
 
-nvim-ci: nvim-lint nvim-test
+nvim-ci: nvim-fmt nvim-lint nvim-test
+
+nvim-fmt:
+    nix shell -f . pkgs.emmy-lua-code-style --command \
+        CodeFormat format --workspace nvim/ --overwrite
 
 nvim-lint:
     #!/usr/bin/env bash

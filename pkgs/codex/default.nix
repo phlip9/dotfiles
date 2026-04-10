@@ -28,7 +28,9 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     mkdir -p $out/bin
-    cp codex-${source.target} $out/bin/${if stdenv.hostPlatform.isLinux then "codex-unwrapped" else "codex"}
+    cp codex-${source.target} $out/bin/${
+      if stdenv.hostPlatform.isLinux then "codex-unwrapped" else "codex"
+    }
     runHook postInstall
   '';
 

@@ -1,9 +1,9 @@
 # @phlip9's dotfiles
 
-- stack: lix, home-manager, niri, noctalia-shell, neovim, tmux, bash, alacritty
-- nix based, non-flake default.nix
-- home-manager manages non-GUI user dotfiles on all Linux and macOS machines
-- neovim configured with lua
+- stack: lix, home-manager, niri, noctalia-shell, neovim, tmux, bash, alacritty.
+- nix based, non-flake default.nix.
+- home-manager manages non-GUI user dotfiles on all Linux and macOS machines.
+- neovim configured with lua.
 
 
 ## high-level layout (non-exhaustive)
@@ -29,8 +29,8 @@
 
 ## communication
 
-- prioritize high signal communication, with high information density
-- assume a high context reader
+- prioritize high signal communication, with high information density.
+- assume a high context reader.
 - avoid superfluous prose, politeness, emoji, etc. filler wastes the reviewer's
   time.
 - when planning, be ruthless about clarifying requirements. if a request is
@@ -38,7 +38,7 @@
   proceeding.
 - anchor abstract descriptions or explanations with concrete and succinct
   examples.
-- lead changes with intent and precise justification
+- lead changes with intent and precise justification.
 
 
 ## style
@@ -55,7 +55,7 @@
   - `phlipdesk: enable ssh-agent systemd service`
   - `firefox: add BetterTTV extension`
   - updates use nixpkgs convention, ex: `omnara: 0.13.4 -> 0.13.5` or `omnara:
-    init at 0.13.4`
+    init at 0.13.4`.
 - commits: rarely add a commit message body, unless the change is complex or
   non-obvious.
 - commits: ABSOLUTELY NEVER add a "Co-Authored-By: " trailer.
@@ -92,7 +92,8 @@
 - `bash-ci`: `bash-lint` shellcheck all *.sh files
 - `go-ci`: `go-fmt`, `go-test` gofmt / go test all go packages
 - `nix-ci`: `nix-fmt`, `nix-lint`
-- `nvim-ci`: `nvim-lint`, `nvim-test` lint/test neovim config and modules
+- `nvim-ci`: `nvim-fmt`, `nvim-lint`, `nvim-test` format/lint/test neovim
+  config and modules
 - `nvim-print-base-runtime-path` print base nvim installation's runtime path
 - `nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
 
@@ -133,8 +134,9 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 
 ### lua
 
-- use `require_local("module")` when importing modules from `nvim/lua/`
-- prefer stateless modules when possible
+- use `just nvim-fmt` to format all *.lua files in the repo.
+- use `require_local("module")` when importing modules from `nvim/lua/`.
+- prefer stateless modules when possible.
 - platform-specific code only needs to handle Linux and macOS. we never care
   about Windows.
 - keymaps should try to be lazy to reduce startup time. a module is ideally
@@ -142,13 +144,13 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - when wrapping a function, preserve its full return contract. lua
   multi-return silently truncates: `local x = f()` drops the second value.
 - never use bare `pcall(fn)` that discards the error. always capture and log:
-  `local ok, err = pcall(fn); if not ok then vim.notify(...) end`
+  `local ok, err = pcall(fn); if not ok then vim.notify(...) end`.
 - `vim.schedule_wrap` any `vim.system` callbacks that touch nvim APIs
   (`vim.notify`, `nvim_*`, etc).
 
 ### lua tests
 
-- tests go in `nvim/lua/test/*_spec.lua`
+- tests go in `nvim/lua/test/*_spec.lua`.
 - tests use Plenary/Busted and run via `just nvim-test`.
 - `just nvim-test` runs the full `nvim/lua/test` suite in a nix sandbox.
 - `just nvim-test <path>` runs a specific file or directory relative to
@@ -156,11 +158,11 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - prefer narrow unit tests for pure helpers; however, don't shy away from
   full integration tests when necessary.
 - make tests deterministic: use fixed dates, explicit buffer contents, temp
-  dirs/repos, and never depend on the user's local environment or editor state
+  dirs/repos, and never depend on the user's local environment or editor state.
 - clean up all nvim and filesystem state created by a test: temp buffers,
-  windows, autocmds, files, dirs, and any mutated globals/options
+  windows, autocmds, files, dirs, and any mutated globals/options.
 - mirror the existing spec style: top-level file comment, short helper
-  comments, `local eq = assert.are.same`, and `describe()` / `it()` structure
+  comments, `local eq = assert.are.same`, and `describe()` / `it()` structure.
 
 
 ## creating PRs
@@ -185,5 +187,5 @@ IMPORTANT:
   arguments; shell interpolation can mangle the PR body and accidentally
   execute commands.
 - if a PR already exists and the body needs updating, use:
-  - `gh pr edit --repo phlip9/dotfiles <pr-number> --body-file <(...)`
-- always request review from `phlip9` when opening PRs
+  `gh pr edit --repo phlip9/dotfiles <pr-number> --body-file <(...)`.
+- always request review from `phlip9` when opening PRs.
