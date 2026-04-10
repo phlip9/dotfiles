@@ -83,11 +83,12 @@ nvim-lint:
     set -euo pipefail
     TMPDIR="$(mktemp -d)"
     trap 'rm -rf "$TMPDIR"' EXIT
+    DOTFILES="$HOME/dev/dotfiles"
 
-    "$(jq -r '."sumneko-lua.serverDir"' .vim/coc-settings.json)/bin/lua-language-server" \
+    "$(jq -r '."sumneko-lua.serverDir"' $DOTFILES/.vim/coc-settings.json)/bin/lua-language-server" \
         --check nvim/ \
         --checklevel Hint \
-        --configpath "$PWD/.luarc.json" \
+        --configpath "$DOTFILES/.luarc.json" \
         --logpath "$TMPDIR/log" \
         --metapath "$TMPDIR/meta"
 

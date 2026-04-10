@@ -29,6 +29,7 @@ config/htop/htoprc
 
 # AI
 /.claude/settings.local.json
+/.codex
 /prompts
 /prompts.md
 /notes

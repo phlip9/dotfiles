@@ -233,11 +233,14 @@ let
     workspace = {
       ignoreSubmodules = true;
       checkThirdParty = false;
-      library =
+      library = [
         # neovim runtime for vim.* types
-        [ "${neovim-unwrapped}/share/nvim/runtime/lua" ]
-        # nvim lua plugin libraries
-        ++ luaPluginLibraryPaths;
+        "${neovim-unwrapped}/share/nvim/runtime/lua"
+        # LuaLS luv type stubs for vim.uv / vim.loop.
+        "${lua-language-server}/share/lua-language-server/meta/3rd/luv/library"
+      ]
+      # nvim lua plugin libraries
+      ++ luaPluginLibraryPaths;
     };
     diagnostics = {
       libraryFiles = "Disable";

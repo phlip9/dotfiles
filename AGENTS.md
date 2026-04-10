@@ -128,6 +128,10 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 
 - use `require_local("module")` when importing modules from `nvim/lua/`
 - prefer stateless modules when possible
+- platform-specific code only needs to handle Linux and macOS. we never care
+  about Windows.
+- keymaps should try to be lazy to reduce startup time. a module is ideally
+  only imported the first time we actually use it.
 
 ### lua tests
 
@@ -153,16 +157,11 @@ you are only allowed to create branches and PRs off `agent/**` branches.
 create PRs using the `gh` CLI tool:
 
 ```bash
-$ cat >/tmp/pr-body.md <<'EOF'
-## Summary
-- ...
-
-## Testing
-- ...
+$ gh pr create --repo phlip9/dotfiles --title "..." --reviewer phlip9 \
+    --body-file <(cat << 'EOF'
+...
 EOF
-
-$ gh pr create --repo phlip9/dotfiles --title "..." \
-    --body-file /tmp/pr-body.md --reviewer phlip9
+)
 ```
 
 IMPORTANT:
@@ -170,11 +169,8 @@ IMPORTANT:
 - always prefer `--body-file` over `--body` for PR descriptions.
 - do not inline markdown body text in shell command strings.
 - never put backticks or `$(...)` command substitutions inside `--body "..."`
-  arguments; shell interpolation can mangle the PR body and accidentally execute
-  commands.
+  arguments; shell interpolation can mangle the PR body and accidentally
+  execute commands.
 - if a PR already exists and the body needs updating, use:
-  - `gh pr edit --repo phlip9/dotfiles <pr-number> --body-file /tmp/pr-body.md`
-- always request review from `phlip9` when opening PRs:
-  - include `--reviewer phlip9` on `gh pr create`
-  - for existing PRs, run:
-    - `gh pr edit --repo phlip9/dotfiles <pr-number> --add-reviewer phlip9`
+  - `gh pr edit --repo phlip9/dotfiles <pr-number> --body-file <(...)`
+- always request review from `phlip9` when opening PRs

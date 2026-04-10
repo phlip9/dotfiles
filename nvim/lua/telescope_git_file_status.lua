@@ -17,6 +17,7 @@
 ---   - cached marker snapshots render first; background refresh repaints later
 
 local api = vim.api
+local uv = vim.uv
 
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
@@ -29,6 +30,11 @@ local pickers = require("telescope.pickers")
 local git_file_status = require_local("git_file_status")
 
 local M = {}
+
+--- @return string
+local function cwd()
+    return uv.cwd() or vim.fn.getcwd()
+end
 
 --- Keep compatibility with Telescope's historical `only_cwd` option alias.
 --- @param opts table
@@ -177,7 +183,7 @@ end
 function M.find_files(opts)
     opts = opts or {}
 
-    local picker_cwd = vim.fs.normalize(opts.cwd or vim.uv.cwd())
+    local picker_cwd = vim.fs.normalize(opts.cwd or cwd())
     local diff_base = git_file_status.effective_diff_base()
 
     local user_attach = opts.attach_mappings
@@ -208,7 +214,7 @@ function M.buffers(opts)
     opts = opts or {}
     opts = apply_cwd_only_aliases(opts)
 
-    local picker_cwd = vim.fs.normalize(opts.cwd or vim.uv.cwd())
+    local picker_cwd = vim.fs.normalize(opts.cwd or cwd())
     local diff_base = git_file_status.effective_diff_base()
 
     local bufnrs = vim.tbl_filter(function(bufnr)
@@ -227,7 +233,7 @@ function M.buffers(opts)
         end
 
         local bufname = api.nvim_buf_get_name(bufnr)
-        if opts.cwd_only and not buf_in_cwd(bufname, vim.uv.cwd()) then
+        if opts.cwd_only and not buf_in_cwd(bufname, cwd()) then
             return false
         end
 
