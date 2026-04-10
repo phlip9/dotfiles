@@ -8,8 +8,27 @@ local action_state = require("telescope.actions.state")
 local entry_display = require("telescope.pickers.entry_display")
 
 describe("telescope_git_file_status", function()
+    local orig_lookup = git_file_status.lookup_marker
+    local orig_create = entry_display.create
+    local orig_subscribe = git_file_status.subscribe
+    local orig_get_current_picker = action_state.get_current_picker
+    local temp_bufs = {}
+
     before_each(function()
         git_file_status._reset_for_test()
+    end)
+
+    after_each(function()
+        git_file_status.lookup_marker = orig_lookup
+        entry_display.create = orig_create
+        git_file_status.subscribe = orig_subscribe
+        action_state.get_current_picker = orig_get_current_picker
+        for _, bufnr in ipairs(temp_bufs) do
+            if vim.api.nvim_buf_is_valid(bufnr) then
+                vim.api.nvim_buf_delete(bufnr, { force = true })
+            end
+        end
+        temp_bufs = {}
     end)
 
     it("extracts entry path from path/filename/value fields", function()
@@ -20,8 +39,6 @@ describe("telescope_git_file_status", function()
     end)
 
     it("prepends marker column to entry display", function()
-        local orig_lookup = git_file_status.lookup_marker
-        local orig_create = entry_display.create
         git_file_status.lookup_marker = function()
             return "+"
         end
@@ -53,9 +70,6 @@ describe("telescope_git_file_status", function()
         assert.is_truthy(type(rendered) == "string")
         assert.is_truthy(rendered:find("+", 1, true) ~= nil)
         assert.is_truthy(rendered:find("tracked.lua", 1, true) ~= nil)
-
-        git_file_status.lookup_marker = orig_lookup
-        entry_display.create = orig_create
     end)
 
     it(
@@ -66,9 +80,6 @@ describe("telescope_git_file_status", function()
             local unsubscribe_called = false
             ---@type function?
             local subscribed_cb = nil
-
-            local orig_subscribe = git_file_status.subscribe
-            local orig_get_current_picker = action_state.get_current_picker
 
             ---@diagnostic disable-next-line: duplicate-set-field
             git_file_status.subscribe = function(cwd, diff_base, cb)
@@ -92,6 +103,7 @@ describe("telescope_git_file_status", function()
 
             local attach = M.make_attach_mappings("/repo", "HEAD", nil)
             local prompt_bufnr = vim.api.nvim_create_buf(false, true)
+            temp_bufs[#temp_bufs + 1] = prompt_bufnr
             attach(prompt_bufnr, function(_, _, _) end)
 
             local got_subscribe = assert(subscribe_args)
@@ -117,9 +129,6 @@ describe("telescope_git_file_status", function()
                 20
             )
             assert.is_true(ok, "expected unsubscribe on prompt buffer wipe")
-
-            git_file_status.subscribe = orig_subscribe
-            action_state.get_current_picker = orig_get_current_picker
         end
     )
 end)
