@@ -153,5 +153,28 @@ you are only allowed to create branches and PRs off `agent/**` branches.
 create PRs using the `gh` CLI tool:
 
 ```bash
-$ gh pr create --repo phlip9/dotfiles --title "..." --body "..."
+$ cat >/tmp/pr-body.md <<'EOF'
+## Summary
+- ...
+
+## Testing
+- ...
+EOF
+
+$ gh pr create --repo phlip9/dotfiles --title "..." \
+    --body-file /tmp/pr-body.md --reviewer phlip9
 ```
+
+IMPORTANT:
+
+- always prefer `--body-file` over `--body` for PR descriptions.
+- do not inline markdown body text in shell command strings.
+- never put backticks or `$(...)` command substitutions inside `--body "..."`
+  arguments; shell interpolation can mangle the PR body and accidentally execute
+  commands.
+- if a PR already exists and the body needs updating, use:
+  - `gh pr edit --repo phlip9/dotfiles <pr-number> --body-file /tmp/pr-body.md`
+- always request review from `phlip9` when opening PRs:
+  - include `--reviewer phlip9` on `gh pr create`
+  - for existing PRs, run:
+    - `gh pr edit --repo phlip9/dotfiles <pr-number> --add-reviewer phlip9`
