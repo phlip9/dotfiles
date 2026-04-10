@@ -132,17 +132,22 @@ function M.make_diff_entry_maker(_bufnr, hunks, opts)
                 hl_group = "GitGutterDelete"
             end
 
-            -- Get original display
-            local display_text
+            -- Get original display, preserving highlight regions
+            local display_text, orig_hl
             if type(orig_display) == "function" then
-                display_text = orig_display(e)
+                display_text, orig_hl = orig_display(e)
             else
                 display_text = orig_display
             end
 
             return displayer({
                 { marker, hl_group },
-                display_text,
+                {
+                    display_text,
+                    function()
+                        return orig_hl or {}
+                    end,
+                },
             })
         end
 
@@ -153,6 +158,54 @@ end
 --------------------------------------------------------------------------------
 -- Custom previewer with diff markers in sign column
 --------------------------------------------------------------------------------
+
+--- Place hunk signs as extmarks in a buffer's sign column.
+---
+--- Clears existing signs in the namespace first, then adds one sign per
+--- hunk line. For deleted hunks (new_count=0), the sign is placed at
+--- the deletion point, clamped to line 0 for deletions at file start.
+---
+--- @param bufnr number Buffer to place signs in
+--- @param ns number Namespace id for the extmarks
+--- @param hunks table[] List of hunks
+function M.place_hunk_signs(bufnr, ns, hunks)
+    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+    for _, hunk in ipairs(hunks) do
+        local old_count = hunk[2]
+        local new_start = hunk[3]
+        local new_count = hunk[4]
+
+        local marker, hl_group
+        if new_count == 0 then
+            -- Deleted: show at deletion point.
+            -- Clamp to 0 for deletions at file start (new_start=0).
+            marker = "-"
+            hl_group = "GitGutterDelete"
+            local line = math.max(0, new_start - 1)
+            pcall(vim.api.nvim_buf_set_extmark, bufnr, ns,
+                line, 0, {
+                    sign_text = marker,
+                    sign_hl_group = hl_group,
+                })
+        else
+            if old_count == 0 then
+                marker = "+"
+                hl_group = "GitGutterAdd"
+            else
+                marker = "~"
+                hl_group = "GitGutterChange"
+            end
+            -- Mark each line in the hunk
+            for lnum = new_start, new_start + new_count - 1 do
+                pcall(vim.api.nvim_buf_set_extmark, bufnr, ns,
+                    lnum - 1, 0, {
+                        sign_text = marker,
+                        sign_hl_group = hl_group,
+                    })
+            end
+        end
+    end
+end
 
 --- Create a previewer that shows diff markers in the sign column.
 --- @param opts table Options
@@ -181,42 +234,7 @@ function M.make_diff_previewer(opts, hunks)
                             entry.lnum, 0
                         })
                     end
-
-                    -- Add diff markers as extmarks in sign column
-                    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-                    for _, hunk in ipairs(hunks) do
-                        local old_count = hunk[2]
-                        local new_start = hunk[3]
-                        local new_count = hunk[4]
-
-                        local marker, hl_group
-                        if new_count == 0 then
-                            -- Deleted: show at deletion point
-                            marker = "-"
-                            hl_group = "GitGutterDelete"
-                            pcall(vim.api.nvim_buf_set_extmark, bufnr, ns,
-                                new_start - 1, 0, {
-                                    sign_text = marker,
-                                    sign_hl_group = hl_group,
-                                })
-                        else
-                            if old_count == 0 then
-                                marker = "+"
-                                hl_group = "GitGutterAdd"
-                            else
-                                marker = "~"
-                                hl_group = "GitGutterChange"
-                            end
-                            -- Mark each line in the hunk
-                            for lnum = new_start, new_start + new_count - 1 do
-                                pcall(vim.api.nvim_buf_set_extmark, bufnr, ns,
-                                    lnum - 1, 0, {
-                                        sign_text = marker,
-                                        sign_hl_group = hl_group,
-                                    })
-                            end
-                        end
-                    end
+                    M.place_hunk_signs(bufnr, ns, hunks)
                 end,
             })
         end,
@@ -234,7 +252,13 @@ local function CocActionWithTimeout(action_type, ...)
 
     local args = { ... }
     table.insert(args, 1, action_type)
-    table.insert(args, function(_, res)
+    table.insert(args, function(err, res)
+        if err then
+            vim.notify(
+                "coc " .. action_type .. ": " .. tostring(err),
+                vim.log.levels.WARN
+            )
+        end
         result = res
         completed = true
     end)
@@ -252,7 +276,10 @@ end
 --- Open coc.nvim document symbols picker with diff markers.
 --- @param opts? table Options passed to telescope
 function M.coc_document_symbols(opts)
-    opts = opts or {}
+    opts = vim.tbl_extend("force", opts or {}, {
+        ignore_filename = true,
+        path_display = { "hidden" },
+    })
 
     if vim.g.coc_service_initialized ~= 1 then
         print("Coc is not ready!")
@@ -286,9 +313,6 @@ function M.coc_document_symbols(opts)
         }
     end
 
-    opts.ignore_filename = true
-    opts.path_display = { "hidden" }
-
     pickers.new(opts, {
         prompt_title = "Document Symbols",
         previewer = M.make_diff_previewer(opts, hunks),
@@ -306,7 +330,10 @@ end
 --- Open treesitter symbols picker with diff markers.
 --- @param opts? table Options passed to telescope
 function M.treesitter_symbols(opts)
-    opts = opts or {}
+    opts = vim.tbl_extend("force", opts or {}, {
+        ignore_filename = true,
+        path_display = { "hidden" },
+    })
 
     local bufnr = vim.api.nvim_get_current_buf()
     local hunks = M.get_hunks(bufnr)
@@ -316,7 +343,8 @@ function M.treesitter_symbols(opts)
     local builtin = require("telescope.builtin")
 
     local parsers = require("nvim-treesitter.parsers")
-    if not parsers.has_parser(parsers.get_buf_lang()) then
+    local lang = parsers.get_buf_lang(bufnr)
+    if not parsers.has_parser(lang) then
         print("No treesitter parser for this buffer")
         return
     end
@@ -326,7 +354,6 @@ function M.treesitter_symbols(opts)
     local filename = vim.api.nvim_buf_get_name(bufnr)
 
     local ts = vim.treesitter
-    local lang = parsers.get_buf_lang()
     local parser = parsers.get_parser(bufnr, lang)
     if not parser then
         print("Could not get treesitter parser")
@@ -339,29 +366,32 @@ function M.treesitter_symbols(opts)
         return
     end
 
-    -- Query for definitions/symbols
-    local query_name = "locals"
-    local query_ok, query = pcall(ts.query.get, lang, query_name)
-    if not query_ok or not query then
-        -- Try highlights as fallback
-        query_ok, query = pcall(ts.query.get, lang, "highlights")
-        if not query_ok or not query then
-            print("No treesitter query available")
-            return
-        end
+    -- Query for definitions. Only "locals" queries contain @definition
+    -- captures; other queries (highlights, etc.) have no matching
+    -- captures and would just waste cycles iterating.
+    local query = ts.query.get(lang, "locals")
+    if not query then
+        builtin.treesitter(opts)
+        return
     end
 
     -- Collect definition nodes
     local seen = {}
     for id, node, _ in query:iter_captures(tree:root(), bufnr, 0, -1) do
         local name = query.captures[id]
-        if name:match("^definition") or name:match("^scope") then
+        if name:match("^definition") then
             local text = ts.get_node_text(node, bufnr)
+            -- Truncate to first line; multi-line definitions (structs,
+            -- function bodies) produce unreadable outline entries.
+            local nl = text:find("\n")
+            if nl then
+                text = text:sub(1, nl - 1)
+            end
             local start_row, start_col = node:start()
             local key = string.format("%d:%d:%s", start_row, start_col, text)
             if not seen[key] then
                 seen[key] = true
-                local kind = name:gsub("^definition%.", ""):gsub("^scope$", "scope")
+                local kind = name:gsub("^definition%.", "")
                 ts_entries[#ts_entries + 1] = {
                     filename = filename,
                     lnum = start_row + 1,
@@ -378,9 +408,6 @@ function M.treesitter_symbols(opts)
         builtin.treesitter(opts)
         return
     end
-
-    opts.ignore_filename = true
-    opts.path_display = { "hidden" }
 
     pickers.new(opts, {
         prompt_title = "Treesitter Symbols",
