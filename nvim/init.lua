@@ -466,11 +466,14 @@ if pcall(require, "telescope") then
 
     -- builtin telescope commands
     local builtin = require("telescope.builtin")
+    local file_status_picker = require_local("telescope_git_file_status")
     -- require("telescope.builtin.__files")
 
     -- files/grep
-    vim.keymap.set("n", "O", builtin.find_files, M.with_desc("search files"))
-    vim.keymap.set("n", "<space>O", function() builtin.find_files({ no_ignore = true }) end,
+    vim.keymap.set("n", "O", file_status_picker.find_files, M.with_desc("search files"))
+    vim.keymap.set("n", "<space>O", function()
+        file_status_picker.find_files({ no_ignore = true })
+    end,
         M.with_desc("find files (no gitignore)"))
     vim.keymap.set("n", "<space>/", builtin.live_grep, M.with_desc("repo grep"))
     vim.keymap.set({ "n", "x" }, "<space>'", builtin.grep_string, M.with_desc("repo grep word under cursor"))
@@ -484,7 +487,7 @@ if pcall(require, "telescope") then
     vim.keymap.set("n", "<space>gb", builtin.git_branches, M.with_desc("open git branches"))
 
     -- nvim
-    vim.keymap.set("n", "T", builtin.buffers, M.with_desc("search buffers"))
+    vim.keymap.set("n", "T", file_status_picker.buffers, M.with_desc("search buffers"))
     vim.keymap.set("n", "<space>vh", builtin.help_tags, M.with_desc("search nvim help"))
     vim.keymap.set("n", "<space>vm", builtin.keymaps, M.with_desc("search nvim key mappings"))
 
