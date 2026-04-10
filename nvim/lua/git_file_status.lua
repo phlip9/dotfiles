@@ -26,7 +26,8 @@
 ---   - `git ls-files --others --exclude-standard -z`
 ---
 --- Caching:
----   Cache key is `(repo_root, diff_base)`. Stale entries are refreshed
+---   A single MRU entry is kept for the most recently used
+---   `(repo_root, diff_base)` pair. Stale entries are refreshed
 ---   asynchronously; inflight refreshes are deduped.
 
 local M = {}
@@ -40,8 +41,8 @@ M._repo_by_cwd = {}
 --- cwd => { callbacks... }
 M._repo_discovery_inflight = {}
 
---- "repo_root\nbase" => entry
-M._cache = {}
+--- Single MRU cache entry for the most recently used (repo_root, diff_base).
+M._entry = nil
 
 --- monotonically increasing id for cache subscribers
 M._next_subscriber_id = 1
@@ -50,7 +51,7 @@ M._next_subscriber_id = 1
 function M._reset_for_test()
     M._repo_by_cwd = {}
     M._repo_discovery_inflight = {}
-    M._cache = {}
+    M._entry = nil
     M._next_subscriber_id = 1
 end
 
@@ -86,12 +87,6 @@ end
 --- @return boolean
 local function is_absolute_path(path)
     return path:sub(1, 1) == "/"
-end
-
---- @param base string
---- @return string
-local function cache_key(repo_root, base)
-    return repo_root .. "\n" .. base
 end
 
 --- @param value string
@@ -250,22 +245,36 @@ function M.effective_diff_base()
     return "HEAD"
 end
 
+--- Return the current MRU entry if it matches, otherwise nil.
+--- @param repo_root string
+--- @param base string
+--- @return table|nil
+local function get_entry(repo_root, base)
+    local e = M._entry
+    if e ~= nil and e.repo_root == repo_root and e.diff_base == base then
+        return e
+    end
+    return nil
+end
+
+--- Return the current MRU entry if it matches, otherwise create a new one.
 --- @param repo_root string
 --- @param base string
 --- @return table
-local function get_cache_entry(repo_root, base)
-    local key = cache_key(repo_root, base)
-    if M._cache[key] == nil then
-        M._cache[key] = {
-            repo_root = repo_root,
-            diff_base = base,
-            markers = {},
-            updated_at_ms = 0,
-            inflight = false,
-            subscribers = {},
-        }
+local function get_or_create_entry(repo_root, base)
+    local e = get_entry(repo_root, base)
+    if e ~= nil then
+        return e
     end
-    return M._cache[key]
+    M._entry = {
+        repo_root = repo_root,
+        diff_base = base,
+        markers = {},
+        updated_at_ms = 0,
+        inflight = false,
+        subscribers = {},
+    }
+    return M._entry
 end
 
 --- @param entry table
@@ -320,7 +329,7 @@ end
 --- @param repo_root string
 --- @param diff_base string
 function M.refresh_async(repo_root, diff_base)
-    local entry = get_cache_entry(repo_root, diff_base)
+    local entry = get_or_create_entry(repo_root, diff_base)
     if entry.inflight then
         return
     end
@@ -387,7 +396,7 @@ function M.subscribe(cwd, diff_base, callback)
             return
         end
 
-        local entry = get_cache_entry(repo_root, diff_base)
+        local entry = get_or_create_entry(repo_root, diff_base)
         entry.subscribers[subscriber_id] = callback
 
         if is_stale(entry) then
@@ -408,7 +417,10 @@ function M.unsubscribe(cwd, diff_base, subscriber_id)
         return
     end
 
-    local entry = get_cache_entry(repo_root, diff_base)
+    local entry = get_entry(repo_root, diff_base)
+    if entry == nil then
+        return
+    end
     entry.subscribers[subscriber_id] = nil
 end
 
@@ -457,27 +469,17 @@ function M.lookup_marker(cwd, diff_base, entry_path)
         return nil
     end
 
-    local entry = get_cache_entry(repo_root, diff_base)
+    local entry = get_entry(repo_root, diff_base)
+    if entry == nil then
+        return nil
+    end
+
     local relpath = M.path_to_repo_rel(norm_cwd, entry_path, repo_root)
     if relpath == nil then
         return nil
     end
 
     return entry.markers[relpath]
-end
-
---- @param cwd string
---- @param diff_base string
---- @return table<string, string>
-function M.cached_markers(cwd, diff_base)
-    local norm_cwd = normalize_path(cwd)
-    local repo_root = M._repo_by_cwd[norm_cwd]
-    if type(repo_root) ~= "string" then
-        return {}
-    end
-
-    local entry = get_cache_entry(repo_root, diff_base)
-    return entry.markers
 end
 
 return M

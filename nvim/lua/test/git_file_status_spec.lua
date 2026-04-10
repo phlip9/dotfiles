@@ -144,8 +144,7 @@ describe("git_file_status", function()
 
         done_fn({ ["f.txt"] = "+" })
         wait_for(function()
-            local markers = M._cache["/repo\nHEAD"].markers
-            return markers["f.txt"] == "+"
+            return M._entry ~= nil and M._entry.markers["f.txt"] == "+"
         end)
 
         M.collect_markers_async = original_collect
