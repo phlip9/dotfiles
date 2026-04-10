@@ -31,55 +31,18 @@ functions (`apply_cwd_only_aliases`, `buf_in_cwd`).
 
 ---
 
-### 4. Notify subscribers even on git command failure
+### 4. ~~Notify subscribers even on git command failure~~
 
-**File:** `git_file_status.lua:374-381`
-
-```lua
-entry.inflight = false
-if markers ~= nil then
-    entry.markers = markers
-    entry.updated_at_ms = now_ms()
-end
-notify_subscribers(entry)  -- always fires
-```
-
-When both git commands fail (`markers == nil`), subscribers are still notified,
-triggering a `picker:refresh` that re-renders all entries — with no data
-change. Harmless but wasteful.
-
-Fix: only notify when markers actually changed.
-
-```lua
-if markers ~= nil then
-    entry.markers = markers
-    entry.updated_at_ms = now_ms()
-    notify_subscribers(entry)
-end
-```
-
-But note: the current behavior has a subtle upside — it lets subscribers know
-"the refresh attempt finished" even if it failed. If that semantic is wanted,
-keep the current code but document it.
+**FIXED.** `notify_subscribers` moved inside the `markers ~= nil` guard so
+subscribers are only notified when data actually changed.
 
 ---
 
-### 5. `vim.system` callback context may be unsafe for `vim.notify`
+### 5. ~~`vim.system` callback context may be unsafe for `vim.notify`~~
 
-**File:** `git_file_status.lua:318-330`
-
-`vim.system` callbacks run from libuv's event loop. `vim.notify` (which
-ultimately calls `nvim_echo`) may not be safe from that context without
-`vim.schedule`. In practice this seems to work because neovim's `vim.system`
-implementation schedule-wraps the exit callback, but this is an implementation
-detail not guaranteed by the API.
-
-The `vim.notify` calls here are `DEBUG` level (rarely shown), so the blast
-radius is small. But if neovim ever changes callback dispatch, these could
-crash.
-
-Fix: wrap the entire `done` callback chain in `vim.schedule`, or at minimum
-wrap the `vim.notify` calls.
+**FIXED.** All three `vim.system` callbacks (`collect_markers_async` x2,
+`resolve_repo_root_async`) are now wrapped with `vim.schedule_wrap`, so the
+entire callback chain runs on the main loop.
 
 ---
 
