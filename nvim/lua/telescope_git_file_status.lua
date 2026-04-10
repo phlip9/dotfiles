@@ -122,9 +122,16 @@ function M.make_attach_mappings(picker_cwd, diff_base, user_attach)
             if picker == nil then
                 return
             end
-            pcall(picker.refresh, picker, picker.finder, {
+            local ok, err = pcall(picker.refresh, picker, picker.finder, {
                 reset_prompt = false,
             })
+            if not ok then
+                vim.notify(
+                    "telescope_git_file_status: refresh error: "
+                        .. tostring(err),
+                    vim.log.levels.WARN
+                )
+            end
         end
 
         local unsubscribe = git_file_status.subscribe(
