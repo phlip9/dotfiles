@@ -45,7 +45,11 @@ describe("telescope_git_file_status", function()
         ---@diagnostic disable-next-line: duplicate-set-field
         entry_display.create = function(_)
             return function(columns)
-                return columns[1][1] .. " " .. columns[2]
+                local text = columns[2]
+                if type(text) == "table" then
+                    text = text[1]
+                end
+                return columns[1][1] .. " " .. text
             end
         end
 

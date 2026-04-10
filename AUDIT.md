@@ -2,37 +2,12 @@
 
 ## High
 
-### 1. Wrapped display function drops original entry highlights
+### 1. ~~Wrapped display function drops original entry highlights~~
 
-**File:** `telescope_git_file_status.lua:112-128`
-
-`orig_display(e)` returns `(string, highlights_table)` but only the first
-return value is captured. The original entry's highlight data (devicon colors,
-path segment dimming, telescope highlight groups) is silently discarded. The
-marker column gets its highlight, but the rest of the entry renders as plain
-unhighlighted text.
-
-Verified against telescope source (`entry_display.lua:99-148`): the displayer
-returns `(string, highlights)`, and `entry_display.resolve` (`line 155`)
-expects both values from `entry:display()`.
-
-```lua
--- current (broken)
-display_text = orig_display(e)
-
--- fix: capture highlights and forward them via a highlight function
--- (the displayer supports hl-as-function for offset-adjusted merging)
-local display_text, orig_hl = orig_display(e)
-return displayer({
-    { marker or " ", marker_hl_group(marker) },
-    { display_text, function() return orig_hl or {} end },
-})
-```
-
-The displayer already handles `hl` functions (lines 112-115 in
-`entry_display.lua`): it calls `hl()`, iterates results, and offsets each
-`{start, end}` range by the column's start position. Passing a closure that
-returns `orig_hl` should preserve the original highlights with correct offsets.
+**FIXED.** `orig_display(e)` now captures both return values
+`(display_text, orig_hl)` and forwards `orig_hl` via a highlight function
+closure. The displayer's hl-function path (lines 112-115 in
+`entry_display.lua`) offsets each range by the column's start position.
 
 ---
 
