@@ -462,6 +462,13 @@ function M.subscribe(cwd, diff_base, callback)
     end
 end
 
+--- Convert a picker entry path to a repo-relative path.
+---
+--- NOTE: normalize_path does not resolve symlinks. If the buffer path or
+--- repo root traverses a symlink, the string prefix check will fail and
+--- the file will get no marker. Fixing this requires fs_realpath on both
+--- sides (extra syscall per entry).
+---
 --- @param picker_cwd string
 --- @param path string
 --- @param repo_root string
