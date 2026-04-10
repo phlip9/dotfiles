@@ -51,6 +51,9 @@ case, so these files get no marker and appear unchanged in the picker.
 
 Fix: add a fallback `else marker = "~"` after the existing conditions.
 
+**Fixed:** `reduce_markers` now falls through to `marker = "~"` when
+`adds == 0` and `deletes == 0`, covering mode-only and submodule changes.
+
 ### 4. Medium — `notify_subscribers` iterates table that callbacks could mutate
 
 `notify_subscribers` uses `pairs()` over `entry.subscribers`. Modifying a
@@ -59,6 +62,9 @@ the subscriber callback is `vim.schedule_wrap(...)` so actual unsubscription
 happens on a later event-loop tick. A future synchronous callback would break.
 
 Fix: snapshot the subscribers table before iterating.
+
+**Fixed:** `notify_subscribers` now copies `entry.subscribers` into a local
+snapshot before iterating.
 
 ### 5. Medium — `buffers()` `cwd_only` filter uses runtime `cwd()` not `picker_cwd`
 
@@ -81,6 +87,8 @@ Fix: replace with a single MRU entry.
 
 No callers exist in the codebase. Remove it.
 
+**Fixed:** removed as part of cache simplification (finding 6).
+
 ### 8. Low — Silent error swallowing
 
 When `git diff` or `git ls-files` fails, `done(nil)` is called with no
@@ -88,10 +96,15 @@ logging. Makes debugging hard in misconfigured repos.
 
 Fix: `vim.notify()` at DEBUG level with stderr.
 
+**Fixed:** `collect_markers_async` now calls `vim.notify` at DEBUG level
+with stderr when either git command exits non-zero.
+
 ### 9. Low — `trim()` only strips trailing whitespace
 
 `vim.trim()` exists and handles both sides. Leading whitespace from
 `git rev-parse` would cause cache-key mismatches.
+
+**Fixed:** `trim()` now uses `vim.trim()` instead of a trailing-only gsub.
 
 ### 10. Low — Test temp dirs leak on assertion failure
 
@@ -100,11 +113,17 @@ test body. If an assertion fails before that line, cleanup never runs.
 
 Fix: use `after_each` or `finally` for cleanup.
 
+**Fixed:** temp dirs are tracked in a `temp_dirs` table and cleaned up in
+`after_each`.
+
 ### 11. Low — Test monkey-patches not restored on failure
 
 Tests that stub `M.collect_markers_async` or `M.resolve_repo_root_async`
 restore the original at the end of the test body. If an assertion fails
 mid-test, the stub leaks into subsequent tests.
+
+**Fixed:** originals are saved at `describe` scope and restored in
+`after_each`. Per-test manual restoration removed.
 
 ### 12. Low — `path_to_repo_rel` doesn't resolve symlinks
 

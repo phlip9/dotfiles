@@ -61,7 +61,7 @@ local function trim(value)
     if type(value) ~= "string" then
         return nil
     end
-    local trimmed = value:gsub("%s+$", "")
+    local trimmed = vim.trim(value)
     if trimmed == "" then
         return nil
     end
@@ -217,7 +217,9 @@ function M.reduce_markers(numstat, untracked)
                 marker = "+"
             elseif adds == 0 and deletes > 0 then
                 marker = "-"
-            elseif adds > 0 and deletes > 0 then
+            else
+                -- Mixed changes, or adds=0/deletes=0 (mode-only,
+                -- submodule pointer change).
                 marker = "~"
             end
         end
@@ -279,7 +281,12 @@ end
 
 --- @param entry table
 local function notify_subscribers(entry)
-    for _, callback in pairs(entry.subscribers) do
+    -- Snapshot to guard against table mutation during iteration.
+    local snapshot = {}
+    for id, callback in pairs(entry.subscribers) do
+        snapshot[id] = callback
+    end
+    for _, callback in pairs(snapshot) do
         pcall(callback)
     end
 end
@@ -308,6 +315,20 @@ function M.collect_markers_async(repo_root, diff_base, done)
             return
         end
         if diff_res.code ~= 0 or untracked_res.code ~= 0 then
+            if diff_res.code ~= 0 then
+                vim.notify(
+                    "git_file_status: git diff failed: "
+                        .. (diff_res.stderr or ""),
+                    vim.log.levels.DEBUG
+                )
+            end
+            if untracked_res.code ~= 0 then
+                vim.notify(
+                    "git_file_status: git ls-files failed: "
+                        .. (untracked_res.stderr or ""),
+                    vim.log.levels.DEBUG
+                )
+            end
             done(nil)
             return
         end

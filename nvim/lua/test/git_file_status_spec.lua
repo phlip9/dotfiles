@@ -29,9 +29,22 @@ local function wait_for(pred)
 end
 
 describe("git_file_status", function()
+    local orig_collect = M.collect_markers_async
+    local orig_resolve = M.resolve_repo_root_async
+    local temp_dirs = {}
+
     before_each(function()
         M._reset_for_test()
         vim.g.gitgutter_diff_base = nil
+    end)
+
+    after_each(function()
+        M.collect_markers_async = orig_collect
+        M.resolve_repo_root_async = orig_resolve
+        for _, dir in ipairs(temp_dirs) do
+            vim.fn.delete(dir, "rf")
+        end
+        temp_dirs = {}
     end)
 
     it("parses numstat -z rows including rename records", function()
@@ -132,7 +145,6 @@ describe("git_file_status", function()
         local calls = 0
         local done_fn
 
-        local original_collect = M.collect_markers_async
         M.collect_markers_async = function(_, _, done)
             calls = calls + 1
             done_fn = done
@@ -146,17 +158,12 @@ describe("git_file_status", function()
         wait_for(function()
             return M._entry ~= nil and M._entry.markers["f.txt"] == "+"
         end)
-
-        M.collect_markers_async = original_collect
     end)
 
     it(
         "does not invoke subscriber callback until async refresh completes",
         function()
             local callback_calls = 0
-
-            local original_resolve = M.resolve_repo_root_async
-            local original_collect = M.collect_markers_async
 
             M.resolve_repo_root_async = function(_, cb)
                 cb("/repo")
@@ -175,17 +182,11 @@ describe("git_file_status", function()
             done_fn({ ["f.lua"] = "~" })
 
             wait_for(function() return callback_calls == 1 end)
-
-            M.resolve_repo_root_async = original_resolve
-            M.collect_markers_async = original_collect
         end
     )
 
     it("unsubscribe before repo root resolves prevents leaked subscriber", function()
         local callback_calls = 0
-
-        local original_resolve = M.resolve_repo_root_async
-        local original_collect = M.collect_markers_async
 
         -- Capture the resolve callback so we can fire it after unsubscribe.
         local resolve_cb
@@ -217,13 +218,11 @@ describe("git_file_status", function()
         -- Give any scheduled callbacks a chance to run.
         vim.wait(100, function() return false end, 10)
         eq(0, callback_calls)
-
-        M.resolve_repo_root_async = original_resolve
-        M.collect_markers_async = original_collect
     end)
 
     it("collects staged, unstaged, deleted, and untracked markers", function()
         local repo = make_repo()
+        temp_dirs[#temp_dirs + 1] = repo
 
         -- Modified (mixed add/delete) -> ~
         vim.fn.writefile({ "line 1", "line two changed" }, repo .. "/keep.txt")
@@ -251,7 +250,5 @@ describe("git_file_status", function()
         eq("+", got["staged_add.txt"])
         eq("-", got["delete_me.txt"])
         eq("+", got["scratch.txt"])
-
-        vim.fn.delete(repo, "rf")
     end)
 end)
