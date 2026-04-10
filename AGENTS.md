@@ -5,6 +5,7 @@
 - home-manager manages non-GUI user dotfiles on all Linux and macOS machines
 - neovim configured with lua
 
+
 ## high-level layout (non-exhaustive)
 
 - config/bash/bashrc (bash settings, aliases, some completions)
@@ -25,6 +26,7 @@
 - nvim/lua/test/ (tests for my neovim lua plugins)
 - pkgs/ (`phlipPkgs` personal nix packages)
 
+
 ## communication
 
 - prioritize high signal communication, with high information density
@@ -38,9 +40,11 @@
   examples.
 - lead changes with intent and precise justification
 
+
 ## style
 
 - general: stick to 80-column width, except for urls or other annoying cases.
+- general: avoid em-dashes. avoid en-dashes.
 - nix: all external inputs are pinned by default. all packages, home-manager
   configs, nixos configs, etc are accesible from the top-level default.nix for
   ease of use and debugging. avoid overlays.
@@ -65,6 +69,7 @@
   something was written.
 - names: almost always avoid single-character variable names.
 - nix package names should be snake-case. ex: `github-agent-authd`.
+
 
 ## nixos
 
@@ -94,6 +99,7 @@
 before presenting changes, run the relevant lint/format/test commands and fix
 any issues.
 
+
 ## nix
 
 this repo does NOT use flakes. do not use e.g. `nix build .#samply` syntax, it
@@ -122,6 +128,7 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - `pkgs`: nixpkgs stable package set
 - `sources`: npins pinned external sources (nixpkgs, home-manager, etc)
 
+
 ## nvim
 
 ### lua
@@ -132,6 +139,12 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
   about Windows.
 - keymaps should try to be lazy to reduce startup time. a module is ideally
   only imported the first time we actually use it.
+- when wrapping a function, preserve its full return contract. lua
+  multi-return silently truncates: `local x = f()` drops the second value.
+- never use bare `pcall(fn)` that discards the error. always capture and log:
+  `local ok, err = pcall(fn); if not ok then vim.notify(...) end`
+- `vim.schedule_wrap` any `vim.system` callbacks that touch nvim APIs
+  (`vim.notify`, `nvim_*`, etc).
 
 ### lua tests
 
