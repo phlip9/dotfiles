@@ -25,6 +25,7 @@ describe("telescope_git_file_status", function()
         git_file_status.lookup_marker = function()
             return "+"
         end
+        ---@diagnostic disable-next-line: duplicate-set-field
         entry_display.create = function(_)
             return function(columns)
                 return columns[1][1] .. " " .. columns[2]
@@ -60,20 +61,25 @@ describe("telescope_git_file_status", function()
     it(
         "refresh callback redraws picker and unsubscribes on prompt wipe",
         function()
+            ---@type {cwd:string, diff_base:string}?
             local subscribe_args = nil
+            ---@type {cwd:string, diff_base:string, id:integer}?
             local unsubscribe_args = nil
+            ---@type function?
             local subscribed_cb = nil
 
             local orig_subscribe = git_file_status.subscribe
             local orig_unsubscribe = git_file_status.unsubscribe
             local orig_get_current_picker = action_state.get_current_picker
 
+            ---@diagnostic disable-next-line: duplicate-set-field
             git_file_status.subscribe = function(cwd, diff_base, cb)
                 subscribe_args = { cwd = cwd, diff_base = diff_base }
                 subscribed_cb = cb
                 return 42
             end
 
+            ---@diagnostic disable-next-line: duplicate-set-field
             git_file_status.unsubscribe = function(cwd, diff_base, id)
                 unsubscribe_args = {
                     cwd = cwd,
@@ -83,6 +89,7 @@ describe("telescope_git_file_status", function()
             end
 
             local refresh_count = 0
+            ---@diagnostic disable-next-line: duplicate-set-field
             action_state.get_current_picker = function()
                 return {
                     finder = {},
@@ -96,11 +103,11 @@ describe("telescope_git_file_status", function()
             local prompt_bufnr = vim.api.nvim_create_buf(false, true)
             attach(prompt_bufnr, function(_, _, _) end)
 
-            assert.is_truthy(subscribe_args ~= nil)
-            eq("/repo", subscribe_args.cwd)
-            eq("HEAD", subscribe_args.diff_base)
+            local got_subscribe = assert(subscribe_args)
+            eq("/repo", got_subscribe.cwd)
+            eq("HEAD", got_subscribe.diff_base)
 
-            subscribed_cb()
+            assert(subscribed_cb)()
             local ok = vim.wait(
                 1000,
                 function() return refresh_count == 1 end,
@@ -119,9 +126,10 @@ describe("telescope_git_file_status", function()
                 20
             )
             assert.is_true(ok, "expected unsubscribe on prompt buffer wipe")
-            eq(42, unsubscribe_args.id)
-            eq("/repo", unsubscribe_args.cwd)
-            eq("HEAD", unsubscribe_args.diff_base)
+            local got_unsubscribe = assert(unsubscribe_args)
+            eq(42, got_unsubscribe.id)
+            eq("/repo", got_unsubscribe.cwd)
+            eq("HEAD", got_unsubscribe.diff_base)
 
             git_file_status.subscribe = orig_subscribe
             git_file_status.unsubscribe = orig_unsubscribe

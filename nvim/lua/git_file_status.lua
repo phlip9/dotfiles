@@ -31,8 +31,6 @@
 
 local M = {}
 
-local uv = vim.uv
-
 --- Milliseconds before a cache entry is considered stale.
 M.cache_ttl_ms = 5000
 
@@ -47,6 +45,14 @@ M._cache = {}
 
 --- monotonically increasing id for cache subscribers
 M._next_subscriber_id = 1
+
+--- Clear process-global cache for deterministic tests.
+function M._reset_for_test()
+    M._repo_by_cwd = {}
+    M._repo_discovery_inflight = {}
+    M._cache = {}
+    M._next_subscriber_id = 1
+end
 
 --- @param value string|nil
 --- @return string|nil
@@ -63,14 +69,13 @@ end
 
 --- @return integer
 local function now_ms()
-    return math.floor(uv.hrtime() / 1000000)
+    return vim.uv.now()
 end
 
 --- @param path string
 --- @return string
 local function normalize_path(path)
     local normalized = vim.fs.normalize(path)
-    normalized = normalized:gsub("\\", "/")
     if normalized:sub(-1) == "/" and #normalized > 1 then
         normalized = normalized:sub(1, -2)
     end
@@ -80,10 +85,7 @@ end
 --- @param path string
 --- @return boolean
 local function is_absolute_path(path)
-    if path:sub(1, 1) == "/" then
-        return true
-    end
-    return path:match("^%a:[/\\]") ~= nil
+    return path:sub(1, 1) == "/"
 end
 
 --- @param base string
@@ -153,7 +155,6 @@ function M.parse_numstat_z(stdout)
                     -- Rename/copy records carry old/new path in the next 2 NUL
                     -- fields. We only annotate the destination path in file
                     -- pickers.
-                    local _old_path = rows[row_idx]
                     local new_path = rows[row_idx + 1]
                     row_idx = row_idx + 2
                     path = new_path or ""
@@ -383,13 +384,11 @@ function M.subscribe(cwd, diff_base, callback)
 
     M.resolve_repo_root_async(cwd, function(repo_root)
         if repo_root == nil then
-            callback()
             return
         end
 
         local entry = get_cache_entry(repo_root, diff_base)
         entry.subscribers[subscriber_id] = callback
-        callback()
 
         if is_stale(entry) then
             M.refresh_async(repo_root, diff_base)
@@ -479,14 +478,6 @@ function M.cached_markers(cwd, diff_base)
 
     local entry = get_cache_entry(repo_root, diff_base)
     return entry.markers
-end
-
---- Clear process-global cache for deterministic tests.
-function M._reset_for_test()
-    M._repo_by_cwd = {}
-    M._repo_discovery_inflight = {}
-    M._cache = {}
-    M._next_subscriber_id = 1
 end
 
 return M

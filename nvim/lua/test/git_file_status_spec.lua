@@ -151,6 +151,37 @@ describe("git_file_status", function()
         M.collect_markers_async = original_collect
     end)
 
+    it(
+        "does not invoke subscriber callback until async refresh completes",
+        function()
+            local callback_calls = 0
+
+            local original_resolve = M.resolve_repo_root_async
+            local original_collect = M.collect_markers_async
+
+            M.resolve_repo_root_async = function(_, cb)
+                cb("/repo")
+            end
+
+            local done_fn
+            M.collect_markers_async = function(_, _, done)
+                done_fn = done
+            end
+
+            M.subscribe("/repo", "HEAD", function()
+                callback_calls = callback_calls + 1
+            end)
+
+            eq(0, callback_calls)
+            done_fn({ ["f.lua"] = "~" })
+
+            wait_for(function() return callback_calls == 1 end)
+
+            M.resolve_repo_root_async = original_resolve
+            M.collect_markers_async = original_collect
+        end
+    )
+
     it("collects staged, unstaged, deleted, and untracked markers", function()
         local repo = make_repo()
 
@@ -175,11 +206,11 @@ describe("git_file_status", function()
         end)
 
         wait_for(function() return done end)
-        assert.is_truthy(markers)
-        eq("~", markers["keep.txt"])
-        eq("+", markers["staged_add.txt"])
-        eq("-", markers["delete_me.txt"])
-        eq("+", markers["scratch.txt"])
+        local got = assert(markers, "expected marker map")
+        eq("~", got["keep.txt"])
+        eq("+", got["staged_add.txt"])
+        eq("-", got["delete_me.txt"])
+        eq("+", got["scratch.txt"])
 
         vim.fn.delete(repo, "rf")
     end)
