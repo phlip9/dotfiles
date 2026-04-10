@@ -349,10 +349,10 @@ function M.collect_markers_async(repo_root, diff_base, done)
             "diff", "--numstat", "-z", diff_base, "--",
         },
         { text = false },
-        function(res)
+        vim.schedule_wrap(function(res)
             diff_res = res
             try_finish()
-        end
+        end)
     )
 
     vim.system(
@@ -361,10 +361,10 @@ function M.collect_markers_async(repo_root, diff_base, done)
             "ls-files", "--others", "--exclude-standard", "-z",
         },
         { text = false },
-        function(res)
+        vim.schedule_wrap(function(res)
             untracked_res = res
             try_finish()
-        end
+        end)
     )
 end
 
@@ -382,8 +382,8 @@ function M.refresh_async(repo_root, diff_base)
         if markers ~= nil then
             entry.markers = markers
             entry.updated_at_ms = now_ms()
+            notify_subscribers(entry)
         end
-        notify_subscribers(entry)
     end)
 end
 
@@ -407,7 +407,7 @@ function M.resolve_repo_root_async(cwd, callback)
     vim.system(
         { "git", "-C", norm_cwd, "rev-parse", "--show-toplevel" },
         { text = true },
-        function(res)
+        vim.schedule_wrap(function(res)
             local repo_root
             if res.code == 0 then
                 repo_root = trim(res.stdout)
@@ -421,7 +421,7 @@ function M.resolve_repo_root_async(cwd, callback)
             for _, waiter in ipairs(callbacks) do
                 pcall(waiter, repo_root)
             end
-        end
+        end)
     )
 end
 
