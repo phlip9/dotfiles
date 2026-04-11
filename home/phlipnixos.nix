@@ -77,6 +77,9 @@
     # codex - OpenAI codex code CLI
     phlipPkgs.codex
 
+    # timep - bash profiler
+    phlipPkgs.timep
+
     pkgs.clangStdenv.cc
     pkgs.gh
     pkgs.protobuf

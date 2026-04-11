@@ -139,6 +139,9 @@ fix (phlipPkgs: {
   # sops wrapped with clean nvim (no plugins) for secret editing
   sops = callPackage ./sops.nix { };
 
+  # timep - bash profiler
+  timep = callPackage ./timep { };
+
   # unified launcher for Windows games on Linux
   umu-launcher =
     callPackage (sources.umu-launcher + "/packaging/nix/package.nix")
