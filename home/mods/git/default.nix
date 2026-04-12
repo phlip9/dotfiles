@@ -4,11 +4,35 @@
   ...
 }:
 let
-  getBin = lib.getBin;
-  getExe' = lib.getExe';
-  writeBash = pkgs.writers.writeBash;
+  inherit (builtins) baseNameOf length replaceStrings;
+  inherit (lib) getExe' makeBinPath;
+  inherit (pkgs.writers) writeBash;
 
-  stripNewlines = str: builtins.replaceStrings [ "\n" ] [ "" ] str;
+  stripNewlines = str: replaceStrings [ "\n" ] [ "" ] str;
+
+  mkWrapperPathArgs =
+    bins:
+    if length bins == 0 then
+      [ ]
+    else
+      [
+        "--prefix"
+        "PATH"
+        ":"
+        "${makeBinPath bins}"
+      ];
+
+  mkScript =
+    path: bins:
+    writeBash (baseNameOf path) {
+      makeWrapperArgs = mkWrapperPathArgs bins;
+    } path;
+
+  mkAlias = path: bins: "!${mkScript path bins}";
+
+  mkAliasInline =
+    name: bins: contents:
+    "!${writeBash name { makeWrapperArgs = mkWrapperPathArgs bins; } contents}";
 in
 {
   # home-manager options:
@@ -114,35 +138,10 @@ in
 
       # Open `nvim` with all unmerged branches (use --all to view all branches).
       # Then delete all the selected branches.
-      rm-merged-branches =
-        let
-          jq = "${getBin pkgs.jq}/bin/jq";
-          xargs = "${getBin pkgs.findutils}/bin/xargs";
-          script = writeBash "git-rm-merged-branches" ''
-            set -euo pipefail
-
-            # Filter out current branch and master/main branches
-            CURRENT_BRANCH="$(git branch --show-current --format='%(refname:short)')"
-            JQ_SELECT_BRANCH_NAME=".branch != \"master\" and .branch != \"main\" and .branch != \"$CURRENT_BRANCH\""
-
-            # By default, branches with no upstream are considered "merged"
-            JQ_SELECT="select($JQ_SELECT_BRANCH_NAME and .upstream == \"\") | .branch"
-            if [[ "$@" == "-a" || "$@" == "--all" ]]; then
-              JQ_SELECT="select($JQ_SELECT_BRANCH_NAME) | .branch"
-            fi
-
-            TEMPFILE=$(mktemp)
-            trap 'rm $TEMPFILE' EXIT
-
-            # List the selected branches and open them in an editor first to
-            # interactively choose which to delete.
-            git branch --list --format='{"branch":"%(refname:short)","upstream":"%(upstream)"}' \
-                | ${jq} -r "$JQ_SELECT" > $TEMPFILE
-            $EDITOR $TEMPFILE
-            ${xargs} git branch --delete --force < $TEMPFILE
-          '';
-        in
-        "!${script}";
+      rm-merged-branches = mkAlias ./git-rm-merged-branches.sh [
+        pkgs.jq
+        pkgs.findutils
+      ];
 
       #############
       # PR Review #
@@ -154,10 +153,10 @@ in
       # Print the branch point of the current PR from origin/master
       pr-base = stripNewlines ''
         !if [ -n "$PR_BASE" ]; then
-            echo "$PR_BASE";
-          else
-            git merge-base HEAD origin/$(git master);
-          fi
+           echo "$PR_BASE";
+         else
+           git merge-base HEAD origin/$(git master);
+         fi
       '';
 
       # Print which files have changed in this PR since master.
@@ -175,34 +174,26 @@ in
       # Print the diff stat for this commit.
       cm-stat = "!git diff --stat HEAD~1";
 
-      # Open all changed files in `nvim` with gitgutter diff'ed against master.
-      # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
-      pr-rv =
-        let
-          script = writeBash "git-pr-rv" ''
-            set -euo pipefail
-            PR_BASE="$(git pr-base)"
-            mapfile -t -d "" files < <(git diff --name-only -z "$PR_BASE")
-            nvim "''${files[@]}" +"let g:gitgutter_diff_base = '$PR_BASE'"
-          '';
-        in
-        "!${script}";
-
       # Open only one specific changed file just like `git pr-review`
       pr-rvo = "!nvim +\"let g:gitgutter_diff_base = '$(git pr-base)'\"";
 
+      # Open all changed files in `nvim` with gitgutter diff'ed against master.
+      # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
+      pr-rv = mkAliasInline "git-pr-rv" [ ] ''
+        set -euo pipefail
+        PR_BASE="$(git pr-base)"
+        mapfile -t -d "" files < <(git diff --name-only -z "$PR_BASE")
+        $EDITOR "''${files[@]}" +"let g:gitgutter_diff_base = '$PR_BASE'"
+      '';
+
       # Single commit: open all changed files in `nvim` with gitgutter diff.
       # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
-      cm-rv =
-        let
-          script = writeBash "git-cm-rv" ''
-            set -euo pipefail
-            DIFF_BASE="$(git rev-parse HEAD~1)"
-            mapfile -t -d "" files < <(git diff --name-only -z "$DIFF_BASE")
-            nvim "''${files[@]}" +"let g:gitgutter_diff_base = '$DIFF_BASE'"
-          '';
-        in
-        "!${script}";
+      cm-rv = mkAliasInline "git-cm-rv" [ ] ''
+        set -euo pipefail
+        DIFF_BASE="$(git rev-parse HEAD~1)"
+        mapfile -t -d "" files < <(git diff --name-only -z "$DIFF_BASE")
+        $EDITOR "''${files[@]}" +"let g:gitgutter_diff_base = '$DIFF_BASE'"
+      '';
 
       # Pretty print PR commits for Github PR description
       pr-desc = "!git --no-pager log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
