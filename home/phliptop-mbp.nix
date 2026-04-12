@@ -39,9 +39,9 @@
     ./mods/fonts.nix
     ./mods/fzf.nix
     ./mods/gh.nix
-    ./mods/gpg.nix
+    ./mods/git/default.nix
     ./mods/gpg-agent.nix
-    ./mods/git.nix
+    ./mods/gpg.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
     ./mods/lexe.nix
