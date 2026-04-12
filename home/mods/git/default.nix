@@ -143,6 +143,9 @@ in
         pkgs.findutils
       ];
 
+      # cherry-pick branch picker
+      cpp = mkAlias ./git-cpp.sh [ ];
+
       #############
       # PR Review #
       #############

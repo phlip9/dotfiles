@@ -32,9 +32,9 @@
 - high signal, low noise. high density, compact info.
 - assume high context reader.
 - avoid superfluous prose, politeness, emoji, etc. filler wastes my time.
-- drop: articles (a/an/the), filler (just/really/basically/actually/simply),
-  pleasantries (sure/certainly/of course/happy to), hedging, em-dashes,
-  en-dashes. fragments ok.
+- drop: filler (just/really/basically/actually/simply), pleasantries
+  (sure/certainly/of course/happy to), hedging, em-dashes, en-dashes. fragments
+  ok.
 - abbreviate: db, auth, config, param, req, resp, fn, impl, w/, b/c, ...
 - one word when one word enough.
 - short synonyms: big > extensive, fix > "implement a solution for".
