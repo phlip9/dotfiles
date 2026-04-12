@@ -7,16 +7,16 @@ JQ_SELECT_BRANCH_NAME=".branch != \"master\" and .branch != \"main\" and .branch
 
 # By default, branches with no upstream are considered "merged"
 JQ_SELECT="select($JQ_SELECT_BRANCH_NAME and .upstream == \"\") | .branch"
-if [[ "$@" == "-a" || "$@" == "--all" ]]; then
+if [[ $# -eq 1 ]] && [[ "$1" == "-a" || "$1" == "--all" ]]; then
   JQ_SELECT="select($JQ_SELECT_BRANCH_NAME) | .branch"
 fi
 
-TEMPFILE=$(mktemp)
-trap 'rm $TEMPFILE' EXIT
+TEMPFILE="$(mktemp)"
+trap 'rm "$TEMPFILE"' EXIT
 
 # List the selected branches and open them in an editor first to
 # interactively choose which to delete.
 git branch --list --format='{"branch":"%(refname:short)","upstream":"%(upstream)"}' \
-  | jq -r "$JQ_SELECT" > $TEMPFILE
-$EDITOR $TEMPFILE
-xargs git branch --delete --force < $TEMPFILE
+  | jq -r "$JQ_SELECT" > "$TEMPFILE"
+$EDITOR "$TEMPFILE"
+xargs git branch --delete --force < "$TEMPFILE"
