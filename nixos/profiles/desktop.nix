@@ -71,6 +71,7 @@
     gnome-themes-extra # dark adwaita theme
     gradia # pretty screenshots
     libnotify # send desktop notifications from CLI
+    losslesscut-bin # lossless video/audio editing
     nautilus # file chooser
     wl-clipboard # clipboard support
     xwayland-satellite # niri will support X11 apps if this is in PATH
