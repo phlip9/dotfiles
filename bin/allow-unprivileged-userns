@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# persistently disable Ubuntu AppArmor's unprivileged userns restriction
+#
+# use this enable unprivileged sandboxing via bubblewrap, flatpak, etc
+# 
+# writes "kernel.apparmor_restrict_unprivileged_userns = 0" to
+# "/etc/sysctl.d/60-apparmor-namespace.conf" and reloads sysctl.
+
+sysctl_key="kernel.apparmor_restrict_unprivileged_userns"
+sysctl_file="/etc/sysctl.d/60-apparmor-namespace.conf"
+sysctl_line="${sysctl_key} = 0"
+
+run_root() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    "$@"
+  elif command -v sudo > /dev/null 2>&1; then
+    echo sudo "$@"
+    sudo "$@"
+  else
+    echo "error: need root or sudo" >&2
+    exit 1
+  fi
+}
+
+if [[ "$(uname -s)" != "Linux" ]]; then
+  echo "error: Linux only" >&2
+  exit 1
+fi
+
+if [[ ! -e "/proc/sys/${sysctl_key//./\/}" ]]; then
+  echo "error: ${sysctl_key} is not available on this host" >&2
+  exit 1
+fi
+
+tmpfile="$(mktemp)"
+trap 'rm -f "$tmpfile"' EXIT
+printf '%s\n' "$sysctl_line" > "$tmpfile"
+
+run_root install -m 0644 "$tmpfile" "$sysctl_file"
+
+if ! run_root sysctl --system > /dev/null; then
+  echo "warning: sysctl reload failed; reboot may still apply ${sysctl_file}" >&2
+fi
+
+current_value="$(sysctl -n "$sysctl_key" 2>/dev/null || true)"
+if [[ "$current_value" != "0" ]]; then
+  echo "warning: ${sysctl_key} is still '${current_value:-unset}'" >&2
+  echo "warning: a reboot may be required for the persistent setting to take effect" >&2
+  exit 1
+fi
+
+bat "${sysctl_file}"
