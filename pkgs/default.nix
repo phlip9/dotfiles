@@ -154,6 +154,9 @@ fix (phlipPkgs: {
         lastModifiedDate = "20260311";
       };
 
+  # vintagestory (game)
+  vintagestory = callPackage ./vintagestory.nix { };
+
   # my wallpapers
   wallpapers = callPackage ./wallpapers.nix { inherit (phlipPkgs) matugen; };
 })

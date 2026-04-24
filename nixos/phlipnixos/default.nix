@@ -305,6 +305,9 @@
 
     # run windows games
     phlipPkgs.umu-launcher
+
+    # vintagestory (game)
+    phlipPkgs.vintagestory
   ];
 
   # enable 1Password
