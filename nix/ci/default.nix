@@ -112,8 +112,10 @@ let
     checkMeta = true;
     inHydra = true;
 
-    # Match nixpkgs CI behavior: abort on fatal meta errors, throw on known
-    # non-fatal reasons to mark eval-failed jobs.
+    # Based on nixpkgs CI behavior: abort on fatal meta errors, throw on
+    # known non-fatal reasons to mark eval-failed jobs.
+    # Unlike nixpkgs, we can safely build+cache unfree packages, so
+    # "unfree" is not in nonFatalErrors.
     handleEvalIssue =
       reason: errormsg:
       let
@@ -127,7 +129,6 @@ let
           "broken"
           "insecure"
           "non-source"
-          "unfree"
           "unsupported"
         ];
       in
