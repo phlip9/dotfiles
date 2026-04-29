@@ -13,8 +13,18 @@
         // flutter/dart: don't check pub packages.
         "$HOME/.pub-cache/**",
     ],
-    // maybe this will fix rust-analyzer and dart lsp conflicts?
-    "workspace.bottomUpFiletypes": ["dart", "yaml"],
+    // Prevent dart files from adding a new global workspace folder.
+    //
+    // Without this, opening a *.dart file resolves workspace root to the
+    // nearest pubspec.yaml dir (e.g. public/app/). That folder is sent to
+    // ALL LSPs via workspace/didChangeWorkspaceFolders. rust-analyzer then
+    // walks up from it, discovers a second Cargo.toml, and loads a duplicate
+    // cargo workspace (two `cargo check` processes).
+    // coc-flutter still works: it resolves its own rootUri independently
+    // via documentsManager.resolveRoot(["pubspec.yaml"]).
+    "workspace.ignoredFiletypes": ["dart"],
+    // // Does NOT fix rust-analyzer and dart lsp conflicts
+    // "workspace.bottomUpFiletypes": ["dart", "yaml"],
     "Lua.format.enable": true,
     "Lua.format.defaultConfig": {
         "indent_style": "space",
