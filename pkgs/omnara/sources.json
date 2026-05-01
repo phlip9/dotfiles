@@ -1,8 +1,8 @@
 {
   "x86_64-linux": {
-    "version": "0.23.8",
+    "version": "7.6.0",
     "target": "linux-x64",
-    "url": "https://releases.omnara.com/0.23.8/omnara-linux-x64",
-    "hash": "sha256-vKvv+RNaXB841cuUiCHm3eXjZDhzsqwOHJq7XTwj1rk="
+    "url": "https://releases.omnara.com/7.6.0/omnara-linux-x64",
+    "hash": ""
   }
 }
