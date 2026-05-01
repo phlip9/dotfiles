@@ -9,9 +9,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "0239dd9a76c14ed7baa2ca40ae89c498e8dac6e7",
-      "url": "https://github.com/nix-community/buildbot-nix/archive/0239dd9a76c14ed7baa2ca40ae89c498e8dac6e7.tar.gz",
-      "hash": "0pfb2zlb3filayj6vikx68fb2nxwy2y42g7mdqarycmgw64sg2pj"
+      "revision": "5ca06fe10f60f52c5a0b481978aeacf8c0b7c9ee",
+      "url": "https://github.com/nix-community/buildbot-nix/archive/5ca06fe10f60f52c5a0b481978aeacf8c0b7c9ee.tar.gz",
+      "hash": "0c2c8d9kgf0yppaijh7fv3pr45vrnqnnzvq8bxlciyn3vlpiacv6"
     },
     "disko": {
       "type": "Git",
@@ -22,9 +22,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "5ad85c82cc52264f4beddc934ba57f3789f28347",
-      "url": "https://github.com/nix-community/disko/archive/5ad85c82cc52264f4beddc934ba57f3789f28347.tar.gz",
-      "hash": "035nyq47jvhxf2d00frd983h5rn56zs84bk41fax88sjq2gb02iw"
+      "revision": "32f4236bfc141ae930b5ba2fb604f561fed5219d",
+      "url": "https://github.com/nix-community/disko/archive/32f4236bfc141ae930b5ba2fb604f561fed5219d.tar.gz",
+      "hash": "0hh9llhkl29nrmdgifc9m1dqqbn7zgf060mcwn1n21lvk2kl4bw0"
     },
     "home-manager": {
       "type": "Git",
@@ -49,9 +49,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "38ce7d2162da633514087ec51bc589e9a92631e6",
-      "url": "https://github.com/Mic92/niks3/archive/38ce7d2162da633514087ec51bc589e9a92631e6.tar.gz",
-      "hash": "0z88r7c084n9dlsg8jdkkx9mj17xrwm9sfv8wpd96nd0q1h60pz0"
+      "revision": "bdde4dffc3ded5e945bfe5c02064f69524ad7f85",
+      "url": "https://github.com/Mic92/niks3/archive/bdde4dffc3ded5e945bfe5c02064f69524ad7f85.tar.gz",
+      "hash": "13i3iv19qq3fxsllzfz63b14ajgsk7isr40snjrzwmzfsmnrpcmy"
     },
     "nixos-unstable": {
       "type": "Channel",
@@ -83,9 +83,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "614e256310e0a4f8a9ccae3fa80c11844fba7042",
-      "url": "https://github.com/Mic92/sops-nix/archive/614e256310e0a4f8a9ccae3fa80c11844fba7042.tar.gz",
-      "hash": "09zy236xxrj2i85lwzcl4agmdfkf7hxnxiz5nyq350hb0wjbh4by"
+      "revision": "8eaee5c45428b28b8c47a83e4c09dccec5f279b5",
+      "url": "https://github.com/Mic92/sops-nix/archive/8eaee5c45428b28b8c47a83e4c09dccec5f279b5.tar.gz",
+      "hash": "1ha37kyn11dj5k38nbasybp4fnmm6iy1lbzvxfydlk4f55j9kkvd"
     },
     "umu-launcher": {
       "type": "Git",
@@ -96,9 +96,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "e17b257d4e6c06295e2ff607a6e9865d2033db43",
-      "url": "https://github.com/Open-Wine-Components/umu-launcher/archive/e17b257d4e6c06295e2ff607a6e9865d2033db43.tar.gz",
-      "hash": "0i6waf859j95jagw8scrakzpk25hdwbwz2zv8y6ps8h043z405zc"
+      "revision": "7f360de5e7f8d92944dd5ccd75ed6b923644afee",
+      "url": "https://github.com/Open-Wine-Components/umu-launcher/archive/7f360de5e7f8d92944dd5ccd75ed6b923644afee.tar.gz",
+      "hash": "1nwyi3jwf35bipfiqla825kz5as6s7y1df70vwrf290wlzc8p1q1"
     }
   },
   "version": 5
