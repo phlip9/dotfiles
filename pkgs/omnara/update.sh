@@ -11,7 +11,7 @@ trap 'rm -rf "$TMPDIR"' EXIT
 extract_version() {
   local binary=$1
   strings "$binary" \
-    | rg -om1 '"([0-9]+\.[0-9]+\.[0-9]+)",.*"Command-line interface for Omnara."' -r '$1'
+    | rg -om1 '"([0-9]+\.[0-9]+\.[0-9]+)",[^"]+"Command-line interface for Omnara."' -r '$1'
 }
 
 # Fetch latest binary, extract version, prefetch versioned URL
