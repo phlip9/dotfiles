@@ -220,6 +220,9 @@
   # Servers don't need fonts
   fonts.fontconfig.enable = false;
 
+  # conflicts with "minimal.nix" profile
+  programs.command-not-found.enable = lib.mkForce false;
+
   # Secrets
   sops = {
     defaultSopsFile = ../${config.networking.hostName}/secrets.yaml;

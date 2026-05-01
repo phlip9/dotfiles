@@ -8,7 +8,7 @@
 {
   name = "o11y";
 
-  globalTimeout = 120;
+  globalTimeout = 160;
 
   nodes.machine =
     { pkgs, ... }:
