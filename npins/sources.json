@@ -49,9 +49,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "bdde4dffc3ded5e945bfe5c02064f69524ad7f85",
-      "url": "https://github.com/Mic92/niks3/archive/bdde4dffc3ded5e945bfe5c02064f69524ad7f85.tar.gz",
-      "hash": "13i3iv19qq3fxsllzfz63b14ajgsk7isr40snjrzwmzfsmnrpcmy"
+      "revision": "8d90f2b739a6b69570b75d017a94e3d14561d2a8",
+      "url": "https://github.com/Mic92/niks3/archive/8d90f2b739a6b69570b75d017a94e3d14561d2a8.tar.gz",
+      "hash": "sha256-qwBU/6g7mT0zAMwFqSZlC4JTJbG+n3y9wUGBBF6opD8="
     },
     "nixos-unstable": {
       "type": "Channel",
