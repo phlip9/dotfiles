@@ -39,21 +39,6 @@ stdenv.mkDerivation {
       --prefix PATH : ${lib.makeBinPath [ bubblewrap ]}
   '';
 
-  fixupPhase = lib.optionalString stdenv.hostPlatform.isLinux ''
-    patchelf \
-      --set-rpath "${
-        lib.makeLibraryPath [
-          libcap
-          stdenv.cc.cc
-          stdenv.cc.libc
-          openssl
-          zlib
-        ]
-      }" \
-      --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-      "$out/bin/codex-unwrapped"
-  '';
-
   nativeInstallCheckInputs = [ versionCheckHook ];
   versionCheckProgramArg = "--version";
   doInstallCheck = true;
