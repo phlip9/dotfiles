@@ -97,32 +97,8 @@ fix (phlipPkgs: {
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
-  # niri - scrolling tiling wayland compositor
-  niri = callPackage ./niri.nix { };
-
   # neovim - wrapped neovim with plugins and tools
   nvim = callPackage ./nvim { };
-
-  # noctalia-qs - noctalia QT quickshell fork
-  noctalia-qs = callPackage (sources.noctalia-qs + "/nix/package.nix") {
-    version = builtins.substring 1 100 sources.noctalia-qs.version;
-    gitRev = sources.noctalia-qs.revision;
-  };
-
-  # noctalia-shell - sleek & minimal wayland desktop shell using quickshell
-  noctalia-shell =
-    (callPackage (sources.noctalia-shell + "/nix/package.nix") {
-      version = builtins.substring 1 100 sources.noctalia-shell.version;
-      quickshell = phlipPkgs.noctalia-qs;
-    }).overrideAttrs
-      (final: {
-        meta = final.meta // {
-          platforms = [
-            "x86_64-linux"
-            "aarch64-linux"
-          ];
-        };
-      });
 
   # omnara - Omnara CLI
   omnara = callPackage ./omnara { };

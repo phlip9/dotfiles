@@ -8,8 +8,12 @@ let
   mpvWithScripts = mpv.override {
     # mpv,
     # extraMakeWrapperArgs ? [ ],
-    # youtubeSupport ? true,
     # extraUmpvWrapperArgs ? [ ],
+
+    # for some reason this depends on deno, which is not cached (?) and takes
+    # forever to build.
+    youtubeSupport = false;
+
     scripts = [
       # nicer UI
       mpvScripts.uosc

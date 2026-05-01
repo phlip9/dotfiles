@@ -2,12 +2,9 @@
   bubblewrap,
   fetchurl,
   lib,
-  libcap,
   makeBinaryWrapper,
-  openssl,
   stdenv,
   versionCheckHook,
-  zlib,
 }:
 let
   sources = lib.importJSON ./sources.json;

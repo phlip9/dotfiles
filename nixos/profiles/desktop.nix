@@ -1,6 +1,5 @@
 {
   lib,
-  phlipPkgs,
   pkgs,
   ...
 }:
@@ -33,7 +32,7 @@
     enable = true;
     settings = rec {
       initial_session = {
-        command = lib.getExe' phlipPkgs.niri "niri-session";
+        command = lib.getExe' pkgs.niri "niri-session";
         user = "phlip9";
       };
       default_session = initial_session;
@@ -42,22 +41,12 @@
 
   # niri scrolling tiling wayland compositor
   # - docs: <https://github.com/YaLTeR/niri/wiki/Getting-Started>
-  programs.niri = {
-    enable = true;
-    package = phlipPkgs.niri;
-  };
+  programs.niri.enable = true;
 
   # noctalia desktop shell
   # - repo: <https://github.com/noctalia-dev/noctalia-shell>
   # - docs: <https://docs.noctalia.dev/>
-  services.noctalia-shell = {
-    enable = true;
-    package = phlipPkgs.noctalia-shell;
-  };
-  systemd.user.services.noctalia-shell = {
-    restartTriggers = lib.mkForce [ ];
-    restartIfChanged = true;
-  };
+  services.noctalia-shell.enable = true;
 
   # desktop environment packages
   environment.systemPackages = with pkgs; [

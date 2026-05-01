@@ -13,13 +13,13 @@
   )
 
   (sources.sops-nix + "/modules/sops/default.nix")
-  (sources.noctalia-shell + "/nix/nixos-module.nix")
-  ./nix-cache.nix
-  ./phlippkgs.nix
   ./github-agent-authd.nix
   ./github-webhook.nix
-  ./xremap.nix
+  ./nix-cache.nix
+  ./noctalia-shell.nix
   ./o11y.nix
+  ./phlippkgs.nix
+  ./xremap.nix
 
   # buildbot-ci module + its dependencies (buildbot-nix and niks3)
   (sources.buildbot-nix + "/nixosModules/master.nix")
