@@ -94,6 +94,12 @@ fix (phlipPkgs: {
   # matugen-themes - config templates for matugen-generated color schemes
   matugen-themes = callPackage ./matugen-themes.nix { };
 
+  # Marinara Engine lite wrapped in a bubblewrap sandbox
+  marinara-engine = callPackage ./marinara-engine/sandbox.nix {
+    inherit (phlipPkgs) marinara-engine-unwrapped;
+  };
+  marinara-engine-unwrapped = callPackage ./marinara-engine { };
+
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
