@@ -21,9 +21,6 @@ in
 fix (phlipPkgs: {
   _type = "pkgs";
 
-  # # aider - AI developer agent cli
-  # aider-chat = pkgs.aider-chat;
-
   # cargo-release - release a Rust package
   cargo-release = pkgs.cargo-release;
 
@@ -33,10 +30,10 @@ fix (phlipPkgs: {
   # codex - OpenAI codex CLI
   codex = callPackage ./codex { };
 
-  # cataclysm-dda - Cataclysm: Dark Days Ahead
+  # cataclysm-dda - Cataclysm: Dark Days Ahead (game)
   cataclysm-dda = callPackage ./cataclysm-dda.nix { };
 
-  # cataclysm-tlg - Catacylsm: The Last Generation
+  # cataclysm-tlg - Catacylsm: The Last Generation (game)
   cataclysm-tlg = callPackage ./cataclysm-tlg.nix { };
 
   # dist - build and distribute binary releases
@@ -69,23 +66,11 @@ fix (phlipPkgs: {
   # github webhook listener for multi-repo command execution
   github-webhook = callPackage ./github-webhook { };
 
-  # # block/goose - AI developer agent cli
-  # goose-cli = callPackage ./goose-cli.nix { };
-
   # # ctz/graviola - devshell for graviola development
   # graviola-tools = callPackage ./graviola-tools.nix { };
 
-  # # phlip9/imgen - OpenAI API image generator cli
-  # imgen = callPackage ./imgen.nix { };
-
   # go-acme/lego - patched Let's Encrypt ACME client
   lego = callPackage ./lego.nix { };
-
-  # LosslessCut - extremely simple linear video cutting
-  lossless-cut = callPackage ./lossless-cut.nix { };
-
-  # # Claude modelcontextprotocol server for filesystem access
-  # mcp-server-filesystem = callPackage ./mcp-server-filesystem/default.nix { };
 
   # MOMW Tools Pack pre-built unstable
   # TODO(phlip9): GitLab CI artifacts expired, need to update URL
