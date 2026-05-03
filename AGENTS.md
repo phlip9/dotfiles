@@ -21,6 +21,7 @@
 - nixos/ (nixos machine configs)
 - nixos/mods/ (nixos configurable modules)
 - nixos/profiles/ (high-level, not-configurable, use-case focused NixOS configs)
+- nixos/pkgs/ (`phlipPkgsNixos` personal nix packages for NixOS machines only)
 - nvim/init.lua (neovim config)
 - nvim/lua/ (personal neovim lua plugins and modules)
 - nvim/lua/test/ (tests for my neovim lua plugins)

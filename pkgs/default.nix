@@ -1,3 +1,11 @@
+# phlip9's packages for nixpkgs latest stable release / home-manager
+#
+# A package belongs here if:
+# - it's added to a home-manager config
+# - it targets macOS
+#
+# For NixOS packages, see: <../nixos/pkgs/default.nix>
+
 { pkgs, sources }:
 let
   callPackage = pkgs.callPackage;
