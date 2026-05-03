@@ -106,6 +106,7 @@
                 {
                     "colorizeDistroLogo": true,
                     "colorizeSystemIcon": "primary",
+                    "colorizeSystemText": "none",
                     "customIconPath": "",
                     "enableColorization": true,
                     "icon": "",
@@ -141,6 +142,7 @@
                     "maxWidth": 145,
                     "scrollingMode": "hover",
                     "showIcon": true,
+                    "showText": true,
                     "textColor": "none",
                     "useFixedWidth": true
                 },
@@ -238,6 +240,7 @@
         "monitorForColors": "",
         "predefinedScheme": "Rose Pine",
         "schedulingMode": "off",
+        "syncGsettings": true,
         "useWallpaperColors": true
     },
     "controlCenter": {
@@ -397,6 +400,7 @@
         "showHibernateOnLockScreen": false,
         "showScreenCorners": true,
         "showSessionButtonsOnLockScreen": true,
+        "smoothScrollEnabled": true,
         "telemetryEnabled": true
     },
     "hooks": {
@@ -427,6 +431,7 @@
     },
     "location": {
         "analogClockInCalendar": false,
+        "autoLocate": false,
         "firstDayOfWeek": -1,
         "hideWeatherCityName": true,
         "hideWeatherTimezone": true,
@@ -437,10 +442,10 @@
         "use12hourFormat": false,
         "useFahrenheit": false,
         "weatherEnabled": true,
-        "weatherShowEffects": true
+        "weatherShowEffects": true,
+        "weatherTaliaMascotAlways": false
     },
     "network": {
-        "airplaneModeEnabled": false,
         "bluetoothAutoConnect": true,
         "bluetoothDetailsViewMode": "grid",
         "bluetoothHideUnnamedDevices": false,
@@ -575,7 +580,7 @@
                 "command": "",
                 "countdownEnabled": true,
                 "enabled": true,
-                "keybind": ""
+                "keybind": "7"
             }
         ],
         "showHeader": true,
@@ -634,6 +639,7 @@
         "fillColor": "#161311",
         "fillMode": "crop",
         "hideWallpaperFilenames": false,
+        "linkLightAndDarkWallpapers": true,
         "monitorDirectories": [
         ],
         "overviewBlur": 0.4,
