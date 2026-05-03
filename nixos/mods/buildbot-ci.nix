@@ -14,7 +14,7 @@
   config,
   lib,
   pkgs,
-  phlipPkgs,
+  phlipPkgsNixos,
   ...
 }:
 
@@ -148,7 +148,7 @@ in
         enable = true;
         serverUrl = "http://[::1]:5751";
         authTokenFile = config.sops.secrets.niks3-api-token.path;
-        package = phlipPkgs.niks3;
+        package = phlipPkgsNixos.niks3;
       };
     };
 

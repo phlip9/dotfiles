@@ -14,6 +14,7 @@ Here's our nixpkgs source tree for looking up nixpkgs references:
   - phlipPkgs (//pkgs/)
     - if a package has `passthru.tests`, add those as nested jobs under
       `phlipPkgs.tests` attr
+  - phlipPkgsNixos (//nixos/pkgs/)
   - nixosConfigs (//nixos/configs/)
   - nixosTests (//nixos/tests/)
   - homeConfigs (//home/)
@@ -110,6 +111,16 @@ Example attrset structure:
     };
   };
 
+  # phlipPkgsNixos jobs (nixos/pkgs)
+  phlipPkgsNixos = {
+    recurseForDerivations = true;
+
+    github-agent-authd = {
+      x86_64-linux = <drv>;
+    };
+    # ...
+  };
+
   # NixOS configuration top-level build jobs (nixos/):
   nixosConfigs = {
     phlipnixos = <drv>;
@@ -123,6 +134,7 @@ Example attrset structure:
     github-webhook = {
       x86_64-linux = <drv>;
     };
+    # ...
   };
 
   # home-manager configurations (home/):

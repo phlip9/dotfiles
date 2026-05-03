@@ -32,7 +32,6 @@
 
     ./mods/alacritty.nix
     ./mods/bash.nix
-    # ./mods/claude.nix
     ./mods/ctags.nix
     # ./mods/direnv.nix
     ./mods/fonts.nix

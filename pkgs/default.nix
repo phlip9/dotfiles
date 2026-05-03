@@ -6,7 +6,7 @@
 #
 # For NixOS packages, see: <../nixos/pkgs/default.nix>
 
-{ pkgs, sources }:
+{ pkgs, ... }:
 let
   callPackage = pkgs.callPackage;
 
@@ -45,9 +45,6 @@ fix (phlipPkgs: {
   # restore fs mtimes from git
   git-restore-mtime = callPackage ./git-restore-mtime.nix { };
 
-  # GitHub App installation-token broker for agent VMs
-  github-agent-authd = callPackage ./github-agent-authd { };
-
   # gh wrapper that injects GitHub App installation tokens per invocation
   github-agent-gh = callPackage ./github-agent-gh {
     inherit (phlipPkgs) github-agent-token;
@@ -63,9 +60,6 @@ fix (phlipPkgs: {
   # GitHub App installation-token client for local authd socket API
   github-agent-token = callPackage ./github-agent-token { };
 
-  # github webhook listener for multi-repo command execution
-  github-webhook = callPackage ./github-webhook { };
-
   # # ctz/graviola - devshell for graviola development
   # graviola-tools = callPackage ./graviola-tools.nix { };
 
@@ -76,25 +70,11 @@ fix (phlipPkgs: {
   # TODO(phlip9): GitLab CI artifacts expired, need to update URL
   # momw-tools-pack = callPackage ./momw-tools-pack.nix { };
 
-  # mpv with patched umpv
-  mpv = callPackage ./mpv { };
-
-  # matugen - material you color generation tool
-  matugen = callPackage ./matugen.nix {
-    inherit (phlipPkgs) matugen-themes noctalia-shell;
-  };
-
-  # matugen-themes - config templates for matugen-generated color schemes
-  matugen-themes = callPackage ./matugen-themes.nix { };
-
   # Marinara Engine lite wrapped in a bubblewrap sandbox
   marinara-engine = callPackage ./marinara-engine/sandbox.nix {
     inherit (phlipPkgs) marinara-engine-unwrapped;
   };
   marinara-engine-unwrapped = callPackage ./marinara-engine { };
-
-  # niks3 - S3-backed Nix binary cache with garbage collection
-  niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
   # neovim - wrapped neovim with plugins and tools
   nvim = callPackage ./nvim { };
@@ -116,22 +96,4 @@ fix (phlipPkgs: {
 
   # timep - bash profiler
   timep = callPackage ./timep { };
-
-  # unified launcher for Windows games on Linux
-  umu-launcher =
-    callPackage (sources.umu-launcher + "/packaging/nix/package.nix")
-      {
-        inherit (phlipPkgs) umu-launcher-unwrapped;
-      };
-  umu-launcher-unwrapped =
-    callPackage (sources.umu-launcher + "/packaging/nix/unwrapped.nix")
-      {
-        lastModifiedDate = "20260311";
-      };
-
-  # vintagestory (game)
-  vintagestory = callPackage ./vintagestory.nix { };
-
-  # my wallpapers
-  wallpapers = callPackage ./wallpapers.nix { inherit (phlipPkgs) matugen; };
 })

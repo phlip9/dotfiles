@@ -4,7 +4,7 @@
   config,
   lib,
   pkgs,
-  phlipPkgs,
+  phlipPkgsNixos,
   ...
 }:
 
@@ -46,7 +46,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = phlipPkgs.github-webhook;
+      default = phlipPkgsNixos.github-webhook;
       description = "github-webhook package to run.";
     };
 

@@ -8,7 +8,7 @@
 {
   config,
   lib,
-  phlipPkgs,
+  phlipPkgsNixos,
   ...
 }:
 
@@ -21,7 +21,7 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = phlipPkgs.github-agent-authd;
+      default = phlipPkgsNixos.github-agent-authd;
       description = "github-agent-authd package to run.";
     };
 

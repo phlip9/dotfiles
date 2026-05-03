@@ -1,7 +1,7 @@
 {
   config,
   lib,
-  phlipPkgs,
+  phlipPkgsNixos,
   pkgs,
   ...
 }:
@@ -38,7 +38,7 @@
       # '';
 
       style = {
-        wallpapers = [ phlipPkgs.wallpapers.dunes ];
+        wallpapers = [ phlipPkgsNixos.wallpapers.dunes ];
         wallpaperStyle = "centered";
         backdrop = "DEC0B2";
         interface.brandingColor = 7;
@@ -301,13 +301,13 @@
     pkgs.nvtopPackages.nvidia
 
     # video player
-    phlipPkgs.mpv
+    phlipPkgsNixos.mpv
 
     # run windows games
-    phlipPkgs.umu-launcher
+    phlipPkgsNixos.umu-launcher
 
     # vintagestory (game)
-    phlipPkgs.vintagestory
+    phlipPkgsNixos.vintagestory
   ];
 
   # enable 1Password

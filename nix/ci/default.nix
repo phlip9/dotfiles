@@ -3,8 +3,8 @@
 # Requirements:
 # - Provide a Hydra-style job tree similar to nixpkgs CI, tailored to our
 #   dotfiles repo layout and constraints.
-# - Compose jobs from: phlipPkgs (pkgs/), nixosConfigs (nixos/),
-#   nixosTests (nixos/tests/), and homeConfigs (home/).
+# - Compose jobs from: phlipPkgs (pkgs/), phlipPkgsNixos (nixos/pkgs/),
+#   nixosConfigs (nixos/), nixosTests (nixos/tests/), and homeConfigs (home/).
 # - Include phlipPkgs passthru.tests under a phlipPkgs.tests subtree.
 # - Use meta.hydraPlatforms / meta.platforms / meta.badPlatforms for platform
 #   filtering, and mark all non-drv attrsets with recurseForDerivations.
