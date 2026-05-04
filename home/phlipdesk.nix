@@ -92,9 +92,6 @@
     # # goose - AI cli
     # phlipPkgs.goose-cli
 
-    # lossless-cut - simple trimming and cutting video editor
-    phlipPkgs.lossless-cut
-
     # Modding OpenMW Tools Pack
     # TODO(phlip9): GitLab CI artifacts expired, need to update URL
     # phlipPkgs.momw-tools-pack
