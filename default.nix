@@ -63,6 +63,7 @@ rec {
   inherit
     hm
     phlipPkgs
+    phlipPkgsNixos
     pkgs
     pkgsUnstable
     sources

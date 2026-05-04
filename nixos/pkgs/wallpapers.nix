@@ -4,6 +4,8 @@
 }:
 
 rec {
+  recurseForDerivations = true;
+
   default = dunes;
 
   # 2560x1440

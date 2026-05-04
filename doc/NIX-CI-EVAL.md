@@ -1,151 +1,71 @@
-# phlip9/dotfiles Nix CI eval plan
+# phlip9/dotfiles Nix CI eval
 
-Goal: build a Nix CI eval system similar to nixpkgs CI but tailored for our
-dotfiles repository structure and needs.
+`nix/ci/default.nix` defines the Hydra-style job tree used by buildbot-nix.
+It is a non-flake eval entrypoint; `flake.nix` is only a thin wrapper exposing
+the tree at `checks.x86_64-linux`.
 
-Here's our nixpkgs source tree for looking up nixpkgs references:
-/nix/store/5gs5kzcpavjvm25896hp7frik1zzj73c-source
+## Job tree
 
-- Add //nix/ci/default.nix, the top-level entrypoint for CI eval
-- It imports //default.nix with custom nixpkgs `args` to set `config.inHydra`
-  etc.
-- Returns a tree of drvs
-- Composes jobs from:
-  - phlipPkgs (//pkgs/)
-    - if a package has `passthru.tests`, add those as nested jobs under
-      `phlipPkgs.tests` attr
-  - phlipPkgsNixos (//nixos/pkgs/)
-  - nixosConfigs (//nixos/configs/)
-  - nixosTests (//nixos/tests/)
-  - homeConfigs (//home/)
+- `phlipPkgs`: packages from `pkgs/`, built for matching supported systems.
+- `phlipPkgs.tests`: `passthru.tests` from `phlipPkgs`.
+- `phlipPkgsNixos`: NixOS-only packages from `nixos/pkgs/`, filtered to linux
+  systems before package `meta.platforms` matching.
+- `phlipPkgsNixos.tests`: `passthru.tests` from `phlipPkgsNixos`.
+- `nixosConfigs`: NixOS system toplevel builds.
+- `nixosTests`: NixOS VM tests, built on `buildSystem`.
+- `homeConfigs`: home-manager activation packages, selected by explicit
+  host-to-system mapping.
 
-- Add minimal //nix/ci/lib.nix for our helper functions. E.g., default
-  `supportedSystems` list, our `ciJob` function (similar to nixpkgs'
-  `hydraJob`), etc...
+Non-derivation attrsets that should be traversed set `recurseForDerivations`.
+Package jobs are wrapped with `lib.hydraJob` by default to scrub large drv attrs
+during eval.
 
-- Add `recurseForDerivations` in attrsets to force nix-build to build all
-  nested drvs
-- At each level of the tree, the containing attrset either holds only drvs or
-  has `recurseForDerivations = true;` and holds nested attrsets that eventually
-  hold drvs
-- Borrow scrubJobs from hydraJob to strip non-essential drv attrs to save
-  memory
-- Unlike nixpkgs CI, we don't need to first build packagesSystem and then map
-  over it; we can directly build the tree of drvs
-- Use meta.hydraPlatforms, meta.platforms, and meta.badPlatforms to filter
-  systems
-- Set nixpkgs args config.inHydra and others like <./nixpkgs-ci/07-ci-eval.md>
-  - Reuse our "unfree" policy in //nix/config-unfree.nix
-  - We can be more strict than nixpkgs CI since we control all packages and
-    have like 1000x fewer packages
-  - Handle eval issues similarly to nixpkgs CI
+## Platform handling
 
-- Ensure we eval efficiently and memoize package sets properly. Package sets
-  should only be evaled once per system.
-
-- Current target systems packaged in this repo: x86_64-linux, aarch64-darwin
-- Current build systems supported in CI: x86_64-linux
-
-- For local testing convenience, we'll also provide a `ci` attr in //default.nix
-  that imports //nix/ci/default.nix. We'll probably need to tweak the args a bit
-  so that we can easily build all packages locally for only the current system.
-  This entry point would probably set supportedSystems to just
-  `[ builtins.currentSystem ]`.
-  
-  ```
-  # Ex: build all CI drvs for the current system:
-  $ nix build -f . ci
-
-  # Ex: build a specific phlipPkgs job:
-  $ nix build -f . ci.phlipPkgs.nvim.x86_64-linux
-
-  # Ex: build all phlipPkgs passthru.tests:
-  $ nix build -f . ci.phlipPkgs.tests
-  ```
-
-- Update our thin flake.nix `checks` to use import //nix/ci/default.nix so it
-  gets picked up by our buildbot-nix CI
-
-Example attrset structure:
+CI supports `supportedSystems`, defaulting to:
 
 ```nix
-{
-  recurseForDerivations = true;
+[
+  "x86_64-linux"
+  "aarch64-darwin"
+]
+```
 
-  # phlipPkgs jobs (pkgs/):
-  phlipPkgs = {
-    recurseForDerivations = true;
+`phlipPkgs` uses the full supported set. `phlipPkgsNixos` first narrows that set
+to linux systems, then applies each package's `meta.hydraPlatforms`,
+`meta.platforms`, and `meta.badPlatforms`. Packages without explicit platform
+metadata therefore only emit linux jobs in the NixOS package subtree.
 
-    cataclysm-dda = {
-      x86_64-linux = <drv>;
-      aarch64-darwin = <drv>;
-    };
+NixOS configs and tests use `buildSystem`, currently `x86_64-linux`.
 
-    noctalia-shell = {
-      x86_64-linux = <drv>;
-    };
+## Eval model
 
-    nvim = {
-      x86_64-linux = <drv>;
-      aarch64-darwin = <drv>;
-    };
+The CI entrypoint imports the repo top-level `default.nix` once per supported
+system and memoizes those package sets. That keeps package and test job
+construction from re-importing nixpkgs per package.
 
-    # ... more phlipPkgs
+Nixpkgs is imported with CI-oriented config:
 
-    # passthru.tests jobs for phlipPkgs:
-    tests = {
-      recurseForDerivations = true;
+- `allowUnsupportedSystem = true`
+- `checkMeta = true`
+- `inHydra = true`
+- repo unfree policy from `nix/config-unfree.nix`
+- fatal eval issues abort; non-fatal issues throw so the job is marked failed
 
-      nvim = {
-        recurseForDerivations = true;
+## Local checks
 
-        nvim-test = {
-          x86_64-linux = <drv>;
-          aarch64-darwin = <drv>;
-        };
-        version-check = {
-          x86_64-linux = <drv>;
-          aarch64-darwin = <drv>;
-        };
-      };
-    };
-  };
+```bash
+# Eval a specific NixOS-only package job.
+nix eval -f ./nix/ci/default.nix \
+  phlipPkgsNixos.github-agent-authd.x86_64-linux.name
 
-  # phlipPkgsNixos jobs (nixos/pkgs)
-  phlipPkgsNixos = {
-    recurseForDerivations = true;
+# Build a specific NixOS-only package job.
+nix build -f ./nix/ci/default.nix \
+  phlipPkgsNixos.github-agent-authd.x86_64-linux
 
-    github-agent-authd = {
-      x86_64-linux = <drv>;
-    };
-    # ...
-  };
+# Build all phlipPkgs passthru.tests.
+nix build -f ./nix/ci/default.nix phlipPkgs.tests
 
-  # NixOS configuration top-level build jobs (nixos/):
-  nixosConfigs = {
-    phlipnixos = <drv>;
-    omnara1 = <drv>;
-  };
-
-  # NixOS VM tests (nixos/tests/): linux only
-  nixosTests = {
-    recurseForDerivations = true;
-
-    github-webhook = {
-      x86_64-linux = <drv>;
-    };
-    # ...
-  };
-
-  # home-manager configurations (home/):
-  # - each home config should be annotated with the host system
-  # - all of these are x86_64-linux, except phliptop-mbp which is aarch64-darwin
-  homeConfigs = {
-    omnara1 = <drv>;
-    phlipdesk = <drv>;
-    phlipnitro = <drv>;
-    phlipnixos = <drv>;
-    phliptop-mbp = <drv>;
-  };
-}
+# Build a NixOS VM test.
+nix build -f ./nix/ci/default.nix nixosTests.github-webhook.x86_64-linux
 ```

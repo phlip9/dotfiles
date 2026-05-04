@@ -13,16 +13,19 @@
 # - Use nixpkgs CI-style eval handling (inHydra, checkMeta, handleEvalIssue).
 # - Support a small set of target systems, and a single build system for NixOS
 #   configs/tests.
-# - Be non-flake and compatible with `nix build -f . ci` style entrypoints.
+# - Be non-flake and compatible with `nix build -f ./nix/ci/default.nix`
+#   style entrypoints.
 #
 # How this module works:
 # - Construct a per-system repo evaluation (repoFor) using our top-level
 #   default.nix, memoized by supportedSystems to reduce eval time.
-# - Uses nix/ci/lib.nix to map phlipPkgs -> platform lists and to wrap
-#   derivations with hydraJob when scrubJobs is enabled.
+# - Maps phlipPkgs and phlipPkgsNixos to platform lists and wraps derivations
+#   with hydraJob when scrubJobs is enabled.
 # - Builds a job tree:
 #     phlipPkgs.${pkg}.${system} = drv
 #     phlipPkgs.tests.${pkg}.${test}.${system} = drv
+#     phlipPkgsNixos.${pkg}.${system} = drv
+#     phlipPkgsNixos.tests.${pkg}.${test}.${system} = drv
 #     nixosConfigs.${host} = drv
 #     nixosTests.${test}.${system} = drv
 #     homeConfigs.${host} = drv
@@ -30,8 +33,8 @@
 #
 # Integration with the repo:
 # - Uses the top-level default.nix for consistent access to pkgs, phlipPkgs,
-#   homeConfigs, and nixosConfigs, respecting our pinned nixpkgs and unfree
-#   policy.
+#   phlipPkgsNixos, homeConfigs, and nixosConfigs, respecting our pinned nixpkgs
+#   and unfree policy.
 # - NixOS tests are provided by nixos/tests (from pkgsUnstable) and are built
 #   only on the buildSystem (currently x86_64-linux).
 # - Home-manager configs are explicitly mapped to their host systems to avoid
@@ -56,27 +59,18 @@ let
   # Optional hydraJob wrapper to strip drv attrs when requested.
   ciJob = if scrubJobs then lib.hydraJob else lib.id;
 
-  # Given a list of 'meta.platforms'-style patterns, return the sublist of
-  # `supportedSystems` containing systems that matches at least one of the given
-  # patterns.
-  #
-  # This is written in a funny way so that we only elaborate the systems once.
-  supportedMatches =
-    let
-      supportedPlatforms = builtins.map (
-        system: lib.systems.elaborate { inherit system; }
-      ) supportedSystems;
-    in
-    metaPatterns:
-    let
-      anyMatch =
-        platform: builtins.any (lib.meta.platformMatch platform) metaPatterns;
-      matchingPlatforms = builtins.filter anyMatch supportedPlatforms;
-    in
-    builtins.map ({ system, ... }: system) matchingPlatforms;
+  supportedPlatforms = builtins.map (
+    system: lib.systems.elaborate { inherit system; }
+  ) supportedSystems;
 
-  # Generate attributes for all systems matching the patterns.
-  forMatchingSystems = metaPatterns: lib.genAttrs (supportedMatches metaPatterns);
+  # Restrict NixOS-only packages to Linux systems from the supported set. The
+  # package set defaults to nixos-unstable, and CI currently runs on NixOS.
+  linuxSystems =
+    let
+      linuxPlatform = platform: platform.isLinux;
+      linuxPlatforms = builtins.filter linuxPlatform supportedPlatforms;
+    in
+    builtins.map ({ system, ... }: system) linuxPlatforms;
 
   # Recursively map over a package set honoring recurseFor* flags.
   recursiveMapPackages =
@@ -95,16 +89,22 @@ let
 
   # Extract supported platforms from meta, honoring hydraPlatforms,
   # badPlatforms, and platforms.
-  getPlatforms =
-    drv:
-    lib.intersectLists supportedSystems (
-      drv.meta.hydraPlatforms or (lib.subtractLists (drv.meta.badPlatforms or [ ]) (
-        drv.meta.platforms or supportedSystems
-      ))
-    );
+  getPlatformsFor =
+    systems: drv:
+    let
+      defaultPlatforms = lib.subtractLists (drv.meta.badPlatforms or [ ]) (
+        drv.meta.platforms or systems
+      );
+    in
+    lib.intersectLists systems (drv.meta.hydraPlatforms or defaultPlatforms);
 
   # Map a package set to meta.platform lists.
-  mkPackagePlatforms = recursiveMapPackages getPlatforms;
+  mkPackagePlatformsFor =
+    systems:
+    let
+      getPlatforms = getPlatformsFor systems;
+    in
+    recursiveMapPackages getPlatforms;
 
   # nixpkgs config tuned for CI eval
   nixpkgsConfig = (import ../config-unfree.nix) // {
@@ -169,28 +169,93 @@ let
     else
       builtins.elemAt supportedSystems 0;
 
-  # Base package set for platform discovery.
-  phlipPkgsEval = (repoFor evalSystem).phlipPkgs;
-  # Per-system package set for job construction.
-  phlipPkgsFor = system: (repoFor system).phlipPkgs;
+  # NixOS package platform discovery should use a Linux package set even when
+  # eval runs from Darwin.
+  evalNixosSystem =
+    if linuxSystems == [ ] then
+      abort "phlipPkgsNixos CI requires at least one Linux supported system"
+    else if lib.elem buildSystem linuxSystems then
+      buildSystem
+    else
+      builtins.elemAt linuxSystems 0;
 
-  # Map phlipPkgs to platform lists, dropping the pkgs marker attr.
-  packagePlatforms = builtins.removeAttrs (mkPackagePlatforms phlipPkgsEval) [
-    "_type"
-  ];
+  # Add recurseForDerivations to non-empty attrsets.
+  withRecurseForDerivations =
+    attrs:
+    if attrs == { } then
+      { }
+    else
+      attrs
+      // {
+        recurseForDerivations = true;
+      };
 
-  # Build jobs across matching systems for a package function.
-  testOn =
-    metaPatterns: f:
-    forMatchingSystems metaPatterns (system: ciJob (f (phlipPkgsFor system)));
+  # Drop empty nested platform attrs and mark kept nodes recursively.
+  prunePlatformTree =
+    value:
+    if builtins.isAttrs value then
+      let
+        mapped = builtins.mapAttrs (_: v: prunePlatformTree v) value;
+        cleaned = lib.filterAttrs (_: v: v != { }) mapped;
+      in
+      withRecurseForDerivations cleaned
+    else if builtins.isList value then
+      if value == [ ] then { } else value
+    else
+      value;
 
-  # Convert packagePlatforms into { attrpath.system = drv; } jobs.
-  mapTestOn = lib.mapAttrsRecursive (
-    path: metaPatterns: testOn metaPatterns (pkgs: lib.getAttrFromPath path pkgs)
-  );
+  # Map a pruned platform tree to drv jobs without traversing generated drvs.
+  mapPackagePlatformsToJobs =
+    packageSetFor:
+    let
+      recurse =
+        path: value:
+        if builtins.isList value then
+          lib.genAttrs value (
+            system: ciJob (lib.getAttrFromPath path (packageSetFor system))
+          )
+        else
+          builtins.mapAttrs (
+            name: child:
+            if name == "recurseForDerivations" then
+              true
+            else
+              recurse (path ++ [ name ]) child
+          ) value;
+    in
+    recurse [ ];
 
-  # Primary phlipPkgs job tree, trimmed of empty nodes.
-  phlipPkgsJobs = lib.filterAttrs (_: v: v != { }) (mapTestOn packagePlatforms);
+  # Map a pruned platform tree to passthru.tests jobs.
+  mapPackagePlatformsToTests =
+    packageSetFor:
+    let
+      recurse =
+        path: value:
+        if builtins.isList value then
+          let
+            perSystem = builtins.map (
+              system:
+              let
+                pkg = lib.getAttrFromPath path (packageSetFor system);
+                tests = pkg.passthru.tests or { };
+              in
+              wrapDerivations system tests
+            ) value;
+
+            merged = builtins.foldl' lib.recursiveUpdate { } perSystem;
+          in
+          withRecurseForDerivations merged
+        else
+          let
+            attrs = builtins.removeAttrs value [ "recurseForDerivations" ];
+            mapChild = name: child: recurse (path ++ [ name ]) child;
+            mapped = builtins.mapAttrs mapChild attrs;
+
+            cleaned = lib.filterAttrs (_: child: child != { }) mapped;
+          in
+          withRecurseForDerivations cleaned;
+    in
+    recurse [ ];
 
   # Wrap a nested test attrset into per-system derivation leaves.
   wrapDerivations =
@@ -205,36 +270,47 @@ let
             mapped = builtins.mapAttrs (_: v: recurse v) value;
             cleaned = lib.filterAttrs (_: v: v != { }) mapped;
           in
-          if cleaned == { } then { } else cleaned // { recurseForDerivations = true; }
+          withRecurseForDerivations cleaned
         else
           { };
     in
     recurse;
 
-  # Collect passthru.tests for one package across its supported systems.
-  testsForPackage =
-    name: platforms:
+  # Build package and passthru.tests jobs for a package set.
+  mkPackageJobTree =
+    {
+      evalPackageSet,
+      packageSetFor,
+      systems ? supportedSystems,
+    }:
     let
-      perSystem = builtins.map (
-        system:
+      packagePlatforms =
         let
-          pkg = (phlipPkgsFor system).${name};
-          tests = pkg.passthru.tests or { };
+          packagePlatformsRaw =
+            builtins.removeAttrs (mkPackagePlatformsFor systems evalPackageSet)
+              [ "_type" ];
         in
-        wrapDerivations system tests
-      ) platforms;
+        prunePlatformTree packagePlatformsRaw;
 
-      merged = builtins.foldl' lib.recursiveUpdate { } perSystem;
+      # Primary package job tree. Keep drv leaves lazy; do not prune after this.
+      packageJobs = mapPackagePlatformsToJobs packageSetFor packagePlatforms;
     in
-    if merged == { } then { } else merged // { recurseForDerivations = true; };
+    packageJobs
+    // {
+      tests = mapPackagePlatformsToTests packageSetFor packagePlatforms;
+      recurseForDerivations = true;
+    };
 
-  # Add passthru.tests under phlipPkgs.tests
-  phlipPkgsTests =
-    let
-      testsByPkg = lib.mapAttrs testsForPackage packagePlatforms;
-      pruned = lib.filterAttrs (_: v: v != { }) testsByPkg;
-    in
-    if pruned == { } then { } else pruned // { recurseForDerivations = true; };
+  phlipPkgsJobs = mkPackageJobTree {
+    evalPackageSet = (repoFor evalSystem).phlipPkgs;
+    packageSetFor = system: (repoFor system).phlipPkgs;
+  };
+
+  phlipPkgsNixosJobs = mkPackageJobTree {
+    evalPackageSet = (repoFor evalNixosSystem).phlipPkgsNixos;
+    packageSetFor = system: (repoFor system).phlipPkgsNixos;
+    systems = linuxSystems;
+  };
 
   # Top-level NixOS system build jobs
   nixosConfigs = builtins.mapAttrs (
@@ -261,19 +337,17 @@ let
 in
 # Final job tree
 {
-  phlipPkgs = phlipPkgsJobs // {
-    tests = phlipPkgsTests;
-    recurseForDerivations = true;
-  };
+  phlipPkgs = phlipPkgsJobs;
+  phlipPkgsNixos = phlipPkgsNixosJobs;
   nixosConfigs = nixosConfigs;
   nixosTests = nixosTests;
   homeConfigs = homeConfigs;
 
   # _dbg = {
   #   inherit
-  #     packagePlatforms
-  #     supportedMatches
-  #     phlipPkgsTests
+  #     linuxSystems
+  #     phlipPkgsJobs
+  #     phlipPkgsNixosJobs
   #     ;
   # };
 }
