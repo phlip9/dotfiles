@@ -207,9 +207,9 @@ in
       # Start rebase to review by commit
       pr-rv-by-commit = "!git rebase --interactive $(git pr-base)";
 
-      # #############
-      # # Shortcuts #
-      # #############
+      #############
+      # Shortcuts #
+      #############
 
       a = "add";
       ab = "!git absorb --base $(git pr-base)";
