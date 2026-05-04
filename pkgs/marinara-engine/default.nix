@@ -6,12 +6,13 @@
 # This is the unwrapped build. Use `marinara-engine` for the
 # bubblewrap-sandboxed version.
 {
-  lib,
-  stdenv,
   fetchFromGitHub,
+  lib,
   makeBinaryWrapper,
+  nix-update-script,
   nodejs_22,
   pnpm_10,
+  stdenv,
 }:
 let
   nodejs = nodejs_22;
@@ -19,19 +20,19 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "marinara-engine-unwrapped";
-  version = "1.5.6";
+  version = "1.5.7";
 
   src = fetchFromGitHub {
     owner = "Pasta-Devs";
     repo = "Marinara-Engine";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-G0IzLS4kPgaokl7lAtbl9Hua4ntZddjbgKCp5LDB5LY=";
+    hash = "sha256-D14LPZ0wUk4ablHo9cWQnJ2R08tJAWlnVmIpPjNuQ9s=";
   };
 
   pnpmDeps = pnpm.fetchDeps {
     inherit (finalAttrs) pname version src;
     fetcherVersion = 3;
-    hash = "sha256-3oLMsYPjC33jkR1DcSGStMQ11MTBpJP6BfmIMV7pG64=";
+    hash = "sha256-eEtcyR+3vvsSUBos7kUBxDWGCWLEvkfi9oGp1+H/WLs=";
   };
 
   nativeBuildInputs = [
@@ -98,6 +99,8 @@ stdenv.mkDerivation (finalAttrs: {
   # pnpm node_modules contain internal symlinks that may dangle after
   # we strip onnxruntime / huggingface packages above.
   dontCheckForBrokenSymlinks = true;
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     homepage = "https://github.com/Pasta-Devs/Marinara-Engine";
