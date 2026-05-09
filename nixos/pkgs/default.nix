@@ -43,9 +43,9 @@ fix (phlipPkgsNixos: {
   mpv = callPackage ./mpv { };
 
   # nethack (game)
-  nethack-qt = callPackage ./nethack.nix { qtMode = true; };
+  nethack-qt = callPackage ./nethack.nix { qtSupport = true; };
   # nethack = callPackage ./nethack.nix { };
-  # nethack-x11 = callPackage ./nethack.nix { x11Mode = true; };
+  # nethack-x11 = callPackage ./nethack.nix { x11Support = true; };
 
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };

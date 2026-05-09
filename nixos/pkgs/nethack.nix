@@ -1,17 +1,15 @@
-# Vendored while we wait for this PR to land:
+# Vendored while we wait for this PR and these edits to land:
+# - <https://gitlab.com/liferooter/the-config/-/blob/main/packages/nethack/default.nix>
 # - <https://github.com/NixOS/nixpkgs/pull/516017>
 # - <https://github.com/Feyorsh/nixpkgs/blob/f57572d8d6eea3ee523f954b3e9a880820de5f2c/pkgs/by-name/ne/nethack/package.nix>
 {
   stdenv,
   lib,
   fetchurl,
-  coreutils,
   groff,
   ncurses,
   gzip,
-  less,
-  x11Mode ? false,
-  qtMode ? false,
+  gnugrep,
   libxaw,
   libxext,
   libxpm,
@@ -21,37 +19,27 @@
   qt5,
   copyDesktopItems,
   makeDesktopItem,
+  x11Support ? false,
+  qtSupport ? false,
+  ...
 }:
 
 let
-  platform =
-    if stdenv.hostPlatform.isUnix then
-      "unix"
-    else
-      throw "Unknown platform for NetHack: ${stdenv.hostPlatform.system}";
-  unixHint =
+  hint =
     if stdenv.hostPlatform.isLinux then
       "linux.500"
     else if stdenv.hostPlatform.isDarwin then
       "macos.500"
     else
       "unix";
-  userDir = "~/.config/nethack";
-  binPath = lib.makeBinPath [
-    coreutils
-    less
-  ];
-
 in
+
+assert lib.assertMsg stdenv.hostPlatform.isUnix
+  "Unsupported platform for NetHack: ${stdenv.hostPlatform.system}";
+
 stdenv.mkDerivation (finalAttrs: {
   version = "5.0.0";
-  pname =
-    if x11Mode then
-      "nethack-x11"
-    else if qtMode then
-      "nethack-qt"
-    else
-      "nethack";
+  pname = "nethack";
 
   src = fetchurl {
     url = "https://nethack.org/download/${finalAttrs.version}/nethack-${
@@ -63,12 +51,12 @@ stdenv.mkDerivation (finalAttrs: {
   buildInputs = [
     ncurses
   ]
-  ++ lib.optionals x11Mode [
+  ++ lib.optionals x11Support [
     libxaw
     libxext
     libxpm
   ]
-  ++ lib.optionals qtMode [
+  ++ lib.optionals qtSupport [
     gzip
     qt5.qtbase.bin
     qt5.qtmultimedia.bin
@@ -79,11 +67,11 @@ stdenv.mkDerivation (finalAttrs: {
     groff
     pkg-config
   ]
-  ++ lib.optionals x11Mode [
+  ++ lib.optionals x11Support [
     mkfontdir
     bdftopcf
   ]
-  ++ lib.optionals qtMode [
+  ++ lib.optionals qtSupport [
     mkfontdir
     qt5.qtbase.dev
     qt5.qtmultimedia.dev
@@ -91,63 +79,48 @@ stdenv.mkDerivation (finalAttrs: {
     bdftopcf
   ];
 
+  NIX_CFLAGS_COMPILE = "-DVAR_PLAYGROUND=getenv(\"NETHACKVARDIR\")";
+
   makeFlags = [
     "PREFIX=$(out)"
+    "HACKDIR=$(out)/lib/nethack"
+    "VARDIR=$(out)/lib/nethack/vardir"
     "WANT_WIN_TTY=1"
     "WANT_WIN_CURSES=1"
     "WANT_DEFAULT=curses"
   ]
-  ++ lib.optionals x11Mode [
+  ++ lib.optionals x11Support [
     "WANT_WIN_X11=1"
     "WANT_DEFAULT=X11"
   ]
-  ++ lib.optionals qtMode [
-    "WANT_WIN_QT=1"
+  ++ lib.optionals qtSupport [
+    "QTDIR=${qt5.qtbase.dev}"
+    "WANT_WIN_QT5=1"
     "WANT_DEFAULT=Qt"
   ];
 
   postPatch = ''
-    sed -e '/^ *cd /d' -i sys/unix/nethack.sh
-    sed \
-      -e 's,^WINQT4LIB =.*,WINQT4LIB = `pkg-config Qt5Gui --libs` \\\
-            `pkg-config Qt5Widgets --libs` \\\
-            `pkg-config Qt5Multimedia --libs`,' \
-      -e '/rm -f $(MAKEDEFS)/d' \
-      -i sys/unix/Makefile.src
-    sed \
-      -e 's,^CFLAGS=-g,CFLAGS=,' \
-      -e 's,/bin/gzip,${gzip}/bin/gzip,g' \
-      -e 's,^WINTTYLIB=.*,WINTTYLIB=-lncurses,' \
-      -e 's,^QTDIR *=.*,QTDIR=${qt5.qtbase.dev},' \
-      -e 's,PKG_CONFIG_PATH=$(QTDIR)/lib/pkgconfig,,' \
-      -e 's,NHCFLAGS+=-DCOMPRESS[^ ]*,NHCFLAGS+=-DCOMPRESS=\\"${gzip}/bin/gzip\\" \\\
-        -DCOMPRESS_EXTENSION=\\".gz\\",' \
-      -i sys/unix/hints/linux.500
-    sed \
-      -E 's/^(GDBPATH|GREPPATH)/#\1/' \
-      -i sys/unix/sysconf
-    sed \
-      -e 's,^HACKDIR=.*$,HACKDIR=\$(PREFIX)/games/lib/\$(GAME)dir,' \
-      -e 's,^SHELLDIR=.*$,SHELLDIR=\$(PREFIX)/games,' \
-      -e 's,^CFLAGS+=-DCRASHREPORT,#CFLAGS+=-DCRASHREPORT,' \
-      -e 's,^NHCFLAGS+=-DGREPPATH,#NHCFLAGS+=-DGREPPATH,' \
-      -e 's,/usr/bin/true,${coreutils}/bin/true,g' \
-      -e 's,^endif   # QTDIR,endif   # QTDIR \
-            QTDIR=${qt5.qtbase.dev},' \
-      -e 's,PKG_CONFIG_PATH=$(QTDIR)/lib/pkgconfig,,' \
-      -e 's,NHCFLAGS+=-DCOMPRESS[^ ]*,NHCFLAGS+=-DCOMPRESS=\\"${gzip}/bin/gzip\\" \\\
-        -DCOMPRESS_EXTENSION=\\".gz\\",' \
-      -i sys/unix/hints/macOS.500
-    sed -e '/define CHDIR/d' \
-        -e '/define ENHANCED_SYMBOLS/d' \
-        -i include/config.h
+    sed -i sys/unix/hints/${hint} \
+      -e 's:/bin/gzip:${lib.getExe gzip}:g' \
+      -e '/^SHELLDIR =/d' \
+      -e 's:PKG_CONFIG_PATH=[^ ]*::g' \
+      -e '/^GIT_/d'
+
+    sed -i sys/unix/sysconf \
+      -e 's:/bin/grep:${lib.getExe gnugrep}:g' \
+      -e '/^GDBPATH=/d' \
+      -e '/^PANICTRACE_GDB=/s:1:0:' \
+      -e '/^WIZARDS=/s:=.*:=*:'
+
+    ${lib.optionalString x11Support ''
+      sed -i include/config.h \
+        -e '/define ENHANCED_SYMBOLS/d'
+    ''}
   '';
 
   configurePhase = ''
-    pushd sys/${platform}
-    ${lib.optionalString (platform == "unix") ''
-      sh setup.sh hints/${unixHint}
-    ''}
+    pushd sys/unix
+    sh setup.sh hints/${hint}
     popd
   '';
 
@@ -166,83 +139,50 @@ stdenv.mkDerivation (finalAttrs: {
   # https://github.com/NixOS/nixpkgs/issues/294751
   enableParallelBuilding = false;
 
-  preFixup = lib.optionalString qtMode ''
-    wrapQtApp "$out/games/nethack"
+  preFixup = lib.optionalString qtSupport ''
+    wrapQtApp "$out/lib/nethack/nethack"
   '';
 
   postInstall = ''
-    mkdir -p $out/games/lib/nethackuserdir
-    for i in xlogfile logfile perm record save; do
-      mv $out/games/lib/nethackdir/$i $out/games/lib/nethackuserdir
-    done
+    mkdir $out/bin
 
-    mkdir -p $out/bin
     cat <<EOF >$out/bin/nethack
     #! ${stdenv.shell} -e
-    PATH=${binPath}:\$PATH
+    export NETHACKVARDIR="\$HOME/.local/share/nethack"
 
-    if [ ! -d ${userDir} ]; then
-      mkdir -p ${userDir}
-      cp -r $out/games/lib/nethackuserdir/* ${userDir}
-      chmod -R +w ${userDir}
+    if [ ! -e "\$NETHACKVARDIR" ]; then
+      mkdir -p "\$NETHACKVARDIR"
+      cp -r $out/lib/nethack/vardir/* "\$NETHACKVARDIR"
+      chmod -R +w "\$NETHACKVARDIR"/*
     fi
 
-    RUNDIR=\$(mktemp -d)
-
-    cleanup() {
-      rm -rf \$RUNDIR
-    }
-    trap cleanup EXIT
-
-    cd \$RUNDIR
-    for i in ${userDir}/*; do
-      ln -s \$i \$(basename \$i)
-    done
-    for i in $out/games/lib/nethackdir/*; do
-      ln -s \$i \$(basename \$i)
-    done
-    set +e
-    $out/games/nethack "\$@"
-    if [[ \$? -gt 128 ]]; then
-      echo "nethack exited abnormally, attempting to recover save file..."
-      ./recover -d . ?lock.0
-    fi
+    exec $out/lib/nethack/nethack \$@
     EOF
+
     chmod +x $out/bin/nethack
-    ${lib.optionalString x11Mode "mv $out/bin/nethack $out/bin/nethack-x11"}
-    ${lib.optionalString qtMode "mv $out/bin/nethack $out/bin/nethack-qt"}
-    install -Dm 555 util/makedefs -t $out/libexec/nethack/
-    ${lib.optionalString (
-      !(x11Mode || qtMode)
-    ) "install -Dm 555 util/dlb -t $out/libexec/nethack/"}
   '';
 
-  desktopItems = [
-    (makeDesktopItem {
-      name = "NetHack";
-      exec =
-        if x11Mode then
-          "nethack-x11"
-        else if qtMode then
-          "nethack-qt"
-        else
-          "nethack";
-      icon = "nethack";
-      desktopName = "NetHack";
-      comment = "NetHack is a single player dungeon exploration game";
-      categories = [
-        "Game"
-        "ActionGame"
-      ];
-    })
-  ];
+  desktopItems = lib.optional (x11Support || qtSupport) (makeDesktopItem {
+    name = "NetHack";
+    exec = finalAttrs.pname;
+    icon = "nethack";
+    desktopName = "NetHack";
+    comment = finalAttrs.meta.description;
+    categories = [
+      "Game"
+      "ActionGame"
+    ];
+  });
 
   meta = {
     description = "Rogue-like game";
     homepage = "http://nethack.org/";
     license = lib.licenses.ngpl;
     platforms = lib.platforms.unix;
-    maintainers = with lib.maintainers; [ olduser101 ];
+    maintainers = with lib.maintainers; [
+      olduser101
+      liferooter
+    ];
     mainProgram = "nethack";
   };
 })
