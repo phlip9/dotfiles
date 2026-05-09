@@ -1,0 +1,95 @@
+# v1: Rendered from <https://gitlab.com/liferooter/the-config/-/blob/main/modules/nethack/home.nix>
+
+OPTION=altmeta
+OPTION=boulder:0
+OPTION=fruit:pineapple
+OPTION=hilite_pet
+OPTION=hilite_pile
+OPTION=hitpointbar
+OPTION=!implicit_uncursed
+OPTION=lit_corridor
+OPTION=menucolors
+OPTION=perminv_mode:all
+OPTION=popup_dialog
+OPTION=runmode:run
+OPTION=showexp
+OPTION=showrace
+OPTION=statushilite:1
+OPTION=statuslines:3
+OPTION=symset:Enhanced2
+OPTION=time
+OPTION=timed_delay
+OPTION=!tutorial
+OPTION=windowborders:0
+OPTION=windowtype:curses
+
+OPTIONS=hilite_status:alignment/Chaotic/magenta/Lawful/lightblue/Neutral/green
+OPTIONS=hilite_status:armor-class/down/blue/up/yellow
+OPTIONS=hilite_status:characteristics/down/red/up/green
+OPTIONS=hilite_status:condition/lev+fly/blue&inverse/major/orange&inverse
+OPTIONS=hilite_status:gold/always/yellow
+OPTIONS=hilite_status:hitpoints/100%/brightgreen/<100%/green/<15%/red&inverse/<33%/red&bold/<50%/orange/<66%/yellow
+OPTIONS=hilite_status:hunger/always/yellow
+OPTIONS=hilite_status:power/100%/white/<100%/lightblue/<15%/orange/<33%/yellow/<5/black/<50%/blue/<66%/magenta
+
+BIND=B:chronicle
+BIND=C-c:quit
+# BIND=M-E:engrave
+# BIND=M-I:inventtype
+# BIND=M-O:offer
+# BIND=M-^i:invoke
+# BIND=M-e:eat
+# BIND=M-i:inventory
+# BIND=M-o:open
+# BIND=C-q:quit
+BIND=b:overview
+BIND=h:enhance
+BIND=y:reqmenu
+
+BIND=e:movesouth
+BIND=i:movenorth
+BIND=k:movesouthwest
+BIND=l:movenorthwest
+BIND=m:movesoutheast
+BIND=n:movewest
+BIND=o:moveeast
+BIND=u:movenortheast
+
+BIND=E:runsouth
+BIND=I:runnorth
+BIND=K:runsouthwest
+BIND=L:runnorthwest
+BIND=M:runsoutheast
+BIND=N:runwest
+BIND=O:runeast
+BIND=U:runnortheast
+
+BIND=^e:rushsouth
+BIND=^i:rushnorth
+BIND=^k:rushsouthwest
+BIND=^l:rushnorthwest
+BIND=^m:rushsoutheast
+BIND=^n:rushwest
+BIND=^o:rusheast
+BIND=^u:rushnortheast
+
+MENUCOLOR="named B($| )"=lightblue
+MENUCOLOR="named C($| )"=orange
+MENUCOLOR="named U($| )"=green
+MENUCOLOR="named N($| )"=brightcyan
+
+MENUCOLOR=" blessed "=lightblue&bold
+MENUCOLOR=" cursed "=orange&bold
+MENUCOLOR=" uncursed "=green&bold
+MENUCOLOR=" holy "=blue&bold
+MENUCOLOR=" unholy "=red
+MENUCOLOR=" (holy|unholy|cursed|uncursed|blessed) .* named (N|C|U|B)($| )"=magenta
+
+MENUCOLOR="gold piece"=yellow
+MENUCOLOR="\(unpaid,"=black
+MENUCOLOR="(gone)"=black
+MENUCOLOR="\[Unskilled\]"=orange
+MENUCOLOR="\[Basic\]"=yellow
+MENUCOLOR="\[Skilled\]"=blue&bold
+MENUCOLOR="\[Expert\]"=lightgreen&bold
+MENUCOLOR="\[Master\]"=lightmagenta&bold

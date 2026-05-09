@@ -50,6 +50,7 @@
     ./mods/local-bin.nix
     # ./mods/lsyncd.nix
     ./mods/mpv.nix
+    ./mods/nethack.nix
     ./mods/niri.nix
     ./mods/noctalia.nix
     ./mods/nvim/default.nix
@@ -73,7 +74,10 @@
     # # cargo-release - release a Rust package
     # phlipPkgs.cargo-release
 
-    # codex - OpenAI codex code CLI
+    # claude - AI cli
+    phlipPkgs.claude-code
+
+    # codex - AI cli
     phlipPkgs.codex
 
     # timep - bash profiler

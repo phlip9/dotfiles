@@ -49,6 +49,7 @@
     ./mods/local-bin.nix
     ./mods/lsyncd.nix
     # ./mods/mpv.nix
+    # ./mods/nethack.nix
     ./mods/nvim/default.nix
     # ./mods/omnara.nix
     ./mods/postgres.nix
