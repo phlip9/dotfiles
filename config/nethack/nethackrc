@@ -1,90 +1,156 @@
-# v1: Rendered from <https://gitlab.com/liferooter/the-config/-/blob/main/modules/nethack/home.nix>
+# nethack 5.0 config
+#
+# - play in terminal with right hand on numpad and left hand on ASDF
+# - keep common actions on QWERTASDFGZXCV, Shift, Ctrl, numpad, and .+-*/
+# - no Meta/Alt modifiers
+# - prefer safety, visible status, discoverable menus, and good glyphs
+# - don't restate nethack defaults
 
-OPTION=altmeta
-OPTION=boulder:0
-OPTION=fruit:pineapple
-OPTION=hilite_pet
-OPTION=hilite_pile
-OPTION=hitpointbar
-OPTION=!implicit_uncursed
-OPTION=lit_corridor
-OPTION=menucolors
-OPTION=perminv_mode:all
-OPTION=popup_dialog
-OPTION=runmode:run
-OPTION=showexp
-OPTION=showrace
-OPTION=statushilite:1
-OPTION=statuslines:3
-OPTION=symset:Enhanced2
-OPTION=time
-OPTION=timed_delay
-OPTION=!tutorial
-OPTION=windowborders:0
-OPTION=windowtype:curses
+# numpad moves; digits become movement keys, so numeric counts are entered with
+# the 'n' prefix, e.g. n50s searches 50 times.
+OPTIONS=number_pad:1
 
+
+# visuals: use UTF-8 symbol set and make boulders obvious
+OPTIONS=symset:Enhanced2
+OPTIONS=boulder:0
+OPTIONS=fruit:pineapple
+
+
+# startup+command UX: skip intro/tutorial prompts, prefer menus for item
+# prompts, remember more messages, and make object menus easier to scan.
+OPTIONS=!legacy
+OPTIONS=!tutorial
+OPTIONS=force_invmenu
+OPTIONS=msghistory:60
+OPTIONS=menu_objsyms:5
+OPTIONS=menucolors
+
+
+# exploration QoL: surface map state, show piles/pets, auto-use digging tools,
+# auto-fill the quiver, and keep the old weapon in the secondary slot.
+OPTIONS=autodescribe
+OPTIONS=autodig
+OPTIONS=autoquiver
+OPTIONS=hilite_pet
+OPTIONS=hilite_pile
+OPTIONS=lit_corridor
+OPTIONS=mention_decor
+OPTIONS=mention_walls
+OPTIONS=pushweapon
+OPTIONS=whatis_coord:compass
+
+
+# pickup policy: autopickup only gold, food, scrolls, potions, wands, rings,
+# spellbooks, gems, and tools. avoid scooping every weapon/armor pile.
+OPTIONS=autopickup
+OPTIONS=pickup_types:$%?!/=+*(
+OPTIONS=pickup_burden:Burdened
+OPTIONS=pile_limit:0
+OPTIONS=sortloot:full
+
+
+# safety prompts: require deliberate input for irreversible or high-risk moves
+OPTIONS=paranoid_confirmation:all
+
+
+# status: expanded curses status w/ HP bar
+OPTIONS=armorstatus
+OPTIONS=hitpointbar
+OPTIONS=showdamage
+OPTIONS=showexp
+OPTIONS=statushilites:5
+OPTIONS=statuslines:3
+OPTIONS=terrainstatus
+OPTIONS=time
+OPTIONS=weaponstatus
+
+
+# eco + end-of-run review
+OPTIONS=price_quotes
+OPTIONS=disclose:+i +a +v +g +c +o
+
+
+# status colors
 OPTIONS=hilite_status:alignment/Chaotic/magenta/Lawful/lightblue/Neutral/green
 OPTIONS=hilite_status:armor-class/down/blue/up/yellow
 OPTIONS=hilite_status:characteristics/down/red/up/green
-OPTIONS=hilite_status:condition/lev+fly/blue&inverse/major/orange&inverse
+OPTIONS=hilite_status:condition/major/orange&inverse
 OPTIONS=hilite_status:gold/always/yellow
-OPTIONS=hilite_status:hitpoints/100%/brightgreen/<100%/green/<15%/red&inverse/<33%/red&bold/<50%/orange/<66%/yellow
+OPTIONS=hilite_status:hitpoints/100%/brightgreen/<100%/green
+OPTIONS=hilite_status:hitpoints/<15%/red&inverse/<33%/red&bold
+OPTIONS=hilite_status:hitpoints/<50%/orange/<66%/yellow
 OPTIONS=hilite_status:hunger/always/yellow
-OPTIONS=hilite_status:power/100%/white/<100%/lightblue/<15%/orange/<33%/yellow/<5/black/<50%/blue/<66%/magenta
+OPTIONS=hilite_status:power/100%/white/<100%/lightblue
+OPTIONS=hilite_status:power/<15%/orange/<33%/yellow/<5/black
+OPTIONS=hilite_status:power/<50%/blue/<66%/magenta
 
-BIND=B:chronicle
-BIND=C-c:quit
-# BIND=M-E:engrave
-# BIND=M-I:inventtype
-# BIND=M-O:offer
-# BIND=M-^i:invoke
-# BIND=M-e:eat
-# BIND=M-i:inventory
-# BIND=M-o:open
-# BIND=C-q:quit
-BIND=b:overview
-BIND=h:enhance
-BIND=y:reqmenu
 
-BIND=e:movesouth
-BIND=i:movenorth
-BIND=k:movesouthwest
-BIND=l:movenorthwest
-BIND=m:movesoutheast
-BIND=n:movewest
-BIND=o:moveeast
-BIND=u:movenortheast
+# left-hand commands
+#
+# base letters for hi-frequency actions. shift variants for related inv/combat.
+# ctrl reserved for extended/system commands.
+BIND=a:apply
+BIND=A:takeoffall
+BIND=c:open
+BIND=C:close
+BIND=d:drop
+BIND=D:droptype
+BIND=e:eat
+BIND=E:engrave
+BIND=f:fire
+BIND=F:fight
+BIND=g:inventory
+BIND=G:pickup
+BIND=q:quaff
+BIND=Q:quiver
+BIND=r:read
+BIND=R:remove
+BIND=s:search
+BIND=S:save
+BIND=t:throw
+BIND=T:takeoff
+BIND=v:call
+BIND=V:chronicle
+BIND=w:wield
+BIND=W:wear
+BIND=x:swap
+BIND=X:twoweapon
+BIND=z:zap
+BIND=Z:Zap
 
-BIND=E:runsouth
-BIND=I:runnorth
-BIND=K:runsouthwest
-BIND=L:runnorthwest
-BIND=M:runsoutheast
-BIND=N:runwest
-BIND=O:runeast
-BIND=U:runnortheast
 
-BIND=^e:rushsouth
-BIND=^i:rushnorth
-BIND=^k:rushsouthwest
-BIND=^l:rushnorthwest
-BIND=^m:rushsoutheast
-BIND=^n:rushwest
-BIND=^o:rusheast
-BIND=^u:rushnortheast
+# ctrl layer: less frequent but important extended commands.
+BIND=^a:adjust
+BIND=^d:dip
+BIND=^e:enhance
+BIND=^f:force
+BIND=^g:pray
+BIND=^t:turn
+BIND=^v:overview
+BIND=^w:optionsfull
+BIND=^x:quit
 
-MENUCOLOR="named B($| )"=lightblue
-MENUCOLOR="named C($| )"=orange
-MENUCOLOR="named U($| )"=green
-MENUCOLOR="named N($| )"=brightcyan
 
+# numpad ext: commands that pair well with the right hand
+BIND=-:prevmsg
+BIND=+:showspells
+BIND=/:whatis
+BIND=*:seeall
+BIND=_:travel
+
+
+# menu colors: B/C/U/X state, known skill level, gold, and shop/used-up state
+MENUCOLOR=" named B($| )"=lightblue
+MENUCOLOR=" named C($| )"=orange
+MENUCOLOR=" named U($| )"=green
+MENUCOLOR=" named N($| )"=brightcyan
 MENUCOLOR=" blessed "=lightblue&bold
 MENUCOLOR=" cursed "=orange&bold
 MENUCOLOR=" uncursed "=green&bold
 MENUCOLOR=" holy "=blue&bold
 MENUCOLOR=" unholy "=red
-MENUCOLOR=" (holy|unholy|cursed|uncursed|blessed) .* named (N|C|U|B)($| )"=magenta
-
+MENUCOLOR="(holy|unholy|cursed|uncursed|blessed).*named [NCUB]($| )"=magenta
 MENUCOLOR="gold piece"=yellow
 MENUCOLOR="\(unpaid,"=black
 MENUCOLOR="(gone)"=black
@@ -93,3 +159,9 @@ MENUCOLOR="\[Basic\]"=yellow
 MENUCOLOR="\[Skilled\]"=blue&bold
 MENUCOLOR="\[Expert\]"=lightgreen&bold
 MENUCOLOR="\[Master\]"=lightmagenta&bold
+
+
+# msg filtering: suppress spam
+MSGTYPE=norep "You displaced .*"
+MSGTYPE=norep "You swap places with .*"
+MSGTYPE=norep "You see here .*"
