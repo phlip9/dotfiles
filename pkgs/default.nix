@@ -76,6 +76,9 @@ fix (phlipPkgs: {
   };
   marinara-engine-unwrapped = callPackage ./marinara-engine { };
 
+  # nethack (game)
+  nethack = callPackage ./nethack { };
+
   # neovim - wrapped neovim with plugins and tools
   nvim = callPackage ./nvim { };
 

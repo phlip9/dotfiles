@@ -136,8 +136,7 @@ stdenv.mkDerivation (finalAttrs: {
       tar zxf ${lua548} -C lib
     '';
 
-  # https://github.com/NixOS/nixpkgs/issues/294751
-  enableParallelBuilding = false;
+  enableParallelBuilding = true;
 
   preFixup = lib.optionalString qtSupport ''
     wrapQtApp "$out/lib/nethack/nethack"
