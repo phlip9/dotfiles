@@ -110,6 +110,8 @@ BIND=s:search
 BIND=S:save
 BIND=t:throw
 BIND=T:takeoff
+BIND=b:kick
+BIND=B:chat
 BIND=v:call
 BIND=V:chronicle
 BIND=w:wield
@@ -117,7 +119,7 @@ BIND=W:wear
 BIND=x:swap
 BIND=X:twoweapon
 BIND=z:zap
-BIND=Z:Zap
+BIND=Z:cast
 
 
 # ctrl layer: less frequent but important extended commands.
@@ -129,7 +131,7 @@ BIND=^g:pray
 BIND=^t:turn
 BIND=^v:overview
 BIND=^w:optionsfull
-BIND=^x:quit
+BIND=^x:attributes
 
 
 # numpad ext: commands that pair well with the right hand

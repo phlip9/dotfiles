@@ -1,0 +1,248 @@
+diff --git a/src/invent.c b/src/invent.c
+index 0c0adc5..20d891a 100644
+--- a/src/invent.c
++++ b/src/invent.c
+@@ -8,6 +8,7 @@
+ staticfn void inuse_classify(Loot *, struct obj *);
+ staticfn char *loot_xname(struct obj *);
+ staticfn int invletter_value(char);
++staticfn int invletter_index(char);
+ staticfn int QSORTCALLBACK sortloot_cmp(const genericptr, const genericptr);
+ staticfn void reorder_invent(void);
+ staticfn struct obj *addinv_core0(struct obj *, struct obj *,
+@@ -45,6 +46,15 @@
+ static int perminv_flags = InvOptNone;
+ static boolean in_perm_invent_toggled;
+ 
++/*
++ * Prefer item letters reachable from left hand on QWERTASDFGZXCV while the
++ * right hand stays on the numpad.  Keep the remaining letters as fallback so
++ * NetHack's 52 inventory slots still exist.
++ */
++static const char preferred_invletters[] =
++    "asdfqwertgzxcvbASDFQWERTGZXCVB"
++    "yuiophjklnmYUIOPHJKLNM";
++
+ /* wizards can wish for venom, which will become an invisible inventory
+  * item without this.  putting it in inv_order would mean venom would
+  * suddenly become a choice for all the inventory-class commands, which
+@@ -386,16 +396,25 @@
+     return res;
+ }
+ 
+-/* '$'==1, 'a'-'z'==2..27, 'A'-'Z'==28..53, '#'==54, catchall 55 */
++staticfn int
++invletter_index(char c)
++{
++    const char *p = strchr(preferred_invletters, c);
++
++    return p ? (int) (p - preferred_invletters) : -1;
++}
++
++/* '$'==1, preferred letters==2..53, '#'==54, catchall 55 */
+ staticfn int
+ invletter_value(char c)
+ {
+-    return ('a' <= c && c <= 'z') ? (c - 'a' + 2)
+-           : ('A' <= c && c <= 'Z') ? (c - 'A' + 2 + 26)
+-             : (c == '$') ? 1
+-               : (c == '#') ? 1 + invlet_basic + 1
+-                 : 1 + invlet_basic + 1 + 1; /* none of the above
+-                                              * (shouldn't happen) */
++    int idx = invletter_index(c);
++
++    return (idx >= 0) ? (idx + 2)
++           : (c == '$') ? 1
++             : (c == '#') ? 1 + invlet_basic + 1
++               : 1 + invlet_basic + 1 + 1; /* none of the above
++                                            * (shouldn't happen) */
+ }
+ 
+ /* qsort comparison routine for sortloot() */
+@@ -695,6 +714,7 @@
+ {
+     boolean inuse[invlet_basic];
+     int i;
++    const char *p;
+     struct obj *obj;
+ 
+     /* there should be at most one of these in inventory... */
+@@ -708,15 +728,13 @@
+     for (obj = gi.invent; obj; obj = obj->nobj)
+         if (obj != otmp) {
+             i = obj->invlet;
+-            if ('a' <= i && i <= 'z')
+-                inuse[i - 'a'] = TRUE;
+-            else if ('A' <= i && i <= 'Z')
+-                inuse[i - 'A' + 26] = TRUE;
++            if ((p = strchr(preferred_invletters, i)) != 0)
++                inuse[p - preferred_invletters] = TRUE;
+             if (i == otmp->invlet)
+                 otmp->invlet = 0;
+         }
+     if ((i = otmp->invlet)
+-        && (('a' <= i && i <= 'z') || ('A' <= i && i <= 'Z')))
++        && strchr(preferred_invletters, i))
+         return;
+     for (i = gl.lastinvnr + 1; i != gl.lastinvnr; i++) {
+         if (i == invlet_basic) {
+@@ -726,8 +744,7 @@
+         if (!inuse[i])
+             break;
+     }
+-    otmp->invlet =
+-        (inuse[i] ? NOINVSYM : (i < 26) ? ('a' + i) : ('A' + i - 26));
++    otmp->invlet = inuse[i] ? NOINVSYM : preferred_invletters[i];
+     gl.lastinvnr = i;
+ }
+ 
+@@ -4868,8 +4885,7 @@
+         }
+     /* second, re-letter the rest of the list */
+     for (obj = gi.invent, i = 0; obj; obj = obj->nobj, i++)
+-        obj->invlet =
+-            (i < 26) ? ('a' + i) : (i < 52) ? ('A' + i - 26) : NOINVSYM;
++        obj->invlet = (i < 52) ? preferred_invletters[i] : NOINVSYM;
+     /* third, assign gold the "letter" '$' and re-insert it at head */
+     if (goldobj) {
+         goldobj->invlet = GOLD_SYM;
+@@ -5097,12 +5113,10 @@
+             break;
+         }
+ 
+-    /* initialize the list with all lower and upper case letters */
++    /* initialize the list with all preferred inventory letters */
+     lets[GOLD_INDX] = (obj->oclass == COIN_CLASS) ? GOLD_SYM : ' ';
+-    for (ix = GOLD_OFFSET, let = 'a'; let <= 'z';)
+-        lets[ix++] = let++;
+-    for (let = 'A'; let <= 'Z';)
+-        lets[ix++] = let++;
++    Strcpy(&lets[GOLD_OFFSET], preferred_invletters);
++    ix = GOLD_OFFSET + (int) strlen(preferred_invletters);
+     lets[OVRFLW_INDX] = ' ';
+     lets[sizeof lets - 1] = '\0';
+     /* for floating inv letters, truncate list after the first open slot */
+@@ -5114,10 +5128,8 @@
+     for (otmp = gi.invent; otmp; otmp = otmp->nobj)
+         if (otmp != obj && !mergable(otmp, obj)) {
+             let = otmp->invlet;
+-            if (let >= 'a' && let <= 'z')
+-                lets[GOLD_OFFSET + let - 'a'] = ' ';
+-            else if (let >= 'A' && let <= 'Z')
+-                lets[GOLD_OFFSET + let - 'A' + 26] = ' ';
++            if ((ix = invletter_index(let)) >= 0)
++                lets[GOLD_OFFSET + ix] = ' ';
+             /* overflow defaults to off, but it we find a stack using that
+                slot, switch to on -- the opposite of normal invlet handling */
+             else if (let == NOINVSYM)
+diff --git a/include/objects.h b/include/objects.h
+index c8550f1..92d45ec 100644
+--- a/include/objects.h
++++ b/include/objects.h
+@@ -1268,7 +1268,8 @@
+ /* spellbooks ... */
+     /* Expanding beyond 52 spells would require changes in spellcasting
+      * or imposition of a limit on number of spells hero can know because
+-     * they are currently assigned successive letters, a-zA-Z, when learned.
++     * they are currently assigned letters from the spell letter table when
++     * learned.
+      * [The existing spell sorting capability could conceivably be extended
+      * to enable moving spells from beyond Z to within it, bumping others
+      * out in the process, allowing more than 52 spells be known but keeping
+diff --git a/src/spell.c b/src/spell.c
+index efc0943..ae1611d 100644
+--- a/src/spell.c
++++ b/src/spell.c
+@@ -21,10 +21,17 @@
+    increment, the hero used to get cheated out of 1 turn of retention */
+ #define incrnknow(spell, x) (svs.spl_book[spell].sp_know = KEEN + (x))
+ 
++/*
++ * Match inventory/menu selection: common spell letters stay under the left
++ * hand while the right hand stays on the numpad.
++ */
++static const char preferred_spell_letters[] =
++    "asdfqwertgzxcvbASDFQWERTGZXCVB"
++    "yuiophjklnmYUIOPHJKLNM";
++
+ #define spellev(spell) svs.spl_book[spell].sp_lev
+ #define spellname(spell) OBJ_NAME(objects[spellid(spell)])
+-#define spellet(spell) \
+-    ((char) ((spell < 26) ? ('a' + spell) : ('A' + spell - 26)))
++#define spellet(spell) (preferred_spell_letters[(spell)])
+ 
+ struct chain_lightning_queue;
+ struct chain_lightning_zap;
+@@ -114,15 +121,9 @@
+ staticfn int
+ spell_let_to_idx(char ilet)
+ {
+-    int indx;
++    const char *p = strchr(preferred_spell_letters, ilet);
+ 
+-    indx = ilet - 'a';
+-    if (indx >= 0 && indx < 26)
+-        return indx;
+-    indx = ilet - 'A';
+-    if (indx >= 0 && indx < 26)
+-        return indx + 26;
+-    return -1;
++    return p ? (int) (p - preferred_spell_letters) : -1;
+ }
+ 
+ /* TRUE: book should be destroyed by caller */
+@@ -742,15 +743,8 @@
+ 
+     if (flags.menu_style == MENU_TRADITIONAL) {
+         /* if we get here, we know there is at least 1 known spell */
+-        if (nspells == 1)
+-            Strcpy(lets, "a");
+-        else if (nspells < 27)
+-            Sprintf(lets, "a-%c", 'a' + nspells - 1);
+-        else if (nspells == 27)
+-            Strcpy(lets, "a-zA");
+-        /* this assumes that there are at most 52 spells... */
+-        else
+-            Sprintf(lets, "a-zA-%c", 'A' + nspells - 27);
++        Strcpy(lets, preferred_spell_letters);
++        lets[nspells] = '\0';
+ 
+         Snprintf(qbuf, sizeof qbuf, "Cast which spell? [%s *?]", lets);
+         for (retry_limit = 0; ; ++retry_limit) {
+diff --git a/win/curses/cursdial.c b/win/curses/cursdial.c
+index b63e023..e4e6d0e 100644
+--- a/win/curses/cursdial.c
++++ b/win/curses/cursdial.c
+@@ -916,23 +916,19 @@
+ static char
+ menu_get_accel(boolean first)
+ {
+-    static char next_letter;
+-    char ret;
++    static const char preferred_menu_accels[] =
++        "asdfqwertgzxcvbASDFQWERTGZXCVB"
++        "yuiophjklnmYUIOPHJKLNM";
++    static int next_index;
++    char ret = preferred_menu_accels[next_index];
+ 
+     if (first) {
+-        next_letter = 'a';
++        next_index = 0;
++        ret = preferred_menu_accels[next_index];
+     }
+ 
+-    ret = next_letter;
+-
+-    if ((next_letter < 'z' && next_letter >= 'a')
+-        || (next_letter < 'Z' && next_letter >= 'A')) {
+-        next_letter++;
+-    } else if (next_letter == 'z') {
+-        next_letter = 'A';
+-    } else if (next_letter == 'Z') {
+-        next_letter = 'a'; /* wrap to beginning */
+-    }
++    if (!preferred_menu_accels[++next_index])
++        next_index = 0;
+ 
+     return ret;
+ }

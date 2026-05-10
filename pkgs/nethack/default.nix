@@ -48,6 +48,11 @@ stdenv.mkDerivation (finalAttrs: {
     sha256 = "sha256-KVm3iGqsdhhbkK6gyfgNFDQ/YE3grpaz3Sp2D3qzvek=";
   };
 
+  patches = [
+    # mod: prefer left-hand keys for inventory etc
+    ./left-hand-selection-keys.patch
+  ];
+
   buildInputs = [
     ncurses
   ]
@@ -136,7 +141,8 @@ stdenv.mkDerivation (finalAttrs: {
       tar zxf ${lua548} -C lib
     '';
 
-  enableParallelBuilding = true;
+  # Upstream make races generated Lua headers against C compilation.
+  enableParallelBuilding = false;
 
   preFixup = lib.optionalString qtSupport ''
     wrapQtApp "$out/lib/nethack/nethack"
