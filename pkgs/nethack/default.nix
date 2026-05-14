@@ -185,7 +185,7 @@ stdenv.mkDerivation (finalAttrs: {
     license = lib.licenses.ngpl;
     platforms = lib.platforms.unix;
     maintainers = with lib.maintainers; [
-      olduser101
+      # olduser101
       liferooter
     ];
     mainProgram = "nethack";
