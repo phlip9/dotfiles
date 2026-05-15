@@ -300,11 +300,11 @@
     # nvtop
     pkgs.nvtopPackages.nvidia
 
+    # run windows games
+    pkgs.umu-launcher
+
     # video player
     phlipPkgsNixos.mpv
-
-    # run windows games
-    phlipPkgsNixos.umu-launcher
 
     # vintagestory (game)
     phlipPkgsNixos.vintagestory

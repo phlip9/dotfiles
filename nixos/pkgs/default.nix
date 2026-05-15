@@ -45,18 +45,6 @@ fix (phlipPkgsNixos: {
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
-  # unified launcher for Windows games on Linux
-  umu-launcher =
-    callPackage (sources.umu-launcher + "/packaging/nix/package.nix")
-      {
-        inherit (phlipPkgsNixos) umu-launcher-unwrapped;
-      };
-  umu-launcher-unwrapped =
-    callPackage (sources.umu-launcher + "/packaging/nix/unwrapped.nix")
-      {
-        lastModifiedDate = "20260426";
-      };
-
   # vintagestory (game)
   vintagestory = callPackage ./vintagestory.nix { };
 
