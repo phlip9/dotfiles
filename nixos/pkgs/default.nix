@@ -54,7 +54,7 @@ fix (phlipPkgsNixos: {
   umu-launcher-unwrapped =
     callPackage (sources.umu-launcher + "/packaging/nix/unwrapped.nix")
       {
-        lastModifiedDate = "20260311";
+        lastModifiedDate = "20260426";
       };
 
   # vintagestory (game)
