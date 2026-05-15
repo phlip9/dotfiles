@@ -13,6 +13,7 @@
   )
 
   (sources.sops-nix + "/modules/sops/default.nix")
+  ./etc-hosts.nix
   ./github-agent-authd.nix
   ./github-webhook.nix
   ./nix-cache.nix

@@ -63,6 +63,9 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   networking.hostName = "phlipnixos";
+  networking.domain = "lan";
+  phlip9.networking.resolveFqdnToLocalhost = true;
+
   networking.wireless.enable = lib.mkForce false;
   networking.networkmanager.enable = true;
 
