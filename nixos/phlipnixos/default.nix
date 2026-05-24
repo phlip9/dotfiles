@@ -41,7 +41,7 @@
         wallpapers = [ phlipPkgsNixos.wallpapers.dunes ];
         wallpaperStyle = "centered";
         backdrop = "DEC0B2";
-        interface.brandingColor = 7;
+        interface.brandingColor = "C8C093";
         graphicalTerminal = {
           # black, red, green, brown, blue, magenta, cyan, gray
           palette = "0D0C0C;C4746E;8A9A7B;C4B28A;8BA4B0;A292A3;8EA4A2;C8C093";
@@ -306,11 +306,11 @@
     # run windows games
     pkgs.umu-launcher
 
+    # vintagestory (game)
+    pkgs.vintagestory
+
     # video player
     phlipPkgsNixos.mpv
-
-    # vintagestory (game)
-    phlipPkgsNixos.vintagestory
   ];
 
   # enable 1Password

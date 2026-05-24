@@ -9,9 +9,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "5ca06fe10f60f52c5a0b481978aeacf8c0b7c9ee",
-      "url": "https://github.com/nix-community/buildbot-nix/archive/5ca06fe10f60f52c5a0b481978aeacf8c0b7c9ee.tar.gz",
-      "hash": "0c2c8d9kgf0yppaijh7fv3pr45vrnqnnzvq8bxlciyn3vlpiacv6"
+      "revision": "8644b7988debf93de7d46024e9173e0d9e155ce4",
+      "url": "https://github.com/nix-community/buildbot-nix/archive/8644b7988debf93de7d46024e9173e0d9e155ce4.tar.gz",
+      "hash": "0za3nyjbd7b7v5kmv4z6vrwm98sm2x55zmap47vkfspfnf5nl859"
     },
     "disko": {
       "type": "Git",
@@ -22,9 +22,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "32f4236bfc141ae930b5ba2fb604f561fed5219d",
-      "url": "https://github.com/nix-community/disko/archive/32f4236bfc141ae930b5ba2fb604f561fed5219d.tar.gz",
-      "hash": "0hh9llhkl29nrmdgifc9m1dqqbn7zgf060mcwn1n21lvk2kl4bw0"
+      "revision": "65fb947964bd44fc0008faf77d1fcb7a9f40bb32",
+      "url": "https://github.com/nix-community/disko/archive/65fb947964bd44fc0008faf77d1fcb7a9f40bb32.tar.gz",
+      "hash": "02x0x29cng43nkqxxg99cxrbkmcwa7q11zs9n1w26im9is6a9qy2"
     },
     "home-manager": {
       "type": "Git",
@@ -49,15 +49,15 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "8d90f2b739a6b69570b75d017a94e3d14561d2a8",
-      "url": "https://github.com/Mic92/niks3/archive/8d90f2b739a6b69570b75d017a94e3d14561d2a8.tar.gz",
-      "hash": "sha256-qwBU/6g7mT0zAMwFqSZlC4JTJbG+n3y9wUGBBF6opD8="
+      "revision": "1db826ca990cb3dead5c033bcfba4bf68ce9fc05",
+      "url": "https://github.com/Mic92/niks3/archive/1db826ca990cb3dead5c033bcfba4bf68ce9fc05.tar.gz",
+      "hash": "1n60qmzf3kmpd5rxy15ldcvp2k39iyfg63dk5fr37nwls2v202m9"
     },
     "nixos-unstable": {
       "type": "Channel",
       "name": "nixos-unstable",
-      "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre987561.1c3fe55ad329/nixexprs.tar.xz",
-      "hash": "10ids5jgvsjpbifbn9651nm12642562xgds7kr12q50v0d8l6nvv",
+      "url": "https://releases.nixos.org/nixos/unstable/nixos-26.05pre1003640.299164534138/nixexprs.tar.xz",
+      "hash": "00sipscprpd0wyr48wswan0mahkyvxfq35g8lc14vfsdcvgxgm9s",
       "frozen": true
     },
     "nixpkgs": {
@@ -83,9 +83,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "8eaee5c45428b28b8c47a83e4c09dccec5f279b5",
-      "url": "https://github.com/Mic92/sops-nix/archive/8eaee5c45428b28b8c47a83e4c09dccec5f279b5.tar.gz",
-      "hash": "1ha37kyn11dj5k38nbasybp4fnmm6iy1lbzvxfydlk4f55j9kkvd"
+      "revision": "c591bf665727040c6cc5cb409079acb22dcce33c",
+      "url": "https://github.com/Mic92/sops-nix/archive/c591bf665727040c6cc5cb409079acb22dcce33c.tar.gz",
+      "hash": "0zxy0kfhhi0dq5jz0gkx9lb3m02a1gzkm86dvsga614kbair3wam"
     }
   },
   "version": 5

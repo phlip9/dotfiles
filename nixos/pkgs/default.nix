@@ -45,9 +45,6 @@ fix (phlipPkgsNixos: {
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
-  # vintagestory (game)
-  vintagestory = callPackage ./vintagestory.nix { };
-
   # my wallpapers
   wallpapers = callPackage ./wallpapers.nix { inherit (phlipPkgsNixos) matugen; };
 })

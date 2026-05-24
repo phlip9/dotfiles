@@ -9,6 +9,10 @@
     { lib, ... }:
     {
       disko.enableConfig = lib.mkDefault false;
+
+      # silence a random warning
+      # TODO(phlip9): periodically remove this and see if the issue persists
+      boot.zfs.forceImportRoot = false;
     }
   )
 
