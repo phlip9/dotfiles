@@ -163,6 +163,23 @@
     };
   };
 
+  # 2026-05-24: Load nvidia modules via systemd-modules-load so they're up
+  # before niri starts. The upstream nvidia module only adds these to
+  # `boot.kernelModules` when `services.xserver.enable = true`, which doesn't
+  # hold for a Wayland-only system. Without this, udev loads nvidia lazily
+  # when the PCI device is enumerated, racing niri startup: niri queries the
+  # primary GPU before nvidia-drm registers `card1`, picks simpledrm's
+  # `card0` instead, then can't recover when udev later swaps the devices.
+  boot.kernelModules = [
+    "nvidia"
+    "nvidia_modeset"
+    "nvidia_drm"
+  ];
+  # boot.kernelParams = [
+  #   "nvidia-drm.modeset=1"
+  #   "nvidia-drm.fbdev=1"
+  # ];
+
   # Error loudly when the nvidia driver version gets too new.
   assertions = [
     (
