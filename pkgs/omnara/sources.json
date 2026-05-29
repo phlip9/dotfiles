@@ -1,8 +1,8 @@
 {
   "x86_64-linux": {
-    "version": "0.25.12",
+    "version": "0.25.13",
     "target": "linux-x64",
-    "url": "https://releases.omnara.com/0.25.12/omnara-linux-x64",
-    "hash": "sha256-vmeoux6b3NuM1nCBFyqdIbruBi9vHus+eKFpDsBO4dA="
+    "url": "https://releases.omnara.com/0.25.13/omnara-linux-x64",
+    "hash": "sha256-8zkIIkeULxH3+Z+Hr2edxd0IIQmvs2lcMw3R0+moGhQ="
   }
 }
