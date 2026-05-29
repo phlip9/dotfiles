@@ -62,6 +62,17 @@
   # use latest kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
+  # use a better Linux scheduler for interactive desktop usage
+  services.scx = {
+    enable = true;
+    package = pkgs.scx.rustscheds;
+    # - scx_bpfland: good for responsive desktop under heavy background load
+    # - scx_lavd: built for the Steam Deck to eliminate gaming micro-stutter
+    # - scx_cosmos. good desktop and server default. less battle-tested.
+    scheduler = "scx_bpfland";
+    extraArgs = [ ];
+  };
+
   networking.hostName = "phlipnixos";
   networking.domain = "lan";
   phlip9.networking.resolveFqdnToLocalhost = true;
