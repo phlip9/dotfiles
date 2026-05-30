@@ -73,6 +73,33 @@
     extraArgs = [ ];
   };
 
+  # compressed RAM swap. absorbs memory pressure in-RAM instead of thrashing to
+  # disk swap.
+  zramSwap = {
+    enable = true;
+    # best ratio/speed balance. lz4 is faster but compresses worse; only worth
+    # it if compression CPU shows up during builds
+    algorithm = "zstd";
+    # logical capacity = 150% of RAM (24G on 16G). compression means a full zram
+    # costs far less physical RAM than that
+    memoryPercent = 150;
+  };
+
+  # tune VM subsystem for fast zram swap
+  boot.kernel.sysctl = {
+    # swap anonymous pages to (cheap, RAM-speed) zram eagerly rather than
+    # evicting page cache, which would force slow re-reads of build inputs from
+    # the SATA disk. 200 is the max; 180 strongly prefers zram w/ some headroom
+    "vm.swappiness" = 180;
+    # zram has no seek penalty, so fault in one page per swap-in. the default (3 =
+    # 8 pages) is read-ahead tuned for slow disks
+    "vm.page-cluster" = 0;
+    # begin background reclaim earlier (default 10 = 0.1% of RAM) so a big
+    # build's allocation bursts meet free pages instead of stalling on direct
+    # reclaim.
+    "vm.watermark_scale_factor" = 125;
+  };
+
   networking.hostName = "phlipnixos";
   networking.domain = "lan";
   phlip9.networking.resolveFqdnToLocalhost = true;
