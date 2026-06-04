@@ -964,6 +964,24 @@ do  -- vim-airline - Lightweight yet fancy status line {{{
     vim.g.airline_right_sep = ""
     vim.g.airline_right_alt_sep = ""
 
+    -- TODO(phlip9): re-order the filename after the git info. Doing this using
+    -- `airline#extensions#default#layout` doesn't work due to `%<`/`%=` marker
+    -- location and vim-fugitive interaction.
+
+    -- Drop the lower-value sections before the filename in narrow splits.
+    --
+    -- Section c (filename) carries vim's `%<` truncation marker and is never
+    -- itself width-truncated, so when the other sections fill a narrow window
+    -- vim collapses the filename first.
+    vim.g["airline#extensions#default#section_truncate_width"] = {
+        b = 100,      -- git branch + diff hunks
+        x = 100,      -- filetype + LSP client
+        y = 80,       -- file encoding/format (airline default)
+        z = 45,       -- file position (airline default)
+        warning = 80, -- airline default
+        error = 80,   -- airline default
+    }
+
     -- airline buffer tab line "
     vim.g["airline#extensions#tabline#enabled"] = 1
 
