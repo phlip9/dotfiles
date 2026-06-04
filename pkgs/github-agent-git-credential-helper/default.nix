@@ -25,4 +25,5 @@ runCommandWith
       ${./github-agent-git-credential-helper.sh} \
       $out/bin/github-agent-git-credential-helper
     chmod +x $out/bin/github-agent-git-credential-helper
+    patchShebangs $out/bin
   ''

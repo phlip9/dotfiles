@@ -27,4 +27,5 @@ runCommandWith
     mkdir -p $out/bin
     substituteAll ${./gh.sh} $out/bin/gh
     chmod +x $out/bin/gh
+    patchShebangs $out/bin
   ''

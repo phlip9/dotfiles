@@ -25,4 +25,5 @@ runCommandWith
     mkdir -p $out/bin
     substituteAll ${./github-agent-token.sh} $out/bin/github-agent-token
     chmod +x $out/bin/github-agent-token
+    patchShebangs $out/bin
   ''
