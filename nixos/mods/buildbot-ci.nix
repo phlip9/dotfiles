@@ -99,6 +99,14 @@ in
       };
     };
 
+    # The upstream niks3 module orders only on `network.target`, so it starts
+    # before DNS is up and crashes on boot ("dial tcp: lookup ...r2... no such
+    # host") before `Restart=always` recovers it. Wait for `network-online`.
+    systemd.services.niks3 = {
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+    };
+
     # =========================================================================
     # buildbot-nix master
     # =========================================================================
