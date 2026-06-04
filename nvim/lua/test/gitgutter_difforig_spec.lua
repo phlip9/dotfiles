@@ -151,6 +151,89 @@ describe("gitgutter_difforig", function()
         eq(true, vim.wo.diff)
     end)
 
+    it("keeps folds open but enabled in both diff windows", function()
+        local src_bufnr = vim.api.nvim_get_current_buf()
+
+        M.toggle()
+
+        -- Source window: folds open (high foldlevel) but folding still
+        -- enabled, so manual zc/zo keep working per-fold.
+        eq(true, vim.wo.foldenable)
+        assert.is_true(vim.wo.foldlevel >= 99)
+
+        -- Diff window: same.
+        local diff_bufnr = vim.b[src_bufnr].gitgutter_difforig_bufnr
+        for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            if vim.api.nvim_win_get_buf(w) == diff_bufnr then
+                eq(true, vim.wo[w].foldenable)
+                assert.is_true(vim.wo[w].foldlevel >= 99)
+            end
+        end
+    end)
+
+    it("restores original foldlevel on close", function()
+        -- Non-zero, non-99 original so we'd catch either failing to
+        -- restore (would read 0, the diff-clobbered value) or leaving
+        -- the bumped 99 in place.
+        vim.wo.foldlevel = 3
+
+        M.toggle() -- open (raises foldlevel to 99)
+        M.toggle() -- close (restores original)
+
+        eq(3, vim.wo.foldlevel)
+        eq(nil, vim.b.gitgutter_difforig_foldlevel)
+    end)
+
+    it("restores foldlevel when closing from the diff window", function()
+        local src_bufnr = vim.api.nvim_get_current_buf()
+        vim.wo.foldlevel = 3
+
+        M.toggle() -- open
+
+        -- Move focus into the diff window before closing.
+        local diff_bufnr = vim.b[src_bufnr].gitgutter_difforig_bufnr
+        for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            if vim.api.nvim_win_get_buf(w) == diff_bufnr then
+                vim.api.nvim_set_current_win(w)
+                break
+            end
+        end
+
+        M.toggle() -- close from the diff window
+
+        -- Source window's original foldlevel restored, not left at 99.
+        eq(src_bufnr, vim.api.nvim_get_current_buf())
+        eq(3, vim.wo.foldlevel)
+        eq(nil, vim.b[src_bufnr].gitgutter_difforig_foldlevel)
+    end)
+
+    it("restores foldlevel to the bumped window when buffer shown twice",
+        function()
+            local src_bufnr = vim.api.nvim_get_current_buf()
+            local win_a = vim.api.nvim_get_current_win()
+            vim.wo[win_a].foldlevel = 3
+
+            -- A second window onto the same source buffer, with a
+            -- different foldlevel. foldlevel is window-local, so close()
+            -- must restore win_a (the one open bumped), not win_b.
+            vim.cmd("split")
+            local win_b = vim.api.nvim_get_current_win()
+            vim.wo[win_b].foldlevel = 7
+            assert.are.not_equal(win_a, win_b)
+            eq(src_bufnr, vim.api.nvim_win_get_buf(win_b))
+
+            -- Open the diff from window A.
+            vim.api.nvim_set_current_win(win_a)
+            M.toggle()
+            eq(99, vim.wo[win_a].foldlevel)
+
+            M.toggle() -- close
+
+            -- win_a restored to its own original; win_b untouched.
+            eq(3, vim.wo[win_a].foldlevel)
+            eq(7, vim.wo[win_b].foldlevel)
+        end)
+
     it("diff buffer contains the committed version", function()
         M.toggle()
 
