@@ -7,9 +7,18 @@ local eq = assert.are.same
 local M = require("gitgutter_difforig")
 
 --- Create an ephemeral git repo with a committed file and unstaged edits.
+---
+--- `committed`/`working` default to a small 3-line file modified to 4
+--- lines (first hunk at line 2, second at line 4). Pass custom content
+--- for tests that need a different diff shape.
+---@param committed string[]|nil committed file contents
+---@param working string[]|nil working (unstaged) file contents
 ---@return string dir repo root
 ---@return string filepath absolute path to test file
-local function make_test_repo()
+local function make_test_repo(committed, working)
+    committed = committed or { "line 1", "line 2", "line 3" }
+    working = working or { "line 1", "modified line 2", "line 3", "new line 4" }
+
     local dir = vim.fn.tempname()
     vim.fn.mkdir(dir, "p")
     vim.fn.system({ "git", "-C", dir, "init" })
@@ -21,55 +30,58 @@ local function make_test_repo()
     })
 
     local filepath = dir .. "/test.txt"
-    vim.fn.writefile({ "line 1", "line 2", "line 3" }, filepath)
+    vim.fn.writefile(committed, filepath)
     vim.fn.system({ "git", "-C", dir, "add", "." })
     vim.fn.system({ "git", "-C", dir, "commit", "-m", "init" })
 
     -- Unstaged modification so there's a real diff.
-    vim.fn.writefile(
-        { "line 1", "modified line 2", "line 3", "new line 4" },
-        filepath
-    )
+    vim.fn.writefile(working, filepath)
 
     return dir, filepath
 end
 
---- Force gitgutter to process the current buffer and block until done.
+--- Force gitgutter to process the current buffer and block until its
+--- hunk list is populated.
 ---
---- Listens for the `User GitGutter` autocmd that gitgutter fires after
---- it finishes updating signs, then kicks off processing with
---- `:GitGutter`. Fails the test if the event doesn't arrive.
+--- gitgutter processes buffers asynchronously. We kick it off with
+--- `:GitGutter`, then poll the per-buffer hunk list until it's
+--- non-empty (every test file here has real changes). Waiting on the
+--- hunks directly is deterministic; the `User GitGutter` autocmd can
+--- fire for an unrelated/stale job, leaving this buffer's hunks empty.
 local function gitgutter_process_sync()
-    local done = false
-    local au = vim.api.nvim_create_autocmd("User", {
-        pattern = "GitGutter",
-        once = true,
-        callback = function() done = true end,
-    })
+    local bufnr = vim.api.nvim_get_current_buf()
     vim.cmd("GitGutter")
-    local ok = vim.wait(5000, function() return done end, 50)
-    pcall(vim.api.nvim_del_autocmd, au)
-    assert.is_true(ok, "gitgutter did not finish processing in time")
+    local ok = vim.wait(5000, function()
+        local hunks = vim.fn["gitgutter#hunk#hunks"](bufnr)
+        return hunks ~= nil and not vim.tbl_isempty(hunks)
+    end, 50)
+    assert.is_true(ok, "gitgutter did not produce hunks in time")
 end
 
 describe("gitgutter_difforig", function()
     local test_dir
+    -- Extra repo dir for tests that build their own fixture. Cleaned in
+    -- after_each so it's removed even if the test fails mid-way.
+    local extra_dir
 
     before_each(function()
+        extra_dir = nil
         local test_file
         test_dir, test_file = make_test_repo()
         vim.cmd.edit(test_file)
 
-        -- gitgutter processes buffers asynchronously. Force it to
-        -- run and wait for the `User GitGutter` event, so its
-        -- internal state (repo path, diff base) is populated for
-        -- DiffOrig.
+        -- gitgutter processes buffers asynchronously. Force it to run
+        -- and block until its hunk list is populated, so DiffOrig and
+        -- first-hunk jumping have the state they need.
         gitgutter_process_sync()
     end)
 
     after_each(function()
         vim.cmd("silent! only | silent! %bdelete!")
         vim.fn.delete(test_dir, "rf")
+        if extra_dir then
+            vim.fn.delete(extra_dir, "rf")
+        end
     end)
 
     it("opens diff split on first toggle", function()
@@ -182,6 +194,79 @@ describe("gitgutter_difforig", function()
 
         eq(3, vim.wo.foldlevel)
         eq(nil, vim.b.gitgutter_difforig_foldlevel)
+    end)
+
+    it("jumps to the first hunk when cursor is above all hunks", function()
+        local src_bufnr = vim.api.nvim_get_current_buf()
+        -- At the top, nearest hunk is the first one (line 2).
+        vim.api.nvim_win_set_cursor(0, { 1, 0 })
+
+        M.toggle()
+
+        -- Focus returns to the source window after open.
+        eq(src_bufnr, vim.api.nvim_get_current_buf())
+        eq(2, vim.api.nvim_win_get_cursor(0)[1])
+    end)
+
+    it("jumps to the hunk nearest the cursor, not the first", function()
+        -- Cursor on line 4 (the second hunk); nearest is line 4, not the
+        -- first hunk at line 2.
+        vim.api.nvim_win_set_cursor(0, { 4, 0 })
+
+        M.toggle()
+
+        eq(4, vim.api.nvim_win_get_cursor(0)[1])
+    end)
+
+    it("centers the view on the jumped-to hunk", function()
+        -- Large file so the window can actually scroll; without zz the
+        -- jumped-to line would sit near the bottom of the viewport.
+        local committed = {}
+        for idx = 1, 200 do
+            committed[idx] = "line " .. idx
+        end
+        local working = vim.deepcopy(committed)
+        working[120] = "modified line 120"
+
+        local file
+        extra_dir, file = make_test_repo(committed, working)
+        vim.cmd.edit(file)
+        gitgutter_process_sync()
+        -- Start a bit before the change so a jump is needed.
+        vim.api.nvim_win_set_cursor(0, { 100, 0 })
+
+        M.toggle()
+
+        eq(120, vim.api.nvim_win_get_cursor(0)[1])
+
+        -- Centered => the line sits in the middle band of the window,
+        -- not pinned to the top or bottom edge.
+        local winline = vim.fn.winline()
+        local height = vim.api.nvim_win_get_height(0)
+        assert.is_true(
+            winline > height * 0.25 and winline < height * 0.75,
+            string.format(
+                "expected centered winline, got %d of %d", winline, height
+            )
+        )
+    end)
+
+    it("jumps to a deletion-only hunk at the top of the file", function()
+        -- Delete the first two lines. gitgutter reports a deletion hunk
+        -- with new_count == 0 and new_start == 0; hunk_line_range must
+        -- clamp the jump target to line 1.
+        local committed = { "line 1", "line 2", "line 3", "line 4" }
+        local working = { "line 3", "line 4" }
+
+        local file
+        extra_dir, file = make_test_repo(committed, working)
+        vim.cmd.edit(file)
+        gitgutter_process_sync()
+        vim.api.nvim_win_set_cursor(0, { 2, 0 })
+
+        M.toggle()
+
+        eq(1, vim.api.nvim_win_get_cursor(0)[1])
     end)
 
     it("restores foldlevel when closing from the diff window", function()

@@ -68,6 +68,75 @@ function M.close(src_bufnr)
     return true
 end
 
+--- The working-buffer line range [first, last] a hunk occupies.
+---
+--- hunk = { orig_start, orig_count, new_start, new_count }. new_start is
+--- the first changed line in the working buffer. A pure deletion has
+--- new_count == 0 and reports the line *after* which content was
+--- removed (0 at the top), so we treat it as a single line, clamped to
+--- line 1.
+---@param hunk number[]
+---@return number first, number last
+local function hunk_line_range(hunk)
+    local new_start = hunk[3]
+    local new_count = hunk[4]
+    local first = math.max(1, new_start)
+    local last = new_count > 0 and (new_start + new_count - 1) or first
+    return first, last
+end
+
+--- Move the current window's cursor to the hunk nearest `cursor_line`,
+--- then center the view on it.
+---
+--- Queries gitgutter's per-buffer hunk list and picks the hunk with the
+--- smallest line distance to the cursor (0 if the cursor sits inside a
+--- hunk), so toggling the diff mid-review keeps you on your current
+--- change instead of snapping back to the top. No-op if gitgutter
+--- reports no hunks. `bufnr` must be the buffer shown in the current
+--- window.
+---@param bufnr number
+---@param cursor_line number 1-indexed line to measure distance from
+local function jump_to_nearest_hunk(bufnr, cursor_line)
+    -- We move/center the current window, so it must show `bufnr`. The
+    -- caller relies on difforig's trailing `wincmd p`; bail if that ever
+    -- changes rather than scroll the wrong (diff) window.
+    if vim.api.nvim_win_get_buf(0) ~= bufnr then
+        return
+    end
+
+    local ok, hunks = pcall(vim.fn["gitgutter#hunk#hunks"], bufnr)
+    if not ok then
+        vim.notify(
+            "gitgutter_difforig: failed to read hunks: " .. tostring(hunks),
+            vim.log.levels.WARN
+        )
+        return
+    end
+    if not hunks or vim.tbl_isempty(hunks) then
+        return
+    end
+
+    -- Pick the hunk with the smallest distance to the cursor. Ties keep
+    -- the earlier hunk (strict `<`), which favors the one above.
+    local best_line, best_dist
+    for _, hunk in ipairs(hunks) do
+        local first, last = hunk_line_range(hunk)
+        local dist = 0
+        if cursor_line < first then
+            dist = first - cursor_line
+        elseif cursor_line > last then
+            dist = cursor_line - last
+        end
+        if best_dist == nil or dist < best_dist then
+            best_line, best_dist = first, dist
+        end
+    end
+
+    vim.api.nvim_win_set_cursor(0, { best_line, 0 })
+    -- Center the view on the hunk (like `zz`).
+    vim.cmd("normal! zz")
+end
+
 --- Open a difforig split and track the new diff buffer.
 ---@param src_bufnr number source buffer
 function M.open(src_bufnr)
@@ -76,6 +145,8 @@ function M.open(src_bufnr)
     -- diff mode clobbers it to 0; we restore this real value on close.
     local src_winid = vim.api.nvim_get_current_win()
     local src_foldlevel = vim.wo[src_winid].foldlevel
+    -- Where the user was reviewing, so we can return to the nearest hunk.
+    local src_cursor_line = vim.api.nvim_win_get_cursor(src_winid)[1]
 
     local wins_before = {}
     for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
@@ -107,6 +178,11 @@ function M.open(src_bufnr)
             vim.b[src_bufnr].gitgutter_difforig_src_winid = src_winid
             vim.wo[src_winid].foldlevel = 99
             vim.wo[w].foldlevel = 99
+
+            -- difforig ends w/ `wincmd p`, so focus is back on the
+            -- source window here. Jump it to the hunk nearest where the
+            -- user was, so toggling mid-review keeps their place.
+            jump_to_nearest_hunk(src_bufnr, src_cursor_line)
             return
         end
     end
