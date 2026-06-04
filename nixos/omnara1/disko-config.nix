@@ -1,8 +1,8 @@
 # mdadm RAID 0 across two NVMe SSDs (~1.8 TiB unified storage)
 #
 # Hardware:
-# - /dev/nvme0n1 - 894.25 GiB (Toshiba KXD51RUE960G)
-# - /dev/nvme1n1 - 894.25 GiB (Toshiba KXD51RUE960G)
+# - nvme-KXD51RUE960G_TOSHIBA_79RS10CJTR1Q - boot/ESP/swap + mdraid
+# - nvme-KXD51RUE960G_TOSHIBA_79RS10BHTR1Q - mdraid only
 {
   disko = {
     enableConfig = true;
@@ -11,7 +11,7 @@
       disk = {
         nvme0 = {
           type = "disk";
-          device = "/dev/nvme0n1";
+          device = "/dev/disk/by-id/nvme-KXD51RUE960G_TOSHIBA_79RS10CJTR1Q";
           content = {
             type = "gpt";
             partitions = {
@@ -47,7 +47,7 @@
         };
         nvme1 = {
           type = "disk";
-          device = "/dev/nvme1n1";
+          device = "/dev/disk/by-id/nvme-KXD51RUE960G_TOSHIBA_79RS10BHTR1Q";
           content = {
             type = "gpt";
             partitions = {
