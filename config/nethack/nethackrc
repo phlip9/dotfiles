@@ -44,7 +44,7 @@ OPTIONS=whatis_coord:compass
 # pickup policy: autopickup only gold, food, scrolls, potions, wands, rings,
 # spellbooks, gems, and tools. avoid scooping every weapon/armor pile.
 OPTIONS=autopickup
-OPTIONS=pickup_types:$%?!/=+*(
+OPTIONS=pickup_types:$%?!/=+*
 OPTIONS=pickup_burden:Burdened
 OPTIONS=pile_limit:0
 OPTIONS=sortloot:full

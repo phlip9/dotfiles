@@ -100,7 +100,7 @@ stdenv.mkDerivation (finalAttrs: {
   # we strip onnxruntime / huggingface packages above.
   dontCheckForBrokenSymlinks = true;
 
-  passthru.updateScript = nix-update-script { };
+  # passthru.updateScript = nix-update-script { };
 
   meta = {
     homepage = "https://github.com/Pasta-Devs/Marinara-Engine";
