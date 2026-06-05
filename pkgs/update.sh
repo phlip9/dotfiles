@@ -10,6 +10,7 @@ RESET=$'\033[0m'
 
 # Track results
 declare -a failed_packages=()
+declare -a updated_packages=()
 success_count=0
 total_count=$(jq 'length' "$packages_json")
 
@@ -101,6 +102,7 @@ while read -r pkg; do
       echo "${GREEN}✓${RESET} $pname: $old_version (unchanged)"
     else
       echo "${GREEN}✓${RESET} $pname: $old_version -> $new_version"
+      updated_packages+=("* $pname: $old_version -> $new_version")
     fi
     ((success_count++)) || true
   else
@@ -121,4 +123,13 @@ if [[ $total_count -gt 1 || ${#failed_packages[@]} -gt 0 ]]; then
     echo "Updated $success_count packages, ${#failed_packages[@]} failed"
     echo "Failed: ${failed_packages[*]}"
   fi
+fi
+
+if [[ ${#updated_packages[@]} -gt 0 ]]; then
+  echo
+  echo "Commit message:"
+  echo
+  echo "phlippkgs: update"
+  echo
+  printf '%s\n' "${updated_packages[@]}"
 fi
