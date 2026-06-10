@@ -84,6 +84,7 @@
     pkgs.josh
     pkgs.rage
     pkgs.toml-cli
+    pkgs.uv
     pkgsYubikey.age-plugin-yubikey
 
     # TODO(phlip9): remove
