@@ -45,6 +45,9 @@ fix (phlipPkgsNixos: {
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
+  # paseo-relay - self-hosted relay for Paseo daemon/client traffic
+  paseo-relay = callPackage ./paseo-relay.nix { };
+
   # my wallpapers
   wallpapers = callPackage ./wallpapers.nix { inherit (phlipPkgsNixos) matugen; };
 })

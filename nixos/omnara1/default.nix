@@ -211,6 +211,45 @@
   sops.secrets.phlip9-github-agent-app-secret-key = { };
 
   # =========================================================================
+  # Paseo
+  # =========================================================================
+  services.paseo = {
+    enable = true;
+    package = config.phlipPkgs.paseo;
+
+    user = "phlip9";
+    group = "users";
+    dataDir = "/home/phlip9/.config/paseo";
+    hostnames = [
+      "paseo.phlip9.com"
+    ];
+
+    relay = {
+      enable = true;
+      mode = "remote";
+      host = "relay.paseo.phlip9.com";
+      port = 443;
+      publicEndpoint = "relay.paseo.phlip9.com:443";
+      useTls = true;
+      publicUseTls = true;
+    };
+
+    relayServer = {
+      enable = true;
+      domain = "relay.paseo.phlip9.com";
+    };
+
+    webUi = {
+      enable = true;
+      domain = "paseo.phlip9.com";
+      publicBaseUrl = "https://paseo.phlip9.com";
+    };
+
+    auth.passwordFile = config.sops.secrets.paseo-daemon-password.path;
+  };
+  sops.secrets.paseo-daemon-password = { };
+
+  # =========================================================================
   # nixbot CI
   # =========================================================================
   # see: doc/nixbot-ci.md

@@ -9,7 +9,7 @@
   fetchFromGitHub,
   lib,
   makeBinaryWrapper,
-  nix-update-script,
+  # nix-update-script,
   nodejs_22,
   pnpm_10,
   stdenv,

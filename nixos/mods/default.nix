@@ -23,6 +23,8 @@
   ./nix-cache.nix
   ./noctalia-shell.nix
   ./o11y.nix
+  (sources.paseo + "/nix/module.nix")
+  ./paseo.nix
   ./phlippkgs.nix
   ./xremap.nix
 

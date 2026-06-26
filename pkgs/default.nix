@@ -6,7 +6,7 @@
 #
 # For NixOS packages, see: <../nixos/pkgs/default.nix>
 
-{ pkgs, ... }:
+{ pkgs, sources }:
 let
   callPackage = pkgs.callPackage;
 
@@ -87,6 +87,9 @@ fix (phlipPkgs: {
 
   # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix { };
+
+  # paseo - self-hosted daemon for claude-code, codex, pi, etc
+  paseo = callPackage ./paseo.nix { inherit sources; };
 
   # rage-age-compat - provide an age shim to the rage binary
   rage-age-compat = callPackage ./rage-age-compat.nix { };
