@@ -74,6 +74,22 @@
       "hash": "1f8j7fh0nl4qmqlxn6lis8zf7dnckm6jri4rwmj0qm1qivhr58lv",
       "frozen": true
     },
+    "paseo": {
+      "type": "GitRelease",
+      "repository": {
+        "type": "GitHub",
+        "owner": "getpaseo",
+        "repo": "paseo"
+      },
+      "pre_releases": false,
+      "version_upper_bound": null,
+      "release_prefix": null,
+      "submodules": false,
+      "version": "v0.1.101",
+      "revision": "c65b83f2fd1848f36d5fc2091efbad2523c88ee7",
+      "url": "https://api.github.com/repos/getpaseo/paseo/tarball/v0.1.101",
+      "hash": "1wn4xsdxsxkc3qsjqdad95nly26alhy68z47zjkx6licczr55mp4"
+    },
     "sops-nix": {
       "type": "Git",
       "repository": {
