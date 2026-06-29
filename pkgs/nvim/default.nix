@@ -149,8 +149,9 @@ let
     # vim-fugitive - Vim Git integration
     { plugin = p.vim-fugitive; }
 
-    # vim-gitgutter - Show git diff in the gutter
-    { plugin = p.vim-gitgutter; }
+    # TODO(phlip9): remove after vgit transition
+    # # vim-gitgutter - Show git diff in the gutter
+    # { plugin = p.vim-gitgutter; }
 
     # NERDCommenter - Easily comment lines or blocks of text
     { plugin = p.nerdcommenter; }

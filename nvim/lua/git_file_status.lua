@@ -1,3 +1,5 @@
+--- TODO(phlip9): re-enable after vgit transition
+---
 --- Async git changed-file status cache keyed by repo root and diff base.
 ---
 --- Motivation:

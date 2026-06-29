@@ -1,3 +1,5 @@
+--- TODO(phlip9): re-enable after vgit transition
+---
 --- Telescope document outline with git diff markers.
 ---
 --- Wraps telescope-coc and builtin.treesitter pickers to add git diff markers

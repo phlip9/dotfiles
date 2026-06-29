@@ -7,6 +7,11 @@ local entry_display = require("telescope.pickers.entry_display")
 local make_entry = require("telescope.make_entry")
 
 describe("telescope_diff_outline", function()
+    -- TODO(phlip9): re-enable after vgit transition
+    if true then
+        return
+    end
+
     describe("get_line_diff_status", function()
         it("returns + for added lines", function()
             -- Hunk format: [old_start, old_count, new_start, new_count]

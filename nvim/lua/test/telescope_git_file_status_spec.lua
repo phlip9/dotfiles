@@ -26,6 +26,11 @@ local function make_stub_picker()
 end
 
 describe("telescope_git_file_status", function()
+    --- TODO(phlip9): re-enable after vgit transition
+    if true then
+        return
+    end
+
     local orig_lookup = git_file_status.lookup_marker
     local orig_is_cache_fresh = git_file_status.is_cache_fresh
     local orig_create = entry_display.create
