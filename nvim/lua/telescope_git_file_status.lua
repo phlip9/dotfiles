@@ -1,3 +1,5 @@
+--- TODO(phlip9): re-enable after vgit transition
+---
 --- Telescope file pickers with async git file-status markers.
 ---
 --- This module is the UI layer for `git_file_status.lua`.

@@ -469,14 +469,18 @@ if pcall(require, "telescope") then
     -- require("telescope.builtin.__files")
 
     -- files/grep
-    vim.keymap.set("n", "O", function()
-        require_local("telescope_git_file_status").find_files({})
-    end, M.with_desc("search files"))
-    vim.keymap.set("n", "<space>O", function()
-            require_local("telescope_git_file_status").find_files({
-                no_ignore = true,
-            })
-        end,
+    -- TODO(phlip9): re-enable after vgit transition
+    -- vim.keymap.set("n", "O", function()
+    --     require_local("telescope_git_file_status").find_files({})
+    -- end, M.with_desc("search files"))
+    -- vim.keymap.set("n", "<space>O", function()
+    --         require_local("telescope_git_file_status").find_files({
+    --             no_ignore = true,
+    --         })
+    --     end,
+    --     M.with_desc("find files (no gitignore)"))
+    vim.keymap.set("n", "O", builtin.find_files, M.with_desc("search files"))
+    vim.keymap.set("n", "<space>O", function() builtin.find_files({ no_ignore = true }) end,
         M.with_desc("find files (no gitignore)"))
     vim.keymap.set("n", "<space>/", builtin.live_grep, M.with_desc("repo grep"))
     vim.keymap.set({ "n", "x" }, "<space>'", builtin.grep_string, M.with_desc("repo grep word under cursor"))
@@ -490,9 +494,11 @@ if pcall(require, "telescope") then
     vim.keymap.set("n", "<space>gb", builtin.git_branches, M.with_desc("open git branches"))
 
     -- nvim
-    vim.keymap.set("n", "T", function()
-        require_local("telescope_git_file_status").buffers({})
-    end, M.with_desc("search buffers"))
+    -- TODO(phlip9): re-enable after vgit transition
+    -- vim.keymap.set("n", "T", function()
+    --     require_local("telescope_git_file_status").buffers({})
+    -- end, M.with_desc("search buffers"))
+    vim.keymap.set("n", "T", builtin.buffers, M.with_desc("search buffers"))
     vim.keymap.set("n", "<space>vh", builtin.help_tags, M.with_desc("search nvim help"))
     vim.keymap.set("n", "<space>vm", builtin.keymaps, M.with_desc("search nvim key mappings"))
 
@@ -501,11 +507,13 @@ if pcall(require, "telescope") then
 
     -- LSP
     local function show_outline()
-        local diff_outline = require_local("telescope_diff_outline")
+        -- TODO(phlip9): re-enable after vgit transition
+        -- local diff_outline = require_local("telescope_diff_outline")
 
         -- Use coc.nvim LSP document outline if available
         if vim.g.coc_service_initialized == 1 and vim.fn.CocHasProvider("documentSymbol") then
-            return diff_outline.coc_document_symbols({
+            -- return diff_outline.coc_document_symbols({
+            return coc.document_symbols({
                 -- don't show path in outline
                 path_display = "hidden",
             })
@@ -514,7 +522,8 @@ if pcall(require, "telescope") then
         -- Use treesitter document outline if available
         local parsers = require("nvim-treesitter.parsers")
         if parsers.has_parser(parsers.get_buf_lang()) then
-            return diff_outline.treesitter_symbols({})
+            -- return diff_outline.treesitter_symbols({})
+            return builtin.treesitter({})
         end
 
         print("No coc.nvim LSP or treesitter parser for outline")
@@ -587,47 +596,47 @@ do  -- baleia.nvim - colorize ANSI escape sequences {{{
     end, { bang = true })
 end -- baleia.nvim }}}
 
-do  -- vim-gitgutter - Show git diff in the gutter {{{
-    -- Mappings:
-    -- <leader>ggt - Toggle git gutter
-    -- <leader>hs - Stage hunk
-    -- <leader>hr - Undo hunk
-    -- <leader>hd - toggle git diff split pane for current file
-    -- <leader>hv - open popup preview for current hunk
-    -- ]h - Move forward one hunk
-    -- [h - Move backward one hunk
-    -- <motion>ih - <motion> in hunk
-    -- <motion>ah - <motion> around hunk (includes trailing empty lines)
+-- do  -- vim-gitgutter - Show git diff in the gutter {{{
+--     -- Mappings:
+--     -- <leader>ggt - Toggle git gutter
+--     -- <leader>hs - Stage hunk
+--     -- <leader>hr - Undo hunk
+--     -- <leader>hd - toggle git diff split pane for current file
+--     -- <leader>hv - open popup preview for current hunk
+--     -- ]h - Move forward one hunk
+--     -- [h - Move backward one hunk
+--     -- <motion>ih - <motion> in hunk
+--     -- <motion>ah - <motion> around hunk (includes trailing empty lines)
+--
+--     local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
+--
+--     -- Don't automatically set mappings.
+--     vim.g.gitgutter_map_keys = false
+--
+--     vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, M.with_desc("toggle showing git hunks"))
+--     vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, M.with_desc("stage git hunk"))
+--     vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, M.with_desc("reset git hunk"))
+--     vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, M.with_desc("preview git hunk in popup"))
+--     vim.keymap.set("n", "<leader>hd", function()
+--         require_local("gitgutter_difforig").toggle()
+--     end, M.with_desc("toggle full hunk diff in split window"))
+--
+--     -- Make GitGutter(Next|Prev)Hunk repeatable
+--     local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
+--         vim.cmd.GitGutterNextHunk,
+--         vim.cmd.GitGutterPrevHunk
+--     )
+--     vim.keymap.set({ "n", "x", "o" }, "]h", M.recenter_after(move_hunk_next), M.with_desc("goto next git hunk"))
+--     vim.keymap.set({ "n", "x", "o" }, "[h", M.recenter_after(move_hunk_prev), M.with_desc("goto prev git hunk"))
+--
+--     local opts = { silent = true, remap = false }
+--     vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)", opts)
+--     vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)", opts)
+--     vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)", opts)
+--     vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)", opts)
+-- end -- vim-gitgutter }}}
 
-    local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
-
-    -- Don't automatically set mappings.
-    vim.g.gitgutter_map_keys = false
-
-    vim.keymap.set("n", "<leader>ggt", vim.cmd.GitGutterToggle, M.with_desc("toggle showing git hunks"))
-    vim.keymap.set("n", "<leader>hs", vim.cmd.GitGutterStageHunk, M.with_desc("stage git hunk"))
-    vim.keymap.set("n", "<leader>hr", vim.cmd.GitGutterUndoHunk, M.with_desc("reset git hunk"))
-    vim.keymap.set("n", "<leader>hv", vim.cmd.GitGutterPreviewHunk, M.with_desc("preview git hunk in popup"))
-    vim.keymap.set("n", "<leader>hd", function()
-        require_local("gitgutter_difforig").toggle()
-    end, M.with_desc("toggle full hunk diff in split window"))
-
-    -- Make GitGutter(Next|Prev)Hunk repeatable
-    local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
-        vim.cmd.GitGutterNextHunk,
-        vim.cmd.GitGutterPrevHunk
-    )
-    vim.keymap.set({ "n", "x", "o" }, "]h", M.recenter_after(move_hunk_next), M.with_desc("goto next git hunk"))
-    vim.keymap.set({ "n", "x", "o" }, "[h", M.recenter_after(move_hunk_prev), M.with_desc("goto prev git hunk"))
-
-    local opts = { silent = true, remap = false }
-    vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)", opts)
-    vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)", opts)
-    vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)", opts)
-    vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)", opts)
-end -- vim-gitgutter }}}
-
-do  -- coc.nvim - Complete engine and Language Server support for neovim {{{
+do -- coc.nvim - Complete engine and Language Server support for neovim {{{
     -- Mappings:
     --         gd  - goto definition
     --         gc  - goto declaration

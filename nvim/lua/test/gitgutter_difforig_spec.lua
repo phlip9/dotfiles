@@ -59,6 +59,11 @@ local function gitgutter_process_sync()
 end
 
 describe("gitgutter_difforig", function()
+    -- TODO(phlip9): re-enable after vgit transition
+    if true then
+        return
+    end
+
     local test_dir
     -- Extra repo dir for tests that build their own fixture. Cleaned in
     -- after_each so it's removed even if the test fails mid-way.
