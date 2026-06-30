@@ -60,7 +60,15 @@ let
   # different branch/rev or temporarily use a plugin before it's added to
   # nixpkgs.
   #
-  # To update:
+  # To add, append the repo to pkgs/nvim/extra-plugins.csv:
+  #
+  # ```csv
+  # repo,branch,alias
+  # https://github.com/MaxFangX/vgit.nvim,,
+  # ```
+  #
+  # To add, after changing extra-plugins.csv / or to update all non-nixpkgs
+  # plugins, run:
   #
   # ```bash
   # just phlippkgs-update nvim
@@ -139,6 +147,17 @@ let
 
     # baleia.nvim - Colorize text with ANSI escape sequences.
     { plugin = p.baleia-nvim; }
+
+    # vgit.nvim - visual git plugin for neovim
+    {
+      plugin = p.vgit-nvim.overrideAttrs {
+        dependencies = [
+          p.plenary-nvim
+          # TODO(phlip9): patch "Source Code Pro" font
+          # p.nvim-web-devicons
+        ];
+      };
+    }
   ];
 
   # All plugins we're actually using.
