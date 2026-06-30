@@ -596,6 +596,1046 @@ do  -- baleia.nvim - colorize ANSI escape sequences {{{
     end, { bang = true })
 end -- baleia.nvim }}}
 
+do  -- vgit.nvim - visual git plugin for neovim {{{
+    local vgit = require("vgit")
+
+    -- Helper functions defined in a table for better organization
+    local helpers = {}
+
+    -- Track the window and buffer we came from before opening vgit preview
+    local prev_window = nil
+    local prev_buffer = nil
+    local prev_cursor_pos = nil -- Track cursor position {line, col}
+
+    -- Configuration flags
+    -- TODO(max): Remove this later if there are no gutter issues for a while
+    local enable_gutter_refresh = false -- Toggle gutter refresh on exit
+
+    -- Track timers for cleanup to prevent leaks
+    local pending_timers = {}
+    local cursor_restore_timer = nil
+
+    -- Helper to cancel all pending timers and clear the list
+    local function cancel_pending_timers()
+        for _, timer in ipairs(pending_timers) do
+            if timer and not timer:is_closing() then
+                timer:stop()
+                timer:close()
+            end
+        end
+        pending_timers = {}
+        -- Don't cancel cursor_restore_timer - that needs to complete
+    end
+
+    -- Wrapper around vim.defer_fn that tracks timers for cleanup
+    local function defer_fn_tracked(fn, ms)
+        local timer = vim.loop.new_timer()
+        if timer == nil then
+            return
+        end
+
+        table.insert(pending_timers, timer)
+
+        timer:start(ms, 0, function()
+            vim.schedule(function()
+                -- Remove this timer from pending list when it fires
+                for i, t in ipairs(pending_timers) do
+                    if t == timer then
+                        table.remove(pending_timers, i)
+                        break
+                    end
+                end
+
+                fn()
+
+                if not timer:is_closing() then
+                    timer:close()
+                end
+            end)
+        end)
+    end
+
+    -- Check if file is untracked
+    helpers.is_untracked = function(filepath)
+        local relative = vim.fn.fnamemodify(filepath, ':.')
+        return vim.fn.system('git ls-files --others --exclude-standard ' ..
+            vim.fn.shellescape(relative)):match('%S') ~= nil
+    end
+
+    -- Helper to restore syntax highlighting if lost
+    helpers.restore_syntax_if_needed = function(bufnr)
+        -- Skip during search/command mode to avoid interfering with search
+        -- highlights
+        local mode = vim.fn.mode()
+        if mode:match('[/?]') or mode == 'c' then
+            return
+        end
+
+        -- Only check normal file buffers
+        local buftype = vim.bo[bufnr].buftype
+        if buftype ~= '' then
+            return
+        end
+
+        local filetype = vim.bo[bufnr].filetype
+        local syntax = vim.bo[bufnr].syntax
+        local filename = vim.api.nvim_buf_get_name(bufnr)
+
+        -- If we have a real file but no filetype, something went wrong
+        if filename == '' or vim.fn.filereadable(filename) ~= 1 then
+            return
+        end
+
+        if filetype == '' then
+            -- Re-detect filetype
+            vim.cmd('silent! doautocmd BufRead ' ..
+                vim.fn.fnameescape(filename))
+
+            -- If still no filetype, try filetype detect
+            if vim.bo[bufnr].filetype == '' then
+                vim.cmd('silent! filetype detect')
+            end
+        end
+
+        -- Always re-enable syntax when returning from vgit
+        -- Even if syntax option is set, highlighting may not be active
+        if vim.bo[bufnr].filetype ~= '' then
+            local ft = vim.bo[bufnr].filetype
+            -- Force reload syntax by resetting and re-applying filetype
+            vim.bo[bufnr].syntax = ''
+            vim.bo[bufnr].syntax = ft
+            vim.cmd('silent! syntax on')
+        end
+    end
+
+    -- Helper to save current window and buffer before opening vgit preview
+    helpers.save_window = function()
+        prev_window = vim.api.nvim_get_current_win()
+        prev_buffer = vim.api.nvim_get_current_buf()
+        prev_cursor_pos = vim.api.nvim_win_get_cursor(0) -- {line, col}
+    end
+
+    -- Helper to restore cursor position for untracked files after opening diff
+    helpers.restore_cursor_for_untracked = function(saved_pos)
+        if cursor_restore_timer and not cursor_restore_timer:is_closing() then
+            cursor_restore_timer:stop()
+            cursor_restore_timer:close()
+        end
+        cursor_restore_timer = vim.loop.new_timer()
+        if cursor_restore_timer == nil then
+            return
+        end
+        cursor_restore_timer:start(200, 0, function()
+            vim.schedule(function()
+                pcall(vim.api.nvim_win_set_cursor, 0, saved_pos)
+                vim.cmd('normal! zz')
+                if not cursor_restore_timer:is_closing() then
+                    cursor_restore_timer:close()
+                end
+            end)
+        end)
+    end
+
+    -- Helper to restore previous window and buffer after closing vgit preview
+    helpers.restore_window = function()
+        -- Cancel cursor restore timer if it's still pending
+        if cursor_restore_timer and not cursor_restore_timer:is_closing() then
+            cursor_restore_timer:stop()
+            cursor_restore_timer:close()
+            cursor_restore_timer = nil
+        end
+
+        if prev_window and vim.api.nvim_win_is_valid(prev_window) then
+            vim.api.nvim_set_current_win(prev_window)
+
+            -- Choose up to 1 of the following behaviors when quitting staging view:
+
+            -- Option 1: Restore original buffer (uncomment to enable)
+            -- if prev_buffer and vim.api.nvim_buf_is_valid(prev_buffer) then
+            --   vim.api.nvim_win_set_buf(prev_window, prev_buffer)
+            -- end
+
+            -- Option 2: Navigate to next hunk (uncomment to enable)
+            -- pcall(function()
+            --   vgit.hunk_down()
+            -- end)
+
+            -- Option 3: Smart behavior based on remaining hunks
+            -- (currently active)
+            local current_file = vim.fn.expand('%:p')
+            local is_untracked = helpers.is_untracked(current_file)
+
+            -- Check if file has unstaged hunks
+            local diff_output = vim.fn.systemlist(
+                'git diff -U0 ' .. vim.fn.shellescape(current_file))
+            local has_hunks = false
+            for _, line in ipairs(diff_output) do
+                if line:match('^@@') then
+                    has_hunks = true
+                    break
+                end
+            end
+
+            if has_hunks or is_untracked then
+                -- File still has hunks or is untracked - restore cursor position
+                if prev_cursor_pos then
+                    pcall(vim.api.nvim_win_set_cursor, 0, prev_cursor_pos)
+                    vim.cmd('normal! zz')
+                end
+            else
+                -- No hunks left in file - jump to next file with hunks
+                pcall(function()
+                    helpers.jump_to_next_unstaged_hunk()
+                    -- Restore syntax for the new file we jumped to
+                    defer_fn_tracked(function()
+                        local new_bufnr = vim.api.nvim_get_current_buf()
+                        if vim.api.nvim_buf_is_valid(new_bufnr) then
+                            helpers.restore_syntax_if_needed(new_bufnr)
+                        end
+                    end, 100)
+                end)
+            end
+
+            prev_window = nil
+            prev_buffer = nil
+            prev_cursor_pos = nil
+
+            -- Show count of remaining unstaged and untracked files
+            local unstaged_count = #vim.fn.systemlist('git diff --name-only')
+            local untracked_count = #vim.fn.systemlist(
+                'git ls-files --others --exclude-standard')
+            local total_count = unstaged_count + untracked_count
+
+            if total_count > 0 then
+                local parts = {}
+                if unstaged_count > 0 then
+                    table.insert(parts, string.format('%d unstaged', unstaged_count))
+                end
+                if untracked_count > 0 then
+                    table.insert(parts, string.format('%d untracked', untracked_count))
+                end
+                print(string.format('%d file%s remaining (%s)',
+                    total_count,
+                    total_count == 1 and '' or 's',
+                    table.concat(parts, ', ')))
+            else
+                print('All files staged!')
+            end
+
+            -- Refresh quickfix list if it's open
+            local qf_winid = vim.fn.getqflist({ winid = 0 }).winid
+            if qf_winid ~= 0 then
+                require("git_hunks").populate_quickfix(false) -- don't log status
+            end
+        end
+    end
+
+    -- Open diff staging view for first unstaged file
+    helpers.open_first_unstaged_diff = function()
+        -- Get first file with unstaged changes
+        local unstaged_files = vim.fn.systemlist('git diff --name-only')
+        if #unstaged_files > 0 then
+            -- Save window BEFORE opening the file
+            helpers.save_window()
+            local first_file = unstaged_files[1]
+            -- Open the file
+            vim.cmd('edit ' .. vim.fn.fnameescape(first_file))
+            -- Open diff preview
+            vgit.buffer_diff_preview()
+        else
+            print('No unstaged changes found')
+        end
+    end
+
+    -- Jump to unstaged hunk with direction (next/prev)
+    helpers.jump_to_unstaged_hunk = function(direction)
+        -- Validate direction parameter
+        if direction ~= 'next' and direction ~= 'prev' then
+            print(string.format(
+                "Invalid direction '%s'. Must be 'next' or 'prev'", direction))
+            return
+        end
+
+        -- Get current file and cursor position
+        local current_file = vim.fn.expand('%:p')
+        local current_line = vim.fn.line('.')
+
+        -- Get git root to convert relative paths to absolute
+        local git_root_output = vim.fn.systemlist(
+            'git rev-parse --show-toplevel')
+        local git_root = git_root_output[1]
+        if not git_root or vim.v.shell_error ~= 0 then
+            print('Error: Not in a git repository')
+            return
+        end
+
+        -- Get all files with unstaged changes and untracked files
+        local unstaged_files = vim.fn.systemlist('git diff --name-only')
+        local untracked_files = vim.fn.systemlist(
+            'git ls-files --others --exclude-standard')
+
+        if #unstaged_files == 0 and #untracked_files == 0 then
+            print('No unstaged changes or untracked files found')
+            return
+        end
+
+        -- Build list of all hunks across all files
+        local all_hunks = {}
+
+        -- Add hunks from unstaged files
+        for _, file in ipairs(unstaged_files) do
+            local diff_output = vim.fn.systemlist(
+                'git diff -U0 ' .. vim.fn.shellescape(file)
+            )
+
+            for _, line in ipairs(diff_output) do
+                -- Parse unified diff header:
+                -- @@ -old_start,old_count +new_start,new_count @@
+                local new_start, new_count = line:match('^@@.*%+(%d+),?(%d*)')
+                if new_start then
+                    local start_line = tonumber(new_start)
+                    local count = tonumber(new_count) or 1
+                    -- For zero-line hunks (pure deletions),
+                    -- end_line should equal start_line
+                    local end_line = start_line + math.max(0, count - 1)
+
+                    table.insert(all_hunks, {
+                        file = file,
+                        -- Store absolute path for consistent comparison
+                        absolute_file = vim.fn.fnamemodify(
+                            git_root .. '/' .. file, ':p'
+                        ),
+                        start_line = start_line,
+                        end_line = end_line,
+                        is_untracked = false
+                    })
+                end
+            end
+        end
+
+        -- Add untracked files (entire file is a "hunk")
+        for _, file in ipairs(untracked_files) do
+            table.insert(all_hunks, {
+                file = file,
+                absolute_file = vim.fn.fnamemodify(git_root .. '/' .. file, ':p'),
+                start_line = 1,
+                end_line = 1,
+                is_untracked = true
+            })
+        end
+
+        if #all_hunks == 0 then
+            print('No hunks found')
+            return
+        end
+
+        -- Find if we're currently in a hunk
+        local current_hunk_index = nil
+        local absolute_current_file = vim.fn.fnamemodify(current_file, ':p')
+
+        for i, hunk in ipairs(all_hunks) do
+            if hunk.absolute_file == absolute_current_file then
+                -- Special case: deletion at beginning of file (start_line = 0)
+                -- Consider user "in" this hunk if at line 1
+                if hunk.start_line == 0 and current_line == 1 then
+                    current_hunk_index = i
+                    break
+                    -- Normal case: check if line is within hunk range
+                elseif current_line >= hunk.start_line and
+                    current_line <= hunk.end_line then
+                    current_hunk_index = i
+                    break
+                end
+            end
+        end
+
+        -- Determine which hunk to jump to
+        local target_hunk
+        local action_description
+
+        if current_hunk_index then
+            -- We're inside a hunk, jump with wraparound
+            if direction == 'next' then
+                -- Jump to the next hunk (with wraparound)
+                -- Note: Lua arrays are 1-indexed, so (index % count) + 1 ensures
+                -- we get 1..n, never 0
+                local next_index = (current_hunk_index % #all_hunks) + 1
+                target_hunk = all_hunks[next_index]
+                action_description = 'next'
+            elseif direction == 'prev' then
+                -- Jump to the previous hunk (with wraparound)
+                local prev_index = current_hunk_index - 1
+                if prev_index < 1 then
+                    prev_index = #all_hunks
+                end
+                target_hunk = all_hunks[prev_index]
+                action_description = 'previous'
+            end
+        else
+            -- Not inside a hunk - check if we're between hunks in
+            -- current file
+
+            -- Find all hunks in current file
+            local hunks_in_current_file = {}
+            for i, hunk in ipairs(all_hunks) do
+                if hunk.absolute_file == absolute_current_file then
+                    table.insert(hunks_in_current_file, i)
+                end
+            end
+
+            if #hunks_in_current_file > 0 then
+                -- We're in a file with hunks but between them
+                local found_index = nil
+
+                if direction == 'next' then
+                    -- Find first hunk after current line
+                    for _, idx in ipairs(hunks_in_current_file) do
+                        if all_hunks[idx].start_line > current_line then
+                            found_index = idx
+                            break
+                        end
+                    end
+
+                    if found_index then
+                        -- Found a hunk after cursor in same file
+                        target_hunk = all_hunks[found_index]
+                        action_description = 'next'
+                    else
+                        -- After all hunks in file, wrap to next file
+                        local last_idx = hunks_in_current_file[
+                        #hunks_in_current_file]
+                        local next_idx = (last_idx % #all_hunks) + 1
+                        target_hunk = all_hunks[next_idx]
+                        action_description = 'next'
+                    end
+                elseif direction == 'prev' then
+                    -- Find last hunk before current line
+                    for i = #hunks_in_current_file, 1, -1 do
+                        local idx = hunks_in_current_file[i]
+                        if all_hunks[idx].end_line < current_line then
+                            found_index = idx
+                            break
+                        end
+                    end
+
+                    if found_index then
+                        -- Found a hunk before cursor in same file
+                        target_hunk = all_hunks[found_index]
+                        action_description = 'previous'
+                    else
+                        -- Before all hunks in file, wrap to previous file
+                        local first_idx = hunks_in_current_file[1]
+                        local prev_idx = first_idx - 1
+                        if prev_idx < 1 then
+                            prev_idx = #all_hunks
+                        end
+                        target_hunk = all_hunks[prev_idx]
+                        action_description = 'previous'
+                    end
+                end
+            else
+                -- We're in a file without any hunks
+                -- Find the next/previous file alphabetically with hunks
+
+                -- Get unique files from all_hunks
+                -- (already in git's alphabetical order)
+                local files_with_hunks = {}
+                local seen_files = {}
+                for _, hunk in ipairs(all_hunks) do
+                    if not seen_files[hunk.file] then
+                        table.insert(files_with_hunks, hunk.file)
+                        seen_files[hunk.file] = true
+                    end
+                end
+
+                -- Get current file's relative path for comparison
+                local escaped_root = vim.fn.escape(git_root, '/\\')
+                local pattern = '^' .. escaped_root .. '/?'
+                local current_file_relative = vim.fn.fnamemodify(
+                    current_file:gsub(pattern, ''), ':.'
+                )
+
+                if direction == 'next' then
+                    -- Find first file alphabetically after current file
+                    local next_file = nil
+                    for _, file in ipairs(files_with_hunks) do
+                        if file > current_file_relative then
+                            next_file = file
+                            break
+                        end
+                    end
+
+                    if next_file then
+                        -- Jump to first hunk in the next file alphabetically
+                        for i, hunk in ipairs(all_hunks) do
+                            if hunk.file == next_file then
+                                target_hunk = all_hunks[i]
+                                action_description = 'next file'
+                                break
+                            end
+                        end
+                    else
+                        -- No files after current, wrap to first file
+                        target_hunk = all_hunks[1]
+                        action_description = 'first file'
+                    end
+                elseif direction == 'prev' then
+                    -- Find last file alphabetically before current file
+                    local prev_file = nil
+                    for i = #files_with_hunks, 1, -1 do
+                        local file = files_with_hunks[i]
+                        if file < current_file_relative then
+                            prev_file = file
+                            break
+                        end
+                    end
+
+                    if prev_file then
+                        -- Jump to last hunk in the previous file alphabetically
+                        local last_hunk_in_prev_file = nil
+                        for i = #all_hunks, 1, -1 do
+                            if all_hunks[i].file == prev_file then
+                                last_hunk_in_prev_file = all_hunks[i]
+                                target_hunk = last_hunk_in_prev_file
+                                action_description = 'previous file'
+                                break
+                            end
+                        end
+                    else
+                        -- No files before current, wrap to last file's last hunk
+                        target_hunk = all_hunks[#all_hunks]
+                        action_description = 'last file'
+                    end
+                end
+            end
+        end
+
+        -- Jump to the target hunk
+        if target_hunk.absolute_file ~= absolute_current_file then
+            vim.cmd('edit ' .. vim.fn.fnameescape(target_hunk.absolute_file))
+        end
+        vim.cmd('normal! ' .. target_hunk.start_line .. 'Gzz')
+
+        -- Update quickfix list highlighting if it's open
+        local qf_winid = vim.fn.getqflist({ winid = 0 }).winid
+        if qf_winid ~= 0 then
+            -- Get the current quickfix list (don't refresh)
+            local qf_list = vim.fn.getqflist()
+
+            -- Find the matching quickfix entry to highlight
+            for i, item in ipairs(qf_list) do
+                -- Get the filename from quickfix entry
+                -- It might be stored as filename or via bufnr
+                local qf_file
+                if item.bufnr and item.bufnr > 0 then
+                    qf_file = vim.fn.fnamemodify(
+                        vim.fn.bufname(item.bufnr), ':p')
+                elseif item.filename then
+                    qf_file = vim.fn.fnamemodify(item.filename, ':p')
+                end
+
+                -- Check if this entry matches our target hunk
+                if qf_file and qf_file == target_hunk.absolute_file and
+                    item.lnum == target_hunk.start_line then
+                    -- Set the quickfix index to highlight this entry
+                    vim.fn.setqflist({}, 'r', { idx = i })
+                    break
+                end
+            end
+        end
+
+        -- Report what we did
+        -- Use relative file name for cleaner output
+        local file_status = target_hunk.is_untracked and 'untracked file' or 'hunk'
+        print(string.format('Jumped to %s %s: %s:%d',
+            action_description, file_status, target_hunk.file,
+            target_hunk.start_line))
+    end
+
+    -- Jump to next unstaged hunk (or first if not in a hunk)
+    helpers.jump_to_next_unstaged_hunk = function()
+        helpers.jump_to_unstaged_hunk('next')
+    end
+
+    -- Jump to previous unstaged hunk (or last if not in a hunk)
+    helpers.jump_to_prev_unstaged_hunk = function()
+        helpers.jump_to_unstaged_hunk('prev')
+    end
+
+    -- Open diff preview, jumping to next hunk first if current file has none
+    helpers.open_diff_with_jump = function()
+        local git_hunks = require("git_hunks")
+
+        -- Check if there are any hunks at all
+        local all_hunks = git_hunks.get_all_hunks()
+        if #all_hunks == 0 then
+            print('No unstaged changes or untracked files found')
+            return
+        end
+
+        local current_file = vim.fn.expand('%:p')
+
+        -- If current file has no hunks, jump to next file with hunks
+        if not git_hunks.has_hunks(current_file) then
+            helpers.jump_to_next_unstaged_hunk()
+        end
+
+        -- Save window state and open diff preview
+        local is_untracked = helpers.is_untracked(vim.fn.expand('%:p'))
+        local saved_pos = vim.api.nvim_win_get_cursor(0)
+        helpers.save_window()
+        vgit.buffer_diff_preview()
+        if is_untracked then
+            helpers.restore_cursor_for_untracked(saved_pos)
+        end
+    end
+
+    vgit.setup({
+        -- Set below
+        keymaps = {},
+
+        settings = {
+            -- General settings
+            git = {
+                cmd = 'git', -- Use system git
+                fallback_cwd = vim.fn.getcwd(),
+                fallback_args = {
+                    '--no-pager',
+                    '--literal-pathspecs',
+                    '-c', 'gc.auto=0',
+                },
+            },
+
+            -- Live gutter signs for changes
+            live_gutter = {
+                enabled = true,
+                edge_navigation = false, -- Jump between hunks, not edges
+            },
+
+            -- Live blame annotations
+            live_blame = {
+                enabled = false, -- Toggle with <LocalLeader>gB
+                format = function(blame, git_config)
+                    local config_author = git_config['user.name']
+                    local author = blame.author
+                    if config_author == author then
+                        author = 'You'
+                    end
+
+                    if not blame.committed then
+                        author = 'You'
+                        return string.format(' %s • Uncommitted changes', author)
+                    end
+
+                    local time = os.difftime(os.time(), blame.author_time)
+                        / (60 * 60 * 24)
+                    local time_str = string.format('%d days ago', math.floor(time))
+                    if time < 1 then
+                        time_str = 'today'
+                    elseif time < 2 then
+                        time_str = 'yesterday'
+                    elseif time > 365 then
+                        time_str = string.format('%d years ago', math.floor(time / 365))
+                    elseif time > 30 then
+                        time_str = string.format('%d months ago', math.floor(time / 30))
+                    end
+
+                    local commit_message = blame.commit_message
+                    local max_commit_message_length = 60
+                    if #commit_message > max_commit_message_length then
+                        commit_message = commit_message:sub(1, max_commit_message_length)
+                            .. '...'
+                    end
+
+                    return string.format(' %s, %s • %s', author, time_str,
+                        commit_message)
+                end,
+            },
+
+            -- Scene settings
+            scene = {
+                diff_preference = 'split', -- Prefer split view over unified
+                keymaps = {
+                    quit = 'q'
+                }
+            },
+
+            -- Diff preview settings
+            -- Note: keymaps must use { key, desc } format (changed in vgit v1.0.x)
+            diff_preview = {
+                keymaps = vim.tbl_extend('force', {
+                        reset = { key = 'R', desc = 'Reset' },
+                        buffer_stage = { key = 'S', desc = 'Stage' },
+                        buffer_unstage = { key = 'U', desc = 'Unstage' },
+                        buffer_hunk_stage = { key = 's', desc = 'Stage hunk' },
+                        buffer_hunk_unstage = { key = 'u', desc = 'Unstage hunk' },
+                        buffer_hunk_reset = { key = 'r', desc = 'Reset hunk' },
+                        -- (v)iew: Changed from 't' to avoid DVORAK conflict
+                        toggle_view = { key = 'v', desc = 'Toggle view' },
+                        -- Navigate between hunks in diff preview
+                        -- Note: These don't work as scene-specific keymaps
+                        -- Use global <S-Up>/<S-Down> instead
+                        -- previous_hunk = '<Up>',
+                        -- next_hunk = '<Down>',
+                    },
+                    {}
+                ),
+            },
+
+            -- Project diff preview settings
+            project_diff_preview = {
+                hunk_alignment = 'center', -- 'top', 'center', or 'bottom'
+                keymaps = {
+                    stage_hunk = { key = 's', desc = 'Stage hunk' },
+                    unstage_hunk = { key = 'u', desc = 'Unstage hunk' },
+                    reset_hunk = { key = 'r', desc = 'Reset hunk' },
+                    stage_file = { key = 'S', desc = 'Stage file' },
+                    unstage_file = { key = 'U', desc = 'Unstage file' },
+                    reset_file = { key = 'R', desc = 'Reset file' },
+                    next = { key = ';', desc = 'Next' },
+                    previous = { key = '+', desc = 'Previous' },
+                    jump_section_next = { key = ']H', desc = 'Next section' },
+                    jump_section_prev = { key = '[H', desc = 'Previous section' },
+                },
+            },
+
+            -- Project commits preview settings
+            project_commits_preview = {
+                keymaps = {
+                    next = { key = 'j', desc = 'Next' },
+                    previous = { key = 'k', desc = 'Previous' },
+                },
+            },
+
+            -- Project review by file settings
+            project_review_by_file = {
+                keymaps = {
+                    toggle_focus = { key = '<Tab>', desc = 'Switch focus between file list and diff preview' },
+                    mark_hunk = { key = 's', desc = 'Mark hunk seen' },
+                    mark_file = { key = 'S', desc = 'Mark file seen' },
+                    unmark_hunk = { key = 'u', desc = 'Unmark hunk' },
+                    unmark_file = { key = 'U', desc = 'Unmark file' },
+                    reset = { key = 'R', desc = 'Reset all marks' },
+                    next = { key = ';', desc = 'Next' },
+                    previous = { key = '+', desc = 'Previous' },
+                    jump_section_next = { key = ']H', desc = 'Next section' },
+                    jump_section_prev = { key = '[H', desc = 'Previous section' },
+                },
+            },
+
+            -- Project review by commit settings
+            project_review_by_commit = {
+                list_position = 'left',
+                keymaps = {
+                    toggle_focus = { key = '<Tab>', desc = 'Switch focus between file list and diff preview' },
+                    mark_hunk = { key = 's', desc = 'Mark hunk seen' },
+                    mark_file = { key = 'S', desc = 'Mark file seen' },
+                    unmark_hunk = { key = 'u', desc = 'Unmark hunk' },
+                    unmark_file = { key = 'U', desc = 'Unmark file' },
+                    reset = { key = 'R', desc = 'Reset all marks' },
+                    next = { key = ';', desc = 'Next' },
+                    previous = { key = '+', desc = 'Previous' },
+                    jump_section_next = { key = ']H', desc = 'Next section' },
+                    jump_section_prev = { key = '[H', desc = 'Previous section' },
+                },
+            },
+
+            -- -- Visual settings inspired by delta configuration
+            -- hls = {
+            --     -- File paths and decorations
+            --     GitTitle = 'Title',
+            --     GitHeader = 'DiffText',
+            --     GitFooter = 'Normal',
+            --     GitBorder = 'LineNr',
+            --     GitLineNr = 'LineNr',
+            --     GitComment = 'Comment',
+            --
+            --     -- Signs for changes (inspired by delta colors)
+            --     GitSignsAdd = {
+            --         fg = '#479B36', -- Green from delta config
+            --         bg = nil,
+            --     },
+            --     GitSignsChange = {
+            --         fg = '#D79921', -- Yellow from gruvbox theme
+            --         bg = nil,
+            --     },
+            --     GitSignsDelete = {
+            --         fg = '#A02A11', -- Red from delta config
+            --         bg = nil,
+            --     },
+            --
+            --     -- Diff highlighting (inspired by delta's gruvbox-dark theme)
+            --     GitSignsAddLn = {
+            --         bg = '#001a00', -- Dark green background
+            --     },
+            --     GitSignsDeleteLn = {
+            --         bg = '#330011', -- Dark red background
+            --     },
+            --     GitWordAdd = {
+            --         bg = '#003300', -- Dark green from delta config
+            --     },
+            --     GitWordDelete = {
+            --         bg = '#80002a', -- Dark red from delta config
+            --     },
+            -- },
+
+            -- Signs configuration
+            signs = {
+                priority = 10,
+                definitions = {
+                    GitSignsAdd = {
+                        texthl = 'GitSignsAdd',
+                        text = '+',
+                    },
+                    GitSignsDelete = {
+                        texthl = 'GitSignsDelete',
+                        text = '-',
+                    },
+                    GitSignsChange = {
+                        texthl = 'GitSignsChange',
+                        text = '~',
+                    },
+                },
+            },
+
+            -- Symbols configuration
+            symbols = {
+                void = ' ', -- Remove dots filler in empty lines
+            },
+        }
+    })
+
+    --- vgit keymaps ---
+
+    vim.keymap.set("n", "<leader>ggt", vgit.toggle_live_gutter, M.with_desc("toggle showing git hunks"))
+    vim.keymap.set("n", "<leader>gp", vgit.project_diff_preview, M.with_desc("project git diff preview"))
+    vim.keymap.set("n", "<leader>gq", function() require("git_hunks").populate_quickfix(true) end,
+        M.with_desc("fill quickfix with unstaged hunks"))
+    vim.keymap.set("n", "<leader>gx", vgit.toggle_diff_preference, M.with_desc("toggle git unified/split diff"))
+    -- vim.keymap.set("n", "<leader>gb", vgit.buffer_blame_preview, M.with_desc("open git blame preview"))
+    -- vim.keymap.set("n", "<leader>gl", vgit.buffer_history_preview, M.with_desc("open git log preview for file"))
+    -- vim.keymap.set("n", "<leader>gL", vgit.project_logs_preview, M.with_desc("open git log preview"))
+
+    vim.keymap.set("n", "<leader>gcr", vgit.project_review_by_commit, M.with_desc("git review by commit"))
+    vim.keymap.set("n", "<leader>gpr", vgit.project_review_by_file, M.with_desc("git review by file"))
+
+    vim.keymap.set("n", "<leader>hs", vgit.buffer_hunk_stage, M.with_desc("git stage hunk"))
+    vim.keymap.set("n", "<leader>hS", vgit.buffer_stage, M.with_desc("git stage file"))
+    vim.keymap.set("n", "<leader>hu", vgit.buffer_hunk_reset, M.with_desc("git unstage hunk"))
+    vim.keymap.set("n", "<leader>hU", vgit.buffer_unstage, M.with_desc("git unstage file"))
+    vim.keymap.set("n", "<leader>hr", vgit.buffer_hunk_reset, M.with_desc("git reset hunk"))
+    vim.keymap.set("n", "<leader>hR", vgit.buffer_reset, M.with_desc("git reset file"))
+
+    vim.keymap.set("n", "<leader>hv", function()
+        helpers.save_window()
+        vgit.buffer_hunk_preview()
+    end, M.with_desc("git hunk preview"))
+
+    vim.keymap.set("n", "<leader>hd", helpers.open_diff_with_jump, M.with_desc("git diff preview of current buffer"))
+    -- vim.keymap.set("n", "<leader>hd", function()
+    --     require_local("gitgutter_difforig").toggle()
+    -- end, M.with_desc("toggle full hunk diff in split window"))
+
+    -- local opts = { silent = true, remap = false }
+    -- vim.keymap.set("o", "ih", "<Plug>(GitGutterTextObjectInnerPending)", opts)
+    -- vim.keymap.set("o", "ah", "<Plug>(GitGutterTextObjectOuterPending)", opts)
+    -- vim.keymap.set("x", "ih", "<Plug>(GitGutterTextObjectInnerVisual)", opts)
+    -- vim.keymap.set("x", "ah", "<Plug>(GitGutterTextObjectOuterVisual)", opts)
+
+    local repeatable_move = require("nvim-treesitter.textobjects.repeatable_move")
+
+    -- Make (Next|Prev)Hunk repeatable
+    local move_hunk_next, move_hunk_prev = repeatable_move.make_repeatable_move_pair(
+        vgit.hunk_down,
+        vgit.hunk_up
+    )
+    vim.keymap.set({ "n", "x", "o" }, "]h", M.recenter_after(move_hunk_next), M.with_desc("goto next git hunk"))
+    vim.keymap.set({ "n", "x", "o" }, "[h", M.recenter_after(move_hunk_prev), M.with_desc("goto prev git hunk"))
+
+    -- Make (Next|Prev)GlobalHunk repeatable
+    local move_global_hunk_next, move_global_hunk_prev = repeatable_move.make_repeatable_move_pair(
+        helpers.jump_to_next_unstaged_hunk,
+        helpers.jump_to_prev_unstaged_hunk
+    )
+    vim.keymap.set("n", "]H", move_global_hunk_next, M.with_desc("goto next git hunk (globally)"))
+    vim.keymap.set("n", "[H", move_global_hunk_prev, M.with_desc("goto prev git hunk (globally)"))
+
+    --- vgit autocmds ---
+
+    -- Create augroup for vgit autocmds
+    local vgit_group = vim.api.nvim_create_augroup('VgitConfig', { clear = true })
+
+    -- Track when we're coming from a vgit preview buffer
+    local coming_from_vgit = false
+
+    -- Detect when entering vgit preview buffers
+    vim.api.nvim_create_autocmd('BufEnter', {
+        group = vgit_group,
+        pattern = '*',
+        callback = function()
+            local bufnr = vim.api.nvim_get_current_buf()
+            local buftype = vim.bo[bufnr].buftype
+            local modifiable = vim.bo[bufnr].modifiable
+            local buflisted = vim.bo[bufnr].buflisted
+            local bufhidden = vim.bo[bufnr].bufhidden
+
+            -- vgit preview buffers: nofile, not modifiable, not listed, bufhidden=wipe
+            if buftype == 'nofile' and
+                modifiable == false and
+                buflisted == false and
+                bufhidden == 'wipe' then
+                coming_from_vgit = true
+                -- Cancel any pending timers from previous preview to avoid races
+                cancel_pending_timers()
+            end
+        end
+    })
+
+    -- Capture cursor position when moving in diff view
+    vim.api.nvim_create_autocmd('CursorMoved', {
+        group = vgit_group,
+        pattern = '*',
+        callback = function()
+            local bufnr = vim.api.nvim_get_current_buf()
+            local winnr = vim.api.nvim_get_current_win()
+
+            -- Check if this is a vgit diff buffer (right side - modified file)
+            local is_vgit_diff = vim.bo[bufnr].buftype == 'nofile'
+                and vim.bo[bufnr].modifiable == false
+                and vim.bo[bufnr].buflisted == false
+                and vim.bo[bufnr].bufhidden == 'wipe'
+                and vim.wo[winnr].cursorbind
+
+            if is_vgit_diff then
+                -- Record the cursor position in the diff view
+                prev_cursor_pos = vim.api.nvim_win_get_cursor(0)
+            end
+        end
+    })
+
+    -- Force gutter refresh when returning from vgit preview
+    vim.api.nvim_create_autocmd({ 'WinEnter', 'BufEnter' }, {
+        group = vgit_group,
+        pattern = '*',
+        callback = function()
+            local bufnr = vim.api.nvim_get_current_buf()
+            local buftype = vim.bo[bufnr].buftype
+
+            -- Check if we're returning to a normal buffer from vgit
+            if buftype == '' and coming_from_vgit then
+                -- Restore syntax BEFORE resetting flag or jumping to another file
+                defer_fn_tracked(function()
+                    if vim.api.nvim_buf_is_valid(bufnr) then
+                        helpers.restore_syntax_if_needed(bufnr)
+                    end
+                end, 50)
+
+                coming_from_vgit = false
+
+                -- Restore previous window position
+                helpers.restore_window()
+
+                -- VGIT GUTTER REFRESH WORKAROUND
+                -- After staging changes in the diff preview, the gutter doesn't
+                -- update immediately due to timing issues with vgit's file watcher.
+                -- This workaround forces a refresh when returning from the diff
+                -- preview. Enable with `enable_gutter_refresh = true`.
+                if enable_gutter_refresh then
+                    defer_fn_tracked(function()
+                        local bufnr = vim.api.nvim_get_current_buf()
+                        if not vim.api.nvim_buf_is_valid(bufnr) then
+                            return
+                        end
+
+                        -- Clear existing signs to force refresh
+                        vim.fn.sign_unplace('vgit_signs', { buffer = bufnr })
+
+                        -- Toggle gutter to force vgit to re-detect changes
+                        vim.schedule(function()
+                            pcall(function()
+                                vgit.toggle_live_gutter()
+
+                                -- Toggle back after a brief delay
+                                defer_fn_tracked(function()
+                                    pcall(function()
+                                        vgit.toggle_live_gutter()
+                                        -- Restore syntax if it was lost during toggle
+                                        helpers.restore_syntax_if_needed(bufnr)
+                                    end)
+                                end, 100)
+                            end)
+                        end)
+                    end, 100)
+                end
+            end
+        end
+    })
+
+    -- Set colorcolumn at 80, 100 chars for vgit diff preview windows
+    -- Track which windows we've configured to avoid redundant updates
+    local colorcolumn_configured = {}
+
+    vim.api.nvim_create_autocmd('BufWinEnter', {
+        group = vgit_group,
+        pattern = '*',
+        callback = function()
+            -- Guard against restricted contexts
+            if vim.fn.getcmdwintype() ~= '' then
+                return
+            end
+            local bufnr = vim.api.nvim_get_current_buf()
+            local winnr = vim.api.nvim_get_current_win()
+
+            -- Early exit if already configured or not a nofile buffer
+            if colorcolumn_configured[winnr] or vim.bo[bufnr].buftype ~= 'nofile' then
+                return
+            end
+
+            -- Check if this is a vgit diff buffer
+            local is_vgit_diff = vim.bo[bufnr].modifiable == false
+                and vim.bo[bufnr].buflisted == false
+                and vim.bo[bufnr].bufhidden == 'wipe'
+                and (vim.wo[winnr].cursorbind
+                    or vim.wo[winnr].scrollbind)
+
+            if is_vgit_diff then
+                colorcolumn_configured[winnr] = true
+
+                -- Detect line number prefix width and set colorcolumn
+                local lines = vim.api.nvim_buf_get_lines(
+                    bufnr, 0, math.min(10, vim.api.nvim_buf_line_count(bufnr)), false
+                )
+
+                -- Find line number prefix width
+                local offset = 0
+                for _, line in ipairs(lines) do
+                    local prefix = line:match("^(%s*%d+%s)")
+                    if prefix then
+                        offset = #prefix
+                        break
+                    end
+                end
+
+                -- Apply offset to standard column positions
+                local col80 = 80 + offset
+                local col100 = 100 + offset
+                vim.wo[winnr].colorcolumn = col80 .. ',' .. col100
+            end
+        end
+    })
+
+    -- Clean up colorcolumn tracking when windows close
+    vim.api.nvim_create_autocmd('WinClosed', {
+        group = vgit_group,
+        callback = function(args)
+            local winnr = tonumber(args.match)
+            if winnr then
+                colorcolumn_configured[winnr] = nil
+            end
+        end
+    })
+end -- }}}
+
 -- do  -- vim-gitgutter - Show git diff in the gutter {{{
 --     -- Mappings:
 --     -- <leader>ggt - Toggle git gutter

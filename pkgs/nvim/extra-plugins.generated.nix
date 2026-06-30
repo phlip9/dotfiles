@@ -6,4 +6,17 @@
   fetchFromGitHub,
 }:
 final: prev: {
+  vgit-nvim = buildVimPlugin {
+    pname = "vgit.nvim";
+    version = "2026-06-26";
+    src = fetchFromGitHub {
+      owner = "MaxFangX";
+      repo = "vgit.nvim";
+      rev = "88e685debe39e7a5b7f45a4eb072cb0b68d7f593";
+      sha256 = "1hbim6r6dkb650f1q0qzl1lwd9xy03jyagzpa0gb5a52m5ijvaig";
+    };
+    meta.homepage = "https://github.com/MaxFangX/vgit.nvim/";
+    meta.hydraPlatforms = [ ];
+  };
+
 }
