@@ -108,10 +108,15 @@ alias gs='git status'
 
 # cargo shortcut
 alias c='cargo'
+complete -F _cargo c
 
 # just shortcut
 alias j='just'
 complete -o bashdefault -o default -F _just j
+
+# neovim shortcut
+alias v='nvim'
+alias vs='nvim -S' # and load saved session
 
 # tmux 256 colors
 alias tmux="TERM=screen-256color tmux -2"
@@ -126,23 +131,16 @@ if [ "$OS" == "LINUX" ]; then
     #   sleep 10; alert
     alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
 
-    # Clean out $PATH for steam
-    alias steam='PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games steam'
+    # # Clean out $PATH for steam
+    # alias steam='PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games steam'
 elif [ "$OS" == "OSX" ]; then
     # alias sha256sum='shasum -a 256'
 
     alias alert='osascript -e "display notification \"Command completed\" with title \"Terminal Alert\""'
 fi
 
-# expressvpn shits all over systemd's resolv.conf.
-# unshittify this when stopping the vpn.
-alias expressvpn-unfuck='sudo ln -sf /run/resolveconf/resolv.conf /etc/resolv.conf'
-
 # less with color
 alias less='less -r'
-
-# latexmk alias
-alias lmk='latexmk -pdf -pvc -shell-escape'
 
 # sudo-nvim
 # factory default, no plugins, no swap, binary
@@ -199,22 +197,8 @@ function workon() {
     source "$PYTHON3_ENV_DIR/$1/bin/activate"
 }
 
-# delete all ctags "tags" files and remove all empty directories
-function cleantags() {
-    find . -name "tags" -and -not -path "*/.git/*" -print0 | xargs -0 rm -v
-    find . -type d -and -not -path "*/.git/*" -empty -print0 | xargs -0 rmdir
-}
-
 function urldecode() {
     python3 -c "import sys; from urllib.parse import unquote; print(unquote(sys.stdin.read()));"
-}
-
-function aoe4rank() {
-    local JSON='{"region":"7","versus":"players","matchType":"unranked","teamSize":"1v1","searchPlayer":"'
-    local JSON+="$1"
-    local JSON+='","page":1,"count":3}'
-    curl --no-progress-meter -d "$JSON" -H 'Content-Type: application/json' https://api.ageofempires.com/api/ageiv/Leaderboard \
-        | jq '.items[] | { name: .userName, elo: .elo, rank: .rank, win_rate: .winPercent, wins: .wins, losses: .losses  }'
 }
 
 # nix home-manager, but with configuration in my dotfiles git repo.
