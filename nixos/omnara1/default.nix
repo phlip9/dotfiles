@@ -211,19 +211,18 @@
   sops.secrets.phlip9-github-agent-app-secret-key = { };
 
   # =========================================================================
-  # Buildbot CI
+  # nixbot CI
   # =========================================================================
-  # see: doc/buildbot-nix-ci.md
-  # see: nixos/mods/buildbot-ci.nix
-  services.phlip9-buildbot-ci = {
+  # see: doc/nixbot-ci.md
+  # see: nixos/mods/nixbot-ci.nix
+  services.phlip9-nixbot-ci = {
     enable = true;
     domain = "ci.phlip9.com";
     cacheDomain = "cache.phlip9.com";
 
     github = {
       appId = 2746100;
-      # OAuth App Client ID for oauth2-proxy (fullyPrivate mode)
-      oauthClientId = "Ov23lipvJOGiZTG0aqv9";
+      oauthClientId = "Iv23liE6dM8w5D4JF7Qz";
     };
 
     cloudflare = {
@@ -233,7 +232,7 @@
 
     cache.publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
   };
-  # PostgreSQL for Buildbot CI
+  # PostgreSQL for nixbot CI
   services.postgresql = {
     # Pin the major version to avoid accidentally breaking the DB on nixos
     # version update.

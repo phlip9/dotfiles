@@ -26,9 +26,8 @@
   ./phlippkgs.nix
   ./xremap.nix
 
-  # buildbot-ci module + its dependencies (buildbot-nix and niks3)
-  (sources.buildbot-nix + "/nixosModules/master.nix")
-  (sources.buildbot-nix + "/nixosModules/worker.nix")
+  # nixbot CI module + its dependencies (nixbot and niks3)
+  (sources.nixbot + "/nixosModules/nixbot.nix")
   (sources.niks3 + "/nix/nixosModules/niks3.nix")
-  ./buildbot-ci.nix
+  ./nixbot-ci.nix
 ]

@@ -32,7 +32,7 @@ bash-lint:
 
 nix-ci: nix-fmt nix-lint
 
-# Simulate buildbot-nix CI eval (nix-eval-jobs on flake checks)
+# Simulate nixbot CI eval (nix-eval-jobs on flake checks)
 nix-ci-eval *args:
     nix shell -f . pkgsUnstable.nix-eval-jobs --command \
         nix-eval-jobs \

@@ -1,6 +1,6 @@
 # phlip9/dotfiles Nix CI eval
 
-`nix/ci/default.nix` defines the Hydra-style job tree used by buildbot-nix.
+`nix/ci/default.nix` defines the Hydra-style job tree used by nixbot CI.
 It is a non-flake eval entrypoint; `flake.nix` is only a thin wrapper exposing
 the tree at `checks.x86_64-linux`.
 

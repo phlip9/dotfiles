@@ -15,7 +15,6 @@
 - High availability, clustering, or replication
 - Log aggregation (Loki, etc.) — separate concern
 - Alerting (vmalert, alertmanager) — future work
-- oauth2-proxy integration — deferred, add later
 
 ## Architecture
 
@@ -107,7 +106,7 @@ Requires `services.nginx.statusPage = true` to expose
 
 ### nginx (TLS termination + reverse proxy)
 
-Already running on omnara1 for buildbot CI. Add a new virtualHost
+Already running on omnara1 for nixbot CI. Add a new virtualHost
 for `grafana.phlip9.com` with:
 - `forceSSL = true`, `enableACME = true`
 - Proxy to `http://127.0.0.1:3000`
@@ -146,10 +145,6 @@ Both downloaded at build time and provisioned as JSON files.
 
 ### Future Work
 
-- **oauth2-proxy**: Protect Grafana behind GitHub OAuth. Either
-  share the existing buildbot oauth2-proxy instance (via the
-  `oauth2-proxy-nginx` NixOS module) or use Grafana's built-in
-  GitHub OAuth support.
 - **Alerting**: vmalert + alertmanager for on-call notifications.
 - **Additional exporters**: postgres-exporter, systemd-exporter,
   blackbox-exporter for endpoint probing.

@@ -1,18 +1,5 @@
 {
   "pins": {
-    "buildbot-nix": {
-      "type": "Git",
-      "repository": {
-        "type": "GitHub",
-        "owner": "nix-community",
-        "repo": "buildbot-nix"
-      },
-      "branch": "main",
-      "submodules": false,
-      "revision": "8644b7988debf93de7d46024e9173e0d9e155ce4",
-      "url": "https://github.com/nix-community/buildbot-nix/archive/8644b7988debf93de7d46024e9173e0d9e155ce4.tar.gz",
-      "hash": "0za3nyjbd7b7v5kmv4z6vrwm98sm2x55zmap47vkfspfnf5nl859"
-    },
     "disko": {
       "type": "Git",
       "repository": {
@@ -49,9 +36,22 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "1db826ca990cb3dead5c033bcfba4bf68ce9fc05",
-      "url": "https://github.com/Mic92/niks3/archive/1db826ca990cb3dead5c033bcfba4bf68ce9fc05.tar.gz",
-      "hash": "1n60qmzf3kmpd5rxy15ldcvp2k39iyfg63dk5fr37nwls2v202m9"
+      "revision": "780939adecefc2f84be700a6f9ae1cc9385ad240",
+      "url": "https://github.com/Mic92/niks3/archive/780939adecefc2f84be700a6f9ae1cc9385ad240.tar.gz",
+      "hash": "1s3yqmk1rq6bc96qxbdq9p616j06j6nkglq21cb8yb031snvws02"
+    },
+    "nixbot": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "Mic92",
+        "repo": "nixbot"
+      },
+      "branch": "main",
+      "submodules": false,
+      "revision": "b31d39be998e05e6b893aca29e1f99d09a151e9a",
+      "url": "https://github.com/Mic92/nixbot/archive/b31d39be998e05e6b893aca29e1f99d09a151e9a.tar.gz",
+      "hash": "1bfi6d6bkak9ds27kg3a0gja86g5ja0dmshdfxlp88l3dwvz90k4"
     },
     "nixos-unstable": {
       "type": "Channel",

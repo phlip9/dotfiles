@@ -1,10 +1,10 @@
-# Minimal flake wrapper for buildbot-nix CI.
+# Minimal flake wrapper for nixbot CI.
 #
 # This flake has no inputs - everything comes from default.nix which uses npins.
-# buildbot-nix evaluates `.#checks` to discover build targets.
+# nixbot evaluates `.#checks` to discover build targets.
 #
-# See: doc/buildbot-nix-ci.md
-# See: nixos/mods/buildbot-ci.nix
+# See: doc/nixbot-ci.md
+# See: nixos/mods/nixbot-ci.nix
 {
   description = "phlip9's dotfiles";
 
