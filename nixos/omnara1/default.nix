@@ -241,6 +241,15 @@
     # Don't need to expose the postgres to non-local connections
     enableTCPIP = false;
   };
+  # Per-repo secrets.json that is available in post-build effects as
+  # `$HERCULES_CI_SECRETS_JSON`.
+  #
+  # Format: <https://docs.hercules-ci.com/hercules-ci-agent/secrets-json/>
+  services.nixbot.effects.perRepoSecretFiles = {
+    "github:phlip9/notes-private" =
+      config.sops.secrets.ci-secrets-phlip9-notes-private.path;
+  };
+  sops.secrets.ci-secrets-phlip9-notes-private = { };
 
   # =========================================================================
   # Observability (o11y)

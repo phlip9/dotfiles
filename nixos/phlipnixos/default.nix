@@ -366,6 +366,9 @@
 
     # video player
     phlipPkgsNixos.mpv
+
+    # TODO(phlip9): find better place
+    config.services.nixbot.packages.nixbot-effects
   ];
 
   # enable 1Password
