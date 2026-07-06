@@ -43,7 +43,7 @@
     ./mods/git/default.nix
     ./mods/gpg-agent.nix
     ./mods/gpg.nix
-    ./mods/hol-light-dev.nix
+    # ./mods/hol-light-dev.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
     ./mods/lexe.nix
