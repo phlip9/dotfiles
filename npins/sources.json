@@ -49,9 +49,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "909f18127b583702aabaeb74d29891096f971f49",
-      "url": "https://github.com/Mic92/nixbot/archive/909f18127b583702aabaeb74d29891096f971f49.tar.gz",
-      "hash": "04rjfbmah62cb2bjwyp87n9sj9qviz4q60lj8n0vya7wjbhbqjk9"
+      "revision": "00e84cc3ae69ec14c24ff17efd7a57f9f665f588",
+      "url": "https://github.com/Mic92/nixbot/archive/00e84cc3ae69ec14c24ff17efd7a57f9f665f588.tar.gz",
+      "hash": "062yfijiwg7qhsfvm0fjsfchq6yyivn9kmgaxzdkmgw9x32ax7ai"
     },
     "nixos-unstable": {
       "type": "Channel",
