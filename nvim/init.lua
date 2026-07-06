@@ -1001,8 +1001,8 @@ end -- Recover.vim }}}
 do  -- worklog - quickly open and manage daily work logs {{{
     -- Mappings:
     --   <space>wo  - telescope picker for all worklog files
-    --  <leader>wol - open ~/dev/notes/lexe worklog
-    --  <leader>wod - open ~/dev/notes/dotfiles worklog
+    --  <leader>wol - open ~/dev/notes/notes/lexe worklog
+    --  <leader>wod - open ~/dev/notes/notes/dotfiles worklog
     --  <leader>wd  - insert today's entry heading
     --
     -- TODO(phlip9): folding does not work well
@@ -1018,20 +1018,20 @@ do  -- worklog - quickly open and manage daily work logs {{{
     vim.keymap.set("n", "<leader>wd", require_local("worklog").insert_today,
         M.with_desc("insert today's worklog heading"))
 
-    -- Enable treesitter folding for worklog files specifically.
-    -- Collapse day entries (## headings) but keep the year heading open.
-    local worklog_group = vim.api.nvim_create_augroup("WorklogFolding", {})
-    vim.api.nvim_create_autocmd("BufRead", {
-        pattern = vim.env.HOME .. "/dev/notes/*/log/*.md",
-        group = worklog_group,
-        desc = "Enable treesitter folding for worklog files",
-        callback = function()
-            vim.opt_local.foldmethod = "expr"
-            vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"
-            -- Collapse ## day entries but keep # year heading open.
-            vim.opt_local.foldlevel = 1
-        end,
-    })
+    -- -- Enable treesitter folding for worklog files specifically.
+    -- -- Collapse day entries (## headings) but keep the year heading open.
+    -- local worklog_group = vim.api.nvim_create_augroup("WorklogFolding", {})
+    -- vim.api.nvim_create_autocmd("BufRead", {
+    --     pattern = vim.env.HOME .. "/dev/notes/notes/*/log/*.md",
+    --     group = worklog_group,
+    --     desc = "Enable treesitter folding for worklog files",
+    --     callback = function()
+    --         vim.opt_local.foldmethod = "expr"
+    --         vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"
+    --         -- Collapse ## day entries but keep # year heading open.
+    --         vim.opt_local.foldlevel = 1
+    --     end,
+    -- })
 end -- worklog }}}
 
 do  -- shellopen - shell command -> open files/quickfix {{{

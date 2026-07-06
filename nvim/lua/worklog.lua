@@ -22,7 +22,7 @@
 local M = {}
 
 --- Default root directory for notes.
-M.DEFAULT_NOTES_DIR = vim.env.HOME .. "/dev/notes"
+M.DEFAULT_NOTES_DIR = vim.env.HOME .. "/dev/notes/notes"
 
 --- Configured notes root directory.
 ---@type string
