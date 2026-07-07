@@ -4,7 +4,18 @@
   ...
 }:
 {
+  #
+  # Kernel/Boot
+  #
+
+  # don't timeout to emergency shell while waiting for LUKS disk encryption
+  # password
+  boot.initrd.systemd.settings.Manager.DefaultDeviceTimeoutSec = "infinity";
+
+  #
   # Nix
+  #
+
   phlip9.nix-cache.enable = true;
 
   #
