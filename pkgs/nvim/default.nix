@@ -12,9 +12,9 @@
   # neovim
   neovim-unwrapped,
   neovimUtils,
-  wrapNeovimUnstable,
   vimPlugins,
   vimUtils,
+  wrapNeovimUnstable,
 
   # extra PATH packages
   alejandra,
@@ -192,23 +192,26 @@ let
     { plugin = p.vim-bbye; }
   ];
 
-  # Using the nixpkgs helper fn as a base, with some manual overrides added after.
-  neovimConfigBase = neovimUtils.makeNeovimConfig {
+  # the wrapped neovim package
+  wrappedNvimPkg = wrapNeovimUnstable neovim-unwrapped {
     withNodeJs = true; # used by `coc.nvim` LSP client
     withPython3 = true; # used by `coc-fzf` symbols
     withRuby = false;
 
-    # Full list of plugins in nixpkgs:
+    # full list of plugins in nixpkgs:
     # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/generated.nix>
     plugins = plugins;
-  };
 
-  # Need some args passed directly to `wrapNeovimUnstable`
-  neovimConfig = neovimConfigBase // {
-    # Don't manage config, we'll just symlink to our `dotfiles/nvim/init.vim`.
-    wrapRc = false;
-    # Inject extra packages into nvim PATH.
-    wrapperArgs = neovimConfigBase.wrapperArgs ++ [
+    # include nix wrapper generated config
+    wrapRc = true;
+
+    # after nix generated config, source our nvim/init.lua
+    luaRcContent = ''
+      dofile(vim.fn.stdpath("config") .. "/init.lua")
+    '';
+
+    # inject extra packages into PATH
+    wrapperArgs = [
       "--suffix"
       "PATH"
       ":"
@@ -255,9 +258,6 @@ let
     };
   };
   dotfilesLuarcJsonFile = writers.writeJSON ".luarc.json" dotfilesLuarcJson;
-
-  # The wrapped neovim package.
-  wrappedNvimPkg = wrapNeovimUnstable neovim-unwrapped neovimConfig;
 in
 
 # The final nvim package with passthru attrs.
