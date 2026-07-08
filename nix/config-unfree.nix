@@ -1,7 +1,6 @@
 # nix package set configuration
-# - allow unfree android SDK packages
 let
-  # allowed unfree package names
+  # allow specific unfree package names
   allowed = {
     android-sdk-build-tools = null;
     android-sdk-cmdline-tools = null;
@@ -12,6 +11,7 @@ let
     build-tools = null;
     cmake = null;
     cmdline-tools = null;
+    delimitMate = null;
     ndk = null;
     platform-tools = null;
     platforms = null;

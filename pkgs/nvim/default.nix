@@ -84,6 +84,8 @@ let
 
     # nvim-treesitter - tree-sitter interface and syntax highlighting
     {
+      # Keep roughly in sync with treesitter_filetypes list in
+      # <../nvim/init.lua>
       plugin = p.nvim-treesitter.withPlugins (q: [
         # available language plugins:
         # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/applications/editors/vim/plugins/nvim-treesitter/generated.nix>
@@ -104,7 +106,7 @@ let
         q.javascript
         q.jq
         q.json
-        q.jsonc
+        q.json5
         q.just
         q.kotlin
         q.lua

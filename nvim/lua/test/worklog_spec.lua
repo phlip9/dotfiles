@@ -430,10 +430,10 @@ describe("worklog", function()
         ---@param bufnr number
         local function setup_md_folding(bufnr)
             vim.bo[bufnr].filetype = "markdown"
-            -- Parse treesitter before enabling foldexpr.
-            vim.treesitter.get_parser(bufnr, "markdown"):parse()
+            -- Start treesitter before enabling foldexpr.
+            vim.treesitter.start(bufnr, "markdown")
             vim.opt_local.foldmethod = "expr"
-            vim.opt_local.foldexpr = "nvim_treesitter#foldexpr()"
+            vim.opt_local.foldexpr = "v:lua.vim.treesitter.foldexpr()"
             -- Collapse ## day entries but keep # year heading open.
             vim.opt_local.foldlevel = 1
             -- Recompute folds.
