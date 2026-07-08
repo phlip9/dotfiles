@@ -21,25 +21,25 @@
       IgnoreUnknown UseKeychain
     '';
 
-    matchBlocks = {
+    settings = {
       # default config
       "*" = {
         # Formerly default home-manager ssh configs
-        compression = false;
-        forwardAgent = false;
-        hashKnownHosts = false;
-        serverAliveCountMax = 3;
-        serverAliveInterval = 0;
+        Compression = false;
+        ForwardAgent = false;
+        HashKnownHosts = false;
+        ServerAliveCountMax = 3;
+        ServerAliveInterval = 0;
 
         # automatically add ssh keys to host agent after first use.
-        addKeysToAgent = "yes";
+        AddKeysToAgent = "yes";
 
         # try to share multiple sessions over a single network connection.
-        controlMaster = "auto";
+        ControlMaster = "auto";
         # keep the connection open for this long after initially disconnecting.
-        controlPersist = "15m";
+        ControlPersist = "15m";
         # control socket location
-        controlPath =
+        ControlPath =
           if pkgs.stdenv.hostPlatform.isLinux then
             "\${XDG_RUNTIME_DIR}/ssh-%C.socket"
           else if
@@ -56,36 +56,36 @@
       };
 
       "lexe-dev" = {
-        user = "deploy";
-        hostname = "lexe-dev.uswest.dev.lexe.app";
-        port = 22022;
-        forwardAgent = true;
+        User = "deploy";
+        HostName = "lexe-dev.uswest.dev.lexe.app";
+        Port = 22022;
+        ForwardAgent = true;
       };
       "lexe-prod" = {
-        user = "deploy";
-        hostname = "lexe-prod.uswest2.prod.lexe.app";
-        port = 22022;
+        User = "deploy";
+        HostName = "lexe-prod.uswest2.prod.lexe.app";
+        Port = 22022;
       };
       "lexe-prod-www" = {
-        user = "deploy";
-        hostname = "lexe-prod-www.uswest2.prod.lexe.app";
-        port = 22022;
+        User = "deploy";
+        HostName = "lexe-prod-www.uswest2.prod.lexe.app";
+        Port = 22022;
       };
       "lexe-staging-sgx" = {
-        user = "deploy";
-        hostname = "lexe-staging-sgx.uswest2.staging.lexe.app";
-        port = 22022;
+        User = "deploy";
+        HostName = "lexe-staging-sgx.uswest2.staging.lexe.app";
+        Port = 22022;
       };
       "lexe-staging-esplora" = {
-        user = "deploy";
-        hostname = "lexe-staging-esplora.uswest2.staging.lexe.app";
-        port = 22022;
+        User = "deploy";
+        HostName = "lexe-staging-esplora.uswest2.staging.lexe.app";
+        Port = 22022;
       };
       "omnara1" = {
-        user = "phlip9";
-        hostname = "omnara1.phlip9.com";
-        port = 22022;
-        # forwardAgent = true;
+        User = "phlip9";
+        HostName = "omnara1.phlip9.com";
+        Port = 22022;
+        # ForwardAgent = true;
       };
     };
   };
