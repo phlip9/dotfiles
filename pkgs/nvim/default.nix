@@ -41,6 +41,9 @@ let
     # Go LSP
     gopls
 
+    # Lua LSP
+    lua-language-server
+
     # Python LSP(s)
     ruff
     ty
@@ -172,7 +175,7 @@ let
     { plugin = p.coc-flutter; }
     { plugin = p.coc-json; }
     { plugin = p.coc-rust-analyzer; }
-    { plugin = p.coc-sumneko-lua; }
+    # { plugin = p.coc-sumneko-lua; } # old and unmaintained
     # { plugin = p.coc-toml; } # old and unmaintained
     # { plugin = p.coc-vimlsp; } # don't use viml anymore
     { plugin = p.coc-yaml; }
@@ -215,10 +218,10 @@ let
   luaPluginLibraryPaths = map (x: "${x.plugin.outPath}/lua") luaPlugins;
 
   # coc-settings.json for lua LSP when editing dotfiles nvim config.
+  # TODO(phlip9): fix this when working in separate worktrees. we'll probably
+  # want to instead inject this config via a mini nix-generated lua plugin.
   dotfilesCocSettings = {
-    "sumneko-lua.serverDir" = "${lua-language-server}/share/lua-language-server";
-    "Lua.runtime.version" = "LuaJIT";
-    "Lua.workspace.library" = luaPluginLibraryPaths;
+    languageserver.lua.settings.Lua.workspace.library = luaPluginLibraryPaths;
   };
   dotfilesCocSettingsFile = writers.writeJSON "coc-settings.json" dotfilesCocSettings;
 

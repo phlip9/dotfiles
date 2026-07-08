@@ -89,7 +89,8 @@ nvim-lint:
     trap 'rm -rf "$TMPDIR"' EXIT
     DOTFILES="$HOME/dev/dotfiles"
 
-    "$(jq -r '."sumneko-lua.serverDir"' $DOTFILES/.vim/coc-settings.json)/bin/lua-language-server" \
+    nix shell -f . pkgs.lua-language-server --command \
+      lua-language-server \
         --check nvim/ \
         --checklevel Hint \
         --configpath "$DOTFILES/.luarc.json" \

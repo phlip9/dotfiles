@@ -25,33 +25,6 @@
     "workspace.ignoredFiletypes": ["dart"],
     // // Does NOT fix rust-analyzer and dart lsp conflicts
     // "workspace.bottomUpFiletypes": ["dart", "yaml"],
-    "Lua.format.enable": true,
-    "Lua.format.defaultConfig": {
-        "indent_style": "space",
-        "indent_size": "4",
-    },
-    "Lua.misc.parameters": [
-        "--metapath",
-        "~/.cache/lua-language-server/meta",
-        "--logpath",
-        "~/.cache/lua-language-server/log",
-    ],
-    "Lua.diagnostics.disable": [
-        "redefined-local"
-    ],
-    "Lua.runtime.pathStrict": true,
-    "Lua.runtime.version": "LuaJIT",
-    "Lua.workspace.ignoreSubmodules": true,
-    "Lua.workspace.checkThirdParty": false,
-    "Lua.diagnostics.libraryFiles": "Disable",
-    "sumneko-lua.checkUpdate": false,
-    "sumneko-lua.logPath": "${userHome}/.cache/lua-language-server/log",
-    "sumneko-lua.serverDir": "${userHome}/.local/share/lua-language-server",
-    // // When this is turned on, coc-sumneko-lua appears to pull in like 2
-    // // extra synthetic/out-of-date vim interfaces that confuse
-    // // goto_definition. Plus, everything seems to work just fine without
-    // // this.
-    // "sumneko-lua.enableNvimLuaDev": true,
     "rust-analyzer.checkOnSave": true,
     "rust-analyzer.diagnostics.disabled": [
         "macro-error",
@@ -66,6 +39,40 @@
     // "rust-analyzer.trace.server": "verbose",
     "dart.showTodos": false,
     "languageserver": {
+        "lua": {
+            "command": "lua-language-server",
+            "args": [
+                "--metapath",
+                "~/.cache/lua-language-server/meta",
+                "--logpath",
+                "~/.cache/lua-language-server/log",
+            ],
+            "filetypes": ["lua"],
+            "rootPatterns": [".luarc.json", ".luarc.jsonc", ".git/"],
+            "settings": {
+                "Lua": {
+                    "format": {
+                        "enable": true,
+                        "defaultConfig": {
+                            "indent_style": "space",
+                            "indent_size": "4",
+                        }
+                    },
+                    "diagnostics": {
+                        "disable": ["redefined-local"],
+                        "libraryFiles": "Disable",
+                    },
+                    "runtime": {
+                        "pathStrict": true,
+                        "version": "LuaJIT",
+                    },
+                    "workspace": {
+                        "ignoreSubmodules": true,
+                        "checkThirdParty": false,
+                    },
+                }
+            }
+        },
         "go": {
             "command": "gopls",
             "filetypes": ["go"],
