@@ -1,0 +1,7 @@
+{
+  "metadataGeneration": {
+    "branchName": {
+      "instructions": "Prefix branches with `agent/`"
+    }
+  }
+}
