@@ -82,9 +82,6 @@ fix (phlipPkgs: {
   # neovim - wrapped neovim with plugins and tools
   nvim = callPackage ./nvim { };
 
-  # omnara - Omnara CLI
-  omnara = callPackage ./omnara { };
-
   # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix { };
 

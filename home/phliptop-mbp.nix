@@ -49,7 +49,6 @@
     # ./mods/mpv.nix
     # ./mods/nethack.nix
     ./mods/nvim/default.nix
-    # ./mods/omnara.nix
     # ./mods/paseo.nix
     ./mods/postgres.nix
     ./mods/python.nix
