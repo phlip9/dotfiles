@@ -6,40 +6,54 @@
 # This is the unwrapped build. Use `marinara-engine` for the
 # bubblewrap-sandboxed version.
 {
+  bash,
   fetchFromGitHub,
+  fetchPnpmDeps,
   lib,
   makeBinaryWrapper,
-  # nix-update-script,
-  nodejs_22,
+  nix-update-script,
+  nodejs-slim_24,
   pnpm_10,
+  pnpmConfigHook,
   stdenv,
 }:
 let
-  nodejs = nodejs_22;
-  pnpm = pnpm_10;
+  nodejs = nodejs-slim_24;
+  pnpm = pnpm_10.override { nodejs-slim = nodejs; };
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "marinara-engine-unwrapped";
-  version = "1.5.7";
+  version = "2.1.1";
 
   src = fetchFromGitHub {
     owner = "Pasta-Devs";
     repo = "Marinara-Engine";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-D14LPZ0wUk4ablHo9cWQnJ2R08tJAWlnVmIpPjNuQ9s=";
+    hash = "sha256-14sKnswQ1W+2mroammaEUZlPC80JGngX8rngQMH3hJg=";
   };
 
-  pnpmDeps = pnpm.fetchDeps {
+  pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
-    fetcherVersion = 3;
-    hash = "sha256-eEtcyR+3vvsSUBos7kUBxDWGCWLEvkfi9oGp1+H/WLs=";
+    inherit pnpm;
+    fetcherVersion = 4;
+    # override upstream's .npmrc store-dir with nix FOD store.
+    prePnpmInstall = ''
+      pnpm config set --location project store-dir "$storePath"
+    '';
+    hash = "sha256-TIv+Jw4go0Y0UKOoa1BRGuytwoR5J4yCDfTnX1CUpNA=";
   };
 
   nativeBuildInputs = [
     nodejs
-    pnpm.configHook
+    pnpmConfigHook
+    pnpm
     makeBinaryWrapper
   ];
+
+  postPatch = ''
+    substituteInPlace packages/server/src/services/professor-mari/workspace-agent.service.ts \
+      --replace-fail '"/bin/sh"' '"${lib.getExe bash}"'
+  '';
 
   env = {
     MARINARA_LITE = "true";
@@ -49,44 +63,65 @@ stdenv.mkDerivation (finalAttrs: {
     MARINARA_GIT_COMMIT = "aaaaaaaaaaaa";
   };
 
+  # override upstream's .npmrc store-dir with nix FOD store.
+  prePnpmInstall = ''
+    pnpm config set --location project store-dir "$STORE_PATH"
+  '';
+
   buildPhase = ''
     runHook preBuild
+
+    # pnpmConfigHook disables lifecycle scripts. esbuild is build-only and needs
+    # the binary before Vite runs.
+    pnpm rebuild esbuild
     pnpm build
+
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/{bin,lib/marinara-engine}
+    app_dir="$out/lib/marinara-engine"
+    mkdir -p "$app_dir" $out/bin
 
-    # Workspace manifests (pnpm module resolution needs these)
-    cp package.json pnpm-workspace.yaml $out/lib/marinara-engine/
-    cp -a node_modules $out/lib/marinara-engine/
+    # recreate the dependency tree with production dependencies only.
+    rm -rf .pnpm node_modules packages/*/node_modules
+    pnpm install --offline --prod --ignore-scripts --frozen-lockfile
 
-    # Each workspace package: manifest + build output + local node_modules
+    # restore workspace manifests (pnpm module resolution needs these)
+    cp package.json pnpm-workspace.yaml "$app_dir/"
+
+    # .npmrc config sets pnpm's virtual store inside the workspace root
+    cp -a .pnpm node_modules "$app_dir/"
+
+    # for each workspace package: cp manifest + build output + node_modules
     for pkg in shared server client; do
-      mkdir -p "$out/lib/marinara-engine/packages/$pkg"
-      cp "packages/$pkg/package.json" "$out/lib/marinara-engine/packages/$pkg/"
-      cp -a "packages/$pkg/dist" "$out/lib/marinara-engine/packages/$pkg/"
+      pkg_dir="$app_dir/packages/$pkg"
+      mkdir -p "$pkg_dir"
+      cp "packages/$pkg/package.json" "$pkg_dir/"
+      cp -a "packages/$pkg/dist" "$pkg_dir/"
       if [ -d "packages/$pkg/node_modules" ]; then
-        cp -a "packages/$pkg/node_modules" \
-          "$out/lib/marinara-engine/packages/$pkg/"
+        cp -a "packages/$pkg/node_modules" "$pkg_dir/"
       fi
     done
 
-    # Strip heavy native deps disabled by MARINARA_LITE
-    rm -rf \
-      $out/lib/marinara-engine/node_modules/.pnpm/onnxruntime-node@* \
-      $out/lib/marinara-engine/node_modules/.pnpm/onnxruntime-web@* \
-      $out/lib/marinara-engine/node_modules/.pnpm/onnxruntime-common@* \
-      $out/lib/marinara-engine/node_modules/onnxruntime-node \
-      $out/lib/marinara-engine/node_modules/onnxruntime-web \
-      $out/lib/marinara-engine/node_modules/onnxruntime-common \
-      $out/lib/marinara-engine/node_modules/.pnpm/@huggingface+transformers@* \
-      $out/lib/marinara-engine/node_modules/@huggingface
+    # user guides served by the in-app documentation viewer.
+    cp -a docs "$app_dir/"
 
-    # Wrapper: run the server with lite-mode env set
+    # strip local inference runtimes disabled by MARINARA_LITE.
+    rm -rf \
+      "$app_dir"/.pnpm/onnxruntime-node@* \
+      "$app_dir"/.pnpm/onnxruntime-web@* \
+      "$app_dir"/packages/server/node_modules/onnxruntime-node \
+      "$app_dir"/packages/server/node_modules/onnxruntime-web
+    find "$app_dir" -xtype l -delete
+
+    # catch incomplete pnpm layouts during the build instead of at startup.
+    ${lib.getExe nodejs} -e \
+      "for (const dep of ['fastify', '@fastify/cors', 'sharp']) require.resolve(dep, { paths: ['$app_dir/packages/server'] })"
+
+    # wrapper: run the server with lite-mode env set
     makeBinaryWrapper ${lib.getExe nodejs} $out/bin/marinara-engine \
       --inherit-argv0 \
       --set MARINARA_LITE true \
@@ -96,11 +131,10 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  # pnpm node_modules contain internal symlinks that may dangle after
-  # we strip onnxruntime / huggingface packages above.
-  dontCheckForBrokenSymlinks = true;
-
-  # passthru.updateScript = nix-update-script { };
+  passthru = {
+    inherit nodejs;
+    updateScript = nix-update-script { };
+  };
 
   meta = {
     homepage = "https://github.com/Pasta-Devs/Marinara-Engine";
