@@ -112,7 +112,7 @@ complete -F _cargo c
 
 # just shortcut
 alias j='just'
-complete -o bashdefault -o default -F _just j
+complete -o bashdefault -o nosort -o nospace -F _clap_complete_just j
 
 # neovim shortcut
 alias v='nvim'
