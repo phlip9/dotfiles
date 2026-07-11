@@ -97,6 +97,9 @@ fix (phlipPkgs: {
   # sops wrapped with clean nvim (no plugins) for secret editing
   sops = callPackage ./sops.nix { };
 
+  # terranix - config.nix -> config.tf.json, wrapped so it uses repo nixpkgs
+  terranix = callPackage ./terranix { };
+
   # timep - bash profiler
   timep = callPackage ./timep { };
 })
