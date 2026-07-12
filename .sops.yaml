@@ -14,3 +14,11 @@ creation_rules:
         - *phlipnixos
         - *phliptop-mbp
         - *phliptop-nitro
+
+  - path_regex: ops/secrets.yaml$
+    key_groups:
+      - age:
+        - *omnara1
+        - *phlipnixos
+        - *phliptop-mbp
+        - *phliptop-nitro

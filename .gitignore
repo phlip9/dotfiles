@@ -27,6 +27,10 @@ config/htop/htoprc
 /.vim/coc-settings.json
 /.luarc.json
 
+# terraform
+/config.tf.json
+/.terraform/
+
 # AI
 /.claude/settings.local.json
 /.codex

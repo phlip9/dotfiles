@@ -140,6 +140,10 @@ tf *args:
     nix shell -f . tf --command \
         tf {{ args }}
 
+cf-terraforming *args:
+    nix shell -f . opentofu pkgs.cf-terraforming --command \
+        sops exec-env ops/secrets.yaml 'cf-terraforming --terraform-binary-path "$(which tofu)" {{ args }}'
+
 # Make sure all sops secrets files are encrypted for all relevant keys.
 sops-updatekeys:
     #!/usr/bin/env bash
