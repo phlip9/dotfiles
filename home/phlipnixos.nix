@@ -89,6 +89,10 @@
     pkgs.uv
     pkgs.htmlq
 
+    # terraform/opentofu
+    phlipPkgs.opentofu
+    phlipPkgs.terranix
+
     # # claude - Anthropic claude code CLI
     # phlipPkgs.claude-code
 

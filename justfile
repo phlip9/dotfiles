@@ -136,6 +136,10 @@ deploy *args:
     nix shell -f . pkgsUnstable.deploy-rs --command \
         deploy -f . {{ args }}
 
+tf *args:
+    nix shell -f . tf --command \
+        tf {{ args }}
+
 # Make sure all sops secrets files are encrypted for all relevant keys.
 sops-updatekeys:
     #!/usr/bin/env bash

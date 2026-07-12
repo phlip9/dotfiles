@@ -17,6 +17,7 @@ runCommandWith
     runLocal = true;
     derivationArgs = {
       terranix = lib.getExe' terranix "terranix";
+      passthru.terranix = terranix;
       meta = {
         mainProgram = name;
       };
@@ -27,4 +28,10 @@ runCommandWith
     substituteAll ${./terranix.sh} $out/bin/terranix
     chmod +x $out/bin/terranix
     patchShebangs $out/bin
+
+    # Link all non-bin directories (share/, etc.) for completions and extras
+    for dir in ${terranix}/*/; do
+      name=$(basename "$dir")
+      [[ "$name" != "bin" ]] && ln -s "$dir" "$out/$name"
+    done
   ''

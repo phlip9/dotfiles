@@ -85,6 +85,11 @@ fix (phlipPkgs: {
   # OpenMW pre-built unstable
   openmw = callPackage ./openmw.nix { };
 
+  # OpenTofu - open source terraform
+  opentofu = pkgs.opentofu.withPlugins (p: [
+    p.cloudflare_cloudflare
+  ]);
+
   # paseo - self-hosted daemon for claude-code, codex, pi, etc
   paseo = callPackage ./paseo.nix { inherit sources; };
 
@@ -99,6 +104,11 @@ fix (phlipPkgs: {
 
   # terranix - config.nix -> config.tf.json, wrapped so it uses repo nixpkgs
   terranix = callPackage ./terranix { };
+
+  # tf - opentofu/terraform shortcut that wires in secrets
+  tf = callPackage ./tf.nix {
+    inherit (phlipPkgs) opentofu sops terranix;
+  };
 
   # timep - bash profiler
   timep = callPackage ./timep { };
