@@ -136,10 +136,11 @@ deploy *args:
     nix shell -f . pkgsUnstable.deploy-rs --command \
         deploy -f . {{ args }}
 
+# run `tf` opentofu/terraform wrapper that injects sops secrets
 tf *args:
-    nix shell -f . tf --command \
-        tf {{ args }}
+    nix shell -f . tf --command tf {{ args }}
 
+# run `cf-terraforming` with `tofu` binary + sops secrets
 cf-terraforming *args:
     nix shell -f . opentofu pkgs.cf-terraforming --command \
         sops exec-env ops/secrets.yaml 'cf-terraforming --terraform-binary-path "$(which tofu)" {{ args }}'

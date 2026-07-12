@@ -4,6 +4,7 @@
 - nix based, non-flake default.nix.
 - home-manager manages non-GUI user dotfiles on all Linux and macOS machines.
 - neovim configured w/ lua.
+- cloud resources in nix, converted to terraform via `terranix`, managed w/ tofu
 
 
 ## high-level layout (non-exhaustive)
@@ -26,6 +27,9 @@
 - nvim/lua/ (personal neovim lua plugins and modules)
 - nvim/lua/test/ (tests for my neovim lua plugins)
 - pkgs/ (`phlipPkgs` personal nix packages)
+- config.nix (top-level terranix/tofu/terraform cloud infra config)
+- ops/ (tf configs and sops secrets)
+- ops/zone/phlip9.com.nix (`phlip9.com` zone and services tf config)
 
 
 ## communication
@@ -99,6 +103,8 @@
   config and modules
 - `nvim-print-base-runtime-path` print base nvim installation's runtime path
 - `nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
+- `tf`: convert config.nix -> config.tf.json, run terraform `tofu` with sops
+   secrets injected in env
 
 before presenting changes, run the relevant lint/format/test commands and fix
 any issues.
@@ -193,3 +199,11 @@ EOF
 - only use e.g. #5 in PR title or body if referring to another PR.
 - if PR already exists and body needs updating, use: `gh pr edit --repo
   phlip9/dotfiles <pr-number> --body-file <(...)`.
+
+
+## terraform and cloud infra
+
+- we use the open source OpenTofu fork (`tofu`), not hashicorp terraform.
+- never `tf apply` unless given explicit permission.
+- remember that `config.nix` and `ops/*` are the sources-of-truth;
+  `config.tf.json` is just a build artifact.
