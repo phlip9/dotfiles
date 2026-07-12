@@ -11,13 +11,57 @@ in
   # DNS zone data source
   data.cloudflare_zone.phlip9_com.filter.name = "phlip9.com";
 
-  # cache.phlip9.com - nix cache - R2 custom domain
+  # cache.phlip9.com - Expose nix cache via R2 custom domain
   resource.cloudflare_r2_custom_domain.cache_phlip9_com = {
     inherit account_id zone_id;
     bucket_name = "phlip9-nix-cache";
     domain = "cache.phlip9.com";
     enabled = true;
     min_tls = "1.2";
+  };
+
+  # cache.phlip9.com - tell Cloudflare CDN to cache nix binary cache objects,
+  # since Cloudflare doesn't cache .narinfo and nix-cache-info files by default.
+  resource.cloudflare_ruleset.phlip9_nix_cache_settings = {
+    zone_id = zone_id;
+    name = "phlip9-nix-cache nix binary cache settings";
+    description = "cache everything in nix binary cache";
+    kind = "zone";
+    phase = "http_request_cache_settings";
+
+    rules = [
+      {
+        description = "cache everything in nix binary cache";
+        expression = ''(http.host eq "cache.phlip9.com")'';
+        action = "set_cache_settings";
+
+        action_parameters = {
+          cache = true;
+          edge_ttl = {
+            mode = "override_origin";
+            default = 1 * 365 * 24 * 60 * 60; # 1 year
+
+            status_code_ttl = [
+              # cache negative results for a bit
+              {
+                status_code_range = {
+                  from = 300;
+                  to = 499;
+                };
+                value = 10 * 60; # 10 minutes
+              }
+              # don't cache server errors
+              {
+                status_code_range = {
+                  from = 500;
+                };
+                value = -1; # never
+              }
+            ];
+          };
+        };
+      }
+    ];
   };
 
   # DNS records
