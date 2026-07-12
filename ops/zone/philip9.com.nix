@@ -10,10 +10,8 @@ let
 in
 
 {
-  # DNS Zone data source
-  data.cloudflare_zone = {
-    philip9_com.filter.name = "philip9.com";
-  };
+  # DNS zone data source
+  data.cloudflare_zone.philip9_com.filter.name = "philip9.com";
 
   # DNS records
   resource.cloudflare_dns_record = {

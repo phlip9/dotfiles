@@ -2,7 +2,8 @@
 { ... }:
 
 let
-  cf_account_id = "30faeb30dcb2a77a72fdc0948c99de62";
+  # Cloudflare account id
+  account_id = "30faeb30dcb2a77a72fdc0948c99de62";
 in
 
 {
@@ -54,7 +55,7 @@ in
       # access_key = ""; # $AWS_ACCESS_KEY_ID
       # secret_key = ""; # $AWS_SECRET_ACCESS_KEY
       endpoints = {
-        s3 = "https://${cf_account_id}.r2.cloudflarestorage.com";
+        s3 = "https://${account_id}.r2.cloudflarestorage.com";
       };
     };
 
@@ -106,4 +107,17 @@ in
   # - Expiration: No expiration
   # - Client IP address filtering: None
   provider.cloudflare = { };
+
+  # R2 buckets
+  resource.cloudflare_r2_bucket = {
+    phlip9_nix_cache = {
+      inherit account_id;
+      name = "phlip9-nix-cache";
+    };
+    phlip9_terraform_backend = {
+      inherit account_id;
+      name = "phlip9-terraform-backend";
+    };
+  };
+
 }

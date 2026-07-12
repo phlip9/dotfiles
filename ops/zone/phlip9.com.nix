@@ -11,6 +11,24 @@ in
   # DNS zone data source
   data.cloudflare_zone.phlip9_com.filter.name = "phlip9.com";
 
+  # DNS zone
+  resource.cloudflare_zone.phlip9_com = {
+    account.id = account_id;
+    name = "phlip9.com";
+    paused = false;
+    type = "full";
+    vanity_name_servers = [ ];
+  };
+  resource.cloudflare_zone_dnssec.phlip9_com = {
+    inherit zone_id;
+    status = "active";
+  };
+  resource.cloudflare_zone_setting.ipv6 = {
+    inherit zone_id;
+    setting_id = "ipv6";
+    value = "on";
+  };
+
   # cache.phlip9.com - Expose nix cache via R2 custom domain
   resource.cloudflare_r2_custom_domain.cache_phlip9_com = {
     inherit account_id zone_id;
