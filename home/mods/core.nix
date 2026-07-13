@@ -89,6 +89,17 @@
       pkgs.yq-go
     ];
 
+    home.sessionPath = [
+      "${config.home.homeDirectory}/.cargo/bin"
+    ];
+
+    home.language.base = "en_US.UTF-8";
+
+    xdg = {
+      enable = true;
+      localBinInPath = true;
+    };
+
     # Use consistent man across platforms
     programs.man = {
       enable = true;

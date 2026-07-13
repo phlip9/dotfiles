@@ -18,7 +18,11 @@ case "$OSTYPE" in
 esac
 
 # If a tmux session exists, just connect to it instead of creating a new one.
-[[ -z "$TMUX" && ! ("$(tmux ls 2>&1)" =~ "no server running") ]] && tmux attach
+# Paseo terminals need their own PTY instead of nesting into an existing tmux.
+if [[ -z "${TMUX:-}" && -z "${PASEO_TERMINAL_ID:-}" &&
+      ! "$(tmux ls 2>&1)" =~ "no server running" ]]; then
+    tmux attach
+fi
 
 ## INIT }}}
 
@@ -225,18 +229,6 @@ alias nors='nor switch'
 
 ## ENV VARS {{{
 
-pathappend() {
-    [[ -d "$1" && ":$PATH:" != *":$1:"* ]] && PATH="${PATH:+"$PATH:"}$1"
-}
-pathprepend() {
-    [[ -d "$1" && ":$PATH:" != *":$1:"* ]] && PATH="$1${PATH:+":$PATH"}"
-}
-
-export XDG_CONFIG_HOME=$HOME/.config
-export XDG_CACHE_HOME=$HOME/.cache
-export XDG_DATA_HOME=$HOME/.local/share
-export XDG_STATE_HOME=$HOME/.local/state
-
 # Disable 'Couldn't connect to accessibility bus' error on opening gnome
 # applications.
 # http://askubuntu.com/questions/227515/terminal-warning-when-opening-a-file-in-gedit
@@ -249,9 +241,6 @@ if [ "$OS" == "LINUX" ]; then
     export SYSRESOURCES=/etc/X11/Xresources
     export USRRESOURCES=$HOME/.Xresources
 fi
-
-pathappend "$HOME/.cargo/bin"
-pathappend "$HOME/.local/bin"
 
 # # ocaml
 # [[ -r "$HOME/.opam/opam-init/init.sh" ]] && source "$HOME/.opam/opam-init/init.sh"
