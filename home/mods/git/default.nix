@@ -235,9 +235,9 @@ in
             --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)'
       '';
       ls = "ls-tree --name-only HEAD";
-      p = "pull";
       pfo = "push --force origin";
       pfom = "!git push --force origin $(git master)";
+      pl = "pull --ff-only";
       plo = "!git pull --ff-only origin $(git master)";
       plu = "!git pull --ff-only upstream $(git master)";
       pom = "!git push origin $(git master)";
@@ -251,13 +251,16 @@ in
       rs = "reset";
       rsh = "reset --hard";
       rsha = "!git reset --hard agent/$(git branch --show-current)";
+      rsham = "!git reset --hard agent/$(git master)";
       rsho = "!git reset --hard origin/$(git branch --show-current)";
       rshom = "!git reset --hard origin/$(git master)";
       rshu = "!git reset --hard upstream/$(git branch --show-current)";
       rshum = "!git reset --hard upstream/$(git master)";
-      rsa = "!git reset origin/$(git master)";
+      rsa = "!git reset agent/$(git master)";
       rso = "!git reset origin/$(git master)";
       rsu = "!git reset upstream/$(git master)";
+      rt = "restore";
+      rts = "restore --staged";
       s = "status";
       sw = "switch";
       unwip = "!git reset --soft HEAD~1 && git restore --staged .";
