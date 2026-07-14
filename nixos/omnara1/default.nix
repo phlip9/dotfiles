@@ -211,7 +211,15 @@
   sops.secrets.phlip9-github-agent-app-secret-key = { };
 
   # =========================================================================
-  # Paseo
+  # Paseo - Agent interface
+  #
+  # Connect:
+  # - Open `https://paseo.phlip9.com`
+  # - Direct Connect:
+  #   - Endpoint: paseo.phlip9.com
+  #   - Port: 443
+  #   - SSL: Yes
+  #   - Password: <paseo-daemon-password>
   # =========================================================================
   services.paseo = {
     enable = true;
