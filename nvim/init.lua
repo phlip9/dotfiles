@@ -657,13 +657,9 @@ if pcall(require, "telescope") then
             })
         end
 
-        -- Use treesitter document outline if available
-        local parsers = require("nvim-treesitter.parsers")
-        if parsers.has_parser(parsers.get_buf_lang()) then
-            return diff_outline.treesitter_symbols({})
-        end
-
-        print("No coc.nvim LSP or treesitter parser for outline")
+        -- Fall back to a tree-sitter outline. The picker reports when the
+        -- current buffer has no installed parser or locals query.
+        return diff_outline.treesitter_symbols({})
     end
 
     vim.keymap.set("n", "<space>o", show_outline, M.with_desc("document outline"))

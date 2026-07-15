@@ -4,7 +4,9 @@ local eq = assert.are.same
 local M = require("telescope_diff_outline")
 
 local entry_display = require("telescope.pickers.entry_display")
+local finders = require("telescope.finders")
 local make_entry = require("telescope.make_entry")
+local pickers = require("telescope.pickers")
 
 describe("telescope_diff_outline", function()
     describe("get_line_diff_status", function()
@@ -437,6 +439,102 @@ describe("telescope_diff_outline", function()
             local ns = vim.api.nvim_create_namespace("test_signs_empty")
             M.place_hunk_signs(bufnr, ns, {})
             eq(0, #get_signs(bufnr, ns))
+        end)
+    end)
+
+    describe("outline keymap", function()
+        local orig_finder_new_table = finders.new_table
+        local orig_picker_new = pickers.new
+        local orig_coc_service_initialized = nil
+        local previous_buf = nil
+        local temp_buf = nil
+
+        before_each(function()
+            orig_coc_service_initialized = vim.g.coc_service_initialized
+            previous_buf = vim.api.nvim_get_current_buf()
+        end)
+
+        after_each(function()
+            finders.new_table = orig_finder_new_table
+            pickers.new = orig_picker_new
+            vim.g.coc_service_initialized = orig_coc_service_initialized
+
+            if previous_buf ~= nil
+                and vim.api.nvim_buf_is_valid(previous_buf)
+            then
+                vim.api.nvim_set_current_buf(previous_buf)
+            end
+            if temp_buf ~= nil and vim.api.nvim_buf_is_valid(temp_buf) then
+                vim.api.nvim_buf_delete(temp_buf, { force = true })
+            end
+        end)
+
+        it("opens a treesitter outline for a justfile", function()
+            temp_buf = vim.api.nvim_create_buf(false, true)
+            vim.api.nvim_buf_set_lines(temp_buf, 0, -1, false, {
+                "build target='default':",
+                "    @echo {{target}}",
+            })
+            vim.api.nvim_set_current_buf(temp_buf)
+            vim.bo[temp_buf].filetype = "just"
+
+            -- Run the real entry maker, capture its picker-facing entries,
+            -- and stop before Telescope creates an interactive picker.
+            local picker_opened = false
+            local picker_results = nil
+            ---@diagnostic disable-next-line: duplicate-set-field
+            finders.new_table = function(opts)
+                local entries = {}
+                for _, result in ipairs(opts.results) do
+                    local entry = opts.entry_maker(result)
+                    if entry ~= nil then
+                        entries[#entries + 1] = entry
+                    end
+                end
+                return { results = entries }
+            end
+            ---@diagnostic disable-next-line: duplicate-set-field
+            pickers.new = function(_, opts)
+                picker_results = opts.finder.results
+                return {
+                    find = function() picker_opened = true end,
+                }
+            end
+
+            -- just has no configured LSP, so the public outline mapping must
+            -- fall back to its installed tree-sitter parser.
+            vim.g.coc_service_initialized = 0
+            local mapping = vim.fn.maparg("<space>o", "n", false, true)
+            assert.is_function(mapping.callback)
+            local ok, err = pcall(mapping.callback)
+            if not ok then
+                error("outline mapping failed: " .. tostring(err))
+            end
+            assert.is_true(picker_opened)
+
+            local outline = {}
+            for _, entry in ipairs(picker_results or {}) do
+                outline[#outline + 1] = {
+                    lnum = entry.lnum,
+                    col = entry.col,
+                    symbol_type = entry.symbol_type,
+                    symbol_name = entry.symbol_name,
+                }
+            end
+            eq({
+                {
+                    lnum = 1,
+                    col = 1,
+                    symbol_type = "function",
+                    symbol_name = "build",
+                },
+                {
+                    lnum = 1,
+                    col = 7,
+                    symbol_type = "var",
+                    symbol_name = "target",
+                },
+            }, outline)
         end)
     end)
 end)
