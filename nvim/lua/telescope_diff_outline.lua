@@ -17,6 +17,36 @@ local entry_display = require("telescope.pickers.entry_display")
 
 local M = {}
 
+--- Return the parser and language for a buffer, if available.
+---@param bufnr number Buffer number
+---@return vim.treesitter.LanguageTree? parser
+---@return string? language
+---@return string? error
+local function get_buf_parser(bufnr)
+    local filetype = vim.bo[bufnr].filetype
+    local language = vim.treesitter.language.get_lang(filetype)
+    if language == nil then
+        local err = string.format(
+            "no tree-sitter language for filetype %q",
+            filetype
+        )
+        return nil, nil, err
+    end
+
+    local parser, err = vim.treesitter.get_parser(bufnr, language)
+    return parser, language, err
+end
+
+--- Return the symbol kind for a standard locals-query definition capture.
+---@param capture string Tree-sitter query capture name
+---@return string? kind
+local function definition_kind(capture)
+    if capture == "local.definition" then
+        return "definition"
+    end
+    return capture:match("^local%.definition%.(.+)$")
+end
+
 --------------------------------------------------------------------------------
 -- Git hunk utilities
 --------------------------------------------------------------------------------
@@ -342,21 +372,14 @@ function M.treesitter_symbols(opts)
     -- diff marker logic
     local builtin = require("telescope.builtin")
 
-    local parsers = require("nvim-treesitter.parsers")
-    local lang = parsers.get_buf_lang(bufnr)
-    if not parsers.has_parser(lang) then
-        print("No treesitter parser for this buffer")
-        return
-    end
-
     -- Get treesitter entries
     local ts_entries = {}
     local filename = vim.api.nvim_buf_get_name(bufnr)
 
     local ts = vim.treesitter
-    local parser = parsers.get_parser(bufnr, lang)
-    if not parser then
-        print("Could not get treesitter parser")
+    local parser, lang, parser_err = get_buf_parser(bufnr)
+    if parser == nil or lang == nil then
+        print("Could not get tree-sitter parser: " .. tostring(parser_err))
         return
     end
 
@@ -366,8 +389,8 @@ function M.treesitter_symbols(opts)
         return
     end
 
-    -- Query for definitions. Only "locals" queries contain @definition
-    -- captures; other queries (highlights, etc.) have no matching
+    -- Query for definitions. Only "locals" queries contain
+    -- @local.definition captures; other queries have no matching
     -- captures and would just waste cycles iterating.
     local query = ts.query.get(lang, "locals")
     if not query then
@@ -379,7 +402,8 @@ function M.treesitter_symbols(opts)
     local seen = {}
     for id, node, _ in query:iter_captures(tree:root(), bufnr, 0, -1) do
         local name = query.captures[id]
-        if name:match("^definition") then
+        local kind = definition_kind(name)
+        if kind ~= nil then
             local text = ts.get_node_text(node, bufnr)
             -- Truncate to first line; multi-line definitions (structs,
             -- function bodies) produce unreadable outline entries.
@@ -391,7 +415,6 @@ function M.treesitter_symbols(opts)
             local key = string.format("%d:%d:%s", start_row, start_col, text)
             if not seen[key] then
                 seen[key] = true
-                local kind = name:gsub("^definition%.", "")
                 ts_entries[#ts_entries + 1] = {
                     filename = filename,
                     lnum = start_row + 1,
