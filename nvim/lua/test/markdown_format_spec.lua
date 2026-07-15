@@ -1,15 +1,16 @@
 --- Tests for markdown formatting (gw/gq) behavior.
 ---
---- These tests verify that continuation lines in markdown lists are properly
---- indented to align with text after the list marker (bullet or number).
+--- These tests verify paragraph reflow and that continuation lines in markdown
+--- lists align with text after the list marker (bullet or number).
 
 local eq = assert.are.same
 
 --- Format text using gw operator, returning the result.
 ---@param lines string[] input lines
 ---@param textwidth number
+---@param normal_cmd? string command selecting the text to format
 ---@return string[] formatted lines
-local function format_with_gw(lines, textwidth)
+local function format_with_gw(lines, textwidth, normal_cmd)
     local bufnr = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_set_current_buf(bufnr)
 
@@ -17,7 +18,7 @@ local function format_with_gw(lines, textwidth)
     vim.bo[bufnr].textwidth = textwidth
 
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-    vim.cmd("normal! ggVGgw")
+    vim.api.nvim_feedkeys(normal_cmd or "ggVGgw", "mx", false)
 
     local result = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     vim.api.nvim_buf_delete(bufnr, { force = true })
@@ -51,6 +52,30 @@ local function assert_continuation_indent(lines, first_line_pattern, continuatio
 end
 
 describe("markdown gw formatting", function()
+    describe("paragraph text object", function()
+        it("reflows the paragraph with gwip", function()
+            local input = {
+                "Markdown paragraphs should reflow together even when the "
+                .. "first line is short.",
+                "Existing continuation lines may exceed the configured text "
+                .. "width after the paragraph has been edited and more words "
+                .. "were added.",
+                "Formatting the inner paragraph should update every line.",
+            }
+            local result = format_with_gw(input, 80, "gg0gwip")
+
+            eq({
+                "Markdown paragraphs should reflow together even when the "
+                .. "first line is short.",
+                "Existing continuation lines may exceed the configured text "
+                .. "width after the",
+                "paragraph has been edited and more words were added. "
+                .. "Formatting the inner",
+                "paragraph should update every line.",
+            }, result)
+        end)
+    end)
+
     describe("bullet list continuation", function()
         it("indents continuation lines with 2 spaces for '- ' bullets", function()
             local input = {

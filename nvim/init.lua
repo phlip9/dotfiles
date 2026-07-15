@@ -199,10 +199,38 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
         },
     })
 
+    ---Check whether the current buffer's language defines a textobject.
+    ---@param bufnr integer
+    ---@param query string
+    ---@param query_group string
+    ---@return boolean
+    local function supports_textobject(bufnr, query, query_group)
+        local filetype = vim.bo[bufnr].filetype
+        local language = vim.treesitter.language.get_lang(filetype) or filetype
+        local ok, parsed_query = pcall(vim.treesitter.query.get,
+            language, query_group)
+        if not ok then
+            vim.notify("tree-sitter query lookup failed: " .. tostring(parsed_query),
+                vim.log.levels.WARN)
+            return false
+        end
+        if not parsed_query then return false end
+
+        local capture_name = query:sub(2)
+        for _, capture in ipairs(parsed_query.captures) do
+            if capture == capture_name then return true end
+        end
+        return false
+    end
+
+    ---Select a tree-sitter textobject.
+    ---@param query string
+    ---@param query_group string
+    ---@return fun()
     local function select_textobject(query, query_group)
         return function()
             require("nvim-treesitter-textobjects.select")
-                .select_textobject(query, query_group or "textobjects")
+                .select_textobject(query, query_group)
         end
     end
 
@@ -221,18 +249,38 @@ do  -- nvim-treesitter - tree-sitter interface and syntax highlighting {{{
         end
     end
 
-    -- <action><in/around><textobject>
-    -- e.g. cif = change in function; vac = visual-select around class.
-    vim.keymap.set({ "x", "o" }, "af", select_textobject("@function.outer"))
-    vim.keymap.set({ "x", "o" }, "if", select_textobject("@function.inner"))
-    vim.keymap.set({ "x", "o" }, "acl", select_textobject("@class.outer"))
-    vim.keymap.set({ "x", "o" }, "icl", select_textobject("@class.inner"))
-    vim.keymap.set({ "x", "o" }, "ap", select_textobject("@parameter.outer"))
-    vim.keymap.set({ "x", "o" }, "ip", select_textobject("@parameter.inner"))
-    vim.keymap.set({ "x", "o" }, "ai", select_textobject("@call.outer"))
-    vim.keymap.set({ "x", "o" }, "ii", select_textobject("@call.inner"))
-    vim.keymap.set({ "x", "o" }, "as", select_textobject("@local.scope", "locals"))
-    vim.keymap.set({ "x", "o" }, "is", select_textobject("@local.scope", "locals"))
+    -- Install buffer mappings only when treesitter supports the relevant
+    -- captures for the language. This preserves built-in textobjects for
+    -- languages where the tree-sitter textobject does not exist.
+    local textobject_mappings = {
+        { lhs = "af",  query = "@function.outer",  query_group = "textobjects" },
+        { lhs = "if",  query = "@function.inner",  query_group = "textobjects" },
+        { lhs = "acl", query = "@class.outer",     query_group = "textobjects" },
+        { lhs = "icl", query = "@class.inner",     query_group = "textobjects" },
+        { lhs = "ap",  query = "@parameter.outer", query_group = "textobjects" },
+        { lhs = "ip",  query = "@parameter.inner", query_group = "textobjects" },
+        { lhs = "ai",  query = "@call.outer",      query_group = "textobjects" },
+        { lhs = "ii",  query = "@call.inner",      query_group = "textobjects" },
+        { lhs = "as",  query = "@local.scope",     query_group = "locals" },
+        { lhs = "is",  query = "@local.scope",     query_group = "locals" },
+    }
+    vim.api.nvim_create_autocmd("FileType", {
+        group = group,
+        pattern = treesitter_filetypes,
+        desc = "Enable supported tree-sitter textobjects",
+        callback = function(opts)
+            for _, mapping in ipairs(textobject_mappings) do
+                local query_group = mapping.query_group
+                if supports_textobject(opts.buf, mapping.query, query_group) then
+                    vim.keymap.set({ "x", "o" }, mapping.lhs,
+                        select_textobject(mapping.query, query_group), {
+                            buffer = opts.buf,
+                            desc = "select " .. mapping.query,
+                        })
+                end
+            end
+        end,
+    })
 
     -- Vim motions with treesitter textobjects.
     --
