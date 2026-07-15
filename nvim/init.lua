@@ -629,8 +629,9 @@ if pcall(require, "telescope") then
                 hidden = true,
             },
             buffers = {
-                -- Sorts all buffers after most recent used.
-                sort_mru = true,
+                -- NOTE(phlip9): on the fence for sort_mru. hurts git pr review.
+                -- -- Sorts all buffers after most recent used.
+                -- sort_mru = true,
                 -- Don't display the current buffer in the list.
                 ignore_current_buffer = true,
             },
