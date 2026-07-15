@@ -66,6 +66,11 @@
         HostName = "lexe-prod.uswest2.prod.lexe.app";
         Port = 22022;
       };
+      "lexe-prod-esplora" = {
+        User = "deploy";
+        HostName = "lexe-prod-esplora.uswest2.prod.lexe.app";
+        Port = 22022;
+      };
       "lexe-prod-www" = {
         User = "deploy";
         HostName = "lexe-prod-www.uswest2.prod.lexe.app";
