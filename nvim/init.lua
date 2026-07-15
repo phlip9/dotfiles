@@ -722,7 +722,9 @@ if pcall(require, "telescope") then
     -- increase height and width to fit more items and ensure paths are visible
     local show_at_cursor = require("telescope.themes").get_cursor({
         layout_config = {
-            height = 32,
+            -- Cursor layout only chooses above or below; cap the height to
+            -- half the screen so one of those placements always fits.
+            height = { 0.5, max = 32 },
             width = 170,
         }
     })
