@@ -467,7 +467,19 @@ end
 
 -- nvim-treesitter }}}
 
-do -- kanagawa - neovim colorscheme {{{
+do -- markdown_format {{{
+    local group = vim.api.nvim_create_augroup("MarkdownFormat", {})
+    vim.api.nvim_create_autocmd("FileType", {
+        group = group,
+        pattern = "markdown",
+        desc = "Smarter markdown formatting",
+        callback = function(opts)
+            require_local("markdown_format").setup(opts.buf)
+        end,
+    })
+end -- markdown_format }}}
+
+do  -- kanagawa - neovim colorscheme {{{
     require("kanagawa").setup({
         -- enable terminal text undercurls (underlines, dotted underlines, etc)
         undercurl = true,
