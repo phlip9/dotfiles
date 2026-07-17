@@ -77,7 +77,7 @@
       pkgs.dnsutils # `dig`, `nslookup`, `delv`, `nsupdate`
       pkgs.curl
       pkgs.iperf
-      pkgs.netcat-gnu # `nc`
+      pkgs.netcat # `nc`
       pkgs.socat
       pkgs.wget
 
