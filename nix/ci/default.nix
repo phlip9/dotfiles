@@ -211,8 +211,10 @@ let
       recurse =
         path: value:
         if builtins.isList value then
-          lib.genAttrs value (
-            system: ciJob (lib.getAttrFromPath path (packageSetFor system))
+          withRecurseForDerivations (
+            lib.genAttrs value (
+              system: ciJob (lib.getAttrFromPath path (packageSetFor system))
+            )
           )
         else
           builtins.mapAttrs (
@@ -225,7 +227,8 @@ let
     in
     recurse [ ];
 
-  # Map a pruned platform tree to passthru.tests jobs.
+  # Map a pruned platform tree to passthru.tests jobs. Tests inherit the
+  # parent package's resolved CI platforms, including hydraPlatforms.
   mapPackagePlatformsToTests =
     packageSetFor:
     let
@@ -264,7 +267,7 @@ let
       recurse =
         value:
         if lib.isDerivation value then
-          { "${system}" = ciJob value; }
+          withRecurseForDerivations { "${system}" = ciJob value; }
         else if builtins.isAttrs value then
           let
             mapped = builtins.mapAttrs (_: v: recurse v) value;

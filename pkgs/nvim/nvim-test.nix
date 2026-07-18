@@ -26,6 +26,8 @@ runCommandLocal "nvim-test"
       which
     ];
 
+    meta.platforms = nvim.meta.platforms;
+
     passthru = {
       inherit srcNvim;
     };

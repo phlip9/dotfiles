@@ -36,6 +36,10 @@ to linux systems, then applies each package's `meta.hydraPlatforms`,
 `meta.platforms`, and `meta.badPlatforms`. Packages without explicit platform
 metadata therefore only emit linux jobs in the NixOS package subtree.
 
+Passthru tests inherit the resolved CI platforms of their parent package. A
+package with `meta.hydraPlatforms = [ ]` therefore emits neither package nor
+passthru test jobs, even when its tests have their own platform metadata.
+
 NixOS configs and tests use `buildSystem`, currently `x86_64-linux`.
 
 ## Eval model
@@ -65,6 +69,9 @@ nix build -f ./nix/ci/default.nix \
 
 # Build all phlipPkgs passthru.tests.
 nix build -f ./nix/ci/default.nix phlipPkgs.tests
+
+# Build the a phlipPkgs passthru test job.
+nix build -f ./nix/ci/default.nix phlipPkgs.tests.nvim.nvim-test.x86_64-linux
 
 # Build a NixOS VM test.
 nix build -f ./nix/ci/default.nix nixosTests.github-webhook.x86_64-linux

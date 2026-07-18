@@ -263,6 +263,11 @@ in
 # The final nvim package with passthru attrs.
 wrappedNvimPkg.overrideAttrs (
   final: prev: {
+    # unlike nixpkgs upstream, we want our nvim wrapper built in CI
+    meta = prev.meta // {
+      hydraPlatforms = prev.meta.platforms;
+    };
+
     passthru = (prev.passthru or { }) // {
       inherit
         luaPlugins
