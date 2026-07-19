@@ -1,6 +1,5 @@
 {
   config,
-  lib,
   phlipPkgsNixos,
   pkgs,
   ...
@@ -104,7 +103,6 @@
   networking.domain = "lan";
   phlip9.networking.resolveFqdnToLocalhost = true;
 
-  networking.wireless.enable = lib.mkForce false;
   networking.networkmanager.enable = true;
 
   time.timeZone = "America/Los_Angeles";
@@ -184,21 +182,22 @@
     # Pascal is too old)
     open = false;
 
-    # # 590+ no longer supports 1080 Ti / Pascal
-    # package = config.boot.kernelPackages.nvidiaPackages.production;
+    # NVIDIA 590+ no longer supports the GTX 1080 Ti / Pascal. Use the
+    # maintained 580 LTSB, supported until August 2028.
+    package = config.boot.kernelPackages.nvidiaPackages.legacy_580;
 
-    # Use specific drivers if stable and beta are too new
-    # <https://download.nvidia.com/XFree86/Linux-x86_64/>
-    # <https://www.nvidia.com/en-us/drivers/unix/>
-    # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/nvidia-x11/default.nix#L74>
-    package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
-      version = "580.159.03";
-      settingsSha256 = "sha256-kP3J87uUVPOOJHmTdRNm4+GdIyniZYrtgehrYSXcX9A=";
-      sha256_64bit = "sha256-MshdmbD2QMlQH2GzndrSCP0CiNAVxPvF/QQ1wHeD+nc=";
-      sha256_aarch64 = "";
-      openSha256 = "";
-      persistencedSha256 = "";
-    };
+    # # Use specific drivers if legacy is not working:
+    # # <https://download.nvidia.com/XFree86/Linux-x86_64/>
+    # # <https://www.nvidia.com/en-us/drivers/unix/>
+    # # <https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/nvidia-x11/default.nix#L74>
+    # package = config.boot.kernelPackages.nvidiaPackages.mkDriver {
+    #   version = "580.159.03";
+    #   settingsSha256 = "sha256-kP3J87uUVPOOJHmTdRNm4+GdIyniZYrtgehrYSXcX9A=";
+    #   sha256_64bit = "sha256-MshdmbD2QMlQH2GzndrSCP0CiNAVxPvF/QQ1wHeD+nc=";
+    #   sha256_aarch64 = "";
+    #   openSha256 = "";
+    #   persistencedSha256 = "";
+    # };
   };
 
   # 2026-05-24: Load nvidia modules via systemd-modules-load so they're up
