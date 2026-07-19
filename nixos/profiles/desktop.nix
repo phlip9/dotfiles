@@ -81,6 +81,13 @@
   services.power-profiles-daemon.enable = true;
   services.upower.enable = true;
 
+  # (currently) required for xdg-document-portal
+  #
+  # NixOS 26.11 just this opt-in and FUSE consumers in NixOS upstream haven't
+  # explicitly added dependencies on FUSE, so need to enable this here for now.
+  # can probably remove this in the future.
+  programs.fuse.enable = true;
+
   # # remove gnome gunk
   # environment.gnome.excludePackages = [
   #   pkgs.decibels
