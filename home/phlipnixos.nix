@@ -186,6 +186,10 @@
     ensureDatabases = [ "lexe-dev" ];
   };
 
+  # HACK: avoid tons of font-config error spam. this needs GUI so provide it
+  # from NixOS pkgs.
+  services.nix-ssh-agent.ssh-askpass = "/run/current-system/sw/bin/seahorse-ssh-askpass";
+
   #
   # Misc
   #

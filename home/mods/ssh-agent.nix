@@ -6,6 +6,8 @@
   ...
 }:
 let
+  cfg = config.services.nix-ssh-agent;
+
   isLinux = pkgs.stdenv.hostPlatform.isLinux;
   isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 
@@ -21,30 +23,39 @@ let
   sshAgentSock = "nix-ssh-agent.socket";
   sshAgentSockPath = "${sshAgentDir}/${sshAgentSock}";
 
-  # ssh-askpass binary
-  ssh-askpass =
-    # TODO(phlip9): seahorse is gnome only. choose an askpass impl based on host cfg.
-    if isLinux then
-      "${pkgs.seahorse}/libexec/seahorse/ssh-askpass"
-    # ssh-askpass apple script for macOS: <https://github.com/theseal/ssh-askpass>
-    else if isDarwin then
-      pkgs.fetchurl {
-        name = "ssh-askpass";
-        url = "https://raw.githubusercontent.com/theseal/ssh-askpass/refs/tags/v1.5.1/ssh-askpass";
-        hash = "sha256-bQUuGS3Mb+i4Kt+1mDP203s2W1jlRcpl/7uXA7TUZ+o=";
-        executable = true;
-      }
-    else
-      throw "nix-ssh-agent: config: unrecognized platform";
-
   shellHook = ''
     export -n SSH_AGENT_LAUNCHER
     export SSH_AUTH_SOCK="${sshAgentSockPath}"
-    export SSH_ASKPASS="${ssh-askpass}"
+    export SSH_ASKPASS="${cfg.ssh-askpass}"
     export SSH_ASKPASS_REQUIRE=force
   '';
 in
 {
+  options = {
+    services.nix-ssh-agent = {
+      ssh-askpass = lib.mkOption {
+        type = lib.types.str;
+        default =
+          if isLinux then
+            "${pkgs.seahorse}/libexec/seahorse/ssh-askpass"
+          # ssh-askpass apple script for macOS: <https://github.com/theseal/ssh-askpass>
+          else if isDarwin then
+            "${pkgs.fetchurl {
+              name = "ssh-askpass";
+              url = "https://raw.githubusercontent.com/theseal/ssh-askpass/refs/tags/v1.5.1/ssh-askpass";
+              hash = "sha256-bQUuGS3Mb+i4Kt+1mDP203s2W1jlRcpl/7uXA7TUZ+o=";
+              executable = true;
+            }}"
+          else
+            throw "nix-ssh-agent: config: unrecognized platform, need to config ssh-askpass binary";
+        description = ''
+          Path to binary used by ssh-agent to prompt user for ssh key passwords
+          and yubikey touches.
+        '';
+      };
+    };
+  };
+
   config = {
     # Common config
     # ssh-agent env exports
@@ -70,7 +81,7 @@ in
               export DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^DISPLAY=\(.*\)/\1/; t; d')"
               export XAUTHORITY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^XAUTHORITY=\(.*\)/\1/; t; d')"
               export WAYLAND_DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^WAYLAND_DISPLAY=\(.*\)/\1/; t; d')"
-              exec ${ssh-askpass} "$@"
+              exec ${cfg.ssh-askpass} "$@"
             '';
           in
           [
@@ -94,7 +105,7 @@ in
           in
           "${run-nix-ssh-agent}";
         EnvironmentVariables = {
-          SSH_ASKPASS = "${ssh-askpass}";
+          SSH_ASKPASS = "${cfg.ssh-askpass}";
           SSH_ASKPASS_REQUIRE = "force";
         };
         # StandardErrorPath = "${sshAgentDir}/nix-ssh-agent.err";

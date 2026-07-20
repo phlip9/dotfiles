@@ -48,6 +48,9 @@ fix (phlipPkgsNixos: {
   # paseo-relay - self-hosted relay for Paseo daemon/client traffic
   paseo-relay = callPackage ./paseo-relay.nix { };
 
+  # seahorse-ssh-askpass - tiny package that links to seahorse's ssh-askpass
+  seahorse-ssh-askpass = callPackage ./seahorse-ssh-askpass.nix { };
+
   # my wallpapers
   wallpapers = callPackage ./wallpapers.nix { inherit (phlipPkgsNixos) matugen; };
 })
