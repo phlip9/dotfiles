@@ -36,9 +36,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "780939adecefc2f84be700a6f9ae1cc9385ad240",
-      "url": "https://github.com/Mic92/niks3/archive/780939adecefc2f84be700a6f9ae1cc9385ad240.tar.gz",
-      "hash": "sha256-Ami+rQ4DLI8WCwLTN62RBkgTzE24rY5NYsvgHGbFfug="
+      "revision": "6e6d6251d94d08bd98410fc190daba80dba02f5b",
+      "url": "https://github.com/Mic92/niks3/archive/6e6d6251d94d08bd98410fc190daba80dba02f5b.tar.gz",
+      "hash": "sha256-paLbmEm96K2rGVzUxhW/Z705BRF9TzZHU2U+9UnKbAg="
     },
     "nixbot": {
       "type": "Git",
@@ -49,9 +49,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "00e84cc3ae69ec14c24ff17efd7a57f9f665f588",
-      "url": "https://github.com/Mic92/nixbot/archive/00e84cc3ae69ec14c24ff17efd7a57f9f665f588.tar.gz",
-      "hash": "sha256-UZ2uxOiJvzrb7+rVmeyO3hsMmdPSgbqdhvg8HmV0Xhg="
+      "revision": "8371281dbe7654c03da980c50c64870ff0c58cc4",
+      "url": "https://github.com/Mic92/nixbot/archive/8371281dbe7654c03da980c50c64870ff0c58cc4.tar.gz",
+      "hash": "sha256-Xy7FlkxZLHPxJWmmxYhguAO8Fu66YrSLNwzFKVF6kPA="
     },
     "nixos-unstable": {
       "type": "Channel",
@@ -99,9 +99,9 @@
       },
       "branch": "master",
       "submodules": false,
-      "revision": "c591bf665727040c6cc5cb409079acb22dcce33c",
-      "url": "https://github.com/Mic92/sops-nix/archive/c591bf665727040c6cc5cb409079acb22dcce33c.tar.gz",
-      "hash": "sha256-VfGRo1qTBKOe3s2gOv8LSoA6Fk19PvBlwQ1ECN0Evn8="
+      "revision": "f1406619a3884cd5c47992a70b8b35c9c0fcb4c9",
+      "url": "https://github.com/Mic92/sops-nix/archive/f1406619a3884cd5c47992a70b8b35c9c0fcb4c9.tar.gz",
+      "hash": "sha256-aCWC8ngycU7OdJrU2+Je3qf+1a2ykuBvpPhZT/9tXMc="
     }
   },
   "version": 7
