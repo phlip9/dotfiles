@@ -265,19 +265,18 @@
   services.phlip9-nixbot-ci = {
     enable = true;
     domain = "ci.phlip9.com";
-    cacheDomain = "cache.phlip9.com";
 
     github = {
       appId = 2746100;
       oauthClientId = "Iv23liE6dM8w5D4JF7Qz";
     };
 
-    cloudflare = {
-      accountId = "30faeb30dcb2a77a72fdc0948c99de62";
-      bucket = "phlip9-nix-cache";
+    cache = {
+      url = "https://cache.phlip9.com";
+      publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
+      s3.endpoint = "30faeb30dcb2a77a72fdc0948c99de62.r2.cloudflarestorage.com";
+      s3.bucket = "phlip9-nix-cache";
     };
-
-    cache.publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
   };
   # PostgreSQL for nixbot CI
   services.postgresql = {

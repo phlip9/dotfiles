@@ -25,14 +25,8 @@ in
 
     domain = lib.mkOption {
       type = lib.types.str;
-      default = "ci.phlip9.com";
+      example = "ci.phlip9.com";
       description = "Domain for the nixbot web UI.";
-    };
-
-    cacheDomain = lib.mkOption {
-      type = lib.types.str;
-      default = "cache.phlip9.com";
-      description = "Domain for the binary cache (served by Cloudflare R2).";
     };
 
     github = {
@@ -47,24 +41,31 @@ in
       };
     };
 
-    cloudflare = {
-      accountId = lib.mkOption {
-        type = lib.types.str;
-        description = "Cloudflare Account ID for R2 endpoint.";
-      };
-
-      bucket = lib.mkOption {
-        type = lib.types.str;
-        default = "phlip9-nix-cache";
-        description = "R2 bucket name.";
-      };
-    };
-
     cache = {
+      url = lib.mkOption {
+        type = lib.types.str;
+        example = "https://cache.phlip9.com";
+        description = "URL for the binary cache (served by Cloudflare R2).";
+      };
+
       publicKey = lib.mkOption {
         type = lib.types.str;
-        description = "Nix signing public key for the cache.";
         example = "cache.phlip9.com-1:ABC123...";
+        description = "Nix signing public key for the cache.";
+      };
+
+      s3 = {
+        endpoint = lib.mkOption {
+          type = lib.types.str;
+          example = "30faeb30dcb2a77a72fdc0948c99de62.r2.cloudflarestorage.com";
+          description = "Cloudflare Account ID for R2 endpoint.";
+        };
+
+        bucket = lib.mkOption {
+          type = lib.types.str;
+          example = "phlip9-nix-cache";
+          description = "R2 bucket name.";
+        };
       };
     };
   };
@@ -121,11 +122,11 @@ in
     services.niks3 = {
       enable = true;
       httpAddr = "[::1]:5751";
-      cacheUrl = "https://${cfg.cacheDomain}";
+      cacheUrl = "${cfg.cache.url}";
 
       s3 = {
-        endpoint = "${cfg.cloudflare.accountId}.r2.cloudflarestorage.com";
-        bucket = cfg.cloudflare.bucket;
+        endpoint = cfg.cache.s3.endpoint;
+        bucket = cfg.cache.s3.bucket;
         useSSL = true;
         accessKeyFile = config.sops.secrets.niks3-s3-access-key.path;
         secretKeyFile = config.sops.secrets.niks3-s3-secret-key.path;
