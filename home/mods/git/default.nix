@@ -177,8 +177,19 @@ in
       # Print the diff stat for this commit.
       cm-stat = "!git diff --stat HEAD~1";
 
+      # Git exports `GIT_DIR` for `!` aliases invoked in a linked worktree. If
+      # the editor inherits it, vim-gitgutter's `git -C <buffer-dir>` treats
+      # that directory as the worktree root and reports nested tracked files
+      # as untracked. Clear `GIT_DIR` and `GIT_WORK_TREE` before running nvim
+      # so vim-gitgutter works.
+
       # Open only one specific changed file just like `git pr-review`
-      pr-rvo = "!nvim +\"let g:gitgutter_diff_base = '$(git pr-base)'\"";
+      pr-rvo = mkAliasInline "git-pr-rvo" [ ] ''
+        set -euo pipefail
+        PR_BASE="$(git pr-base)"
+        unset GIT_DIR GIT_WORK_TREE
+        exec $EDITOR +"let g:gitgutter_diff_base = '$PR_BASE'"
+      '';
 
       # Open all changed files in `nvim` with gitgutter diff'ed against master.
       # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
@@ -186,7 +197,8 @@ in
         set -euo pipefail
         PR_BASE="$(git pr-base)"
         mapfile -t -d "" files < <(git diff --name-only -z "$PR_BASE")
-        $EDITOR "''${files[@]}" +"let g:gitgutter_diff_base = '$PR_BASE'"
+        unset GIT_DIR GIT_WORK_TREE
+        exec $EDITOR "''${files[@]}" +"let g:gitgutter_diff_base = '$PR_BASE'"
       '';
 
       # Single commit: open all changed files in `nvim` with gitgutter diff.
@@ -195,7 +207,8 @@ in
         set -euo pipefail
         DIFF_BASE="$(git rev-parse HEAD~1)"
         mapfile -t -d "" files < <(git diff --name-only -z "$DIFF_BASE")
-        $EDITOR "''${files[@]}" +"let g:gitgutter_diff_base = '$DIFF_BASE'"
+        unset GIT_DIR GIT_WORK_TREE
+        exec $EDITOR "''${files[@]}" +"let g:gitgutter_diff_base = '$DIFF_BASE'"
       '';
 
       # Pretty print PR commits for Github PR description
