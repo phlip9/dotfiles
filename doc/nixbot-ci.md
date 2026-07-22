@@ -38,6 +38,7 @@ nginx (ci.phlip9.com:443)
 - `nixos/mods/nixbot-ci.nix`: Main module wrapping nixbot + niks3
 - `nixos/mods/default.nix`: Imports nixbot and niks3 NixOS modules
 - `nixos/omnara1/default.nix`: Enables `services.phlip9-nixbot-ci`
+- `nixos/tests/nixbot.nix`: Hermetic nixbot + niks3 + S3 integration test
 - `nixos/omnara1/secrets.yaml`: sops-encrypted secrets
 - `npins/sources.json`: Pins for nixbot and niks3
 

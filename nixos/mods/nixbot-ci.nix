@@ -29,6 +29,20 @@ in
       description = "Domain for the nixbot web UI.";
     };
 
+    admins = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "github:phlip9" ];
+      description = "List of nixbot admins.";
+    };
+
+    nginx = {
+      enableACME = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Request ACME certs for CI domain.";
+      };
+    };
+
     github = {
       appId = lib.mkOption {
         type = lib.types.int;
@@ -38,6 +52,27 @@ in
       oauthClientId = lib.mkOption {
         type = lib.types.str;
         description = "GitHub App OAuth2 Client ID.";
+      };
+
+      apiUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "https://api.github.com";
+        description = "GitHub API base URL.";
+      };
+
+      userAllowlist = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ "phlip9" ];
+        description = "GitHub users or organizations whose repos may build.";
+      };
+
+      topic = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = ''
+          GitHub repo topic used to automatically add repos on first start.
+          Otherwise repos must be added via the UI.
+        '';
       };
     };
 
@@ -58,13 +93,19 @@ in
         endpoint = lib.mkOption {
           type = lib.types.str;
           example = "30faeb30dcb2a77a72fdc0948c99de62.r2.cloudflarestorage.com";
-          description = "Cloudflare Account ID for R2 endpoint.";
+          description = "S3-compatible object store endpoint.";
         };
 
         bucket = lib.mkOption {
           type = lib.types.str;
           example = "phlip9-nix-cache";
           description = "R2 bucket name.";
+        };
+
+        useSSL = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Use TLS when connecting to the S3-compatible store.";
         };
       };
     };
@@ -76,12 +117,13 @@ in
     # =========================================================================
     services.nixbot = {
       enable = true;
-      domain = cfg.domain;
+      inherit (cfg) admins domain;
+      outputsPath = "/var/www/nixbot/nix-outputs/";
 
       # expose via NGINX
       nginx = {
         enable = true;
-        enableACME = true;
+        inherit (cfg.nginx) enableACME;
       };
 
       buildSystems = [ "x86_64-linux" ];
@@ -90,29 +132,26 @@ in
 
       github = {
         enable = true;
-        appId = cfg.github.appId;
+        inherit (cfg.github)
+          appId
+          apiUrl
+          userAllowlist
+          topic
+          ;
         appSecretKeyFile = config.sops.secrets.nixbot-github-app-secret-key.path;
         webhookSecretFile = config.sops.secrets.nixbot-github-webhook-secret.path;
         oauthId = cfg.github.oauthClientId;
         oauthSecretFile = config.sops.secrets.nixbot-github-oauth-client-secret.path;
 
         oauthPrivateRepoScope = false; # enable if you need private repos
-
-        # Only build repos owned by these users
-        userAllowlist = [ "phlip9" ];
-
-        topic = null;
       };
-
-      admins = [ "github:phlip9" ];
-      outputsPath = "/var/www/nixbot/nix-outputs/";
 
       # niks3 integration for cache uploads
       niks3 = {
         enable = true;
+        package = phlipPkgsNixos.niks3;
         serverUrl = "http://[::1]:5751";
         authTokenFile = config.sops.secrets.niks3-api-token.path;
-        package = phlipPkgsNixos.niks3;
       };
     };
 
@@ -122,12 +161,10 @@ in
     services.niks3 = {
       enable = true;
       httpAddr = "[::1]:5751";
-      cacheUrl = "${cfg.cache.url}";
+      cacheUrl = cfg.cache.url;
 
       s3 = {
-        endpoint = cfg.cache.s3.endpoint;
-        bucket = cfg.cache.s3.bucket;
-        useSSL = true;
+        inherit (cfg.cache.s3) endpoint bucket useSSL;
         accessKeyFile = config.sops.secrets.niks3-s3-access-key.path;
         secretKeyFile = config.sops.secrets.niks3-s3-secret-key.path;
       };

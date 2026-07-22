@@ -43,7 +43,8 @@ let
           mode = "0400";
         };
 
-        # SOPS configuration for test
+        # Set test secret:
+        # `just sops-test-fixtures-set secret-name < <(echo "secret-value")`
         sops = {
           defaultSopsFile = ./fixtures/secrets.yaml;
         };

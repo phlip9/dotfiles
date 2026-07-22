@@ -1,12 +1,23 @@
-# nixbot + niks3 NixOS integration test. Run against a fake GitHub API and S3
-# cache backend.
+# phlip9-nixbot-ci integration test
 #
-# TODO(phlip9): use our phlip9-nixbot-ci module
+# - fake GitHub API advertises a local test repo and records check runs
+# - signed push webhook triggers nixbot eval and build
+# - niks3 post-build step uploads the output
+# - niks3 server writes signed cache objects to S3 (local RustFS S3 API in test)
+# - reads the output's narinfo directly from S3, verifies its signature, and
+#   copies the output into an empty Nix store
+let
+  apiToken = "test-token-that-is-at-least-36-characters-long";
+  s3AccessKey = "rustfsadmin";
+  s3SecretKey = "rustfsadmin";
+  s3Bucket = "nixbot-test";
+  signingPublicKey = "niks3-test-1:f/Mfq81CcfUlnchjlZdtSGyZUHplChuNKltk08qxPvs=";
+in
 {
   name = "nixbot";
   nodes = {
     github =
-      { self, pkgs, ... }:
+      { lib, pkgs, ... }:
       let
         fakeGithubPort = 8970;
         fakeGithub = pkgs.writers.writePython3Bin "fake-github" { } ''
@@ -86,18 +97,31 @@
         '';
       in
       {
-        imports = [ ];
-
-        services.nixbot = {
+        services.phlip9-nixbot-ci = {
           enable = true;
           domain = "localhost";
-          nginx.enable = false;
+          admins = [ "github:acme" ];
+
+          nginx = {
+            enableACME = false;
+          };
+
           github = {
-            enable = true;
             appId = 123;
             apiUrl = "http://127.0.0.1:${toString fakeGithubPort}";
-            appSecretKeyFile = "/var/lib/secrets/github-app-key.pem";
-            webhookSecretFile = pkgs.writeText "webhook-secret" "test-webhook-secret";
+            oauthClientId = "test-oauth-client";
+            userAllowlist = [ "acme" ];
+            topic = "build-with-buildbot";
+          };
+
+          cache = {
+            url = "http://localhost:5751";
+            publicKey = signingPublicKey;
+            s3 = {
+              endpoint = "127.0.0.1:9000";
+              bucket = s3Bucket;
+              useSSL = false;
+            };
           };
         };
 
@@ -105,12 +129,78 @@
           "nix-command"
           "flakes"
         ];
+        nix.settings.trusted-public-keys = [ signingPublicKey ];
 
         environment.systemPackages = [
           pkgs.git
           pkgs.curl
           pkgs.jq
+          pkgs.openssl
+          pkgs.s5cmd
+          pkgs.zstd
         ];
+
+        # RustFS replaces Cloudflare R2 while retaining the real S3 protocol
+        # boundary used by niks3 in production.
+        systemd.services.rustfs = {
+          description = "RustFS S3-compatible object storage";
+          after = [ "network.target" ];
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            ExecStart = lib.escapeShellArgs [
+              "${pkgs.rustfs}/bin/rustfs"
+              "--address"
+              "127.0.0.1:9000"
+              "--access-key"
+              s3AccessKey
+              "--secret-key"
+              s3SecretKey
+              "/var/lib/rustfs"
+            ];
+            StateDirectory = "rustfs";
+            DynamicUser = true;
+            Restart = "on-failure";
+          };
+        };
+
+        # Create the bucket before niks3 opens its S3-backed store.
+        systemd.services.rustfs-setup = {
+          description = "Create the nixbot test S3 bucket";
+          after = [ "rustfs.service" ];
+          requires = [ "rustfs.service" ];
+          before = [ "niks3.service" ];
+          wantedBy = [ "multi-user.target" ];
+          environment = {
+            S3_ENDPOINT_URL = "http://127.0.0.1:9000";
+            AWS_ACCESS_KEY_ID = s3AccessKey;
+            AWS_SECRET_ACCESS_KEY = s3SecretKey;
+          };
+          path = [ pkgs.s5cmd ];
+          script = ''
+            set -euo pipefail
+
+            # Wait for the object store API before creating the cache bucket.
+            for attempt in $(seq 60); do
+              if s5cmd ls >/dev/null 2>&1; then
+                s5cmd mb s3://${s3Bucket} || true
+                exit 0
+              fi
+              sleep 1
+            done
+
+            echo "RustFS did not become ready" >&2
+            exit 1
+          '';
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+        };
+
+        systemd.services.niks3 = {
+          after = [ "rustfs-setup.service" ];
+          requires = [ "rustfs-setup.service" ];
+        };
 
         systemd.services.fake-github = {
           wantedBy = [ "multi-user.target" ];
@@ -126,19 +216,12 @@
           wantedBy = [ "multi-user.target" ];
           before = [ "nixbot.service" ];
           requiredBy = [ "nixbot.service" ];
-          path = [
-            pkgs.git
-            pkgs.openssl
-          ];
+          path = [ pkgs.git ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
           };
           script = ''
-            mkdir -p /var/lib/secrets
-            openssl genrsa -out /var/lib/secrets/github-app-key.pem 2048
-            chmod 644 /var/lib/secrets/github-app-key.pem
-
             rm -rf /var/lib/test-repo /tmp/test-flake
 
             # setupTestFlake - build a minimal test flake with one check
@@ -175,17 +258,43 @@
     import json
     import shlex
 
+    # Exercise the same nginx-to-Unix-socket boundary used in production.
+    nixbot_url = "http://localhost"
+
     start_all()
 
-    with subtest("github: nixbot becomes healthy"):
-        github.wait_for_unit("nixbot.service")
+    with subtest("secrets: sops decrypts the nixbot CI fixture"):
         github.wait_until_succeeds(
-            "curl --fail -s http://127.0.0.1:8010/health", timeout=120
+            "test -r /run/secrets/nixbot-github-app-secret-key"
+        )
+        github.succeed(
+            "test \"$(cat /run/secrets/niks3-api-token)\" = "
+            "'${apiToken}'"
+        )
+        github.succeed(
+            "openssl pkey -in "
+            "/run/secrets/nixbot-github-app-secret-key -noout"
         )
 
-    with subtest("github: project discovered from fake forge"):
+    with subtest("cache: RustFS and niks3 become healthy"):
+        github.wait_for_unit("rustfs-setup.service")
+        github.wait_for_unit("niks3.service")
+        github.wait_until_succeeds(
+            "curl --noproxy '*' --fail -g -s 'http://[::1]:5751/health'",
+            timeout=120,
+        )
+
+    with subtest("nixbot: nginx proxies to the service Unix socket"):
+        github.wait_for_unit("nginx.service")
+        github.wait_for_unit("nixbot.service")
+        github.fail("curl --fail -s http://127.0.0.1:8010/health")
+        github.wait_until_succeeds(
+            f"curl --fail -s {nixbot_url}/health", timeout=120
+        )
+
+    with subtest("nixbot: project discovered from fake GitHub"):
         def github_project_discovered(_ignore):
-            out = github.succeed("curl --fail -s http://127.0.0.1:8010/api/repos")
+            out = github.succeed(f"curl --fail -s {nixbot_url}/api/repos")
             projects = json.loads(out)
             print(projects)
             return any(
@@ -195,7 +304,7 @@
 
         retry(github_project_discovered, timeout_seconds=120)
 
-    with subtest("github: webhook push triggers eval, build, and statuses"):
+    with subtest("nixbot: webhook triggers eval, build, and statuses"):
         sha = github.succeed("git -C /var/lib/test-repo rev-parse master").strip()
         body = json.dumps({
             "ref": "refs/heads/master",
@@ -203,9 +312,12 @@
             "repository": {"id": 1, "default_branch": "master"},
             "head_commit": {"message": "initial commit"},
         }).encode()
-        sig = hmac.new(b"test-webhook-secret", body, hashlib.sha256).hexdigest()
+        webhook_secret = github.succeed(
+            "cat /run/secrets/nixbot-github-webhook-secret"
+        ).strip().encode()
+        sig = hmac.new(webhook_secret, body, hashlib.sha256).hexdigest()
         github.succeed(
-            "curl --fail -s -X POST http://127.0.0.1:8010/webhooks/github "
+            f"curl --fail -s -X POST {nixbot_url}/webhooks/github "
             "-H 'Content-Type: application/json' "
             "-H 'X-GitHub-Event: push' "
             "-H 'X-GitHub-Delivery: test-delivery-1' "
@@ -228,5 +340,44 @@
             )
 
         retry(github_checks_posted, timeout_seconds=300)
+
+    with subtest("cache: post-build upload is signed and readable from S3"):
+        store_path = github.succeed(
+            "nix eval --raw "
+            "'git+file:///var/lib/test-repo?ref=master"
+            "#checks.x86_64-linux.test.outPath'"
+        ).strip()
+        store_hash = store_path.rsplit("/", 1)[1].split("-", 1)[0]
+        s3_env = (
+            "export S3_ENDPOINT_URL=http://127.0.0.1:9000\n"
+            "export AWS_ACCESS_KEY_ID="
+            "$(cat /run/secrets/niks3-s3-access-key)\n"
+            "export AWS_SECRET_ACCESS_KEY="
+            "$(cat /run/secrets/niks3-s3-secret-key)"
+        )
+        narinfo = github.succeed(
+            f"{s3_env}\n"
+            f"s5cmd cat s3://${s3Bucket}/{store_hash}.narinfo "
+            "| zstd --decompress"
+        )
+        assert f"StorePath: {store_path}" in narinfo
+        assert "Sig: niks3-test-1:" in narinfo
+
+        # Fetching into an empty store verifies the nar and its signature, not
+        # only the presence of an S3 metadata object.
+        binary_cache_url = (
+            "s3://${s3Bucket}?endpoint=http://127.0.0.1:9000"
+            "&region=us-east-1"
+        )
+        github.succeed(
+            f"{s3_env}\n"
+            "mkdir -p /tmp/cache-store\n"
+            f"nix copy --from '{binary_cache_url}' "
+            f"--to /tmp/cache-store {store_path}"
+        )
+        content = github.succeed(
+            f"nix --store /tmp/cache-store store cat {store_path}"
+        ).strip()
+        assert content == "hello"
   '';
 }

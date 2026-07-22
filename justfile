@@ -169,6 +169,13 @@ sops-test-fixtures-edit:
         --config nixos/tests/fixtures/.sops.yaml \
         nixos/tests/fixtures/secrets.yaml
 
+# Set one test fixture secret from stdin
+sops-test-fixtures-set key:
+    jq -Rs . \
+        | SOPS_AGE_KEY_FILE=./nixos/tests/fixtures/keys.txt sops set \
+            --value-stdin nixos/tests/fixtures/secrets.yaml  \
+            {{ quote('["' + key + '"]') }}
+
 ssh-updatekeys:
     curl https://github.com/phlip9.keys > nix/phlip9.keys
 
