@@ -169,7 +169,9 @@ in
           Crashed = true;
           SuccessfulExit = false;
         };
-        ProcessType = "Background";
+        # NOTE(phlip9): previously "Background", but agents would take like
+        # an hour to run `cargo clippy` in work monorepo.
+        ProcessType = "Standard";
         ThrottleInterval = 10;
         ExitTimeOut = 15;
       };
