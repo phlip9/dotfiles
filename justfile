@@ -50,9 +50,10 @@ nix-lint:
     nix shell -f . pkgs.nil --command \
         fd --extension "nix" --exec nil diagnostics
 
-# Update phlipPkgs package(s) with updateScript
-phlippkgs-update pkg="":
-    nix-shell pkgs/update.nix {{ if pkg != "" { "--argstr package " + pkg } else { "" } }}
+# Update package(s) in pkgs/default.nix
+[positional-arguments]
+phlippkgs-update *packages:
+    nix-shell pkgs/update.nix --arg packageNames "[$(printf ' "%s"' "$@") ]"
 
 wallpaper-colors name="default":
     ./just/wallpaper-colors.sh {{ name }}

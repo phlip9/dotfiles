@@ -1,7 +1,7 @@
 # Run: nix-shell pkgs/update.nix
-# Or:  nix-shell pkgs/update.nix --argstr package claude-code
+# Or:  nix-shell pkgs/update.nix --arg packageNames '[ "claude-code" "codex" ]'
 {
-  package ? null,
+  packageNames ? [ ],
 }:
 let
   dotfiles = import ../. { };
@@ -77,16 +77,24 @@ let
     )
   );
 
-  # Select package(s) to update
+  # Select requested packages, or every updatable package when none are given.
   packages =
-    if package != null then
-      let
-        pkg = phlipPkgs.${package} or (throw "Package '${package}' not found");
-      in
-      if pkg.updateScript or null == null then
-        throw "Package '${package}' has no updateScript"
-      else
-        { ${package} = pkg; }
+    if packageNames != [ ] then
+      listToAttrs (
+        map (
+          packageName:
+          let
+            pkg = phlipPkgs.${packageName} or (throw "Package '${packageName}' not found");
+          in
+          if pkg.updateScript or null == null then
+            throw "Package '${packageName}' has no updateScript"
+          else
+            {
+              name = packageName;
+              value = pkg;
+            }
+        ) packageNames
+      )
     else
       packagesWithUpdateScript;
 
