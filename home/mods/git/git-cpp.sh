@@ -115,7 +115,7 @@ main() {
   done
 
   # open picker w/ initial order from git for-each-ref
-  local selected
+  local selected fzf_status=0
   selected="$(
     fzf --prompt='git cpp> ' \
       --delimiter=$'\t' \
@@ -126,7 +126,13 @@ main() {
       --no-sort \
       --tiebreak=index \
       < "${picker_rows}"
-  )"
+  )" || fzf_status=$?
+
+  # 0 = ok, 1 = no match, 130 = cancelled (ESC/ctrl-c); o/w fwd fzf errors
+  if [[ "$fzf_status" -ne 0 && "$fzf_status" -ne 1 && "$fzf_status" -ne 130 ]]
+  then
+    exit "$fzf_status"
+  fi
   [[ -z "$selected" ]] && exit 0
 
   # pull out selected commits to cherry-pick
