@@ -107,8 +107,11 @@ alias bash-trace="bash -lixc exit 2>&1 | sed -n 's/^+* \(source\|\.\) //p'"
 # git shortcut
 alias g='git'
 complete -o bashdefault -o default -o nospace -F __git_wrap__git_main g
-# common typo
-alias gs='git status'
+
+# common git typos
+alias gs='git s'
+alias gsw='git sw'
+alias gcm='git cm'
 
 # cargo shortcut
 alias c='cargo'
@@ -290,6 +293,10 @@ __complete_nix_alias() {
     return $status
 }
 complete -F __complete_nix_alias nb nd ne nr ns nbf ndf nef nrf nsf
+
+# `git sw` is `home/mods/git/git-sw.sh`, but with any args is just `git switch`.
+# delegate bash completions completely to `git switch`.
+_git_sw() { _git_switch; }
 
 # Alacritty
 [ -f "$HOME/.local/share/alacritty/alacritty.bash" ] && source "$HOME/.local/share/alacritty/alacritty.bash"

@@ -146,6 +146,9 @@ in
       # cherry-pick branch picker
       cpp = mkAlias ./git-cpp.sh [ ];
 
+      # `git switch` w/ fzf branch picker when run w/o args
+      sw = mkAlias ./git-sw.sh [ ];
+
       #############
       # PR Review #
       #############
@@ -275,7 +278,6 @@ in
       rt = "restore";
       rts = "restore --staged";
       s = "status";
-      sw = "switch";
       unwip = "!git reset --soft HEAD~1 && git restore --staged .";
       wip = "!git add . && git commit -m WIP";
     };
