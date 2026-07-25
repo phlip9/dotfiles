@@ -197,26 +197,6 @@ in
       comment = "Hetzner bare metal machine";
     };
 
-    # TODO(phlip9): remove
-    a_omnara1_phlip9_com = {
-      inherit zone_id;
-      name = "omnara1.phlip9.com";
-      type = "A";
-      content = "95.217.195.225";
-      ttl = 1; # automatic
-      proxied = false;
-      comment = "Hetzner omnara bare metal machine";
-    };
-    aaaa_omnara1_phlip9_com = {
-      inherit zone_id;
-      name = "omnara1.phlip9.com";
-      type = "AAAA";
-      content = "2a01:4f9:4a:52de::2";
-      ttl = 1; # automatic
-      proxied = false;
-      comment = "Hetzner omnara bare metal machine";
-    };
-
     # # Managed by R2 custom domain
     # cname_cache_phlip9_com = {
     #   inherit zone_id;
