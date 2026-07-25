@@ -53,7 +53,8 @@ nix-lint:
 # Update package(s) in pkgs/default.nix
 [positional-arguments]
 phlippkgs-update *packages:
-    nix-shell pkgs/update.nix --arg packageNames "[$(printf ' "%s"' "$@") ]"
+    nix-shell pkgs/update.nix \
+        --arg packageNames "[$(if (( $# )); then printf ' \"%s\"' "$@"; fi) ]"
 
 wallpaper-colors name="default":
     ./just/wallpaper-colors.sh {{ name }}
