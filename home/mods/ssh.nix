@@ -86,6 +86,13 @@
         HostName = "lexe-staging-esplora.uswest2.staging.lexe.app";
         Port = 22022;
       };
+      "sauna" = {
+        User = "phlip9";
+        HostName = "sauna.phlip9.com";
+        Port = 22022;
+        # ForwardAgent = true;
+      };
+      # TODO(phlip9): remove
       "omnara1" = {
         User = "phlip9";
         HostName = "omnara1.phlip9.com";

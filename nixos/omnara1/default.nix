@@ -87,7 +87,7 @@
     443
   ];
 
-  # ACME for omnara1.phlip9.com certificates.
+  # ACME for sauna.phlip9.com certificates.
   security.acme = {
     acceptTerms = true;
     defaults.email = "philiphayes9@gmail.com";
@@ -115,6 +115,32 @@
       access_log syslog:server=unix:/dev/log,nohostname,tag=nginx,severity=info main;
     '';
 
+    virtualHosts."sauna.phlip9.com" = {
+      forceSSL = true;
+      enableACME = true;
+
+      extraConfig = ''
+        client_max_body_size 256k;
+      '';
+
+      locations."/webhooks/github" = {
+        proxyPass = "http://[::1]:8673/webhooks/github";
+        extraConfig = ''
+          proxy_read_timeout 5s;
+          proxy_connect_timeout 5s;
+        '';
+      };
+
+      locations."/healthz" = {
+        proxyPass = "http://[::1]:8673/healthz";
+        extraConfig = ''
+          proxy_read_timeout 5s;
+          proxy_connect_timeout 5s;
+        '';
+      };
+    };
+
+    # TODO(phlip9): remove
     virtualHosts."omnara1.phlip9.com" = {
       forceSSL = true;
       enableACME = true;
