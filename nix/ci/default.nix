@@ -326,7 +326,7 @@ let
   # Explicit host->system mapping for home-manager configs
   # TODO(phlip9): annotate in each home config instead
   homeConfigSystems = {
-    omnara1 = "x86_64-linux";
+    sauna = "x86_64-linux";
     phlipdesk = "x86_64-linux";
     phlipnixos = "x86_64-linux";
     phliptop-mbp = "aarch64-darwin";

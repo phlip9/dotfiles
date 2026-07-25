@@ -26,7 +26,7 @@
       "Bash(nvim:*)",
       "Bash(pkgs/codex/update.sh:*)",
       "Bash(pkgs/nvim/update.sh:*)",
-      "Bash(pkgs/omnara/update.sh:*)",
+      "Bash(pkgs/sauna/update.sh:*)",
       "Bash(rg:*)",
       "Bash(shellcheck:*)",
       "Bash(tree:*)",

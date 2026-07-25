@@ -8,7 +8,7 @@ using rage + sops + sops-nix
 There's a top-level file `.sops.yaml` that declares all pubkeys and determines
 which keys have access to which secrets files.
 
-Groups of secrets are stored in a file like `nixos/omnara1/secrets.yaml`. The
+Groups of secrets are stored in a file like `nixos/sauna/secrets.yaml`. The
 `.sops.yaml` has a matching `creation_rules` regex that determines this secrets
 file should be accessible by e.g. key A and key B.
 
@@ -18,7 +18,7 @@ file should be accessible by e.g. key A and key B.
 Edit the secrets that should be accessible to a host:
 
 ```bash
-$ sops nixos/omnara1/secrets.yaml
+$ sops nixos/sauna/secrets.yaml
 ```
 
 
@@ -36,15 +36,15 @@ Add the pubkey to `.sops.yaml` and all secrets `creation_rules`:
 ```yaml
 keys:
   - &phliptop-nitro age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
-  - &omnara1 age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
+  - &sauna age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
   - &build01 age173xhxpc7n9vwp84hy3gulfnn0zm9vwn4xce5wrvrs4kx3k8lefxsyhh2pu
 
 creation_rules:
-  - path_regex: nixos/omnara1/secrets.yaml$
+  - path_regex: nixos/sauna/secrets.yaml$
     key_groups:
       - age:
         - *phliptop-nitro
-        - *omnara1
+        - *sauna
   - path_regex: nixos/build01/secrets.yaml$
     key_groups:
       - age:
@@ -65,7 +65,7 @@ Server machines only get access to their own secrets.
 Get the ssh pubkey and convert it to an age pubkey:
 
 ```bash
-$ ssh-keyscan -p 22022 omnara1.phlip9.com | ssh-to-age
+$ ssh-keyscan -p 22022 sauna.phlip9.com | ssh-to-age
 age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
 ```
 
@@ -74,14 +74,14 @@ Add this age pubkey to `.sops.yaml`:
 ```yaml
 keys:
   - &phliptop-nitro age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
-  - &omnara1 age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
+  - &sauna age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
 
 creation_rules:
-  - path_regex: nixos/omnara1/secrets.yaml$
+  - path_regex: nixos/sauna/secrets.yaml$
     key_groups:
       - age:
         - *phliptop-nitro
-        - *omnara1
+        - *sauna
 ```
 
 Encrypt all relevant secrets to this new key:

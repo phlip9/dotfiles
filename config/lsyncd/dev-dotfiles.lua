@@ -4,7 +4,7 @@ settings {
 sync {
     default.rsyncssh,
     source = "/home/phlip9/dev/dotfiles",
-    host = "omnara1",
+    host = "sauna",
     targetdir = "/home/phlip9/dev/dotfiles",
     exclude = {
         "*~",

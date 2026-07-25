@@ -36,6 +36,6 @@
   #
   #   # Auto-append co-author trailer to all commits so they show phlip9 as a
   #   # contributor. Works with `git commit -m` unlike commit.template.
-  #   hooks.prepare-commit-msg = ./omnara1/prepare-commit-msg;
+  #   hooks.prepare-commit-msg = ./sauna/prepare-commit-msg;
   # };
 }

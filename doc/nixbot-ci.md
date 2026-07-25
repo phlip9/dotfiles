@@ -1,11 +1,12 @@
-# Nixbot CI Setup for omnara1.phlip9.com
+# Nixbot CI Setup at ci.phlip9.com
 
 # Overview
 
 ## References
 
-nixbot CI on omnara1 (Hetzner 6c/12t server) to build:
-- `phlip9/dotfiles` master + PRs
+nixbot CI on sauna.phlip9.com (Hetzner 6c/12t server):
+- `phlip9/dotfiles` build master + PRs
+- `phlip9/notes-private` build master + deploy to GitHub pages
 
 Components:
 - [Mic92/nixbot](https://github.com/Mic92/nixbot): NixOS module for nixbot CI with Nix
@@ -37,9 +38,9 @@ nginx (ci.phlip9.com:443)
 - `flake.nix`: Minimal flake wrapper exposing `.#checks` for nixbot
 - `nixos/mods/nixbot-ci.nix`: Main module wrapping nixbot + niks3
 - `nixos/mods/default.nix`: Imports nixbot and niks3 NixOS modules
-- `nixos/omnara1/default.nix`: Enables `services.phlip9-nixbot-ci`
+- `nixos/sauna/default.nix`: Enables `services.phlip9-nixbot-ci`
 - `nixos/tests/nixbot.nix`: Hermetic nixbot + niks3 + S3 integration test
-- `nixos/omnara1/secrets.yaml`: sops-encrypted secrets
+- `nixos/sauna/secrets.yaml`: sops-encrypted secrets
 - `npins/sources.json`: Pins for nixbot and niks3
 
 ## Config
@@ -65,7 +66,7 @@ services.phlip9-nixbot-ci = {
 
 ### Secrets
 
-All secrets in `nixos/omnara1/secrets.yaml`:
+All secrets in `nixos/sauna/secrets.yaml`:
 
 - `niks3-api-token`
 - `niks3-s3-access-key`: Cloudflare R2 API token

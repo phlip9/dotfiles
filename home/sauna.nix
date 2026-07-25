@@ -1,4 +1,4 @@
-# omnara1 - Hetzner bare metal dev server home config
+# sauna - Hetzner bare metal server home config
 {
   # a reference to the home-manager config object this fn outputs
   # config,

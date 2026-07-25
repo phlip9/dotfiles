@@ -95,7 +95,7 @@ doc/github-agent-access/06-vm-auth-and-cli-integration.md:
   ```
 
 * (`gh` Integration): quickly remark that we'll nix package this `gh` wrapper
-  in pkgs/ and add it to `home/omnara1.nix`'s home-manager config.
+  in pkgs/ and add it to `home/sauna.nix`'s home-manager config.
 
 doc/github-agent-access/07-provisioning-and-automation.md:
 

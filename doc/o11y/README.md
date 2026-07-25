@@ -37,7 +37,7 @@ victoriametrics (127.0.0.1:8428)
     └── nginx-exporter    localhost:9113/metrics
 ```
 
-Target machine: `omnara1` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0)
+Target machine: `sauna` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0)
 DNS: `grafana.phlip9.com`
 
 ## Files
@@ -46,7 +46,7 @@ DNS: `grafana.phlip9.com`
 |------|---------|
 | `nixos/mods/o11y.nix` | NixOS module: VM + Grafana + exporters |
 | `nixos/tests/o11y.nix` | NixOS VM test |
-| `nixos/omnara1/default.nix` | NixOS machine config |
+| `nixos/sauna/default.nix` | NixOS machine config |
 
 ## Components
 
@@ -106,7 +106,7 @@ Requires `services.nginx.statusPage = true` to expose
 
 ### nginx (TLS termination + reverse proxy)
 
-Already running on omnara1 for nixbot CI. Add a new virtualHost
+Already running on sauna for nixbot CI. Add a new virtualHost
 for `grafana.phlip9.com` with:
 - `forceSSL = true`, `enableACME = true`
 - Proxy to `http://127.0.0.1:3000`
@@ -156,7 +156,7 @@ Both downloaded at build time and provisioned as JSON files.
 
 1. Add the `phlip9-o11y` service
 
-2. Re-deploy: (ex: `just deploy omnara1`)
+2. Re-deploy: (ex: `just deploy sauna`)
 
 3. Open grafana (ex: <https://grafana.phlip9.com>)
 
@@ -164,7 +164,7 @@ Both downloaded at build time and provisioned as JSON files.
    secrets.yaml:
 
    ```bash
-   $ sops --decrypt nixos/omnara1/secrets.yaml | yq -r '.grafana-admin-password' | wl-copy
+   $ sops --decrypt nixos/sauna/secrets.yaml | yq -r '.grafana-admin-password' | wl-copy
    ```
 
 5. Create `phlip9` user

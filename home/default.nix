@@ -53,9 +53,9 @@
     };
   };
 
-  omnara1 = hm.lib.homeManagerConfiguration {
+  sauna = hm.lib.homeManagerConfiguration {
     pkgs = pkgs;
-    modules = [ ./omnara1.nix ];
+    modules = [ ./sauna.nix ];
     extraSpecialArgs = {
       inherit phlipPkgs pkgs;
       inherit sources;

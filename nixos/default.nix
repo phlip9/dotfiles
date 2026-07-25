@@ -61,8 +61,8 @@ in
     modules = [ ./phlipnixos/default.nix ];
   };
 
-  # omnara1 - Hetzner bare metal dev server
-  omnara1 = nixosSystem {
-    modules = [ ./omnara1/default.nix ];
+  # sauna - Hetzner bare metal server
+  sauna = nixosSystem {
+    modules = [ ./sauna/default.nix ];
   };
 }

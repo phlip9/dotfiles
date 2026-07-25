@@ -1,4 +1,4 @@
-# omnara1 - Hetzner bare metal dev server
+# sauna - Hetzner bare metal dev server
 #
 # Hardware:
 # - 2x 894 GiB NVMe SSDs in RAID 0
@@ -37,7 +37,7 @@
   boot.swraid.mdadmConf = "PROGRAM ${pkgs.coreutils}/bin/true";
 
   # Hostname
-  networking.hostName = "omnara1";
+  networking.hostName = "sauna";
   networking.domain = "phlip9.com";
 
   # Use systemd networkd

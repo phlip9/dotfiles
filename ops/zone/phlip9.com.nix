@@ -232,7 +232,7 @@ in
       inherit zone_id;
       name = "ci.phlip9.com";
       type = "CNAME";
-      content = "omnara1.phlip9.com";
+      content = "sauna.phlip9.com";
       ttl = 1; # automatic
       proxied = false;
       settings.flatten_cname = false;
@@ -242,7 +242,7 @@ in
       inherit zone_id;
       name = "grafana.phlip9.com";
       type = "CNAME";
-      content = "omnara1.phlip9.com";
+      content = "sauna.phlip9.com";
       ttl = 1; # automatic
       proxied = false;
       settings.flatten_cname = false;
@@ -252,7 +252,7 @@ in
       inherit zone_id;
       name = "paseo.phlip9.com";
       type = "CNAME";
-      content = "omnara1.phlip9.com";
+      content = "sauna.phlip9.com";
       ttl = 1; # automatic
       proxied = false;
       settings.flatten_cname = false;
@@ -262,7 +262,7 @@ in
       inherit zone_id;
       name = "relay.paseo.phlip9.com";
       type = "CNAME";
-      content = "omnara1.phlip9.com";
+      content = "sauna.phlip9.com";
       ttl = 1; # automatic
       proxied = false;
       settings.flatten_cname = false;

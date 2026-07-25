@@ -104,7 +104,7 @@ rec {
     inherit pkgs;
     nodes = {
       inherit (nixosConfigs)
-        omnara1
+        sauna
         ;
     };
   };

@@ -61,7 +61,7 @@
   - `nix: don't need flakes anymore`
   - `phlipdesk: enable ssh-agent systemd service`
   - `firefox: add BetterTTV extension`
-  - updates use nixpkgs convention, ex: `omnara: 0.13.4 -> 0.13.5` or `omnara:
+  - updates use nixpkgs convention, ex: `codex: 0.13.4 -> 0.13.5` or `codex:
     init at 0.13.4`.
 - commits: rarely add a commit message body, unless change is complex or
   non-obvious.
@@ -81,7 +81,7 @@
 ## nixos
 
 - machine: nixos/phlipnixos/default.nix - main desktop
-- machine: nixos/omnara1/default.nix - Hetzner dev machine
+- machine: nixos/sauna/default.nix - Hetzner bare metal machine
 - priorities: reliable, beautiful, secure, performant, minimalist.
 - full-disk encryption, single-user install, auto-login, secure boot.
 
