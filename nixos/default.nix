@@ -56,6 +56,11 @@ in
     ];
   };
 
+  # phlipdesk NixOS desktop
+  phlipdesk = nixosSystem {
+    modules = [ ./phlipdesk/default.nix ];
+  };
+
   # phlipdesk experimental NixOS install
   phlipnixos = nixosSystem {
     modules = [ ./phlipnixos/default.nix ];

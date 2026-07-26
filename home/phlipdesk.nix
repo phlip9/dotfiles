@@ -1,11 +1,13 @@
 {
   # a reference to the home-manager config object this fn outputs
-  config,
+  # config,
+  # nixpkgs
   pkgs,
   # ../pkgs/default.nix
   phlipPkgs,
   # nixpkgs.lib
   # lib,
+  # # npins sources passed in via `extraSpecialArgs`
   # sources,
   ...
 }:
@@ -34,20 +36,23 @@
     ./mods/bash.nix
     ./mods/ctags.nix
     # ./mods/direnv.nix
-    ./mods/fonts.nix
+    # ./mods/fonts.nix
     ./mods/fzf.nix
-    ./mods/gdb.nix
-    ./mods/gh.nix
+    # ./mods/gdb.nix
+    # ./mods/gh.nix
     ./mods/git/default.nix
     ./mods/gpg-agent.nix
     ./mods/gpg.nix
+    # ./mods/hol-light-dev.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
     ./mods/lexe.nix
     ./mods/local-bin.nix
     # ./mods/lsyncd.nix
-    # ./mods/mpv.nix
-    # ./mods/nethack.nix
+    ./mods/mpv.nix
+    ./mods/nethack.nix
+    ./mods/niri.nix
+    ./mods/noctalia.nix
     ./mods/nvim/default.nix
     ./mods/postgres.nix
     ./mods/python.nix
@@ -55,12 +60,6 @@
     ./mods/ssh-agent.nix
     ./mods/tmux.nix
   ];
-
-  # Not (currently) a NixOS machine. This makes home-manager integrate more
-  # nicely with non-NixOS by linking xdg-applications etc
-  targets.genericLinux.enable = true;
-  xdg.mime.enable = true;
-  xdg.systemDirs.data = [ "${config.home.homeDirectory}/.nix-profile/share" ];
 
   # The home.packages option allows you to install Nix packages into your
   # environment.
@@ -71,42 +70,61 @@
     # # aider-chat - AI developer agent cli
     # phlipPkgs.aider-chat
 
-    # cargo-release - release a Rust package
-    phlipPkgs.cargo-release
+    # # cargo-release - release a Rust package
+    # phlipPkgs.cargo-release
 
-    # codex - OpenAI codex code CLI
-    phlipPkgs.codex
-
-    # claude - Anthropic claude code CLI
+    # claude - AI cli
     phlipPkgs.claude-code
 
-    # dist - build and distribute binary releases
-    phlipPkgs.dist
+    # codex - AI cli
+    phlipPkgs.codex
 
-    # mount remote fs via ssh
-    pkgs.sshfs-fuse
+    # timep - bash profiler
+    phlipPkgs.timep
 
-    # binary diff w/ alignment
-    pkgs.biodiff
+    pkgs.clangStdenv.cc
+    pkgs.gh
+    pkgs.protobuf
+    pkgs.rustup
+    pkgs.uv
+    pkgs.htmlq
 
-    # # goose - AI cli
-    # phlipPkgs.goose-cli
+    # terraform/opentofu
+    phlipPkgs.opentofu
+    phlipPkgs.terranix
 
-    # Modding OpenMW Tools Pack
-    # TODO(phlip9): GitLab CI artifacts expired, need to update URL
+    # # claude - Anthropic claude code CLI
+    # phlipPkgs.claude-code
+
+    # # dist - build and distribute binary releases
+    # phlipPkgs.dist
+
+    # # mount remote fs via ssh
+    # pkgs.sshfs-fuse
+
+    # # binary diff w/ alignment
+    # pkgs.biodiff
+
+    # # # goose - AI cli
+    # # phlipPkgs.goose-cli
+
+    # # lossless-cut - simple trimming and cutting video editor
+    # phlipPkgs.lossless-cut
+
+    # # Modding OpenMW Tools Pack
     # phlipPkgs.momw-tools-pack
 
-    # OpenMW unstable
-    phlipPkgs.openmw
+    # # OpenMW unstable
+    # phlipPkgs.openmw
 
-    # samply - sampling CPU profiler for Linux and macOS
-    phlipPkgs.samply
+    # # samply - sampling CPU profiler for Linux and macOS
+    # phlipPkgs.samply
 
     # # imgen - OpenAI API image generator cli
     # phlipPkgs.imgen
 
-    # io_uring man pages
-    pkgs.liburing.man
+    # # io_uring man pages
+    # pkgs.liburing.man
 
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
@@ -152,7 +170,7 @@
   #
   # if you don't want to manage your shell through Home Manager.
   home.sessionVariables = {
-    HF_HOME = "/mnt/phlipdisk3/huggingface";
+    # HF_HOME = "/mnt/phlipdisk3/huggingface";
   };
 
   # Let Home Manager install and manage itself.
@@ -167,6 +185,10 @@
     enable = true;
     ensureDatabases = [ "lexe-dev" ];
   };
+
+  # HACK: avoid tons of font-config error spam. this needs GUI so provide it
+  # from NixOS pkgs.
+  services.nix-ssh-agent.ssh-askpass = "/run/current-system/sw/bin/seahorse-ssh-askpass";
 
   #
   # Misc
