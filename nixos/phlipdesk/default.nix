@@ -1,3 +1,4 @@
+# phlipdesk - NixOS desktop
 {
   config,
   phlipPkgsNixos,
@@ -7,6 +8,7 @@
 {
   imports = [
     ./hardware-configuration.nix
+    ./disko-config.nix
     ../profiles/desktop.nix
   ];
 
@@ -99,7 +101,7 @@
     "vm.watermark_scale_factor" = 125;
   };
 
-  networking.hostName = "phlipnixos";
+  networking.hostName = "phlipdesk";
   networking.domain = "lan";
   phlip9.networking.resolveFqdnToLocalhost = true;
 
