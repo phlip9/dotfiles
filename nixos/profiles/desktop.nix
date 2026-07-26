@@ -12,6 +12,14 @@
   # password
   boot.initrd.systemd.settings.Manager.DefaultDeviceTimeoutSec = "infinity";
 
+  # Ensure a clean & sparkling /tmp on fresh boots.
+  boot.tmp.cleanOnBoot = true;
+
+  # Limit max journal size
+  services.journald.extraConfig = ''
+    SystemMaxUse=512M
+  '';
+
   #
   # Nix
   #

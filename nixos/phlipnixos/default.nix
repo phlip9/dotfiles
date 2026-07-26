@@ -247,6 +247,7 @@
       "wheel"
     ];
     packages = [ ];
+    uid = 1000;
   };
 
   # sudo-rs - memory-safe sudo
@@ -348,20 +349,26 @@
     # discord
     pkgs.discord
 
-    # copy/paste
-    pkgs.wl-clipboard
-
-    # Signal messenger
-    pkgs.signal-desktop
+    # EFI
+    pkgs.efibootmgr
 
     # nvtop
     pkgs.nvtopPackages.nvidia
+
+    # secure boot
+    pkgs.sbctl
+
+    # Signal messenger
+    pkgs.signal-desktop
 
     # run windows games
     pkgs.umu-launcher
 
     # vintagestory (game)
     pkgs.vintagestory
+
+    # copy/paste
+    pkgs.wl-clipboard
 
     # video player
     phlipPkgsNixos.mpv

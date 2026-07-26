@@ -53,6 +53,11 @@
     };
   };
 
+  # Limit max journal size
+  services.journald.extraConfig = ''
+    SystemMaxUse=1G
+  '';
+
   # Make sure the serial console is visible in qemu when testing the server
   # configuration with nixos-rebuild build-vm
   virtualisation.vmVariant.virtualisation.graphics = lib.mkDefault false;

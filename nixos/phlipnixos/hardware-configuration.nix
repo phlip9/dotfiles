@@ -28,8 +28,8 @@
     "crypt-swap".device = "/dev/disk/by-uuid/817d77e0-f4fd-43c2-8307-4ab50caf50d8";
     "crypt-phlipdisk3".device =
       "/dev/disk/by-uuid/74a62a74-f99b-4feb-8d6f-9bd76140b4fb";
-    "crypt-ubuntu".device =
-      "/dev/disk/by-uuid/bcaf844a-8cfb-4cd4-bff0-10d68b252a3e";
+    # "crypt-ubuntu".device =
+    #   "/dev/disk/by-uuid/bcaf844a-8cfb-4cd4-bff0-10d68b252a3e";
   };
 
   fileSystems = {
@@ -49,11 +49,11 @@
       device = "/dev/disk/by-uuid/0b5829aa-d02f-4a0d-9022-32bb83b6a7a2";
       fsType = "ext4";
     };
-    "/mnt/ubuntu" = {
-      device = "/dev/disk/by-uuid/3a888929-866b-4f92-b4d2-7030c295c441";
-      fsType = "ext4";
-      options = [ "ro" ];
-    };
+    # "/mnt/ubuntu" = {
+    #   device = "/dev/disk/by-uuid/3a888929-866b-4f92-b4d2-7030c295c441";
+    #   fsType = "ext4";
+    #   options = [ "ro" ];
+    # };
   };
 
   swapDevices = [
