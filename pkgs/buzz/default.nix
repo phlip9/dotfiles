@@ -4,6 +4,7 @@
   callPackage,
   fetchFromGitHub,
   makeBinaryWrapper,
+  nix-update-script,
   rust,
   rustPlatform,
 
@@ -136,6 +137,16 @@ stdenv.mkDerivation {
 
   passthru = {
     inherit desktop frontend sidecars;
+    updateScript = nix-update-script {
+      extraArgs = [
+        "--subpackage"
+        "frontend"
+        "--subpackage"
+        "sidecars"
+        "--subpackage"
+        "desktop"
+      ];
+    };
   };
 
   meta = {
