@@ -245,6 +245,7 @@
       "input"
       "networkmanager"
       "plugdev"
+      "transmission"
       "video"
       "wheel"
     ];
@@ -393,6 +394,18 @@
   programs.steam = {
     enable = true;
   };
+
+  # # mullvad VPN
+  # services.mullvad-vpn.enable = false;
+  #
+  # # transmission torrents
+  # # - ui: http://localhost:9091
+  # # - downloads: /var/lib/transmission/Downloads
+  # services.transmission = {
+  #   enable = false;
+  #   package = pkgs.transmission_4;
+  #   downloadDirPermissions = "775";
+  # };
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions

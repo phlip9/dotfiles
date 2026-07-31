@@ -44,6 +44,7 @@
 - one word when one word enough.
 - short synonyms: big > extensive, fix > "implement a solution for".
 - use exact technical terms.
+- use only ASCII characters unless absolutely necessary.
 - plan: clarify requirements ruthlessly. if fuzzy, vague, or ambiguous, then
   you MUST ask before go-ahead.
 - less abstract and verbose, more concrete and succinct.
