@@ -15,17 +15,22 @@ let
     tryEval
     ;
 
-  # Path to local pkgs directory
-  pkgsDir = toString ./.;
+  # Package definitions live in the stable and NixOS package sets.
+  pkgsDirs = map toString [
+    ./.
+    ../nixos/pkgs
+  ];
 
   # Packages that can't be evaluated (missing deps, use abort which tryEval
   # can't catch)
   skipPackages = [ ];
 
-  # All phlipPkgs except skipped ones
-  phlipPkgs = removeAttrs dotfiles.phlipPkgs skipPackages;
+  # All phlipPkgs and phlipPkgsNixos except skipped ones.
+  phlipPkgsCombined = removeAttrs (
+    dotfiles.phlipPkgs // dotfiles.phlipPkgsNixos
+  ) skipPackages;
 
-  # Check if package is defined in local pkgs/ directory via meta.position
+  # Check if package is defined in pkgs/ or nixos/pkgs/ via meta.position
   isLocalPackage =
     pkg:
     let
@@ -33,7 +38,8 @@ let
       # meta.position is "path:line", extract the path
       filePath = if pos != null then lib.head (lib.splitString ":" pos) else null;
     in
-    filePath != null && lib.hasPrefix pkgsDir filePath;
+    filePath != null
+    && lib.any (pkgsDir: lib.hasPrefix "${pkgsDir}/" filePath) pkgsDirs;
 
   # Try to get a package with updateScript, returns null if eval fails or no
   # updateScript
@@ -42,7 +48,7 @@ let
     let
       result = tryEval (
         let
-          pkg = phlipPkgs.${name};
+          pkg = phlipPkgsCombined.${name};
         in
         if lib.isDerivation pkg && pkg ? updateScript && isLocalPackage pkg then
           pkg
@@ -73,7 +79,7 @@ let
           }
         else
           null
-      ) (lib.attrNames phlipPkgs)
+      ) (lib.attrNames phlipPkgsCombined)
     )
   );
 
@@ -82,15 +88,15 @@ let
     if packageNames != [ ] then
       listToAttrs (
         map (
-          packageName:
+          pkgName:
           let
-            pkg = phlipPkgs.${packageName} or (throw "Package '${packageName}' not found");
+            pkg = phlipPkgsCombined.${pkgName} or (throw "Package '${pkgName}' not found");
           in
           if pkg.updateScript or null == null then
-            throw "Package '${packageName}' has no updateScript"
+            throw "Package '${pkgName}' has no updateScript"
           else
             {
-              name = packageName;
+              name = pkgName;
               value = pkg;
             }
         ) packageNames
