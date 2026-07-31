@@ -25,6 +25,9 @@ in
 fix (phlipPkgsNixos: {
   _type = "pkgs";
 
+  # buzz - workspace where humans and agents build together
+  buzz = callPackage ./buzz { };
+
   # GitHub App installation-token broker for agent VMs
   github-agent-authd = callPackage ./github-agent-authd { };
 

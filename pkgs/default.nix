@@ -24,9 +24,6 @@ fix (phlipPkgs: {
   # cargo-release - release a Rust package
   cargo-release = pkgs.cargo-release;
 
-  # buzz - workspace where humans and agents build together
-  buzz = callPackage ./buzz { };
-
   # claude-code - Anthropic claude code CLI
   claude-code = callPackage ./claude-code { };
 
