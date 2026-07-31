@@ -1,0 +1,30 @@
+diff --git a/desktop/src-tauri/src/managed_agents/storage.rs b/desktop/src-tauri/src/managed_agents/storage.rs
+--- a/desktop/src-tauri/src/managed_agents/storage.rs
++++ b/desktop/src-tauri/src/managed_agents/storage.rs
+@@ -428,7 +428,7 @@ fn legacy_agent_data_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
+ /// Call this at boot before `hydrate_keys` runs (i.e. before
+ /// `load_managed_agents` is called) so agents find their keys on first boot
+ /// after the service-name change.
+-#[cfg(debug_assertions)]
++#[cfg(any(debug_assertions, test))]
+ pub fn migrate_agent_keys_to_dev_service(app: &tauri::AppHandle) {
+     if !cfg!(feature = "system-keyring") || keyring_service() != "buzz-desktop-dev" {
+         return;
+@@ -462,7 +462,7 @@ pub fn migrate_agent_keys_to_dev_service(app: &tauri::AppHandle) {
+ /// Its presence means all agent keys that existed in the prod service at
+ /// migration time have been copied; subsequent dev boots skip the migration
+ /// entirely (no prod keyring access).
+-#[cfg(debug_assertions)]
++#[cfg(any(debug_assertions, test))]
+ const DEV_MIGRATION_MARKER: &str = "_dev_migration_v1";
+ 
+ /// Testable core of [`migrate_agent_keys_to_dev_service`]: copy `agent:<pubkey>`
+@@ -483,7 +483,7 @@ const DEV_MIGRATION_MARKER: &str = "_dev_migration_v1";
+ /// may have rotated their key in the dev service after initial migration).
+ /// New agents (pubkey not in `src`) are silently skipped — they will mint a
+ /// fresh key on their next onboarding run.
+-#[cfg(debug_assertions)]
++#[cfg(any(debug_assertions, test))]
+ fn copy_agent_keys_between_stores(pubkeys: &[String], src: &impl KeyStore, dst: &impl KeyStore) {
+     // One read of the dev blob. If the migration-complete marker is present,
+     // all prior agent keys are already in the dev service — skip entirely.

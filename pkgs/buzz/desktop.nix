@@ -6,7 +6,9 @@
   rust,
   rustPlatform,
 
+  cacert,
   cmake,
+  gitMinimal,
   pkg-config,
 
   alsa-lib,
@@ -27,6 +29,27 @@
 
 let
   targetTriple = rust.envVars.rustHostPlatformSpec;
+
+  # These tests create FHS scripts, spawn fixed FHS paths, or clear PATH before
+  # spawning an ambient tool. Nix's Linux sandbox only provides /bin/sh.
+  linuxFhsTestSkips = [
+    "commands::agent_auth::tests::auth_command_uses_augmented_path_for_node_adapter"
+    "commands::agent_discovery::tests::test_composed_path_survives_a_profile_that_clears_it"
+    "commands::agent_discovery::tests::test_install_shell_pipeline_status_follows_left_side"
+    "managed_agents::agent_env::tests::baked_defaults_do_not_override_record_provider_written_after"
+    "managed_agents::agent_env::tests::buzz_agent_provider_defaults_empty_in_oss_build"
+    "managed_agents::discovery::tests::codex_version::probe_codex_acp_version_uses_augmented_path_for_env_shebang_interpreter"
+    "managed_agents::readiness::cli_probe::tests::login_probe_uses_augmented_path_for_env_shebang_interpreter"
+    "managed_agents::runtime::tests::grandchild_inherits_pgid_of_process_group_leader"
+    "managed_agents::runtime::tests::kill_stale_live_pair_is_not_touched"
+    "managed_agents::runtime::tests::own_group_grandchild_detected_by_ancestor_walk"
+  ];
+
+  # This test leaves a 300-second process-global admission gate armed, which
+  # races with the parallel relay admission tests.
+  sharedStateTestSkips = [
+    "relay::tests::oversized_hint_is_capped_in_relay_error_message_string"
+  ];
 
   # sherpa-onnx-sys otherwise downloads its native archive during the build.
   sherpaOnnxVersion = "1.13.4";
@@ -70,10 +93,21 @@ rustPlatform.buildRustPackage {
   cargoRoot = "desktop/src-tauri";
   buildAndTestSubdir = "desktop/src-tauri";
   cargoHash = "sha256-2SWtMPUxuW6hV9mExBHkNe6Qw1aKUB40Jbax5mgvA0U=";
+  cargoCheckType = "release";
+
+  # Upstream's release-profile tests reference helpers gated on
+  # debug_assertions. Include those helpers whenever the test harness is built.
+  patches = [ ./release-profile-tests.patch ];
 
   nativeBuildInputs = [
     cmake
     pkg-config
+  ];
+
+  # Tests construct HTTPS clients and invoke Git inside the Nix sandbox.
+  nativeCheckInputs = [
+    cacert
+    gitMinimal
   ];
 
   buildInputs =
@@ -133,8 +167,15 @@ rustPlatform.buildRustPackage {
     done
   '';
 
-  # Tests assume FHS shell paths, system CA certificates, and ambient tools.
-  doCheck = false;
+  preCheck = ''
+    export HOME="$NIX_BUILD_TOP/test-home"
+    mkdir -p "$HOME"
+  '';
+
+  checkFlags = map (test: "--skip=${test}") (
+    sharedStateTestSkips
+    ++ lib.optionals stdenv.hostPlatform.isLinux linuxFhsTestSkips
+  );
 
   installPhase = ''
     runHook preInstall
