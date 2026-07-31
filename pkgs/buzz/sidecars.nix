@@ -36,6 +36,10 @@ rustPlatform.buildRustPackage {
     gitMinimal
   ];
 
+  # This test stops reading responses when the prompt completes, racing the
+  # steer rejection it intends to assert.
+  checkFlags = [ "--skip=steer_rejected_on_run_id_mismatch" ];
+
   postInstall = ''
     rm -f "$out/bin/fake-mcp"
   '';
