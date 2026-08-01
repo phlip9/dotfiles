@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# rgs (ripgrep-stacked): find files matching the INTERSECTION of N regex
+# patterns. Each pattern narrows the file set from the previous stage.
+# File-granularity AND: a file must match every pattern *somewhere* (not
+# necessarily on the same line).
+#
+# Usage:
+#   rgs PATTERN [PATTERN...]            # search cwd tree
+#   fd .nix | rgs PATTERN [PATTERN...]  # search piped file list (stdin)
+#
+# Output: newline-separated relative paths, globally sorted by path.
+# Empty intersection -> no output, exit 1. Zero patterns -> usage, exit 2.
+#
+# rg flags may be leading/interleaved; passed through verbatim to *every* stage
+# (KISS). Match modifiers (-i -S -w -F -U) apply per stage. Traversal filters
+# (-g -t --hidden --no-ignore -u) only effect stage 1's tree walk; on the
+# downstream file-list stages they re-filter an already-filtered set, so they're
+# harmless no-ops. No pattern-vs-flag disambiguation beyond rg's own defaults
+# (regex, case-sensitive, .gitignore-respecting).
+#
+# Pipeline (every stage NUL-delimited via -l0/-0; sort + newline-ify only once
+# at the very end):
+#   stage 1 (cwd):    rg -l0 FLAGS pat1
+#   stage 1 (stdin):  tr '\n' '\0' | xargs -0r rg -l0 FLAGS pat1
+#   stage 2..N:       ... | xargs -0r rg -l0 FLAGS pat_i
+#   final:            ... | sort -z | tr '\0' '\n'
+#
+# Key details:
+# - `sort -z` at the *end*, not `rg --sort=path`: xargs may split a big file
+#   list across multiple rg invocations, so rg's per-invocation sort isn't
+#   global.
+# - `xargs -0r` (--no-run-if-empty): an empty intermediate set short-circuits to
+#   empty output instead of rg blocking on stdin with zero file args.
+# - Batching-safe: xargs splitting -l0 output across rg calls yields a union of
+#   disjoint file sets, so intersection semantics are preserved.
+# - stdin is newline-separated paths (works with bare fd/find/git ls-files;
+#   can't handle newlines-in-filenames, accepted).
+# - Success is judged by output emptiness, not exit codes: rg/xargs return
+#   non-zero on no-match, which is expected, not a script error.
+
+usage() {
+  echo "usage: rgs PATTERN [PATTERN...]" >&2
+  echo "       fd . | rgs PATTERN [PATTERN...]" >&2
+}
+
+# rg short/long options that consume a following argument in *separated* form
+# (`-g '*.nix'`). Attached (`-g'*.nix'`) and `--glob=...` forms are already
+# self-contained. Uncommon value-flags not listed here should use the `=` form.
+rg_takes_value() {
+  case "$1" in
+    -A | -B | -C | -E | -e | -f | -g | -j | -m | -M | -r | -t | -T | \
+      --after-context | --before-context | --context | --encoding | \
+      --regexp | --file | --glob | --iglob | --max-count | --max-columns | \
+      --max-depth | --replace | --threads | --type | --type-not | \
+      --sort | --sortr | --pre | --colors)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# split argv into rg flags vs positional patterns
+rg_flags=()
+patterns=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --)
+      # everything after `--` is a pattern
+      shift
+      while [[ $# -gt 0 ]]; do
+        patterns+=("$1")
+        shift
+      done
+      break
+      ;;
+    -*)
+      rg_flags+=("$1")
+      if rg_takes_value "$1" && [[ $# -ge 2 ]]; then
+        rg_flags+=("$2")
+        shift
+      fi
+      shift
+      ;;
+    *)
+      patterns+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ${#patterns[@]} -eq 0 ]]; then
+  usage
+  exit 2
+fi
+
+# stage 1: emit the NUL-delimited initial file set filtered by the first
+# pattern. Walk the cwd tree, or consume a stdin file list when stdin isn't a
+# tty. `-- "$pat"` terminates rg options so dash-leading patterns work.
+stage1() {
+  local pat="$1"
+  if [[ -t 0 ]]; then
+    rg -l0 "${rg_flags[@]+"${rg_flags[@]}"}" -- "$pat"
+  else
+    tr '\n' '\0' | xargs -0r rg -l0 "${rg_flags[@]+"${rg_flags[@]}"}" -- "$pat"
+  fi
+}
+
+# narrow: read a NUL file list on stdin, apply the remaining patterns "$@" in
+# sequence, write the narrowed NUL file list to stdout. Recursion adds one pipe
+# stage per pattern; the base case (no patterns left) passes the set through.
+narrow() {
+  if [[ $# -eq 0 ]]; then
+    cat
+    return
+  fi
+  local pat="$1"
+  shift
+  xargs -0r rg -l0 "${rg_flags[@]+"${rg_flags[@]}"}" -- "$pat" | narrow "$@"
+}
+
+first="${patterns[0]}"
+rest=("${patterns[@]:1}")
+
+# `|| true`: no-match makes rg/xargs exit non-zero mid-pipeline (expected); the
+# result is decided by output emptiness below, not by exit status.
+out="$(
+  stage1 "$first" \
+    | narrow "${rest[@]+"${rest[@]}"}" \
+    | sort -z \
+    | tr '\0' '\n'
+)" || true
+
+if [[ -n "$out" ]]; then
+  printf '%s\n' "$out"
+  exit 0
+fi
+exit 1
