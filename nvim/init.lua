@@ -1421,6 +1421,7 @@ end -- TAB SETTINGS }}}
 
 do  -- KEYBINDINGS {{{
     local opts = { silent = true, remap = false }
+    local config_file = vim.fs.joinpath(vim.fn.stdpath("config"), "init.lua")
 
     -- Delete `keyworkprg`/man-page keybind
     vim.keymap.set("v", "K", "<Nop>", M.with_desc("disable K in visual", opts))
@@ -1452,14 +1453,16 @@ do  -- KEYBINDINGS {{{
             end
         end
 
-        vim.cmd("source $MYVIMRC")
+        vim.cmd.source(config_file)
         vim.cmd("filetype detect")
         vim.notify("Reloaded nvim/init.lua", vim.log.levels.INFO)
     end
     vim.keymap.set("n", "<leader>nr", reload_nvim_config, M.with_desc("reload nvim config", opts))
 
     -- Edit nvim/init.lua
-    vim.keymap.set("n", "<leader>ne", ":e $MYVIMRC<CR>", M.with_desc("edit nvim config", opts))
+    vim.keymap.set("n", "<leader>ne", function()
+        vim.cmd.edit(config_file)
+    end, M.with_desc("edit nvim config", opts))
 
     -- remap Visual Block selection to something that doesn't conflict with
     -- system copy/paste
