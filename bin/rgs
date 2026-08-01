@@ -7,42 +7,47 @@ set -euo pipefail
 # necessarily on the same line).
 #
 # Usage:
-#   rgs PATTERN [PATTERN...]            # search cwd tree
-#   fd .nix | rgs PATTERN [PATTERN...]  # search piped file list (stdin)
+#   rgs PATTERN [PATTERN...]           # search cwd tree
+#   fd -tf | rgs PATTERN [PATTERN...]  # search piped file list (stdin)
 #
 # Output: newline-separated relative paths, globally sorted by path.
 # Empty intersection -> no output, exit 1. Zero patterns -> usage, exit 2.
 #
 # rg flags may be leading/interleaved; passed through verbatim to *every* stage
 # (KISS). Match modifiers (-i -S -w -F -U) apply per stage. Traversal filters
-# (-g -t --hidden --no-ignore -u) only effect stage 1's tree walk; on the
-# downstream file-list stages they re-filter an already-filtered set, so they're
-# harmless no-ops. No pattern-vs-flag disambiguation beyond rg's own defaults
-# (regex, case-sensitive, .gitignore-respecting).
+# (-g -t --hidden --no-ignore -u) only affect the cwd tree walk (stage 1 with no
+# stdin); rg ignores them for the explicitly-listed paths of the stdin file-list
+# stages, so they're no-ops there. Either way harmless. rg's own pattern-
+# injecting flags (-e/-f/--regexp/--file) are rejected: they'd smuggle a pattern
+# into every stage and break the positional-pattern model. No other
+# pattern-vs-flag disambiguation beyond rg's own defaults (regex,
+# case-sensitive, .gitignore-respecting).
 #
 # Pipeline (every stage NUL-delimited via -l0/-0; sort + newline-ify only once
 # at the very end):
 #   stage 1 (cwd):    rg -l0 FLAGS pat1
-#   stage 1 (stdin):  tr '\n' '\0' | xargs -0r rg -l0 FLAGS pat1
+#   stage 1 (stdin):  awk NF | tr '\n' '\0' | xargs -0r rg -l0 FLAGS pat1
 #   stage 2..N:       ... | xargs -0r rg -l0 FLAGS pat_i
-#   final:            ... | sort -z | tr '\0' '\n'
+#   final:            ... | sort -zu | tr '\0' '\n'
 #
 # Key details:
-# - `sort -z` at the *end*, not `rg --sort=path`: xargs may split a big file
+# - `sort -zu` at the *end*, not `rg --sort=path`: xargs may split a big file
 #   list across multiple rg invocations, so rg's per-invocation sort isn't
-#   global.
+#   global; `-u` also dedupes repeated stdin paths.
 # - `xargs -0r` (--no-run-if-empty): an empty intermediate set short-circuits to
 #   empty output instead of rg blocking on stdin with zero file args.
 # - Batching-safe: xargs splitting -l0 output across rg calls yields a union of
 #   disjoint file sets, so intersection semantics are preserved.
-# - stdin is newline-separated paths (works with bare fd/find/git ls-files;
-#   can't handle newlines-in-filenames, accepted).
+# - stdin is newline-separated paths (works with fd/find/git ls-files; can't
+#   handle newlines-in-filenames, accepted). Blank lines are dropped. Dir paths
+#   in the list are recursed by rg, so pipe files (e.g. `fd -tf`) for strict
+#   list-narrowing.
 # - Success is judged by output emptiness, not exit codes: rg/xargs return
 #   non-zero on no-match, which is expected, not a script error.
 
 usage() {
   echo "usage: rgs PATTERN [PATTERN...]" >&2
-  echo "       fd . | rgs PATTERN [PATTERN...]" >&2
+  echo "       fd -tf | rgs PATTERN [PATTERN...]" >&2
 }
 
 # rg short/long options that consume a following argument in *separated* form
@@ -50,9 +55,9 @@ usage() {
 # self-contained. Uncommon value-flags not listed here should use the `=` form.
 rg_takes_value() {
   case "$1" in
-    -A | -B | -C | -E | -e | -f | -g | -j | -m | -M | -r | -t | -T | \
+    -A | -B | -C | -E | -g | -j | -m | -M | -r | -t | -T | \
       --after-context | --before-context | --context | --encoding | \
-      --regexp | --file | --glob | --iglob | --max-count | --max-columns | \
+      --glob | --iglob | --max-count | --max-columns | \
       --max-depth | --replace | --threads | --type | --type-not | \
       --sort | --sortr | --pre | --colors)
       return 0
@@ -68,6 +73,14 @@ rg_flags=()
 patterns=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -e | -f | --regexp | --file | -e* | -f* | --regexp=* | --file=*)
+      # rg's pattern-injecting flags don't fit the positional-pattern model:
+      # their value would become a per-stage pattern (silently ANDed) and shove
+      # our real pattern into a file-path arg. Reject loudly.
+      echo "rgs: -e/-f/--regexp/--file unsupported; pass patterns positionally" \
+        >&2
+      exit 2
+      ;;
     --)
       # everything after `--` is a pattern
       shift
@@ -98,14 +111,21 @@ if [[ ${#patterns[@]} -eq 0 ]]; then
 fi
 
 # stage 1: emit the NUL-delimited initial file set filtered by the first
-# pattern. Walk the cwd tree, or consume a stdin file list when stdin isn't a
-# tty. `-- "$pat"` terminates rg options so dash-leading patterns work.
+# pattern. `-- "$pat"` terminates rg options so dash-leading patterns work.
+#
+# Use stdin as the file list only when it's a pipe or a redirected file
+# (`fd -tf | rgs`, `rgs < list`). A tty, /dev/null, or other char device means
+# "no piped input" -> walk the cwd tree. Testing `-p`/`-f` rather than `! -t 0`
+# keeps the tree walk working under non-interactive callers (scripts, cron,
+# systemd, nvim `:Sho`/`vim.system`) whose stdin is /dev/null, not a pipe.
 stage1() {
   local pat="$1"
-  if [[ -t 0 ]]; then
-    rg -l0 "${rg_flags[@]+"${rg_flags[@]}"}" -- "$pat"
+  if [[ -p /dev/stdin || -f /dev/stdin ]]; then
+    awk 'NF' \
+      | tr '\n' '\0' \
+      | xargs -0r rg -l0 "${rg_flags[@]+"${rg_flags[@]}"}" -- "$pat"
   else
-    tr '\n' '\0' | xargs -0r rg -l0 "${rg_flags[@]+"${rg_flags[@]}"}" -- "$pat"
+    rg -l0 "${rg_flags[@]+"${rg_flags[@]}"}" -- "$pat"
   fi
 }
 
@@ -130,7 +150,7 @@ rest=("${patterns[@]:1}")
 out="$(
   stage1 "$first" \
     | narrow "${rest[@]+"${rest[@]}"}" \
-    | sort -z \
+    | sort -zu \
     | tr '\0' '\n'
 )" || true
 
