@@ -373,6 +373,9 @@
     # copy/paste
     pkgs.wl-clipboard
 
+    # buzz
+    phlipPkgsNixos.buzz
+
     # video player
     phlipPkgsNixos.mpv
 
