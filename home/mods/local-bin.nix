@@ -15,6 +15,7 @@ in
     ".local/bin/nor".source = mkOutOfStoreSymlink "${dotfilesDir}/bin/nor";
     ".local/bin/picolispfmt".source =
       mkOutOfStoreSymlink "${dotfilesDir}/bin/picolispfmt";
+    ".local/bin/rgs".source = mkOutOfStoreSymlink "${dotfilesDir}/bin/rgs";
     # ".local/bin/signal-china".source =
     #   mkOutOfStoreSymlink "${dotfilesDir}/bin/signa-china";
     ".local/bin/traceexec.d" = {
