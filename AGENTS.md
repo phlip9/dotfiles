@@ -1,10 +1,12 @@
 # @phlip9's dotfiles
 
-- stack: lix, home-manager, niri, noctalia-shell, neovim, tmux, bash, alacritty.
+- stack: lix, nixos, home-manager, niri, noctalia-shell, neovim, tmux, bash,
+  alacritty.
 - nix based, non-flake default.nix.
 - home-manager manages non-GUI user dotfiles on all Linux and macOS machines.
 - neovim configured w/ lua.
-- cloud resources in nix, converted to terraform via `terranix`, managed w/ tofu
+- cloud resources in nix, converted to terraform via `terranix`, managed w/
+  tofu
 
 
 ## high-level layout (non-exhaustive)
@@ -16,6 +18,7 @@
 - doc/ (architecture, ops run-books, research, guides, tutorials)
 - home/ (home-manager machine configs)
 - home/mods/ (custom home-manager modules)
+- home/mods/git/default.nix (git aliases, tools)
 - home/mods/nvim/default.nix (nvim plugins, tools)
 - justfile (common tasks)
 - nix/ (common nix libs)
@@ -35,7 +38,7 @@
 ## communication
 
 - high signal, low noise. high density, compact info.
-- assume high context reader.
+- assume a high context reader.
 - avoid superfluous prose, politeness, emoji, etc. filler wastes my time.
 - drop: filler (just/really/basically/actually/simply), pleasantries
   (sure/certainly/of course/happy to), hedging, em-dashes, en-dashes. fragments
@@ -43,7 +46,7 @@
 - abbreviate: db, auth, config, param, req, resp, fn, impl, w/, b/c, ...
 - one word when one word enough.
 - short synonyms: big > extensive, fix > "implement a solution for".
-- use exact technical terms.
+- use precise technical terms.
 - use only ASCII characters unless absolutely necessary.
 - plan: clarify requirements ruthlessly. if fuzzy, vague, or ambiguous, then
   you MUST ask before go-ahead.
@@ -64,12 +67,9 @@
   - `firefox: add BetterTTV extension`
   - updates use nixpkgs convention, ex: `codex: 0.13.4 -> 0.13.5` or `codex:
     init at 0.13.4`.
-- commits: rarely add a commit message body, unless change is complex or
+- commits: rarely add a commit message body, unless the change is complex or
   non-obvious.
 - commits: ABSOLUTELY NEVER add "Co-Authored-By: " trailer.
-- structure changes and commits for reviewability. prefer small, focused
-  commits that are easy to review. bulk changes or refactors should be split
-  out from primary changes into own commit(s) for fast review.
 - changes MUST fit coherently in the codebase. avoid unnecessary vendoring.
 - comments: every non-trivial function/struct/module/type needs at least a
   short comment. include short "guide post" comments above logic blocks.
@@ -78,6 +78,20 @@
 - names: almost always avoid single-character variable names.
 - nix package names should be snake-case. ex: `github-agent-authd`.
 
+
+## git workflow
+
+- structure changes and commits for reviewability. prefer small, focused
+  commits that are easy to review. bulk changes, code movement, and refactors
+  should be split out from primary changes into their own commit(s) for faster
+  human review.
+- work through changes step-by-step. break down the problem into parts that can
+  be tackled independently.
+- create clean, atomic, readable, and easily-reviewable commits. after I review
+  your work, structure new changes as either new commits or fixups into your
+  prior commits to maintain a clear linear history. don't rebase or autosquash
+  your changes--I will rebase and auto-squash fixup commits as I approve them.
+- aim for maintainability, clarity, and elegance first.
 
 ## nixos
 
