@@ -14,6 +14,7 @@
 
   alsa-lib,
   glib-networking,
+  gst_all_1,
   gtk3,
   libayatana-appindicator,
   libopus,
@@ -81,6 +82,13 @@ stdenv.mkDerivation {
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
     alsa-lib
     glib-networking
+
+    # WebKit aborts if its GStreamer media elements are missing at runtime.
+    gst_all_1.gst-libav
+    gst_all_1.gst-plugins-bad
+    gst_all_1.gst-plugins-base
+    gst_all_1.gst-plugins-good
+    gst_all_1.gstreamer
     gtk3
     libayatana-appindicator
     libopus
