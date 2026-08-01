@@ -376,8 +376,8 @@
     # ssh-askpass
     phlipPkgsNixos.seahorse-ssh-askpass
 
-    # TODO(phlip9): find better place
-    config.services.nixbot.packages.nixbot-effects
+    # nixbot CLI
+    phlipPkgsNixos.nixbot-cli
   ];
 
   # enable 1Password

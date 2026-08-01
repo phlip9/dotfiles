@@ -17,7 +17,12 @@ in
   name = "nixbot";
   nodes = {
     github =
-      { lib, pkgs, ... }:
+      {
+        lib,
+        phlipPkgsNixos,
+        pkgs,
+        ...
+      }:
       let
         fakeGithubPort = 8970;
         fakeGithub = pkgs.writers.writePython3Bin "fake-github" { } ''
@@ -132,6 +137,7 @@ in
         nix.settings.trusted-public-keys = [ signingPublicKey ];
 
         environment.systemPackages = [
+          phlipPkgsNixos.nixbot-cli
           pkgs.git
           pkgs.curl
           pkgs.jq
@@ -237,7 +243,7 @@ in
                   name = "test";
                   system = "x86_64-linux";
                   builder = "/bin/sh";
-                  args = [ "-c" "echo hello > $out" ];
+                  args = [ "-c" "echo building-test; echo hello > $out" ];
                 };
               };
             }
@@ -260,6 +266,13 @@ in
 
     # Exercise the same nginx-to-Unix-socket boundary used in production.
     nixbot_url = "http://localhost"
+    repo = "github/acme/test-flake"
+
+    # Run nbo against the test server without relying on user config.
+    def nbo(*args):
+        return github.succeed(
+            f"NIXBOT_URL={shlex.quote(nixbot_url)} nbo {shlex.join(args)}"
+        )
 
     start_all()
 
@@ -304,6 +317,19 @@ in
 
         retry(github_project_discovered, timeout_seconds=120)
 
+    with subtest("nbo: connects and lists discovered repos"):
+        auth_status = nbo("auth", "status")
+        assert "server: http://localhost" in auth_status
+        assert "server is reachable" in auth_status
+
+        repos = json.loads(nbo("repo", "list", "--json"))
+        assert any(
+            project["forge"] == "github"
+            and project["owner"] == "acme"
+            and project["name"] == "test-flake"
+            for project in repos
+        )
+
     with subtest("nixbot: webhook triggers eval, build, and statuses"):
         sha = github.succeed("git -C /var/lib/test-repo rev-parse master").strip()
         body = json.dumps({
@@ -340,6 +366,29 @@ in
             )
 
         retry(github_checks_posted, timeout_seconds=300)
+
+    with subtest("nbo: inspects the completed build and its logs"):
+        builds = json.loads(
+            nbo("build", "list", "-R", repo, "--branch", "master", "--json")
+        )
+        assert len(builds) == 1
+        assert builds[0]["status"] == "succeeded"
+        build_number = builds[0]["number"]
+
+        detail = json.loads(
+            nbo("build", "view", str(build_number), "-R", repo, "--json")
+        )
+        assert detail["build"]["branch"] == "master"
+        assert [
+            (attribute["attr"], attribute["status"])
+            for attribute in detail["attributes"]
+        ] == [("default.checks.x86_64-linux.test", "succeeded")]
+
+        watch = nbo("build", "watch", str(build_number), "-R", repo)
+        assert "default.checks.x86_64-linux.test" in watch
+
+        log = nbo("log", str(build_number), "test", "-R", repo)
+        assert "building-test" in log
 
     with subtest("cache: post-build upload is signed and readable from S3"):
         store_path = github.succeed(
