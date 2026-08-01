@@ -580,7 +580,8 @@ if pcall(require, "telescope") then
     --   <space>O - open files search (all files)
     --   <space>/ - grep with pattern
     --   <space>' - grep using word under cursor
-    --          T - open buffers search
+    --          T - open buffers search (most recently used first)
+    --   <space>T - open buffers search (sorted)
     -- <space>gcm - search git commits
     -- <space>gcb - search git commits for the current buffer
     -- <space>gcs - search git commits for the current selection
@@ -641,9 +642,8 @@ if pcall(require, "telescope") then
                 hidden = true,
             },
             buffers = {
-                -- NOTE(phlip9): on the fence for sort_mru. hurts git pr review.
-                -- -- Sorts all buffers after most recent used.
-                -- sort_mru = true,
+                -- Sort all buffers after the most recently used buffer.
+                sort_mru = true,
                 -- Don't display the current buffer in the list.
                 ignore_current_buffer = true,
             },
@@ -699,7 +699,13 @@ if pcall(require, "telescope") then
     -- nvim
     vim.keymap.set("n", "T", function()
         require_local("telescope_git_file_status").buffers({})
-    end, M.with_desc("search buffers"))
+    end, M.with_desc("search buffers (MRU)"))
+    vim.keymap.set("n", "<space>T", function()
+        require_local("telescope_git_file_status").buffers({
+            -- Sort by filename is useful while reviewing PRs
+            sort_mru = false,
+        })
+    end, M.with_desc("search buffers (sorted)"))
     vim.keymap.set("n", "<space>vh", builtin.help_tags, M.with_desc("search nvim help"))
     vim.keymap.set("n", "<space>vm", builtin.keymaps, M.with_desc("search nvim key mappings"))
 
