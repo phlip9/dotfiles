@@ -1,0 +1,31 @@
+diff --git a/desktop/src-tauri/src/lib.rs b/desktop/src-tauri/src/lib.rs
+--- a/desktop/src-tauri/src/lib.rs
++++ b/desktop/src-tauri/src/lib.rs
+@@ -527,16 +527,6 @@ pub fn run() {
+                 migration::migrate_dev_nest();
+             }
+ 
+-            // Create/update the local CLI symlink pointing to the
+-            // bundled CLI binary. Non-fatal: agents find CLI via PATH.
+-            if let Ok(exe) = std::env::current_exe() {
+-                if let Some(parent) = exe.parent() {
+-                    if let Err(error) = managed_agents::ensure_cli_symlink(parent, is_dev_nest) {
+-                        eprintln!("buzz-desktop: failed to create CLI symlink: {error}");
+-                    }
+-                }
+-            }
+-
+             try_regenerate_nest(&app_handle);
+ 
+             if let Some(mgr) = huddle::models::global_model_manager() {
+diff --git a/desktop/src-tauri/src/managed_agents/nest.rs b/desktop/src-tauri/src/managed_agents/nest.rs
+--- a/desktop/src-tauri/src/managed_agents/nest.rs
++++ b/desktop/src-tauri/src/managed_agents/nest.rs
+@@ -361,6 +361,7 @@ pub fn cli_link_name(is_dev: bool) -> &'static str {
+ /// Non-fatal: callers should ignore errors — the symlink is a convenience
+ /// for human Terminal use; agents find the CLI via PATH augmentation.
+ #[cfg(unix)]
++#[allow(dead_code)]
+ pub fn ensure_cli_symlink(exe_parent: &Path, is_dev: bool) -> Result<(), String> {
+     let buzz_bin = exe_parent.join("buzz");
+     if !buzz_bin.exists() {

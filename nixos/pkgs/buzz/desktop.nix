@@ -103,9 +103,14 @@ rustPlatform.buildRustPackage {
   # feature there too rather than installing a development build afterward.
   cargoTestFlags = [ "--features=tauri/custom-protocol" ];
 
-  # Upstream's release-profile tests reference helpers gated on
-  # debug_assertions. Include those helpers whenever the test harness is built.
-  patches = [ ./release-profile-tests.patch ];
+  patches = [
+    # Nix owns CLI installation, so desktop startup must not mutate ~/.local/bin.
+    ./disable-cli-symlink.patch
+
+    # Upstream's release-profile tests reference helpers gated on
+    # debug_assertions. Include those helpers whenever the test harness is built.
+    ./release-profile-tests.patch
+  ];
 
   nativeBuildInputs = [
     cmake
