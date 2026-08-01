@@ -4,7 +4,6 @@
   lib,
   phlipPkgs,
   pkgs,
-  sources,
   ...
 }:
 {
@@ -18,27 +17,6 @@
   };
 
   config = {
-    nix = {
-      # Normally, when e run a command like `nix run nixpkgs#hello` or
-      # `nix shell nixpkgs#diffoscope`, nix will download the latest nixpkgs
-      # repo, package, and runtime libs for this quick ephemeral bin/shell.
-      # This whole thing is pretty wasteful.
-      #
-      # With this setting, nix will instead use the same `nixpkgs` version as the
-      # one we're using for our home-manager setup, which saves time and disk
-      # space.
-      registry = {
-        nixpkgs.flake = sources.nixpkgs;
-        home-manager.flake = sources.home-manager;
-      };
-
-      # Let <nixpkgs>, <home-manager> work with our pinned sources instead of
-      # the imperative `nix-channel` thing.
-      channels = {
-        inherit (sources) nixpkgs home-manager;
-      };
-    };
-
     home.packages = [
       # GNU core utils
       pkgs.coreutils

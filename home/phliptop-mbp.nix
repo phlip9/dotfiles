@@ -48,6 +48,7 @@
     # ./mods/lsyncd.nix
     # ./mods/mpv.nix
     # ./mods/nethack.nix
+    ./mods/nix-sources.nix
     ./mods/nvim/default.nix
     ./mods/paseo.nix
     ./mods/postgres.nix

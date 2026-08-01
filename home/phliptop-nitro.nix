@@ -50,6 +50,7 @@
     ./mods/lsyncd.nix
     # ./mods/mpv.nix
     # ./mods/nethack.nix
+    ./mods/nix-sources.nix
     ./mods/nvim/default.nix
     ./mods/postgres.nix
     ./mods/python.nix
