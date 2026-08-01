@@ -30,6 +30,11 @@ fix (phlipPkgs: {
   # cataclysm-tlg - Catacylsm: The Last Generation (game)
   cataclysm-tlg = callPackage ./cataclysm-tlg.nix { };
 
+  # claude-agent-acp - ACP adapter for Anthropic claude code CLI
+  claude-agent-acp = callPackage ./claude-agent-acp.nix {
+    inherit (phlipPkgs) claude-code;
+  };
+
   # claude-code - Anthropic claude code CLI
   claude-code = callPackage ./claude-code { };
 
