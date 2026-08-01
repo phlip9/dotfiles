@@ -95,6 +95,14 @@ rustPlatform.buildRustPackage {
   cargoHash = "sha256-2SWtMPUxuW6hV9mExBHkNe6Qw1aKUB40Jbax5mgvA0U=";
   cargoCheckType = "release";
 
+  # Tauri's CLI enables this for production builds. Without it, the prebuilt
+  # executable loads build.devUrl instead of serving the embedded frontend.
+  cargoBuildFlags = [ "--features=tauri/custom-protocol" ];
+
+  # cargo test replaces the top-level executable, so use the production
+  # feature there too rather than installing a development build afterward.
+  cargoTestFlags = [ "--features=tauri/custom-protocol" ];
+
   # Upstream's release-profile tests reference helpers gated on
   # debug_assertions. Include those helpers whenever the test harness is built.
   patches = [ ./release-profile-tests.patch ];
