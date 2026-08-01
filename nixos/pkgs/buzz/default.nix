@@ -61,7 +61,7 @@ let
   };
 in
 
-stdenv.mkDerivation {
+stdenv.mkDerivation (finalAttrs: {
   pname = "buzz";
   inherit src version;
 
@@ -145,6 +145,11 @@ stdenv.mkDerivation {
 
   passthru = {
     inherit desktop frontend sidecars;
+    tests = lib.optionalAttrs stdenv.hostPlatform.isLinux {
+      headless = callPackage ./headless-test.nix {
+        buzz = finalAttrs.finalPackage;
+      };
+    };
     updateScript = nix-update-script {
       extraArgs = [
         "--subpackage"
@@ -168,4 +173,4 @@ stdenv.mkDerivation {
       "x86_64-linux"
     ];
   };
-}
+})
