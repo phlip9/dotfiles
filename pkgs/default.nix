@@ -24,17 +24,22 @@ fix (phlipPkgs: {
   # cargo-release - release a Rust package
   cargo-release = pkgs.cargo-release;
 
+  # cataclysm-dda - Cataclysm: Dark Days Ahead (game)
+  cataclysm-dda = callPackage ./cataclysm-dda.nix { };
+
+  # cataclysm-tlg - Catacylsm: The Last Generation (game)
+  cataclysm-tlg = callPackage ./cataclysm-tlg.nix { };
+
   # claude-code - Anthropic claude code CLI
   claude-code = callPackage ./claude-code { };
 
   # codex - OpenAI codex CLI
   codex = callPackage ./codex { };
 
-  # cataclysm-dda - Cataclysm: Dark Days Ahead (game)
-  cataclysm-dda = callPackage ./cataclysm-dda.nix { };
-
-  # cataclysm-tlg - Catacylsm: The Last Generation (game)
-  cataclysm-tlg = callPackage ./cataclysm-tlg.nix { };
+  # codex-acp - ACP adapter for OpenAI codex CLI
+  codex-acp = callPackage ./codex-acp.nix {
+    inherit (phlipPkgs) codex;
+  };
 
   # dist - build and distribute binary releases
   dist = pkgs.cargo-dist;
