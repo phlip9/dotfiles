@@ -52,7 +52,6 @@
     # ./mods/lsyncd.nix
     # ./mods/mpv.nix
     # ./mods/nethack.nix
-    ./mods/nix-sources.nix
     # ./mods/niri.nix
     # ./mods/noctalia.nix
     ./mods/nvim/default.nix

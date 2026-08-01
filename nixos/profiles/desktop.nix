@@ -4,6 +4,8 @@
   ...
 }:
 {
+  imports = [ ./nix-sources.nix ];
+
   #
   # Kernel/Boot
   #

@@ -8,6 +8,8 @@
 }:
 {
   imports = [
+    ./nix-sources.nix
+
     # Use minimal+headless (no GUI/window manager) for server images
     (modulesPath + "/profiles/minimal.nix")
     (modulesPath + "/profiles/headless.nix")
