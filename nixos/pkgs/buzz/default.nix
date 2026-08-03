@@ -2,6 +2,8 @@
   lib,
   stdenv,
   callPackage,
+  claude-agent-acp,
+  codex-acp,
   fetchFromGitHub,
   makeBinaryWrapper,
   nix-update-script,
@@ -41,6 +43,10 @@ let
     "buzz-dev-mcp"
     "git-credential-nostr"
     "buzz"
+  ];
+  acpBinsPath = lib.makeBinPath [
+    claude-agent-acp
+    codex-acp
   ];
 
   frontend = callPackage ./frontend.nix {
@@ -131,16 +137,25 @@ stdenv.mkDerivation (finalAttrs: {
   '';
 
   postInstall = lib.optionalString stdenv.hostPlatform.isDarwin ''
-    mkdir -p "$out/bin"
+    # LaunchServices starts the app-bundle executable directly.
+    appExecutable="$out/Applications/Buzz.app/Contents/MacOS/buzz-desktop"
+    mv "$appExecutable" "$appExecutable.unwrapped"
     makeBinaryWrapper \
-      "$out/Applications/Buzz.app/Contents/MacOS/buzz-desktop" \
-      "$out/bin/buzz-desktop"
+      "$appExecutable.unwrapped" \
+      "$appExecutable" \
+      --suffix PATH : ${lib.escapeShellArg acpBinsPath}
+
+    mkdir -p "$out/bin"
+    ln -s "$appExecutable" "$out/bin/buzz-desktop"
   '';
 
   # Keep CLI sidecars unwrapped so Tauri can execute their adjacent binaries.
   dontWrapGApps = true;
   postFixup = lib.optionalString stdenv.hostPlatform.isLinux ''
-    wrapGApp "$out/bin/buzz-desktop"
+    # Buzz discovers ACP adapters from its process PATH. Keep the packaged
+    # adapters private to the desktop instead of exposing them in $out/bin.
+    wrapGApp "$out/bin/buzz-desktop" \
+      --suffix PATH : ${lib.escapeShellArg acpBinsPath}
   '';
 
   passthru = {
