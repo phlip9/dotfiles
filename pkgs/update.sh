@@ -72,10 +72,10 @@ run_with_spinner() {
   return "$status"
 }
 
-# Get new version after update
+# Evaluate the package's new version after its update script edits the repo.
 get_version() {
   local attr_path="$1"
-  nix eval -f . --raw "phlipPkgs.$attr_path.version" 2>/dev/null || echo "?"
+  nix eval -f . --raw "$attr_path.version" 2>/dev/null || echo "?"
 }
 
 while read -r pkg; do
@@ -132,4 +132,8 @@ if [[ ${#updated_packages[@]} -gt 0 ]]; then
   echo "phlippkgs: update"
   echo
   printf '%s\n' "${updated_packages[@]}"
+fi
+
+if [[ ${#failed_packages[@]} -gt 0 ]]; then
+  exit 1
 fi

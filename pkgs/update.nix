@@ -7,7 +7,6 @@ let
   dotfiles = import ../. { };
   inherit (dotfiles) lib pkgs;
   inherit (builtins)
-    filter
     listToAttrs
     removeAttrs
     toJSON
@@ -25,9 +24,20 @@ let
   # can't catch)
   skipPackages = [ ];
 
-  # All phlipPkgs and phlipPkgsNixos except skipped ones.
-  phlipPkgsCombined = removeAttrs (
-    dotfiles.phlipPkgs // dotfiles.phlipPkgsNixos
+  # Attach each package's full top-level attr path before merging package sets.
+  mkPackageDefs =
+    attrPrefix: packageSet:
+    lib.mapAttrs (name: package: {
+      attrPath = "${attrPrefix}.${name}";
+      inherit package;
+    }) packageSet;
+
+  phlipPackageDefs = mkPackageDefs "phlipPkgs" dotfiles.phlipPkgs;
+  phlipNixosPackageDefs = mkPackageDefs "phlipPkgsNixos" dotfiles.phlipPkgsNixos;
+
+  # NixOS packages take precedence when both sets define the same attr.
+  packageDefs = removeAttrs (
+    phlipPackageDefs // phlipNixosPackageDefs
   ) skipPackages;
 
   # Check if package is defined in pkgs/ or nixos/pkgs/ via meta.position
@@ -43,44 +53,24 @@ let
 
   # Try to get a package with updateScript, returns null if eval fails or no
   # updateScript
-  tryGetPackageWithUpdateScript =
-    name:
+  tryUpdatablePackageDef =
+    packageDef:
     let
       result = tryEval (
         let
-          pkg = phlipPkgsCombined.${name};
+          pkg = packageDef.package;
         in
         if lib.isDerivation pkg && pkg ? updateScript && isLocalPackage pkg then
-          pkg
+          packageDef
         else
           null
       );
     in
-    if result.success && result.value != null then
-      {
-        inherit name;
-        pkg = result.value;
-      }
-    else
-      null;
+    if result.success then result.value else null;
 
   # Find all packages with updateScript (filter out nulls from failed evals)
-  packagesWithUpdateScript = listToAttrs (
-    filter (x: x != null) (
-      map (
-        name:
-        let
-          r = tryGetPackageWithUpdateScript name;
-        in
-        if r != null then
-          {
-            name = r.name;
-            value = r.pkg;
-          }
-        else
-          null
-      ) (lib.attrNames phlipPkgsCombined)
-    )
+  packagesWithUpdateScript = lib.filterAttrs (_: packageDef: packageDef != null) (
+    lib.mapAttrs (_: tryUpdatablePackageDef) packageDefs
   );
 
   # Select requested packages, or every updatable package when none are given.
@@ -90,14 +80,15 @@ let
         map (
           pkgName:
           let
-            pkg = phlipPkgsCombined.${pkgName} or (throw "Package '${pkgName}' not found");
+            packageDef = packageDefs.${pkgName} or (throw "Package '${pkgName}' not found");
+            pkg = packageDef.package;
           in
           if pkg.updateScript or null == null then
             throw "Package '${pkgName}' has no updateScript"
           else
             {
               name = pkgName;
-              value = pkg;
+              value = packageDef;
             }
         ) packageNames
       )
@@ -113,13 +104,19 @@ let
     map toString (lib.toList (script.command or script));
 
   # Build package data for runner
-  packageData = lib.mapAttrs (name: pkg: {
-    name = pkg.name;
-    pname = lib.getName pkg;
-    oldVersion = lib.getVersion pkg;
-    attrPath = name;
-    updateScript = getUpdateScript pkg;
-  }) packages;
+  packageData = lib.mapAttrs (
+    _: packageDef:
+    let
+      pkg = packageDef.package;
+    in
+    {
+      inherit (packageDef) attrPath;
+      name = pkg.name;
+      pname = lib.getName pkg;
+      oldVersion = lib.getVersion pkg;
+      updateScript = getUpdateScript pkg;
+    }
+  ) packages;
 
   packagesJson = pkgs.writeText "packages.json" (
     toJSON (lib.attrValues packageData)
