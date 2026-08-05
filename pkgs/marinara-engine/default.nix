@@ -11,7 +11,6 @@
   fetchPnpmDeps,
   lib,
   makeBinaryWrapper,
-  nix-update-script,
   nodejs-slim_24,
   pnpm_10,
   pnpmConfigHook,
@@ -131,10 +130,8 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  passthru = {
-    inherit nodejs;
-    updateScript = nix-update-script { };
-  };
+  # Update manually: upstream often requires pnpm newer than stable nixpkgs.
+  passthru = { inherit nodejs; };
 
   meta = {
     homepage = "https://github.com/Pasta-Devs/Marinara-Engine";
