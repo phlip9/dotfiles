@@ -22,16 +22,16 @@ in
 
 buildNpmPackage (finalAttrs: {
   pname = "codex-acp";
-  version = "1.1.7";
+  version = "1.1.9";
 
   src = fetchFromGitHub {
     owner = "agentclientprotocol";
     repo = "codex-acp";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-RY1iiajNR3eJI9WYARZnbIHnDl5+gmlPo3GVjJEJ9Zs=";
+    hash = "sha256-c8Sgj9XNDAO25UOa+vEy619mSi3tG3NJHbKnV1QzOo8=";
   };
 
-  npmDepsHash = "sha256-378T8eM4AkvRWpbNlCsfLqqapWJl4iBewt0rt/nUFhs=";
+  npmDepsHash = "sha256-wLO/Hk+cGK2ZNpeGPJixHDvY4unV4CBKZVFjW07NWYs=";
 
   npmInstallFlags = [
     "--omit=dev"

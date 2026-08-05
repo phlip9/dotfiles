@@ -22,16 +22,16 @@ in
 
 buildNpmPackage (finalAttrs: {
   pname = "claude-agent-acp";
-  version = "0.64.0";
+  version = "0.65.0";
 
   src = fetchFromGitHub {
     owner = "agentclientprotocol";
     repo = "claude-agent-acp";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-DBWsdGNbjkC1CzGwCpySOr07ruGkDdybfjkXI+3HXtA=";
+    hash = "sha256-JxoDk815O4cDq5yqD3gQW4pnLApzicXrEApM1swBGHY=";
   };
 
-  npmDepsHash = "sha256-CRJbFoFjQLvzrs4sWGGNlbxlh05Z7i29oT5np/udqbc=";
+  npmDepsHash = "sha256-wez1hfnLYbXLNeLhNjFqKaqlDOzj+qicVf0aEXL6g0s=";
 
   npmInstallFlags = [
     "--legacy-peer-deps"
