@@ -31,10 +31,18 @@
   };
 
   fileSystems = {
+    # Secondary SSD that stores games, Steam library, large downloads, etc.
     "/mnt/phlipdisk3" = {
       device = "/dev/disk/by-uuid/0b5829aa-d02f-4a0d-9022-32bb83b6a7a2";
       fsType = "ext4";
-      options = [ "noatime" ];
+      options = [
+        "noatime"
+        "lazytime"
+        # Hardening
+        "nodev"
+        "nosuid"
+        # "noexec" # Steam games need to exec
+      ];
     };
   };
 

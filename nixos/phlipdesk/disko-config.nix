@@ -8,6 +8,7 @@
 
     devices = {
       disk = {
+        # Primary NVMe disk drive
         nvme0 = {
           type = "disk";
           device = "/dev/disk/by-id/nvme-Samsung_SSD_970_PRO_512GB_S463NF0K404099B";
@@ -95,7 +96,10 @@
                       "lazy_itable_init=0,lazy_journal_init=0"
                     ];
                     mountpoint = "/";
-                    mountOptions = [ "noatime" ];
+                    mountOptions = [
+                      "noatime"
+                      "lazytime"
+                    ];
                   };
                 };
               };
