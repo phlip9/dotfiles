@@ -41,6 +41,14 @@
           enableACME = false;
         };
       };
+
+      # Keep the service test offline and focused on daemon integration. The
+      # v0.2 Nix package supports local speech and otherwise downloads models.
+      systemd.services.paseo.environment = {
+        PASEO_DICTATION_ENABLED = "false";
+        PASEO_VOICE_MODE_ENABLED = "false";
+      };
+
       sops.secrets.paseo-daemon-password = { };
     };
 

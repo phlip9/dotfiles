@@ -85,10 +85,10 @@
       "version_upper_bound": null,
       "release_prefix": null,
       "submodules": false,
-      "version": "v0.1.110",
-      "revision": "63d0dfafa887213697e8b4e58a1f1bea0277ba2d",
-      "url": "https://api.github.com/repos/getpaseo/paseo/tarball/refs/tags/v0.1.110",
-      "hash": "sha256-GgM74W44S6JjDz3DUgdhq5M9F9+cY1jZiER5NGjVLTE="
+      "version": "v0.2.5",
+      "revision": "8d143abc43e2b257c4fc2f77606bb11734ba3da4",
+      "url": "https://api.github.com/repos/getpaseo/paseo/tarball/refs/tags/v0.2.5",
+      "hash": "sha256-3IMEyJS0z83peC1Vzvtj2m+7hm3Uss1qOoE5sMGFITM="
     },
     "sops-nix": {
       "type": "Git",
