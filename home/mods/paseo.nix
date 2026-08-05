@@ -152,7 +152,10 @@ in
 
         EnvironmentVariables = {
           NODE_ENV = "production";
+          # Disable unused speech features and their model downloads.
+          PASEO_DICTATION_ENABLED = "false";
           PASEO_LISTEN = listen;
+          PASEO_VOICE_MODE_ENABLED = "false";
           PASEO_WEB_UI_ENABLED = "false";
 
           PASEO_APP_BASE_URL = "https://paseo.phlip9.com";

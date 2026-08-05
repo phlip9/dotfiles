@@ -183,7 +183,10 @@ in
       ];
 
       environment = {
+        # Disable unused speech features and their model downloads.
+        PASEO_DICTATION_ENABLED = "false";
         PASEO_PASSWORD_FILE = "%d/daemon-password";
+        PASEO_VOICE_MODE_ENABLED = "false";
         PASEO_WEB_UI_ENABLED = if cfg.webUi.enable then "true" else "false";
       }
       // lib.optionalAttrs (cfg.webUi.publicBaseUrl != null) {
