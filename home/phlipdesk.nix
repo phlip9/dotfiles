@@ -93,6 +93,9 @@
     phlipPkgs.opentofu
     phlipPkgs.terranix
 
+    # mutagen - file sync
+    pkgs.mutagen
+
     # # claude - Anthropic claude code CLI
     # phlipPkgs.claude-code
 

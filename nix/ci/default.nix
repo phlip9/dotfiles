@@ -328,7 +328,6 @@ let
   homeConfigSystems = {
     sauna = "x86_64-linux";
     phlipdesk = "x86_64-linux";
-    phlipnixos = "x86_64-linux";
     phliptop-mbp = "aarch64-darwin";
     phliptop-nitro = "x86_64-linux";
   };

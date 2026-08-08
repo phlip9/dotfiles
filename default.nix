@@ -57,7 +57,7 @@ let
     inherit sources;
     pkgs = pkgsUnstable;
   };
-  # phlipPkgsNixos = nixosConfigs.phlipnixos._module.args.phlipPkgs;
+  # phlipPkgsNixos = nixosConfigs.phlipdesk._module.args.phlipPkgs;
 in
 rec {
   inherit
@@ -89,7 +89,7 @@ rec {
   };
 
   # convenient pkgs + phlipPkgs packages sets from nixos machine
-  pkgsNixos = nixosConfigs.phlipnixos.pkgs;
+  pkgsNixos = nixosConfigs.phlipdesk.pkgs;
 
   # NixOS graphical installer .iso image
   nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;

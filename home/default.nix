@@ -29,18 +29,6 @@
     };
   };
 
-  phlipnixos = hm.lib.homeManagerConfiguration {
-    pkgs = pkgs;
-    modules = [ ./phlipnixos.nix ];
-    extraSpecialArgs = {
-      # force hm to use one pkgs eval to reduce eval time by 600ms
-      inherit phlipPkgs pkgs;
-      inherit sources;
-      pkgsUnfree = pkgs;
-      pkgsYubikey = pkgs;
-    };
-  };
-
   phliptop-mbp = hm.lib.homeManagerConfiguration {
     pkgs = pkgs;
     modules = [ ./phliptop-mbp.nix ];

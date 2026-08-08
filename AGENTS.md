@@ -95,7 +95,7 @@
 
 ## nixos
 
-- machine: nixos/phlipnixos/default.nix - main desktop
+- machine: nixos/phlipdesk/default.nix - main desktop
 - machine: nixos/sauna/default.nix - Hetzner bare metal machine
 - priorities: reliable, beautiful, secure, performant, minimalist.
 - full-disk encryption, single-user install, auto-login, secure boot.
@@ -137,8 +137,8 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - ex: `nix build -f . pkgs.lego` build `lego` package in from stable nixpkgs
 - ex: `nix build -f . homeConfigs.phlipdesk.activationPackage` build `phlipdesk` home-manager config
 - ex: `nix eval -f . homeConfigs.phlipdesk.config.systemd.user.services.nix-ssh-agent.Service.ExecStart`
-- ex: `nix build -f . nixosConfigs.phlipnixos.config.system.build.toplevel`
-- ex: `nix eval -f . nixosConfigs.phlipnixos.config.system.nixos.version`
+- ex: `nix build -f . nixosConfigs.phlipdesk.config.system.build.toplevel`
+- ex: `nix eval -f . nixosConfigs.phlipdesk.config.system.nixos.version`
 - ex: `nix build -f . nixosTests.github-agent-authd` run NixOS test (only works on Linux)
 - ex: `nix build -f . pkgsNixos.lix` build `lix` package from NixOS-machine unstable nixpkgs
 
@@ -148,7 +148,7 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - `nixosConfigs`: NixOS machine configs (`./nixos/<host>/default.nix`)
 - `nixosTests`: NixOS VM tests (`./nixos/tests/default.nix`)
 - `phlipPkgs`: personal package set (`./pkgs/default.nix`)
-- `pkgsNixos`: nixpkgs unstable package set from `phlipnixos` (almost same as `pkgsUnstable`)
+- `pkgsNixos`: nixpkgs unstable package set from `phlipdesk` (almost same as `pkgsUnstable`)
 - `pkgsUnstable`: nixpkgs unstable package set
 - `pkgs`: nixpkgs stable package set
 - `sources`: npins pinned external sources (nixpkgs, home-manager, ...)

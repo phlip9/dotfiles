@@ -61,11 +61,6 @@ in
     modules = [ ./phlipdesk/default.nix ];
   };
 
-  # phlipdesk experimental NixOS install
-  phlipnixos = nixosSystem {
-    modules = [ ./phlipnixos/default.nix ];
-  };
-
   # sauna - Hetzner bare metal server
   sauna = nixosSystem {
     modules = [ ./sauna/default.nix ];

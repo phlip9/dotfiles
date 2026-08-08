@@ -13,8 +13,8 @@
 
     ```
     # /etc/hosts
-    ::1 localhost phlipnixos phlipnixos.lan
-    127.0.0.1 localhost phlipnixos phlipnixos.lan
+    ::1 localhost phlipdesk phlipdesk.lan
+    127.0.0.1 localhost phlipdesk phlipdesk.lan
     ```
 
     Unlike stock NixOS, this supports resolving the hostname/FQDN to IPv6 `::1`

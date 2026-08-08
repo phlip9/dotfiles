@@ -42,7 +42,7 @@ interface_help_hidden: False
 protocol: linux
 comment: NixOS Yarara 26.05pre916364.3e2499d5539c (Linux 6.18.2), built on 2025-12-28 17:28:28
 kernel_path: boot():/limine/kernels/4yl7akp43x29szfc6lvlwd0ybfg2qkc7-linux-6.18.2-bzImage#0a26938b835bbc3c0507904437718acac71c09eee47efbcd6c3d6ac3d2d00c4c827f4b2255b3103c7dbd1a1e75c88c1ac52173704029848c3cbb083590f8935e
-cmdline: init=/nix/store/5n8j4a9kbfiv5k6bgh6kw6ngrwrzw36r-nixos-system-phlipnixos-26.05pre916364.3e2499d5539c/init loglevel=4 lsm=landlock,yama,bpf nvidia-drm.modeset=1 nvidia-drm.fbdev=1
+cmdline: init=/nix/store/5n8j4a9kbfiv5k6bgh6kw6ngrwrzw36r-nixos-system-phlipdesk-26.05pre916364.3e2499d5539c/init loglevel=4 lsm=landlock,yama,bpf nvidia-drm.modeset=1 nvidia-drm.fbdev=1
 module_path: boot():/limine/kernels/swnrk6f0xjzc26nid3l4pfajr83gp8gc-initrd-linux-6.18.2-initrd#76f65179747161d4e9d7f7610e7032944bc8e71279a118ba9d6dbde51500c9b3d3ba50c1778e5c1c8ce837621c7c18d40b15eb40ad31773ce1858800cd7c9f71
 //Generation 79
 # ...
