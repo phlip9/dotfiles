@@ -17,7 +17,7 @@ let
       "$XDG_RUNTIME_DIR"
     # TODO(phlip9): find a better location for the socket on macOS
     else if isDarwin then
-      "${config.home.homeDirectory}/.ssh"
+      "$(${lib.getExe pkgs.getconf} DARWIN_USER_TEMP_DIR)"
     else
       throw "nix-ssh-agent: config: unrecognized platform";
   sshAgentSock = "nix-ssh-agent.socket";
@@ -95,15 +95,12 @@ in
     launchd.agents.nix-ssh-agent = lib.mkIf isDarwin {
       enable = true;
       config = {
-        Program =
-          let
-            run-nix-ssh-agent = pkgs.writeShellScript "run-nix-ssh-agent" ''
-              ${pkgs.coreutils}/bin/mkdir -m 700 -p ${sshAgentDir}
-              ${pkgs.coreutils}/bin/rm -f ${sshAgentSockPath}
-              exec ${pkgs.openssh}/bin/ssh-agent -D -a ${sshAgentSockPath}
-            '';
-          in
-          "${run-nix-ssh-agent}";
+        ProgramArguments = [
+          (lib.getExe pkgs.bash)
+          "-c"
+          ''${lib.getExe' pkgs.openssl "ssh-agent"} -D -a "${sshAgentSockPath}"''
+        ];
+
         EnvironmentVariables = {
           SSH_ASKPASS = "${cfg.ssh-askpass}";
           SSH_ASKPASS_REQUIRE = "force";
