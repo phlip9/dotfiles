@@ -58,7 +58,7 @@
     ./mods/postgres.nix
     ./mods/python.nix
     ./mods/ssh.nix
-    # ./mods/ssh-agent.nix
+    ./mods/ssh-agent.nix
     ./mods/tmux.nix
   ];
 
@@ -84,4 +84,7 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
+
+  # Headless server, no need for ssh-askpass
+  services.nix-ssh-agent.ssh-askpass = null;
 }
