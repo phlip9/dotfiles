@@ -26,6 +26,8 @@ let
   shellHook = ''
     export -n SSH_AGENT_LAUNCHER
     export SSH_AUTH_SOCK="${sshAgentSockPath}"
+  ''
+  + lib.optionalString (cfg.ssh-askpass != null) ''
     export SSH_ASKPASS="${cfg.ssh-askpass}"
     export SSH_ASKPASS_REQUIRE=force
   '';
@@ -34,7 +36,7 @@ in
   options = {
     services.nix-ssh-agent = {
       ssh-askpass = lib.mkOption {
-        type = lib.types.str;
+        type = lib.types.nullOr lib.types.str;
         default =
           if isLinux then
             "${pkgs.seahorse}/libexec/seahorse/ssh-askpass"
@@ -47,7 +49,7 @@ in
               executable = true;
             }}"
           else
-            throw "nix-ssh-agent: config: unrecognized platform, need to config ssh-askpass binary";
+            null;
         description = ''
           Path to binary used by ssh-agent to prompt user for ssh key passwords
           and yubikey touches.
@@ -65,7 +67,7 @@ in
 
     # Linux - configure systemd user service
     systemd.user.services.nix-ssh-agent = lib.mkIf isLinux {
-      Install.WantedBy = [ "graphical-session-pre.target" ];
+      Install.WantedBy = [ "default.target" ];
 
       Unit = {
         Description = "nixpkgs OpenSSH agent";
@@ -73,21 +75,18 @@ in
       };
 
       Service = {
-        ExecStart = "${pkgs.openssh}/bin/ssh-agent -D -a %t/${sshAgentSock}";
-        Environment =
-          let
-            ssh-askpass-wrapper = pkgs.writeScript "ssh-askpass-wrapper" ''
-              #!${pkgs.runtimeShell} -e
-              export DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^DISPLAY=\(.*\)/\1/; t; d')"
-              export XAUTHORITY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^XAUTHORITY=\(.*\)/\1/; t; d')"
-              export WAYLAND_DISPLAY="$(systemctl --user show-environment | ${pkgs.gnused}/bin/sed 's/^WAYLAND_DISPLAY=\(.*\)/\1/; t; d')"
-              exec ${cfg.ssh-askpass} "$@"
-            '';
-          in
-          [
-            "SSH_ASKPASS=${ssh-askpass-wrapper}"
-            "DISPLAY=fake"
-          ];
+        ExecStart = "${lib.getExe' pkgs.openssh "ssh-agent"} -D -a %t/${sshAgentSock}";
+        Environment = lib.optionals (cfg.ssh-askpass != null) ([
+          "DISPLAY=fake"
+          "SSH_ASKPASS=${pkgs.writeScript "ssh-askpass-wrapper" ''
+            #!${lib.getExe pkgs.bash} -e
+            export DISPLAY="$(systemctl --user show-environment | ${lib.getExe pkgs.gnused} 's/^DISPLAY=\(.*\)/\1/; t; d')"
+            export XAUTHORITY="$(systemctl --user show-environment | ${lib.getExe pkgs.gnused} 's/^XAUTHORITY=\(.*\)/\1/; t; d')"
+            export WAYLAND_DISPLAY="$(systemctl --user show-environment | ${lib.getExe pkgs.gnused} 's/^WAYLAND_DISPLAY=\(.*\)/\1/; t; d')"
+            exec ${cfg.ssh-askpass} "$@"
+          ''}"
+        ]);
+        SuccessExitStatus = 2;
       };
     };
 
@@ -100,8 +99,7 @@ in
           "-c"
           ''${lib.getExe' pkgs.openssl "ssh-agent"} -D -a "${sshAgentSockPath}"''
         ];
-
-        EnvironmentVariables = {
+        EnvironmentVariables = lib.optionalAttrs (cfg.ssh-askpass != null) {
           SSH_ASKPASS = "${cfg.ssh-askpass}";
           SSH_ASKPASS_REQUIRE = "force";
         };
