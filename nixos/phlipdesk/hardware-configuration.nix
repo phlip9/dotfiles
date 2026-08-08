@@ -23,29 +23,6 @@
 
   hardware.i2c.enable = true;
 
-  boot.initrd.luks.devices = {
-    "crypt-phlipdisk3" = {
-      device = "/dev/disk/by-uuid/74a62a74-f99b-4feb-8d6f-9bd76140b4fb";
-      allowDiscards = true; # support TRIM
-    };
-  };
-
-  fileSystems = {
-    # Secondary SSD that stores games, Steam library, large downloads, etc.
-    "/mnt/phlipdisk3" = {
-      device = "/dev/disk/by-uuid/0b5829aa-d02f-4a0d-9022-32bb83b6a7a2";
-      fsType = "ext4";
-      options = [
-        "noatime"
-        "lazytime"
-        # Hardening
-        "nodev"
-        "nosuid"
-        # "noexec" # Steam games need to exec
-      ];
-    };
-  };
-
   # Use a low-priority swapfile. This way zram absorbs memory pressure first,
   # but we've still got headroom for large nix build's with OOMing.
   swapDevices = [
