@@ -373,6 +373,9 @@
     # copy/paste
     pkgs.wl-clipboard
 
+    # path of exile (game) price checker
+    phlipPkgsNixos.awakened-poe-trade
+
     # buzz
     phlipPkgsNixos.buzz
 

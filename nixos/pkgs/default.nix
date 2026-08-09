@@ -29,6 +29,9 @@ in
 fix (phlipPkgsNixos: {
   _type = "pkgs";
 
+  # awakened-poe-trade - Path of Exile trading app for price checking
+  awakened-poe-trade = callPackage ./awakened-poe-trade.nix { };
+
   # buzz - workspace where humans and agents build together
   buzz = callPackage ./buzz {
     inherit (phlipPkgs) claude-agent-acp codex-acp;
