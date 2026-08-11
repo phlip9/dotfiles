@@ -1,0 +1,90 @@
+# sauna - Hetzner bare metal server home config
+{
+  # a reference to the home-manager config object this fn outputs
+  # config,
+  # nixpkgs
+  pkgs,
+  # ../pkgs/default.nix
+  phlipPkgs,
+  # nixpkgs.lib
+  # lib,
+  # # npins sources passed in via `extraSpecialArgs`
+  # sources,
+  ...
+}:
+{
+  # Easily search through home-manager options:
+  # <https://mipmip.github.io/home-manager-option-search>
+
+  # Home Manager needs a bit of information about you and the paths it should
+  # manage.
+  home.username = "phlip9";
+  home.homeDirectory = "/home/phlip9";
+
+  # This value determines the Home Manager release that your configuration is
+  # compatible with. This helps avoid breakage when a new Home Manager release
+  # introduces backwards incompatible changes.
+  #
+  # You should not change this value, even if you update Home Manager. If you do
+  # want to update the value, then make sure to first check the Home Manager
+  # release notes.
+  home.stateVersion = "25.11"; # Please read the comment before changing.
+
+  imports = [
+    ./mods/core.nix
+
+    # ./mods/alacritty.nix
+    ./mods/bash.nix
+    # ./mods/ctags.nix
+    # ./mods/direnv.nix
+    # ./mods/fonts.nix
+    ./mods/fzf.nix
+    ./mods/gdb.nix
+    ./mods/gh.nix
+    ./mods/git/default.nix
+    ./mods/github-agent.nix
+    ./mods/gpg-agent.nix
+    ./mods/gpg.nix
+    ./mods/inputrc.nix
+    # ./mods/jdk.nix
+    ./mods/lexe.nix
+    ./mods/local-bin.nix
+    # ./mods/lsyncd.nix
+    # ./mods/mpv.nix
+    # ./mods/nethack.nix
+    # ./mods/niri.nix
+    # ./mods/noctalia.nix
+    ./mods/nvim/default.nix
+    ./mods/postgres.nix
+    ./mods/python.nix
+    ./mods/ssh.nix
+    ./mods/ssh-agent.nix
+    ./mods/tmux.nix
+  ];
+
+  # The home.packages option allows you to install Nix packages into your
+  # environment.
+  home.packages = [
+    pkgs.htop
+    pkgs.lm_sensors
+
+    pkgs.clangStdenv.cc
+    pkgs.go
+    pkgs.htmlq
+    pkgs.protobuf
+    pkgs.rustup
+    pkgs.uv
+
+    # claude - AI cli
+    phlipPkgs.claude-code
+
+    # codex - AI cli
+    phlipPkgs.codex
+  ];
+
+  # Let Home Manager install and manage itself.
+  programs.home-manager.enable = true;
+
+  # Headless server, no need for ssh-askpass
+  services.nix-ssh-agent.ssh-askpass = null;
+}

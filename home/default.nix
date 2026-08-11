@@ -6,6 +6,17 @@
   sources,
 }:
 {
+  lexe-dev = hm.lib.homeManagerConfiguration {
+    pkgs = pkgs;
+    modules = [ ./lexe-dev.nix ];
+    extraSpecialArgs = {
+      inherit phlipPkgs pkgs;
+      inherit sources;
+      pkgsUnfree = pkgs;
+      pkgsYubikey = pkgs;
+    };
+  };
+
   phlipdesk = hm.lib.homeManagerConfiguration {
     pkgs = pkgs;
     modules = [ ./phlipdesk.nix ];
