@@ -1,4 +1,4 @@
-# sauna - Hetzner bare metal server home config
+# lexe-dev - Azure DCsv3 SGX-enabled dev machine
 {
   # a reference to the home-manager config object this fn outputs
   # config,
@@ -28,7 +28,7 @@
   # You should not change this value, even if you update Home Manager. If you do
   # want to update the value, then make sure to first check the Home Manager
   # release notes.
-  home.stateVersion = "25.11"; # Please read the comment before changing.
+  home.stateVersion = "26.05"; # Please read the comment before changing.
 
   imports = [
     ./mods/core.nix
@@ -55,10 +55,11 @@
     # ./mods/niri.nix
     # ./mods/noctalia.nix
     ./mods/nvim/default.nix
-    ./mods/postgres.nix
+    ./mods/paseo.nix
+    # ./mods/postgres.nix
     ./mods/python.nix
-    ./mods/ssh.nix
-    ./mods/ssh-agent.nix
+    # ./mods/ssh.nix
+    # ./mods/ssh-agent.nix
     ./mods/tmux.nix
   ];
 
@@ -85,6 +86,7 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  # Headless server, no need for ssh-askpass
-  services.nix-ssh-agent.ssh-askpass = null;
+  # TODO(phlip9): enable once Linux home-manager support
+  # # paseo self-hosted agent interface
+  # services.paseo.enable = true;
 }
