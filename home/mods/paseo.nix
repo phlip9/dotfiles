@@ -18,6 +18,8 @@ let
   servicePath = lib.concatStringsSep ":" [
     "${config.home.profileDirectory}/bin"
     "/nix/var/nix/profiles/default/bin"
+    "/run/current-system/sw/bin"
+    "/run/wrappers/bin"
     "/usr/local/bin"
     "/usr/local/sbin"
     "/usr/bin"
