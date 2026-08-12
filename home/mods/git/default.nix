@@ -175,7 +175,7 @@ in
       pr-stat = "!git diff --stat $(git pr-base)";
 
       # Print the diff stat (+ commit metadata) for each commit in this PR.
-      pr-stat-by-commit = "!git --no-pager log --stat $(git pr-base)..";
+      pr-statc = "!git --no-pager log --stat $(git pr-base)..";
 
       # Print the diff stat for this commit.
       cm-stat = "!git diff --stat HEAD~1";
@@ -187,7 +187,7 @@ in
       # so vim-gitgutter works.
 
       # Open only one specific changed file just like `git pr-review`
-      pr-rvo = mkAliasInline "git-pr-rvo" [ ] ''
+      prro = mkAliasInline "git-prro" [ ] ''
         set -euo pipefail
         PR_BASE="$(git pr-base)"
         unset GIT_DIR GIT_WORK_TREE
@@ -196,7 +196,7 @@ in
 
       # Open all changed files in `nvim` with gitgutter diff'ed against master.
       # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
-      pr-rv = mkAliasInline "git-pr-rv" [ ] ''
+      prr = mkAliasInline "git-prr" [ ] ''
         set -euo pipefail
         PR_BASE="$(git pr-base)"
         mapfile -t -d "" files < <(git diff --name-only -z "$PR_BASE")
@@ -204,9 +204,12 @@ in
         exec $EDITOR "''${files[@]}" +"let g:gitgutter_diff_base = '$PR_BASE'"
       '';
 
+      # Start rebase to review by commit
+      prrc = "!git rebase --interactive $(git pr-base)";
+
       # Single commit: open all changed files in `nvim` with gitgutter diff.
       # Uses mapfile and `git diff -z` to handle file paths with spaces/etc.
-      cm-rv = mkAliasInline "git-cm-rv" [ ] ''
+      cmr = mkAliasInline "git-cmr" [ ] ''
         set -euo pipefail
         DIFF_BASE="$(git rev-parse HEAD~1)"
         mapfile -t -d "" files < <(git diff --name-only -z "$DIFF_BASE")
@@ -219,9 +222,6 @@ in
 
       # Print compact list of commits on this PR branch.
       pr-lg = "!git --no-pager log --reverse --format='* %s' $(git pr-base)..";
-
-      # Start rebase to review by commit
-      pr-rv-by-commit = "!git rebase --interactive $(git pr-base)";
 
       #############
       # Shortcuts #
