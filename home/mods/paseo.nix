@@ -1,4 +1,4 @@
-# Run the Paseo daemon on a workstation.
+# Run the Paseo daemon as a systemd/launchd user service.
 {
   config,
   lib,
@@ -10,6 +10,8 @@
 let
   cfg = config.services.paseo;
   homeDir = config.home.homeDirectory;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
+  isLinux = pkgs.stdenv.hostPlatform.isLinux;
 
   # Seed the environment before sourcing Home Manager's generated session
   # variables. home.sessionPath adds personal paths to this baseline.
@@ -31,6 +33,27 @@ let
   listen = hostPort cfg.listenAddress cfg.port;
   passwordFile = "${cfg.dataDir}/daemon-password";
 
+  # shared CLI and daemon envs
+  paseoEnvs = {
+    PASEO_APP_BASE_URL = "https://paseo.phlip9.com";
+    PASEO_HOME = cfg.dataDir;
+    PASEO_HOST = listen;
+    PASEO_PASSWORD_FILE = passwordFile;
+    PASEO_RELAY_ENABLED = lib.boolToString cfg.relay.enable;
+    PASEO_RELAY_ENDPOINT = hostPort cfg.relay.host cfg.relay.port;
+    PASEO_RELAY_USE_TLS = lib.boolToString cfg.relay.useTls;
+  };
+
+  # daemon-only envs
+  daemonEnvs = paseoEnvs // {
+    NODE_ENV = "production";
+    # Disable unused speech features and their model downloads.
+    PASEO_DICTATION_ENABLED = "false";
+    PASEO_LISTEN = listen;
+    PASEO_VOICE_MODE_ENABLED = "false";
+    PASEO_WEB_UI_ENABLED = "false";
+  };
+
   # Source the same declarative environment as interactive shells without
   # depending on mutable login-shell startup files. Paseo terminals inherit
   # SHELL below and load the normal bashrc when they start a PTY.
@@ -49,14 +72,14 @@ let
 
     set -u
 
-    ${pkgs.coreutils}/bin/install -d -m 0700 "$PASEO_HOME"
+    ${lib.getExe' pkgs.coreutils "install"} -d -m 0700 "$PASEO_HOME"
 
-    ${pkgs.openssl}/bin/openssl rand -hex 32 > "$PASEO_PASSWORD_FILE"
-    ${pkgs.coreutils}/bin/chmod 0600 "$PASEO_PASSWORD_FILE"
+    ${lib.getExe pkgs.openssl} rand -hex 32 > "$PASEO_PASSWORD_FILE"
+    ${lib.getExe' pkgs.coreutils "chmod"} 0600 "$PASEO_PASSWORD_FILE"
 
     exec ${
       lib.escapeShellArgs (
-        [ "${cfg.package}/bin/paseo-server" ]
+        [ "${lib.getExe' cfg.package "paseo-server"}" ]
         ++ lib.optional (!cfg.relay.enable) "--no-relay"
       )
     }
@@ -64,7 +87,7 @@ let
 in
 {
   options.services.paseo = {
-    enable = lib.mkEnableOption "Paseo daemon launchd service";
+    enable = lib.mkEnableOption "Paseo daemon user service";
 
     package = lib.mkOption {
       type = lib.types.package;
@@ -132,40 +155,38 @@ in
     # Make paseo CLI available
     home.packages = [ cfg.package ];
 
-    # Make the CLI target the launchd-managed local daemon by default.
-    home.sessionVariables = {
-      PASEO_APP_BASE_URL = "https://paseo.phlip9.com";
-      PASEO_HOME = cfg.dataDir;
-      PASEO_HOST = listen;
-      PASEO_PASSWORD_FILE = passwordFile;
-      PASEO_RELAY_ENABLED = lib.boolToString cfg.relay.enable;
-      PASEO_RELAY_ENDPOINT = hostPort cfg.relay.host cfg.relay.port;
-      PASEO_RELAY_USE_TLS = lib.boolToString cfg.relay.useTls;
+    # Make the CLI target the local daemon by default.
+    home.sessionVariables = paseoEnvs;
+
+    # paseo Linux systemd user service
+    systemd.user.services.paseo = lib.mkIf isLinux {
+      Unit = {
+        Description = "Paseo - self-hosted daemon for AI coding agents";
+        After = [ "network.target" ];
+      };
+
+      Install.WantedBy = [ "default.target" ];
+
+      Service = {
+        Type = "simple";
+        ExecStart = runPaseo;
+        WorkingDirectory = homeDir;
+        Environment = lib.mapAttrsToList (k: v: "${k}=${v}") daemonEnvs;
+        Restart = "on-failure";
+        RestartSec = 10;
+        KillSignal = "SIGTERM";
+        TimeoutStopSec = 15;
+      };
     };
 
     # paseo macOS launchd service
-    launchd.agents.paseo = {
+    launchd.agents.paseo = lib.mkIf isDarwin {
       enable = true;
       config = {
         Program = runPaseo;
         WorkingDirectory = homeDir;
 
-        EnvironmentVariables = {
-          NODE_ENV = "production";
-          # Disable unused speech features and their model downloads.
-          PASEO_DICTATION_ENABLED = "false";
-          PASEO_LISTEN = listen;
-          PASEO_VOICE_MODE_ENABLED = "false";
-          PASEO_WEB_UI_ENABLED = "false";
-
-          PASEO_APP_BASE_URL = "https://paseo.phlip9.com";
-          PASEO_HOME = cfg.dataDir;
-          PASEO_HOST = listen;
-          PASEO_PASSWORD_FILE = passwordFile;
-          PASEO_RELAY_ENABLED = lib.boolToString cfg.relay.enable;
-          PASEO_RELAY_ENDPOINT = hostPort cfg.relay.host cfg.relay.port;
-          PASEO_RELAY_USE_TLS = lib.boolToString cfg.relay.useTls;
-        };
+        EnvironmentVariables = daemonEnvs;
 
         RunAtLoad = true;
         KeepAlive = {

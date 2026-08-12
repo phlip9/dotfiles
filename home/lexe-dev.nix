@@ -86,7 +86,6 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  # TODO(phlip9): enable once Linux home-manager support
-  # # paseo self-hosted agent interface
-  # services.paseo.enable = true;
+  # paseo self-hosted agent interface
+  services.paseo.enable = true;
 }
