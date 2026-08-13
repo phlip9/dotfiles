@@ -12,7 +12,7 @@ let
   # fetchNpmDeps output differs across nixpkgs revisions. Keep the hash for
   # this repo's pinned nixpkgs while upstream maintains the package logic.
   upstreamPaseo = callPackage (sources.paseo + "/nix/package.nix") {
-    npmDepsHash = "sha256-FbAuGkXHC6uCLED4X6vOW/T5eUrdxAxNZME6gWsc0w0=";
+    npmDepsHash = "sha256-i5PbVUe2Ec+GtghV9IpCJQJ9hcUT5hFhmxneNvoD584=";
   };
 in
 

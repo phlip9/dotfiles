@@ -48,7 +48,7 @@ let
 
   # daemon-only envs
   daemonEnvs = paseoEnvs // {
-    NODE_ENV = "production";
+    PASEO_NODE_ENV = "production";
     # Disable unused speech features and their model downloads.
     PASEO_DICTATION_ENABLED = "false";
     PASEO_LISTEN = listen;
