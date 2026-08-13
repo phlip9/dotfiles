@@ -1,6 +1,7 @@
 # Paseo daemon + CLI with password-file support for runtime secrets.
 {
   callPackage,
+  fetchpatch,
   gnutar,
   lib,
   procps,
@@ -20,6 +21,12 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
   # Keep credentials out of the process environment. Upstream supports only
   # plaintext PASEO_PASSWORD or a bcrypt hash in mutable config.json.
   patches = (prevAttrs.patches or [ ]) ++ [
+    (fetchpatch {
+      url = "https://github.com/getpaseo/paseo/commit/7bd8fb25b6cdebe813ae16da4d2df4d2895e7bc2.patch";
+      hash = "sha256-NsITAF4UAU+OS3yt+NtvLnpNLEGx4UXWCYZadn4cQFQ=";
+      # Upstream's Nix source filter excludes test files before patchPhase.
+      includes = [ "packages/relay/src/crypto.ts" ];
+    })
     ./paseo-password-file.patch
   ];
 
