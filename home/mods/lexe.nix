@@ -39,11 +39,11 @@ let
       "arm64-v8a"
     ];
     platformVersions = [
-      "35" # lexe, flutter_zxing -> camera_android_camerax
+      "36" # lexe
       "34" # app_links
     ];
     buildToolsVersions = [
-      "35.0.0"
+      "35.0.0" # Android Gradle Plugin 8.13.2
     ];
     includeNDK = true;
     ndkVersion = "28.2.13676358";
@@ -64,7 +64,7 @@ let
   JAVA_HOME = "${pkgs.jdk17_headless.home}";
 
   # flutter/dart
-  flutter = pkgs.flutter332;
+  flutter = pkgs.flutter341;
 
   isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 in
