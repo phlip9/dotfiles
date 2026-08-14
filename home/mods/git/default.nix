@@ -172,13 +172,13 @@ in
       cm-files = "!git diff --name-only HEAD~1";
 
       # Print the diff stat for the files changed in this PR.
-      pr-stat = "!git diff --stat $(git pr-base)";
+      prs = "!git diff --stat $(git pr-base)";
 
       # Print the diff stat (+ commit metadata) for each commit in this PR.
-      pr-statc = "!git --no-pager log --stat $(git pr-base)..";
+      prsc = "!git --no-pager log --stat $(git pr-base)..";
 
       # Print the diff stat for this commit.
-      cm-stat = "!git diff --stat HEAD~1";
+      cms = "!git show --stat";
 
       # Git exports `GIT_DIR` for `!` aliases invoked in a linked worktree. If
       # the editor inherits it, vim-gitgutter's `git -C <buffer-dir>` treats
@@ -221,7 +221,7 @@ in
       pr-desc = "!git --no-pager log --format=tformat:'%x23%x23%x23 %B' $(git pr-base)..";
 
       # Print compact list of commits on this PR branch.
-      pr-lg = "!git --no-pager log --reverse --format='* %s' $(git pr-base)..";
+      prlg = "!git --no-pager log --reverse --format='* %s' $(git pr-base)..";
 
       #############
       # Shortcuts #
