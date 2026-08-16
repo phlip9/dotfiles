@@ -16,7 +16,7 @@ echo "Latest version: $VERSION"
 prefetch_hash() {
   local artifact=$1
   local target=$2
-  local url="https://github.com/openai/codex/releases/download/rust-v${VERSION}/${artifact}-${target}.tar.gz"
+  local url="https://github.com/openai/codex/releases/download/rust-v${VERSION}/${artifact}-${target}.zst"
   echo "Prefetching $artifact for $target..." >&2
   nix store prefetch-file "$url" --json | jq -r '.hash'
 }
@@ -47,24 +47,22 @@ jq -n \
   '{
     version: $version,
     "x86_64-linux": {
-      target: "x86_64-unknown-linux-musl",
       codex: {
-        url: "\($base_url)/codex-x86_64-unknown-linux-musl.tar.gz",
+        url: "\($base_url)/codex-x86_64-unknown-linux-musl.zst",
         hash: $x86_64_linux_codex_hash
       },
       codeModeHost: {
-        url: "\($base_url)/codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz",
+        url: "\($base_url)/codex-code-mode-host-x86_64-unknown-linux-musl.zst",
         hash: $x86_64_linux_code_mode_host_hash
       }
     },
     "aarch64-darwin": {
-      target: "aarch64-apple-darwin",
       codex: {
-        url: "\($base_url)/codex-aarch64-apple-darwin.tar.gz",
+        url: "\($base_url)/codex-aarch64-apple-darwin.zst",
         hash: $aarch64_darwin_codex_hash
       },
       codeModeHost: {
-        url: "\($base_url)/codex-code-mode-host-aarch64-apple-darwin.tar.gz",
+        url: "\($base_url)/codex-code-mode-host-aarch64-apple-darwin.zst",
         hash: $aarch64_darwin_code_mode_host_hash
       }
     }
