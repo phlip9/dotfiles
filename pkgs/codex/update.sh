@@ -6,35 +6,67 @@ SOURCES_FILE="$SCRIPT_DIR/sources.json"
 
 # Fetch latest version from GitHub releases API
 echo "Fetching latest codex version..."
-LATEST_TAG=$(curl -s "https://api.github.com/repos/openai/codex/releases/latest" | jq -r '.tag_name')
+LATEST_TAG=$(curl -fsSL \
+  "https://api.github.com/repos/openai/codex/releases/latest" \
+  | jq -er '.tag_name')
 VERSION="${LATEST_TAG#rust-v}"
 echo "Latest version: $VERSION"
 
+# Prefetch one platform-specific release artifact and print its Nix hash.
 prefetch_hash() {
-  local target=$1
-  local url="https://github.com/openai/codex/releases/download/rust-v${VERSION}/codex-${target}.tar.gz"
-  echo "Prefetching $target..." >&2
+  local artifact=$1
+  local target=$2
+  local url="https://github.com/openai/codex/releases/download/rust-v${VERSION}/${artifact}-${target}.tar.gz"
+  echo "Prefetching $artifact for $target..." >&2
   nix store prefetch-file "$url" --json | jq -r '.hash'
 }
 
-X86_64_LINUX_HASH=$(prefetch_hash "x86_64-unknown-linux-musl")
-AARCH64_DARWIN_HASH=$(prefetch_hash "aarch64-apple-darwin")
+X86_64_LINUX_CODEX_HASH=$(
+  prefetch_hash codex "x86_64-unknown-linux-musl"
+)
+X86_64_LINUX_CODE_MODE_HOST_HASH=$(
+  prefetch_hash codex-code-mode-host "x86_64-unknown-linux-musl"
+)
+AARCH64_DARWIN_CODEX_HASH=$(
+  prefetch_hash codex "aarch64-apple-darwin"
+)
+AARCH64_DARWIN_CODE_MODE_HOST_HASH=$(
+  prefetch_hash codex-code-mode-host "aarch64-apple-darwin"
+)
 
 jq -n \
   --arg version "$VERSION" \
-  --arg x86_64_linux_hash "$X86_64_LINUX_HASH" \
-  --arg aarch64_darwin_hash "$AARCH64_DARWIN_HASH" \
+  --arg base_url \
+    "https://github.com/openai/codex/releases/download/rust-v${VERSION}" \
+  --arg x86_64_linux_codex_hash "$X86_64_LINUX_CODEX_HASH" \
+  --arg x86_64_linux_code_mode_host_hash \
+    "$X86_64_LINUX_CODE_MODE_HOST_HASH" \
+  --arg aarch64_darwin_codex_hash "$AARCH64_DARWIN_CODEX_HASH" \
+  --arg aarch64_darwin_code_mode_host_hash \
+    "$AARCH64_DARWIN_CODE_MODE_HOST_HASH" \
   '{
     version: $version,
     "x86_64-linux": {
       target: "x86_64-unknown-linux-musl",
-      url: "https://github.com/openai/codex/releases/download/rust-v\($version)/codex-x86_64-unknown-linux-musl.tar.gz",
-      hash: $x86_64_linux_hash
+      codex: {
+        url: "\($base_url)/codex-x86_64-unknown-linux-musl.tar.gz",
+        hash: $x86_64_linux_codex_hash
+      },
+      codeModeHost: {
+        url: "\($base_url)/codex-code-mode-host-x86_64-unknown-linux-musl.tar.gz",
+        hash: $x86_64_linux_code_mode_host_hash
+      }
     },
     "aarch64-darwin": {
       target: "aarch64-apple-darwin",
-      url: "https://github.com/openai/codex/releases/download/rust-v\($version)/codex-aarch64-apple-darwin.tar.gz",
-      hash: $aarch64_darwin_hash
+      codex: {
+        url: "\($base_url)/codex-aarch64-apple-darwin.tar.gz",
+        hash: $aarch64_darwin_codex_hash
+      },
+      codeModeHost: {
+        url: "\($base_url)/codex-code-mode-host-aarch64-apple-darwin.tar.gz",
+        hash: $aarch64_darwin_code_mode_host_hash
+      }
     }
   }' > "$SOURCES_FILE"
 
