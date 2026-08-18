@@ -47,6 +47,7 @@
     ./mods/gpg.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
+    ./mods/jujutsu.nix
     ./mods/lexe.nix
     ./mods/local-bin.nix
     # ./mods/lsyncd.nix
