@@ -1,0 +1,29 @@
+diff --git a/packages/server/src/utils/run-git-command.ts b/packages/server/src/utils/run-git-command.ts
+--- a/packages/server/src/utils/run-git-command.ts
++++ b/packages/server/src/utils/run-git-command.ts
+@@ -20,5 +20,6 @@ import {
+   type GitProcessPolicy,
+ } from "./git-process-scheduler.js";
++import { signalProcessTree } from "./tree-kill.js";
+
+ const DEFAULT_TIMEOUT_MS = 30_000;
+ const DEFAULT_MAX_OUTPUT_BYTES = 20 * 1024 * 1024; // 20MB
+@@ -389,11 +390,13 @@ export function runGitCommand(
+
+       timer = setTimeout(() => {
+         timeoutError = new Error(`Git command timed out after ${timeout}ms: ${command}`);
+-        child.kill("SIGKILL");
+-        settle(() => reject(timeoutError));
+-        if (processExit) {
+-          settleTimeoutTrace(processExit.exitCode, processExit.signal);
+-        }
++        // Kill ssh and askpass descendants before allowing the caller to retry.
++        void signalProcessTree(child, "SIGKILL").then(() => {
++          settle(() => reject(timeoutError));
++          if (processExit) {
++            settleTimeoutTrace(processExit.exitCode, processExit.signal);
++          }
++        });
+       }, timeout);
+
+       stdout.on("data", (chunk: Buffer | string) => {

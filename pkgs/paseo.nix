@@ -18,15 +18,18 @@ let
 in
 
 upstreamPaseo.overrideAttrs (prevAttrs: {
-  # Keep credentials out of the process environment. Upstream supports only
-  # plaintext PASEO_PASSWORD or a bcrypt hash in mutable config.json.
   patches = (prevAttrs.patches or [ ]) ++ [
+    # Security: reject low-order Curve25519 public keys
     (fetchpatch {
       url = "https://github.com/getpaseo/paseo/commit/7bd8fb25b6cdebe813ae16da4d2df4d2895e7bc2.patch";
       hash = "sha256-NsITAF4UAU+OS3yt+NtvLnpNLEGx4UXWCYZadn4cQFQ=";
       # Upstream's Nix source filter excludes test files before patchPhase.
       includes = [ "packages/relay/src/crypto.ts" ];
     })
+    # Kill full git process tree after timeout so ssh-askpass prompts don't
+    # persist and stack up.
+    ./paseo-kill-git-process-tree.patch
+    # Add support for setting password via more secure PASEO_PASSWORD_FILE env.
     ./paseo-password-file.patch
   ];
 
