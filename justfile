@@ -73,8 +73,10 @@ go-test *args:
 
 go-test-inner:
     mkdir -p /tmp/go-cache
-    cd pkgs/github-webhook && GOCACHE=/tmp/go-cache GO111MODULE=off go test
-    cd pkgs/github-agent-authd && GOCACHE=/tmp/go-cache GO111MODULE=off go test
+    cd nixos/pkgs/github-webhook && \
+        CGO_ENABLED=0 GOCACHE=/tmp/go-cache GO111MODULE=off go test
+    cd nixos/pkgs/github-agent-authd && \
+        CGO_ENABLED=0 GOCACHE=/tmp/go-cache GO111MODULE=off go test
 
 # --- neovim --- #
 
