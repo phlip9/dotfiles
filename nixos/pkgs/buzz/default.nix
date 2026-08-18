@@ -6,7 +6,6 @@
   codex-acp,
   fetchFromGitHub,
   makeBinaryWrapper,
-  nix-update-script,
   rust,
   rustPlatform,
 
@@ -165,16 +164,17 @@ stdenv.mkDerivation (finalAttrs: {
         buzz = finalAttrs.finalPackage;
       };
     };
-    updateScript = nix-update-script {
-      extraArgs = [
-        "--subpackage"
-        "frontend"
-        "--subpackage"
-        "sidecars"
-        "--subpackage"
-        "desktop"
-      ];
-    };
+    # Update manually: upstream release tags are currently unstable.
+    # updateScript = nix-update-script {
+    #   extraArgs = [
+    #     "--subpackage"
+    #     "frontend"
+    #     "--subpackage"
+    #     "sidecars"
+    #     "--subpackage"
+    #     "desktop"
+    #   ];
+    # };
   };
 
   meta = {
