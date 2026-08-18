@@ -380,10 +380,10 @@ in
         assert [
             (attribute["attr"], attribute["status"])
             for attribute in detail["attributes"]
-        ] == [("default.checks.x86_64-linux.test", "succeeded")]
+        ] == [("checks.x86_64-linux.test", "succeeded")]
 
         watch = nbo("build", "watch", str(build_number), "-R", repo)
-        assert "default.checks.x86_64-linux.test" in watch
+        assert "checks.x86_64-linux.test" in watch
 
         log = nbo("log", str(build_number), "test", "-R", repo)
         assert "building-test" in log

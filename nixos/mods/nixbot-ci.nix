@@ -142,8 +142,6 @@ in
         webhookSecretFile = config.sops.secrets.nixbot-github-webhook-secret.path;
         oauthId = cfg.github.oauthClientId;
         oauthSecretFile = config.sops.secrets.nixbot-github-oauth-client-secret.path;
-
-        oauthPrivateRepoScope = false; # enable if you need private repos
       };
 
       # niks3 integration for cache uploads
