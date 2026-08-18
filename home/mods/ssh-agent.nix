@@ -97,7 +97,7 @@ in
         ProgramArguments = [
           (lib.getExe pkgs.bash)
           "-c"
-          ''${lib.getExe' pkgs.openssl "ssh-agent"} -D -a "${sshAgentSockPath}"''
+          ''${lib.getExe' pkgs.openssh "ssh-agent"} -D -a "${sshAgentSockPath}"''
         ];
         EnvironmentVariables = lib.optionalAttrs (cfg.ssh-askpass != null) {
           SSH_ASKPASS = "${cfg.ssh-askpass}";
