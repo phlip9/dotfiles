@@ -1,0 +1,22 @@
+diff --git a/scripts/trace-daemon.mjs b/scripts/trace-daemon.mjs
+--- a/scripts/trace-daemon.mjs
++++ b/scripts/trace-daemon.mjs
+@@ -60,13 +60,12 @@ const additionalInputs = [
+   // CLI shebang script wrapping dist/index.js
+   "packages/cli/bin/paseo",
+-  // node-pty's compiled native addon. nft can't trace it because
+-  // node-pty loads it via `require(path.join(__dirname, 'prebuilds/<plat>/pty.node'))`
+-  // with a runtime-computed platform suffix. Pin to the host platform —
+-  // the Nix derivation builds for one platform at a time and ships only
+-  // its own binaries.
+-  `node_modules/node-pty/prebuilds/${process.platform}-${process.arch}/**`,
++  // node-pty's compiled native addon. nft can't trace its runtime-computed
++  // build and prebuild paths. package-lock keeps node-pty nested under the
++  // server workspace, and the Nix derivation ships only host binaries.
++  "packages/server/node_modules/node-pty/build/Release/**",
++  `packages/server/node_modules/node-pty/prebuilds/${process.platform}-${process.arch}/**`,
+   // sherpa-onnx-node dynamically resolves a platform-specific native package.
+   // Copy the wrapper plus the host platform package explicitly.
+   "node_modules/sherpa-onnx-node/**",
+   `node_modules/${sherpaPlatformPackageName()}/**`,
+   ...(traceDesktop

@@ -8,12 +8,20 @@
     { config, pkgs, ... }:
     {
       environment.systemPackages = [
+        config.services.paseo.package
         pkgs.curl
         pkgs.jq
       ];
 
+      users.users.testuser = {
+        isNormalUser = true;
+        shell = pkgs.bashInteractive;
+      };
+
       services.paseo = {
         enable = true;
+        user = "testuser";
+        group = "users";
         relay = {
           enable = true;
           mode = "remote";
@@ -84,6 +92,38 @@
             "curl -g -sf -H 'Authorization: Bearer correct-password' "
             "http://[::1]:6767/api/status "
             "| jq -e '.status == \"server_info\"'"
+        )
+
+    with subtest("terminal CLI drives a workspace terminal"):
+        machine.succeed("install -d -m 0777 /tmp/paseo-terminal-test")
+        machine.succeed(
+            "PASEO_PASSWORD=correct-password "
+            "paseo terminal create --host '[::1]:6767' "
+            "--cwd /tmp/paseo-terminal-test --name vm-terminal --json "
+            "| jq -e '.name == \"vm-terminal\" "
+            "and .cwd == \"/tmp/paseo-terminal-test\"'"
+        )
+        machine.succeed(
+            "PASEO_PASSWORD=correct-password "
+            "paseo terminal send-keys --host '[::1]:6767' vm-terminal "
+            "'echo paseo-terminal-file-ok > terminal-result; "
+            "echo paseo-terminal-output-ok' Enter"
+        )
+        machine.wait_until_succeeds(
+            "grep -Fx paseo-terminal-file-ok "
+            "/tmp/paseo-terminal-test/terminal-result",
+            timeout=30,
+        )
+        machine.succeed(
+            "PASEO_PASSWORD=correct-password "
+            "paseo terminal capture --host '[::1]:6767' "
+            "--scrollback vm-terminal "
+            "| grep -Fx paseo-terminal-output-ok"
+        )
+        machine.succeed(
+            "PASEO_PASSWORD=correct-password "
+            "paseo terminal kill --host '[::1]:6767' "
+            "--json vm-terminal | jq -e '.success == true'"
         )
 
     with subtest("bundled web UI is served"):
