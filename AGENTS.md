@@ -85,12 +85,16 @@
   commits that are easy to review. bulk changes, code movement, and refactors
   should be split out from primary changes into their own commit(s) for faster
   human review.
+- refactor until the change is easy, then make the easy change.
+- try to schedule pre-factors, renames, and code motion early in the commit
+  stack.
 - work through changes step-by-step. break down the problem into parts that can
   be tackled independently.
 - create clean, atomic, readable, and easily-reviewable commits. after I review
   your work, structure new changes as either new commits or fixups into your
   prior commits to maintain a clear linear history. don't rebase or autosquash
-  your changes--I will rebase and auto-squash fixup commits as I approve them.
+  your changes unless asked--I will rebase and auto-squash fixup commits as I
+  approve them.
 - aim for maintainability, clarity, and elegance first.
 
 ## nixos
