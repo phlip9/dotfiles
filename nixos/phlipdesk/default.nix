@@ -376,6 +376,9 @@
     # path of exile (game) price checker
     phlipPkgsNixos.awakened-poe-trade
 
+    # path of exile 2 (game) price checker
+    phlipPkgsNixos.exiled-exchange-2
+
     # buzz
     phlipPkgsNixos.buzz
 
