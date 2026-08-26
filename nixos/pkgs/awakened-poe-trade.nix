@@ -1,14 +1,14 @@
 {
-  lib,
-  fetchurl,
-  stdenv,
   appimageTools,
-  makeBinaryWrapper,
   electron,
-  libxtst,
+  fetchurl,
+  lib,
   libxt,
-
+  libxtst,
+  makeBinaryWrapper,
   nix-update-script,
+  stdenv,
+  xdg-utils,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -34,14 +34,24 @@ stdenv.mkDerivation (finalAttrs: {
 
   nativeBuildInputs = [ makeBinaryWrapper ];
 
-  # NOTE(phlip9): only include en-US locale to reduce space consumption by ~40 MiB
+  # NOTE(phlip9): only include en-US locale to reduce space consumption by
+  # ~40 MiB.
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/bin $out/share/awakened-poe-trade/locales $out/share/applications
+    mkdir -p \
+      $out/bin \
+      $out/share/awakened-poe-trade/locales \
+      $out/share/applications
 
-    cp -a ${finalAttrs.passthru.appImageContents}/resources $out/share/awakened-poe-trade
-    cp -a ${finalAttrs.passthru.appImageContents}/locales/en-US.pak $out/share/awakened-poe-trade/locales/
-    cp -a ${finalAttrs.passthru.appImageContents}/awakened-poe-trade.desktop $out/share/applications/
+    cp -a \
+      ${finalAttrs.passthru.appImageContents}/resources \
+      $out/share/awakened-poe-trade
+    cp -a \
+      ${finalAttrs.passthru.appImageContents}/locales/en-US.pak \
+      $out/share/awakened-poe-trade/locales/
+    cp -a \
+      ${finalAttrs.passthru.appImageContents}/awakened-poe-trade.desktop \
+      $out/share/applications/
     cp -a ${finalAttrs.passthru.appImageContents}/usr/share/icons $out/share
 
     substituteInPlace $out/share/applications/awakened-poe-trade.desktop \
@@ -56,6 +66,7 @@ stdenv.mkDerivation (finalAttrs: {
       --add-flag '--ozone-platform=x11' \
       --add-flag '--no-overlay' \
       --add-flag '--no-updates' \
+      --prefix PATH : "${lib.makeBinPath [ xdg-utils ]}" \
       --prefix LD_LIBRARY_PATH : "${
         lib.makeLibraryPath [
           libxtst
@@ -70,10 +81,8 @@ stdenv.mkDerivation (finalAttrs: {
     changelog = "https://github.com/SnosMe/awakened-poe-trade/releases/tag/v${finalAttrs.version}";
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [
-      mreichardt95
-    ];
-    platforms = with lib.platforms; linux;
+    maintainers = with lib.maintainers; [ phlip9 ];
+    platforms = [ "x86_64-linux" ];
     mainProgram = "awakened-poe-trade";
   };
 })
