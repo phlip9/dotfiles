@@ -373,6 +373,9 @@
     # copy/paste
     pkgs.wl-clipboard
 
+    # path of exile 1+2 build planner
+    pkgs.rusty-path-of-building
+
     # path of exile (game) price checker
     phlipPkgsNixos.awakened-poe-trade
 
