@@ -349,6 +349,9 @@
     # terminal
     pkgs.alacritty
 
+    # bwrap - sandboxing
+    pkgs.bubblewrap
+
     # discord
     pkgs.discord
 

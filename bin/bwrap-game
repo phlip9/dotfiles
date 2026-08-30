@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+#
+# Run a game in a bubblewrap sandbox.
+# - Disable network
+# - Hide user $HOME
+#
+# Usage:
+# bwrap-game ./TheGame
+#
+
+ROOT_DIR="$(pwd -P)"
+SANDBOX_HOME="$ROOT_DIR/sandbox-home"
+SANDBOX_UID="$(id -u)"
+SANDBOX_RUNTIME="/run/user/$SANDBOX_UID"
+
+if ! command -v bwrap >/dev/null 2>&1; then
+    echo >&2 "bwrap-game: bubblewrap (bwrap) is required but was not found in PATH."
+    exit 127
+fi
+
+bwrap_args=(
+    --die-with-parent
+    --new-session
+    --unshare-pid
+    --unshare-net
+    --cap-drop ALL
+
+    # Start with a read-only view of the host for maximum runtime
+    # compatibility, then mask sensitive and writable locations below.
+    --ro-bind / /
+    --proc /proc
+    --dev /dev
+    --tmpfs /tmp
+    --tmpfs /home
+    --tmpfs /root
+    --tmpfs /run/user
+    --dir "$SANDBOX_RUNTIME"
+
+    # The game can update its own files, but nothing else on the host.
+    --bind "$ROOT_DIR" "$ROOT_DIR"
+    --bind "$SANDBOX_HOME" /home/game
+
+    --setenv HOME /home/game
+    --setenv XDG_CACHE_HOME /home/game/.cache
+    --setenv XDG_CONFIG_HOME /home/game/.config
+    --setenv XDG_DATA_HOME /home/game/.local/share
+    --setenv XDG_RUNTIME_DIR "$SANDBOX_RUNTIME"
+    --chdir "$ROOT_DIR"
+)
+
+# Only expose X11, Wayland, PulseAudio, and PipeWire local Unix sockets.
+if [[ -d /tmp/.X11-unix ]]; then
+    bwrap_args+=(--ro-bind /tmp/.X11-unix /tmp/.X11-unix)
+fi
+HOST_RUNTIME="${XDG_RUNTIME_DIR:-}"
+if [[ -n "$HOST_RUNTIME" && -d "$HOST_RUNTIME" ]]; then
+    if [[ -n "${WAYLAND_DISPLAY:-}" && -S "$HOST_RUNTIME/$WAYLAND_DISPLAY" ]]; then
+        bwrap_args+=(--ro-bind "$HOST_RUNTIME/$WAYLAND_DISPLAY" "$SANDBOX_RUNTIME/$WAYLAND_DISPLAY")
+    fi
+
+    if [[ -S "$HOST_RUNTIME/pipewire-0" ]]; then
+        bwrap_args+=(--ro-bind "$HOST_RUNTIME/pipewire-0" "$SANDBOX_RUNTIME/pipewire-0")
+    fi
+
+    if [[ -S "$HOST_RUNTIME/pulse/native" ]]; then
+        bwrap_args+=(--dir "$SANDBOX_RUNTIME/pulse")
+        bwrap_args+=(--ro-bind "$HOST_RUNTIME/pulse/native" "$SANDBOX_RUNTIME/pulse/native")
+    fi
+fi
+
+# SDL needs udev metadata
+if [[ -d /run/udev ]]; then
+    bwrap_args+=(--ro-bind /run/udev /run/udev)
+fi
+
+# Bind devices for direct-rendering, NVIDIA, sound, and input. Default bwrap
+# --dev only mounts basic pseudo devices.
+shopt -s nullglob
+for device_path in /dev/dri /dev/nvidia* /dev/snd /dev/input /dev/hidraw*; do
+    if [[ -e "$device_path" ]]; then
+        bwrap_args+=(--dev-bind "$device_path" "$device_path")
+    fi
+done
+shopt -u nullglob
+
+game_command=("$@")
+
+# Build fake $HOME
+mkdir -p \
+    "$SANDBOX_HOME/.cache" \
+    "$SANDBOX_HOME/.config" \
+    "$SANDBOX_HOME/.local/share" \
+    "$SANDBOX_HOME/Desktop" \
+    "$SANDBOX_HOME/Documents" \
+    "$SANDBOX_HOME/Downloads" \
+    "$SANDBOX_HOME/Games" \
+    "$SANDBOX_HOME/Pictures"
+
+exec bwrap "${bwrap_args[@]}" "${game_command[@]}"
