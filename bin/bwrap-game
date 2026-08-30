@@ -2,23 +2,135 @@
 set -euo pipefail
 
 #
-# Run a game in a bubblewrap sandbox.
-# - Disable network
-# - Hide user $HOME
+# Run an untrusted game in a bubblewrap sandbox.
+#
+# - Disable networking. Run game in a new network namespace.
+# - Mount a fake ./sandbox-home in place of the real home dir.
+# - Only passthru whitelisted envs.
+# - Mount clean /run and /run/user/$UID dirs with only a few exceptions. Hide
+#   all host sockets (e.g., nix daemon socket, ssh agent socket).
+# - Wine prefixes below ~/Games/umu are intentionally shared and writable.
+# - UMU's Steam Runtime gets an ephemeral writable overlay because umu-run
+#   touches some bookkeeping files even while offline.
+# - Expose /dev/ devices for display, nvidia, audio, direct-rendering, input,
+#   and hidraw access.
+# - Nested user namespaces remain enabled because the Nix umu-run wrapper and
+#   Steam pressure-vessel use bubblewrap themselves.
 #
 # Usage:
-# bwrap-game ./TheGame
+#   bwrap-game ./TheGame [arguments...]
+#   DEBUG=1 bwrap-game ./TheGame [arguments...]
+#
+# DEBUG=1 (or BWRAP_GAME_DEBUG=1) prints the resolved layout and shell-quoted
+# bubblewrap command.
 #
 
-ROOT_DIR="$(pwd -P)"
-SANDBOX_HOME="$ROOT_DIR/sandbox-home"
-SANDBOX_UID="$(id -u)"
-SANDBOX_RUNTIME="/run/user/$SANDBOX_UID"
+DEBUG_ENABLED=0
+case "${DEBUG:-${BWRAP_GAME_DEBUG:-0}}" in
+    1 | true | yes)
+        DEBUG_ENABLED=1
+        ;;
+esac
+readonly DEBUG_ENABLED
+
+echoerr() {
+  echo >&2 "$*"
+}
+
+debug() {
+    if ((DEBUG_ENABLED)); then
+        echoerr 'bwrap-game: debug: ' "$*"
+    fi
+}
+
+if (($# == 0)); then
+    echoerr "usage: bwrap-game COMMAND [ARGUMENT...]"
+    exit 2
+fi
 
 if ! command -v bwrap >/dev/null 2>&1; then
     echo >&2 "bwrap-game: bubblewrap (bwrap) is required but was not found in PATH."
     exit 127
 fi
+
+ROOT_DIR="$(pwd -P)"
+readonly ROOT_DIR
+
+SANDBOX_HOME="$ROOT_DIR/sandbox-home"
+SANDBOX_UID="$(id -u)"
+SANDBOX_USER="$(id -un)"
+SANDBOX_PROTONPATH="${PROTONPATH:-UMU-Proton}"
+SANDBOX_RUNTIME="/run/user/$SANDBOX_UID"
+readonly SANDBOX_HOME SANDBOX_UID SANDBOX_USER SANDBOX_PROTONPATH SANDBOX_RUNTIME
+
+HOST_HOME="$HOME"
+HOST_RUNTIME="${XDG_RUNTIME_DIR:-}"
+HOST_STEAM_COMPAT="$HOST_HOME/.local/share/Steam/compatibilitytools.d"
+HOST_UMU_DATA="$HOST_HOME/.local/share/umu"
+HOST_UMU_PREFIXES="$HOST_HOME/Games/umu"
+readonly HOST_HOME HOST_RUNTIME HOST_STEAM_COMPAT HOST_UMU_DATA HOST_UMU_PREFIXES
+
+#
+# Create ./sandbox-home that persists across runs, mounted over normal $HOME.
+#
+# Refuse symlinked mountpoints before using them from the unsandboxed launcher,
+# otherwise a game could point ./sandbox-home at the real home for the next run.
+#
+
+die_unsafe_home_path() {
+    printf >&2 'bwrap-game: unsafe fake-home path (must be a real directory beneath %s): %s\n' \
+        "$SANDBOX_HOME" "$1"
+    exit 1
+}
+
+if [[ -L "$SANDBOX_HOME" || (-e "$SANDBOX_HOME" && ! -d "$SANDBOX_HOME") ]]; then
+    die_unsafe_home_path "$SANDBOX_HOME"
+fi
+mkdir -p -- "$SANDBOX_HOME"
+if [[ "$(realpath -e -- "$SANDBOX_HOME")" != "$SANDBOX_HOME" ]]; then
+    die_unsafe_home_path "$SANDBOX_HOME"
+fi
+
+ensure_fake_home_dir() {
+    local relative_path="$1"
+    local target="$SANDBOX_HOME/$relative_path"
+    local resolved
+
+    resolved="$(realpath -m -- "$target")"
+    if [[ "$resolved" != "$SANDBOX_HOME"/* ]]; then
+        die_unsafe_home_path "$target"
+    fi
+    if [[ -L "$target" || (-e "$target" && ! -d "$target") ]]; then
+        die_unsafe_home_path "$target"
+    fi
+
+    mkdir -p -- "$target"
+    resolved="$(realpath -e -- "$target")"
+    if [[ "$resolved" != "$SANDBOX_HOME"/* ]]; then
+        die_unsafe_home_path "$target"
+    fi
+}
+
+fake_home_dirs=(
+    .cache
+    .config
+    .local/share
+    .local/state
+    .local/share/Steam/compatibilitytools.d
+    .local/share/umu
+    Desktop
+    Documents
+    Downloads
+    Games/umu
+    Pictures
+)
+for fake_home_dir in "${fake_home_dirs[@]}"; do
+    ensure_fake_home_dir "$fake_home_dir"
+done
+
+#
+# bwrap sandbox args
+#
 
 bwrap_args=(
     --die-with-parent
@@ -26,57 +138,140 @@ bwrap_args=(
     --unshare-pid
     --unshare-net
     --cap-drop ALL
+    --clearenv
 
-    # Start with a read-only view of the host for maximum runtime
-    # compatibility, then mask sensitive and writable locations below.
+    # By default host files are readable
     --ro-bind / /
     --proc /proc
     --dev /dev
     --tmpfs /tmp
     --tmpfs /home
     --tmpfs /root
-    --tmpfs /run/user
+    --tmpfs /run
+    --dir /run/user
     --dir "$SANDBOX_RUNTIME"
 
-    # The game can update its own files, but nothing else on the host.
+    # The game and its persistent fake home are writable. Mounting the fake
+    # home at HOST_HOME also makes getpwuid(), HOME, and Wine agree on its path.
     --bind "$ROOT_DIR" "$ROOT_DIR"
-    --bind "$SANDBOX_HOME" /home/game
+    --bind "$SANDBOX_HOME" "$HOST_HOME"
 
-    --setenv HOME /home/game
-    --setenv XDG_CACHE_HOME /home/game/.cache
-    --setenv XDG_CONFIG_HOME /home/game/.config
-    --setenv XDG_DATA_HOME /home/game/.local/share
+    --setenv HOME "$HOST_HOME"
+    --setenv USER "$SANDBOX_USER"
+    --setenv LOGNAME "$SANDBOX_USER"
+    --setenv SHELL /run/current-system/sw/bin/bash
+    --setenv PATH /run/current-system/sw/bin:/usr/bin:/bin
+    --setenv TMPDIR /tmp
+    --setenv XDG_CACHE_HOME "$HOST_HOME/.cache"
+    --setenv XDG_CONFIG_HOME "$HOST_HOME/.config"
+    --setenv XDG_DATA_HOME "$HOST_HOME/.local/share"
+    --setenv XDG_STATE_HOME "$HOST_HOME/.local/state"
     --setenv XDG_RUNTIME_DIR "$SANDBOX_RUNTIME"
+    --setenv UMU_RUNTIME_UPDATE 0
+    --setenv PROTONPATH "$SANDBOX_PROTONPATH"
     --chdir "$ROOT_DIR"
 )
 
-# Only expose X11, Wayland, PulseAudio, and PipeWire local Unix sockets.
+# Mask out /nix/var (incl. daemon socket) leaving only /nix/store
+if [[ -d /nix/var ]]; then
+    bwrap_args+=(--tmpfs /nix/var)
+fi
+
+# Bind only whitelisted paths into fake /run
+run_paths=(
+    # Expose NixOS system drv
+    /run/current-system
+
+    # Expose graphics drivers
+    /run/opengl-driver
+    /run/opengl-driver-32
+
+    # Expose udev device metadata for libudev users like SDL
+    /run/udev/data
+    /run/udev/links
+    /run/udev/tags
+)
+for run_path in "${run_paths[@]}"; do
+    if [[ -e "$run_path" ]]; then
+        bwrap_args+=(--ro-bind "$run_path" "$run_path")
+    fi
+done
+
+# Shared UMU state.
+# All wine prefixes are intentionally persistent, shared, and writable.
+if [[ -d "$HOST_UMU_PREFIXES" ]]; then
+    bwrap_args+=(--bind "$HOST_UMU_PREFIXES" "$HOST_HOME/Games/umu")
+    debug "shared Wine prefixes: $HOST_UMU_PREFIXES (read-write)"
+fi
+# Writes to base umu runtimes are not persistent. umu writes some random
+# bookkeeping files here.
+if [[ -d "$HOST_UMU_DATA" ]]; then
+    bwrap_args+=(--overlay-src "$HOST_UMU_DATA" --tmp-overlay "$HOST_HOME/.local/share/umu")
+    debug "UMU runtime data: $HOST_UMU_DATA (ephemeral writable overlay)"
+fi
+# Mount steam runtimes read-only.
+if [[ -d "$HOST_STEAM_COMPAT" ]]; then
+    bwrap_args+=(--ro-bind "$HOST_STEAM_COMPAT" "$HOST_HOME/.local/share/Steam/compatibilitytools.d")
+    debug "Steam compatibility tools: $HOST_STEAM_COMPAT (read-only)"
+fi
+
+# Mount Wayland, Xwayland, PulseAudio, and PipeWire sockets
 if [[ -d /tmp/.X11-unix ]]; then
     bwrap_args+=(--ro-bind /tmp/.X11-unix /tmp/.X11-unix)
 fi
-HOST_RUNTIME="${XDG_RUNTIME_DIR:-}"
 if [[ -n "$HOST_RUNTIME" && -d "$HOST_RUNTIME" ]]; then
     if [[ -n "${WAYLAND_DISPLAY:-}" && -S "$HOST_RUNTIME/$WAYLAND_DISPLAY" ]]; then
         bwrap_args+=(--ro-bind "$HOST_RUNTIME/$WAYLAND_DISPLAY" "$SANDBOX_RUNTIME/$WAYLAND_DISPLAY")
     fi
-
     if [[ -S "$HOST_RUNTIME/pipewire-0" ]]; then
         bwrap_args+=(--ro-bind "$HOST_RUNTIME/pipewire-0" "$SANDBOX_RUNTIME/pipewire-0")
     fi
-
     if [[ -S "$HOST_RUNTIME/pulse/native" ]]; then
         bwrap_args+=(--dir "$SANDBOX_RUNTIME/pulse")
         bwrap_args+=(--ro-bind "$HOST_RUNTIME/pulse/native" "$SANDBOX_RUNTIME/pulse/native")
     fi
 fi
 
-# SDL needs udev metadata
-if [[ -d /run/udev ]]; then
-    bwrap_args+=(--ro-bind /run/udev /run/udev)
-fi
+# Passthru graphics, audio, locale, and umu-launcher envs.
+allow_ambient_env() {
+    local env_name="$1"
 
-# Bind devices for direct-rendering, NVIDIA, sound, and input. Default bwrap
-# --dev only mounts basic pseudo devices.
+    case "$env_name" in
+        HOME | USER | LOGNAME | SHELL | PATH | TMPDIR | XAUTHORITY | PROTONPATH | \
+            XDG_CACHE_HOME | XDG_CONFIG_HOME | XDG_DATA_HOME | XDG_STATE_HOME | \
+            XDG_RUNTIME_DIR | UMU_RUNTIME_UPDATE)
+            return 1
+            ;;
+        DISPLAY | WAYLAND_DISPLAY | LANG | LANGUAGE | TERM | COLORTERM | TZ | TZDIR | \
+            LOCALE_ARCHIVE | LOCALE_ARCHIVE_* | XDG_CONFIG_DIRS | XDG_DATA_DIRS | \
+            XDG_CURRENT_DESKTOP | XDG_SESSION_DESKTOP | XDG_SESSION_TYPE | XDG_SEAT | XDG_VTNR | \
+            NIX_LD | NIX_LD_LIBRARY_PATH | LD_LIBRARY_PATH | LD_PRELOAD | \
+            GIO_EXTRA_MODULES | GTK_PATH | GTK_THEME | GTK_IM_MODULE | GDK_BACKEND | \
+            QT_PLUGIN_PATH | QML2_IMPORT_PATH | QT_QPA_PLATFORM | QT_STYLE_OVERRIDE | \
+            QTWEBKIT_PLUGIN_PATH | QT_IM_MODULE | XMODIFIERS | \
+            XCURSOR_PATH | XCURSOR_THEME | XCURSOR_SIZE | FONTCONFIG_PATH | FONTCONFIG_FILE | \
+            ALSA_CONFIG_PATH | ALSA_CONFIG_DIR | LIBGL_DRIVERS_PATH | LIBVA_DRIVER_NAME | \
+            VDPAU_DRIVER | DRI_PRIME | AMD_VULKAN_ICD | GAMEID | STORE | SteamAppId | SteamGameId | \
+            ENABLE_VKBASALT)
+            return 0
+            ;;
+        LC_* | SDL_* | MESA_* | __GL_* | VK_* | DXVK_* | VKD3D_* | WINE* | PROTON* | \
+            UMU_* | STEAM_* | WAYLAND_* | PULSE_* | PIPEWIRE_* | GST_* | RENPY_* | \
+            MANGOHUD* | GAMESCOPE_* | VKBASALT_* | GAMEMODE* | RADV_* | GLFW_*)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+mapfile -t ambient_env_names < <(compgen -e | sort -u)
+for env_name in "${ambient_env_names[@]}"; do
+    if allow_ambient_env "$env_name"; then
+        bwrap_args+=(--setenv "$env_name" "${!env_name}")
+    fi
+done
+
+# Mount some devices for rendering, sound, and input.
 shopt -s nullglob
 for device_path in /dev/dri /dev/nvidia* /dev/snd /dev/input /dev/hidraw*; do
     if [[ -e "$device_path" ]]; then
@@ -85,17 +280,20 @@ for device_path in /dev/dri /dev/nvidia* /dev/snd /dev/input /dev/hidraw*; do
 done
 shopt -u nullglob
 
+#
+# Run game
+#
+
 game_command=("$@")
 
-# Build fake $HOME
-mkdir -p \
-    "$SANDBOX_HOME/.cache" \
-    "$SANDBOX_HOME/.config" \
-    "$SANDBOX_HOME/.local/share" \
-    "$SANDBOX_HOME/Desktop" \
-    "$SANDBOX_HOME/Documents" \
-    "$SANDBOX_HOME/Downloads" \
-    "$SANDBOX_HOME/Games" \
-    "$SANDBOX_HOME/Pictures"
+debug "root: $ROOT_DIR"
+debug "fake home backing: $SANDBOX_HOME"
+debug "sandbox HOME: $HOST_HOME"
+debug "default Proton selection: $SANDBOX_PROTONPATH"
+if ((DEBUG_ENABLED)); then
+    printf >&2 'bwrap-game: debug: command:'
+    printf >&2 ' %q' bwrap "${bwrap_args[@]}" -- "${game_command[@]}"
+    printf >&2 '\n'
+fi
 
-exec bwrap "${bwrap_args[@]}" "${game_command[@]}"
+exec bwrap "${bwrap_args[@]}" -- "${game_command[@]}"
