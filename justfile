@@ -25,7 +25,7 @@ bash-ci: bash-lint
 
 bash-lint:
     nix shell -f . pkgs.shellcheck pkgs.fd --command \
-        fd --type file '^.*(\.sh|\.bash|bashrc|bwrap-game|hms|nos|rgs)$' \
+        fd --type file '^.*(\.sh|\.bash|bashrc|bwrap-game|hms|nor|rgs)$' \
             --exec shellcheck {}
 
 # --- nix --- #

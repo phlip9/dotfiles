@@ -209,7 +209,7 @@ function urldecode() {
 }
 
 # nix home-manager, but with configuration in my dotfiles git repo.
-alias hmb='nix build --file ~/dev/dotfiles homeConfigs."$(hostname -s)".activationPackage'
+alias hmb='nix build --file . homeConfigs."$(hostname -s)".activationPackage'
 
 # nix aliases
 alias nb='nix build --file .'

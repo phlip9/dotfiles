@@ -5,6 +5,9 @@ set -euo pipefail
 
 HM_HOST="${HM_HOST:-$(hostname -s)}"
 
+# Save the config path before building from a temporary directory.
+dotfiles_dir="$PWD"
+
 TMPDIR="$(mktemp --tmpdir -d home-manager-build.XXXXXXXXXX)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
@@ -12,7 +15,7 @@ pushd "$TMPDIR" > /dev/null
 
 # --out-link into to a file to ensure we have a GC root while activating
 generation="$TMPDIR/generation"
-nix build -f ~/dev/dotfiles --out-link "$generation" "$@" \
+nix build -f "$dotfiles_dir" --out-link "$generation" "$@" \
   homeConfigs."$HM_HOST".activationPackage
 
 "$generation"/activate

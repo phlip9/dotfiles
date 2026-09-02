@@ -15,7 +15,7 @@ for arg in "$@"; do
   esac
 done
 
-cmd=(nixos-rebuild -f ~/dev/dotfiles -A nixosConfigs."${NO_HOST}")
+cmd=(nixos-rebuild -f . -A nixosConfigs."${NO_HOST}")
 if [[ "${needs_sudo}" -eq 1 ]]; then
   cmd+=(--sudo)
 fi
