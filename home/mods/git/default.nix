@@ -242,9 +242,11 @@ in
       cpe = "cherry-pick --edit-todo";
       d = "diff";
       ds = "diff --staged";
-      fo = "fetch origin";
-      fu = "fetch upstream";
       fa = "fetch agent";
+      fl = "fetch lexe";
+      fo = "fetch origin";
+      fp = "fetch phlip9";
+      fu = "fetch upstream";
       last = "log -1 HEAD";
       lg = stripNewlines ''
         log --graph --abbrev-commit --decorate --all
@@ -268,12 +270,18 @@ in
       rsh = "reset --hard";
       rsha = "!git reset --hard agent/$(git branch --show-current)";
       rsham = "!git reset --hard agent/$(git master)";
+      rshl = "!git reset --hard lexe/$(git branch --show-current)";
+      rshlm = "!git reset --hard lexe/$(git master)";
       rsho = "!git reset --hard origin/$(git branch --show-current)";
       rshom = "!git reset --hard origin/$(git master)";
+      rshp = "!git reset --hard phlip9/$(git branch --show-current)";
+      rshpm = "!git reset --hard phlip9/$(git master)";
       rshu = "!git reset --hard upstream/$(git branch --show-current)";
       rshum = "!git reset --hard upstream/$(git master)";
       rsa = "!git reset agent/$(git master)";
+      rsl = "!git reset lexe/$(git master)";
       rso = "!git reset origin/$(git master)";
+      rsp = "!git reset phlip9/$(git master)";
       rsu = "!git reset upstream/$(git master)";
       rt = "restore";
       rts = "restore --staged";
