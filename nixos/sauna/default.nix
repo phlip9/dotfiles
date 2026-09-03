@@ -167,39 +167,68 @@
   };
 
   # repo updates -> receive webhook -> fetch+reset
+  #
+  # ## New repo setup runbook
+  #
+  # - Add new sops webhook secret: $(openssl rand -base64 32 | tr -d '+/=' | head -c 32)
+  # - Add new entry below
+  # - Redeploy
+  # - Add webhook: <https://github.com/XXX/YYY/settings/hooks/new>
+  #   - Payload URL: `https://sauna.phlip9.com/webhooks/github`
+  #   - Content type: `application/json`
+  #   - Secret: (from above)
+  #   - SSL verification: Yes
+  #   - Events: "Just the `push` event."
+  #   - Active: Yes
   services.github-webhook = {
     enable = true;
     user = "phlip9";
     repos =
       let
-        cmdFetchReset = builtins.toString (
-          pkgs.writeShellScript "fetch-reset-origin.sh" ''
+        cmdFetchResetMaster = builtins.toString (
+          pkgs.writeShellScript "fetch-reset-origin-master.sh" ''
             set -euxo pipefail
             git fetch origin
             git reset --hard origin/master
           ''
         );
+        cmdFetchResetMain = builtins.toString (
+          pkgs.writeShellScript "fetch-reset-origin-main.sh" ''
+            set -euxo pipefail
+            git fetch origin
+            git reset --hard origin/main
+          ''
+        );
       in
       {
         "phlip9/dotfiles" = {
-          secretName = "dotfiles-github-webhook-secret";
+          secretName = "github-webhook-secret-phlip9-dotfiles";
           branches = [ "master" ];
-          command = [ cmdFetchReset ];
+          command = [ cmdFetchResetMaster ];
           workingDir = "/home/phlip9/dev/dotfiles";
           runOnStartup = true;
         };
 
+        "phlip9/vss-server" = {
+          secretName = "github-webhook-secret-phlip9-vss-server";
+          branches = [ "main" ];
+          command = [ cmdFetchResetMain ];
+          workingDir = "/home/phlip9/dev/ldk-vss-server";
+          runOnStartup = true;
+        };
+
         "lexe-app/lexe" = {
-          secretName = "lexe-github-webhook-secret";
+          secretName = "github-webhook-secret-lexeapp-lexe";
           branches = [ "master" ];
-          command = [ cmdFetchReset ];
+          command = [ cmdFetchResetMaster ];
           workingDir = "/home/phlip9/dev/lexe";
           runOnStartup = true;
         };
       };
   };
-  sops.secrets.dotfiles-github-webhook-secret = { };
-  sops.secrets.lexe-github-webhook-secret = { };
+  sops.secrets.github-webhook-secret-phlip9-dotfiles = { };
+  sops.secrets.github-webhook-secret-phlip9-vss-server = { };
+  sops.secrets.github-webhook-secret-lexeapp-lexe = { };
 
   # give agents running on this machine limited access to certain repos, so they
   # can only write to `agent/**` branches.
