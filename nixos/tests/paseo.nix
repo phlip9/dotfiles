@@ -44,6 +44,13 @@
         hostnames = [
           "paseo.test"
         ];
+        # Simulate stale mutable config that conflicts with the declarative
+        # service-proxy policy.
+        settings.daemon.serviceProxy = {
+          enabled = true;
+          listen = "[::1]:6768";
+          publicBaseUrl = "http://services.test";
+        };
         nginx = {
           forceSSL = false;
           enableACME = false;
@@ -54,6 +61,8 @@
     };
 
   testScript = ''
+    password_file = "/run/credentials/paseo.service/daemon-password"
+
     machine.start()
     machine.wait_for_unit("multi-user.target")
 
@@ -78,6 +87,16 @@
             "tr '\\0' '\\n' < /proc/$pid/environ "
             "| grep '^PASEO_PASSWORD_FILE=/run/credentials/paseo.service/daemon-password$'"
         )
+        machine.succeed(
+            "pid=$(systemctl show paseo.service -p MainPID --value); "
+            "tr '\\0' '\\n' < /proc/$pid/environ "
+            "| grep '^PASEO_RELAY_ENABLED=true$'"
+        )
+        machine.succeed(
+            "pid=$(systemctl show paseo.service -p MainPID --value); "
+            "tr '\\0' '\\n' < /proc/$pid/environ "
+            "| grep '^PASEO_SERVICE_PROXY_ENABLED=false$'"
+        )
         machine.fail(
             "pid=$(systemctl show paseo.service -p MainPID --value); "
             "tr '\\0' '\\n' < /proc/$pid/environ "
@@ -93,18 +112,29 @@
             "http://[::1]:6767/api/status "
             "| jq -e '.status == \"server_info\"'"
         )
+        machine.succeed(
+            "test \"$(paseo --version)\" = "
+            "\"$(curl -g -sf -H 'Authorization: Bearer correct-password' "
+            "http://[::1]:6767/api/status | jq -r .version)\""
+        )
+        machine.fail("curl -g -sf --connect-timeout 1 http://[::1]:6768/")
+        machine.succeed("ss -H -ltnp | grep -F 'Paseo Daemon'")
+        machine.fail(
+            "ss -H -ltnp | grep -F 'Paseo Daemon' | awk '{print $4}' "
+            "| grep -Ev '^(127[.]0[.]0[.]1|\\[::1\\]):'"
+        )
 
     with subtest("terminal CLI drives a workspace terminal"):
         machine.succeed("install -d -m 0777 /tmp/paseo-terminal-test")
         machine.succeed(
-            "PASEO_PASSWORD=correct-password "
+            f"PASEO_PASSWORD_FILE={password_file} "
             "paseo terminal create --host '[::1]:6767' "
             "--cwd /tmp/paseo-terminal-test --name vm-terminal --json "
             "| jq -e '.name == \"vm-terminal\" "
             "and .cwd == \"/tmp/paseo-terminal-test\"'"
         )
         machine.succeed(
-            "PASEO_PASSWORD=correct-password "
+            f"PASEO_PASSWORD_FILE={password_file} "
             "paseo terminal send-keys --host '[::1]:6767' vm-terminal "
             "'echo paseo-terminal-file-ok > terminal-result; "
             "echo paseo-terminal-output-ok' Enter"
@@ -115,13 +145,13 @@
             timeout=30,
         )
         machine.succeed(
-            "PASEO_PASSWORD=correct-password "
+            f"PASEO_PASSWORD_FILE={password_file} "
             "paseo terminal capture --host '[::1]:6767' "
             "--scrollback vm-terminal "
             "| grep -Fx paseo-terminal-output-ok"
         )
         machine.succeed(
-            "PASEO_PASSWORD=correct-password "
+            f"PASEO_PASSWORD_FILE={password_file} "
             "paseo terminal kill --host '[::1]:6767' "
             "--json vm-terminal | jq -e '.success == true'"
         )

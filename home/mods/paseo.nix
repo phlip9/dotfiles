@@ -52,6 +52,7 @@ let
     # Disable unused speech features and their model downloads.
     PASEO_DICTATION_ENABLED = "false";
     PASEO_LISTEN = listen;
+    PASEO_SERVICE_PROXY_ENABLED = "false";
     PASEO_VOICE_MODE_ENABLED = "false";
     PASEO_WEB_UI_ENABLED = "false";
   };

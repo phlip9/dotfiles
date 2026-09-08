@@ -17,6 +17,8 @@ let
 
   daemonListen = hostPort cfg.listenAddress cfg.port;
   serviceProxyListen = hostPort cfg.serviceProxy.listenAddress cfg.serviceProxy.port;
+  serviceProxyIsPublic =
+    cfg.serviceProxy.enable && cfg.serviceProxy.publicBaseUrl != null;
   relayListen = hostPort cfg.relayServer.listenAddress cfg.relayServer.port;
 
   nginxVhostConfig = ''
@@ -186,6 +188,8 @@ in
         # Disable unused speech features and their model downloads.
         PASEO_DICTATION_ENABLED = "false";
         PASEO_PASSWORD_FILE = "%d/daemon-password";
+        PASEO_RELAY_ENABLED = lib.boolToString cfg.relay.enable;
+        PASEO_SERVICE_PROXY_ENABLED = lib.boolToString cfg.serviceProxy.enable;
         PASEO_VOICE_MODE_ENABLED = "false";
         PASEO_WEB_UI_ENABLED = if cfg.webUi.enable then "true" else "false";
       }
@@ -199,7 +203,7 @@ in
       // lib.optionalAttrs cfg.serviceProxy.enable {
         PASEO_SERVICE_PROXY_LISTEN = serviceProxyListen;
       }
-      // lib.optionalAttrs (cfg.serviceProxy.publicBaseUrl != null) {
+      // lib.optionalAttrs serviceProxyIsPublic {
         PASEO_SERVICE_PROXY_PUBLIC_BASE_URL = cfg.serviceProxy.publicBaseUrl;
       };
 

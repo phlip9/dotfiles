@@ -1,7 +1,6 @@
 # Paseo daemon + CLI with password-file support for runtime secrets.
 {
   callPackage,
-  fetchpatch,
   gnutar,
   lib,
   procps,
@@ -13,19 +12,18 @@ let
   # fetchNpmDeps output differs across nixpkgs revisions. Keep the hash for
   # this repo's pinned nixpkgs while upstream maintains the package logic.
   upstreamPaseo = callPackage (sources.paseo + "/nix/package.nix") {
-    npmDepsHash = "sha256-i5PbVUe2Ec+GtghV9IpCJQJ9hcUT5hFhmxneNvoD584=";
+    npmDepsHash = "sha256-0hOGev0HglOQmofzPQMfiWh1opg6cpiEgsfK22AKcGk=";
   };
 in
 
 upstreamPaseo.overrideAttrs (prevAttrs: {
+  # Upstream changed to Apache-2.0 in v0.7.0 but has not updated
+  # nix/package.nix.
+  meta = prevAttrs.meta // {
+    license = lib.licenses.asl20;
+  };
+
   patches = (prevAttrs.patches or [ ]) ++ [
-    # Security: reject low-order Curve25519 public keys
-    (fetchpatch {
-      url = "https://github.com/getpaseo/paseo/commit/7bd8fb25b6cdebe813ae16da4d2df4d2895e7bc2.patch";
-      hash = "sha256-NsITAF4UAU+OS3yt+NtvLnpNLEGx4UXWCYZadn4cQFQ=";
-      # Upstream's Nix source filter excludes test files before patchPhase.
-      includes = [ "packages/relay/src/crypto.ts" ];
-    })
     # Kill full git process tree after timeout so ssh-askpass prompts don't
     # persist and stack up.
     ./paseo-kill-git-process-tree.patch
