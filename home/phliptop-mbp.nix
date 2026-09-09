@@ -51,7 +51,7 @@
     # ./mods/nethack.nix
     ./mods/nix-sources.nix
     ./mods/nvim/default.nix
-    ./mods/paseo.nix
+    # ./mods/paseo.nix
     ./mods/postgres.nix
     ./mods/python.nix
     ./mods/ssh.nix
@@ -136,6 +136,6 @@
     ensureDatabases = [ "lexe-dev" ];
   };
 
-  # paseo self-hosted agent interface
-  services.paseo.enable = true;
+  # # paseo self-hosted agent interface
+  # services.paseo.enable = true;
 }
