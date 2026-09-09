@@ -101,7 +101,7 @@ fix (phlipPkgs: {
   ]);
 
   # paseo - self-hosted daemon for claude-code, codex, pi, etc
-  paseo = callPackage ./paseo.nix { inherit sources; };
+  paseo = callPackage ./paseo { inherit sources; };
 
   # rage-age-compat - provide an age shim to the rage binary
   rage-age-compat = callPackage ./rage-age-compat.nix { };
