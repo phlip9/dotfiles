@@ -1,5 +1,5 @@
-# Run: nix-shell pkgs/update.nix
-# Or:  nix-shell pkgs/update.nix --arg packageNames '[ "claude-code" "codex" ]'
+# Run: nix-shell pkgs/update/default.nix
+# Or:  nix-shell pkgs/update/default.nix --arg packageNames '[ "claude-code" "codex" ]'
 {
   packageNames ? [ ],
 }:
