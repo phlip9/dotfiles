@@ -157,6 +157,13 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - `pkgs`: nixpkgs stable package set
 - `sources`: npins pinned external sources (nixpkgs, home-manager, ...)
 
+### packaging
+
+- a simple one-file package can go live in `pkgs/<name>.nix` or
+  `nixos/pkgs/<name>.nix`. if a package requires more than one file, say for an
+  update script or patch file, it must be moved into a separate directory, like
+  `pkgs/<name>/default.nix` or `nixos/pkgs/<name>/default.nix`.
+
 
 ## nvim
 
