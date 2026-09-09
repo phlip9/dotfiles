@@ -30,27 +30,14 @@ fix (phlipPkgs: {
   # cataclysm-tlg - Catacylsm: The Last Generation (game)
   cataclysm-tlg = callPackage ./cataclysm-tlg.nix { };
 
-  # claude-agent-acp - ACP adapter for Anthropic claude code CLI
-  claude-agent-acp = callPackage ./claude-agent-acp.nix {
-    inherit (phlipPkgs) claude-code;
-  };
-
   # claude-code - Anthropic claude code CLI
   claude-code = callPackage ./claude-code { };
 
   # codex - OpenAI codex CLI
   codex = callPackage ./codex { };
 
-  # codex-acp - ACP adapter for OpenAI codex CLI
-  codex-acp = callPackage ./codex-acp.nix {
-    inherit (phlipPkgs) codex;
-  };
-
   # dist - build and distribute binary releases
   dist = pkgs.cargo-dist;
-
-  # # profiler.firefox.org but local
-  # firefox-profiler = callPackage ./firefox-profiler.nix { };
 
   # restore fs mtimes from git
   git-restore-mtime = callPackage ./git-restore-mtime.nix { };
@@ -70,15 +57,8 @@ fix (phlipPkgs: {
   # GitHub App installation-token client for local authd socket API
   github-agent-token = callPackage ./github-agent-token { };
 
-  # # ctz/graviola - devshell for graviola development
-  # graviola-tools = callPackage ./graviola-tools.nix { };
-
-  # go-acme/lego - patched Let's Encrypt ACME client
+  # lego - patched Let's Encrypt ACME client
   lego = callPackage ./lego.nix { };
-
-  # MOMW Tools Pack pre-built unstable
-  # TODO(phlip9): GitLab CI artifacts expired, need to update URL
-  # momw-tools-pack = callPackage ./momw-tools-pack.nix { };
 
   # Marinara Engine lite wrapped in a bubblewrap sandbox
   marinara-engine = callPackage ./marinara-engine/sandbox.nix {
@@ -86,7 +66,7 @@ fix (phlipPkgs: {
   };
   marinara-engine-unwrapped = callPackage ./marinara-engine { };
 
-  # nethack (game)
+  # nethack - roguelike game
   nethack = callPackage ./nethack { };
 
   # neovim - wrapped neovim with plugins and tools
@@ -106,7 +86,7 @@ fix (phlipPkgs: {
   # rage-age-compat - provide an age shim to the rage binary
   rage-age-compat = callPackage ./rage-age-compat.nix { };
 
-  # sampling profiler written in Rust, with native firefox-profiler integration
+  # samply - sampling profiler written in Rust
   samply = callPackage ./samply.nix { };
 
   # sops wrapped with clean nvim (no plugins) for secret editing
