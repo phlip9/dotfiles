@@ -385,8 +385,8 @@
     # path of exile 2 (game) price checker
     phlipPkgsNixos.exiled-exchange-2
 
-    # buzz
-    phlipPkgsNixos.buzz
+    # # buzz
+    # phlipPkgsNixos.buzz
 
     # video player
     phlipPkgsNixos.mpv
