@@ -4,7 +4,7 @@
   packageNames ? [ ],
 }:
 let
-  dotfiles = import ../. { };
+  dotfiles = import ../../. { };
   inherit (dotfiles) lib pkgs;
   inherit (builtins)
     listToAttrs
@@ -16,8 +16,8 @@ let
 
   # Package definitions live in the stable and NixOS package sets.
   pkgsDirs = map toString [
-    ./.
-    ../nixos/pkgs
+    ../.
+    ../../nixos/pkgs
   ];
 
   # Packages that can't be evaluated (missing deps, use abort which tryEval
@@ -40,16 +40,23 @@ let
     phlipPackageDefs // phlipNixosPackageDefs
   ) skipPackages;
 
-  # Check if package is defined in pkgs/ or nixos/pkgs/ via meta.position
+  # Check if package is defined in pkgs/ or nixos/pkgs/.
   isLocalPackage =
     pkg:
     let
-      pos = pkg.meta.position or null;
-      # meta.position is "path:line", extract the path
-      filePath = if pos != null then lib.head (lib.splitString ":" pos) else null;
+      # `unsafeGetAttrPos` is a nix builtin that returns the file location of
+      # an attr in an attrset.
+      srcPos = builtins.unsafeGetAttrPos "src" pkg;
+      # `meta.position` is set by `stdenv.mkDerivation` and contains the file
+      # path of the file defining the package.
+      metaPos = pkg.meta.position or null;
+      filePaths =
+        lib.optional (srcPos != null) srcPos.file
+        ++ lib.optional (metaPos != null) (lib.head (lib.splitString ":" metaPos));
     in
-    filePath != null
-    && lib.any (pkgsDir: lib.hasPrefix "${pkgsDir}/" filePath) pkgsDirs;
+    lib.any (
+      filePath: lib.any (pkgsDir: lib.hasPrefix "${pkgsDir}/" filePath) pkgsDirs
+    ) filePaths;
 
   # Try to get a package with updateScript, returns null if eval fails or no
   # updateScript
