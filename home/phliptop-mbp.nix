@@ -133,7 +133,10 @@
   # per-user postgres systemd service: ./mods/postgres.nix
   services.postgres = {
     enable = true;
-    ensureDatabases = [ "lexe-dev" ];
+    ensureDatabases = [
+      "lexe-dev"
+      "ldk-vss-server-dev"
+    ];
   };
 
   # # paseo self-hosted agent interface
