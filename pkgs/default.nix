@@ -39,6 +39,9 @@ fix (phlipPkgs: {
   # dist - build and distribute binary releases
   dist = pkgs.cargo-dist;
 
+  # gh-stack - GitHub stacked PRs CLI extension
+  gh-stack = callPackage ./gh-stack.nix { };
+
   # restore fs mtimes from git
   git-restore-mtime = callPackage ./git-restore-mtime.nix { };
 
