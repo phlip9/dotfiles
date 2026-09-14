@@ -1,4 +1,7 @@
-{ ... }:
+{ phlipPkgs, ... }:
 {
-  programs.gh.enable = true;
+  programs.gh = {
+    enable = true;
+    extensions = [ phlipPkgs.gh-stack ];
+  };
 }
