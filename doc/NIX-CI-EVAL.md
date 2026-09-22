@@ -59,6 +59,9 @@ Nixpkgs is imported with CI-oriented config:
 ## Local checks
 
 ```bash
+# Evaluate all CI jobs locally with nixbot's evaluator.
+just nix-ci-eval
+
 # Eval a specific NixOS-only package job.
 nix eval -f ./nix/ci/default.nix \
   phlipPkgsNixos.github-agent-authd.x86_64-linux.name

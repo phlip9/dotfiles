@@ -34,8 +34,10 @@ nix-ci: nix-fmt nix-lint
 
 # Simulate nixbot CI eval (nix-eval-jobs on flake checks)
 nix-ci-eval *args:
-    nix shell -f . pkgsUnstable.nix-eval-jobs --command \
+    nix shell -f . phlipPkgsNixos.nixbot-eval-jobs \
+        phlipPkgsNixos.nixbot-eval-jobs.nix --command \
         nix-eval-jobs \
+            --workers 4 \
             --option eval-cache false \
             --force-recurse \
             --check-cache-status \
