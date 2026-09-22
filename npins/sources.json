@@ -36,9 +36,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "76cb73a99911bef6a395cf331c36e6f4e620c6a9",
-      "url": "https://github.com/Mic92/niks3/archive/76cb73a99911bef6a395cf331c36e6f4e620c6a9.tar.gz",
-      "hash": "sha256-to1UGPixvqyQwl1UC05/e+o3MYiIJ1DZ6m48xovDsq0="
+      "revision": "1c74f969454c91db023fc37f286b5a113c30cdd6",
+      "url": "https://github.com/Mic92/niks3/archive/1c74f969454c91db023fc37f286b5a113c30cdd6.tar.gz",
+      "hash": "sha256-rllb4XHCSJnr6szko7OSU/YE8ArpQclIK6O4BSd8Vu8="
     },
     "nixbot": {
       "type": "Git",
@@ -49,9 +49,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "df8d4b65ae9007514235e16f727e36a793733369",
-      "url": "https://github.com/Mic92/nixbot/archive/df8d4b65ae9007514235e16f727e36a793733369.tar.gz",
-      "hash": "sha256-x6s0VxOCanK2Cg++CalQVg192iFjoFRnyHlLgkE8uqI="
+      "revision": "cb0e0719cc64d1d62695bf4e991d4a017d2a8337",
+      "url": "https://github.com/Mic92/nixbot/archive/cb0e0719cc64d1d62695bf4e991d4a017d2a8337.tar.gz",
+      "hash": "sha256-k1MQvLlfgYXExvfHP2vIVvT/+3V3ldNhbvhGTJGgyuU="
     },
     "nixos-unstable": {
       "type": "Channel",
