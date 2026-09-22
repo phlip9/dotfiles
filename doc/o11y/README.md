@@ -20,21 +20,23 @@
 
 ```
 internet
-    │
-    ▼
+    |
+    v
 nginx (443, TLS/ACME)
-    │
-    ▼
+    |
+    v
 grafana (127.0.0.1:3000)
-    │ MetricsQL queries
-    ▼
+    | MetricsQL queries
+    v
 victoriametrics (127.0.0.1:8428)
-    │ promscrape (15s interval)
-    ├── victoriametrics   localhost:8428/metrics
-    ├── grafana           localhost:3000/metrics
-    ├── node-exporter     localhost:9100/metrics
-    │   ...
-    └── nginx-exporter    localhost:9113/metrics
+    | promscrape (15s interval)
+    +-- victoriametrics   localhost:8428/metrics
+    +-- grafana           localhost:3000/metrics
+    +-- node-exporter     localhost:9100/metrics
+    +-- nginx-exporter    localhost:9113/metrics
+    +-- postgres-exporter localhost:9187/metrics
+    +-- nixbot            https://127.0.0.1:443/metrics
+    +-- niks3             [::1]:5751/metrics
 ```
 
 Target machine: `sauna` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0)
@@ -103,6 +105,21 @@ Listen: `127.0.0.1:9113`
 
 Requires `services.nginx.statusPage = true` to expose
 `/nginx_status` on localhost.
+
+### nixbot and niks3
+
+Scraping is enabled automatically when each service is enabled.
+
+Useful queries in Grafana Explore:
+
+- `up{job=~"nixbot|niks3"}`: scrape health
+- `nixbot_queue_depth`: pending/running builds
+- `nixbot_upload_queue_depth`: paths awaiting cache upload
+- `niks3_cache_objects`: objects tracked by the cache
+- `niks3_cache_logical_bytes`: logical cache size
+
+`nixosTests.nixbot` checks that both services' metrics reach VictoriaMetrics
+after a successful build and cache upload.
 
 ### nginx (TLS termination + reverse proxy)
 

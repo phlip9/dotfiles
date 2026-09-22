@@ -6,6 +6,7 @@
 # - niks3 server writes signed cache objects to S3 (local RustFS S3 API in test)
 # - reads the output's narinfo directly from S3, verifies its signature, and
 #   copies the output into an empty Nix store
+# - VictoriaMetrics scrapes both services through their local endpoints
 let
   apiToken = "test-token-that-is-at-least-36-characters-long";
   s3AccessKey = "rustfsadmin";
@@ -133,6 +134,14 @@ in
         "flakes"
       ];
       nix.settings.trusted-public-keys = [ signingPublicKey ];
+
+      services.phlip9-o11y = {
+        enable = true;
+        retentionPeriod = "1d";
+        grafana.adminPasswordFile = pkgs.writeText "gf-admin-pwd" "test-password";
+        grafana.secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
+      };
+      services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
 
       environment.systemPackages = [
         phlipPkgsNixos.nixbot-cli
@@ -425,5 +434,26 @@ in
             f"nix --store /tmp/cache-store store cat {store_path}"
         ).strip()
         assert content == "hello"
+
+    with subtest("metrics: nginx vhost exposes nixbot metrics over loopback"):
+        machine.succeed(
+            "curl -sf -H 'Host: localhost' http://127.0.0.1/metrics "
+            "| grep '^nixbot_queue_depth '"
+        )
+
+    with subtest("metrics: VictoriaMetrics ingests nixbot and niks3 metrics"):
+        machine.wait_for_unit("victoriametrics.service")
+        for query in (
+            'up{job="nixbot"} == 1',
+            'up{job="niks3"} == 1',
+            'nixbot_builds{job="nixbot",status="succeeded"} >= 1',
+            'niks3_cache_objects{job="niks3"} >= 1',
+        ):
+            machine.wait_until_succeeds(
+                "curl -sfG http://127.0.0.1:8428/api/v1/query "
+                f"--data-urlencode {shlex.quote('query=' + query)} "
+                "| jq -e '.data.result | length > 0'",
+                timeout=60,
+            )
   '';
 }

@@ -29,6 +29,8 @@ let
   cfgGfSrv = cfgGf.settings.server;
   gfAddr = "${cfgGfSrv.http_addr}:${toString cfgGfSrv.http_port}";
 
+  cfgNixbot = config.services.nixbot;
+
   exporterAddr = exporter: "${exporter.listenAddress}:${toString exporter.port}";
   exporterTargets = exporter: [
     { targets = [ (exporterAddr exporter) ]; }
@@ -87,6 +89,8 @@ in
       enable = true;
       listenAddress = "127.0.0.1:8428";
       retentionPeriod = cfg.retentionPeriod;
+      # niks3 listens on IPv6 loopback; VM defaults to IPv4-only dialing.
+      extraOptions = [ "-enableTCP6" ];
 
       prometheusConfig = {
         scrape_configs = [
@@ -114,6 +118,26 @@ in
         ++ lib.optional config.services.prometheus.exporters.postgres.enable ({
           job_name = "postgres-exporter";
           static_configs = exporterTargets config.services.prometheus.exporters.postgres;
+        })
+        ++ lib.optional cfgNixbot.enable (
+          let
+            useTLS = config.services.nginx.virtualHosts.${cfgNixbot.domain}.forceSSL;
+          in
+          {
+            job_name = "nixbot";
+            scheme = if useTLS then "https" else "http";
+            # VM uses server_name for both TLS verification/SNI and HTTP Host.
+            tls_config.server_name = cfgNixbot.domain;
+            static_configs = [
+              { targets = [ "127.0.0.1:${if useTLS then "443" else "80"}" ]; }
+            ];
+          }
+        )
+        ++ lib.optional config.services.niks3.enable ({
+          job_name = "niks3";
+          static_configs = [
+            { targets = [ config.services.niks3.httpAddr ]; }
+          ];
         });
       };
     };
