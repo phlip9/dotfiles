@@ -83,12 +83,6 @@ in
         description = "URL for the binary cache (served by Cloudflare R2).";
       };
 
-      publicKey = lib.mkOption {
-        type = lib.types.str;
-        example = "cache.phlip9.com-1:ABC123...";
-        description = "Nix signing public key for the cache.";
-      };
-
       s3 = {
         endpoint = lib.mkOption {
           type = lib.types.str;
@@ -127,8 +121,6 @@ in
       };
 
       buildSystems = [ "x86_64-linux" ];
-      evalWorkerCount = 4; # tune for 6c/12t machine
-      buildConcurrency = 10; # max concurrent builds
 
       github = {
         enable = true;

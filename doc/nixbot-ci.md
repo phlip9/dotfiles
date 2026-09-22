@@ -17,20 +17,27 @@ Components:
 
 ```
 GitHub webhook
-    │
-    ▼
+    |
+    v
 https://ci.phlip9.com/webhooks/github
-    │
-    ▼
+    |
+    v
 nginx (ci.phlip9.com:443)
-    │
-    ├─► nixbot (127.0.0.1:8010) ───► niks3 push (post-build)
-    │                                       │
-    │                                       ▼
-    └─► niks3 server ([::1]:5751) ─► Cloudflare R2
-                                            │
-                                            ▼
-                                   cache.phlip9.com (public reads)
+    |
+    v
+nixbot (/run/nixbot/web.sock)
+    |
+    v
+persistent upload queue -> niks3 push --stdin
+                                  |
+                                  v
+                          niks3 server ([::1]:5751)
+                                  |
+                                  v
+                            Cloudflare R2
+                                  |
+                                  v
+                       cache.phlip9.com (public reads)
 ```
 
 ## Files
@@ -52,17 +59,19 @@ services.phlip9-nixbot-ci = {
 
   github = {
     appId = 2746100;
-    oauthClientId = "Ov23lipvJOGiZTG0aqv9";
+    oauthClientId = "Iv23liE6dM8w5D4JF7Qz";
   };
 
   cache = {
     url = "https://cache.phlip9.com";
-    publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
     s3.endpoint = "30faeb30dcb2a77a72fdc0948c99de62.r2.cloudflarestorage.com";
     s3.bucket = "phlip9-nix-cache";
   };
 };
 ```
+
+Host concurrency is set in `nixos/sauna/default.nix`. Client cache trust is
+configured separately in `nixos/mods/nix-cache.nix`.
 
 ### Secrets
 
@@ -151,29 +160,25 @@ nix key convert-secret-to-public < key && echo ""
 - Account ID: `30faeb30dcb2a77a72fdc0948c99de62`
 - S3 endpoint: `30faeb30dcb2a77a72fdc0948c99de62.r2.cloudflarestorage.com`
 
-**Cache signing key** (public):
+**Cache signing pubkey**:
 - `cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=`
 
-## Checklist
+## Validation
 
-### Before deployment:
-- [ ] Create Cloudflare R2 bucket
-- [ ] Connect cache.phlip9.com domain
-- [ ] Create R2 API token
-- [ ] Create GitHub App
-- [ ] Generate all secrets
-- [ ] Encrypt secrets with sops
-- [ ] Add nixbot-nix + niks3 to npins
-- [ ] Install GitHub App on repo
+Run the integration test before deployment:
 
-### After deployment:
-- [ ] Verify ACME cert for ci.phlip9.com
-- [ ] Test webhook delivery
-- [ ] Test cache uploads to R2
-- [ ] Verify niks3-gc timer is active
+```bash
+nix build -f . nixosTests.nixbot --no-link
+```
+
+After deployment, check nginx/webhook delivery, cache uploads to R2, and the
+`niks3-gc` timer. On sauna, `curl -g 'http://[::1]:5751/health'` to check niks3
+liveness and `/readyz` to check DB connection.
 
 ## Adding New Repos
 
 - Install the `phlip9-nixbot-ci` GitHub App on the repo
 - Ensure repo has `flake.nix` with `.#checks`
+- Reload repos in the nixbot UI and enable the repo. With `github.topic = null`,
+  discovery does not automatically enable new repos.
 - Push to trigger first build

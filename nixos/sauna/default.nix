@@ -302,7 +302,6 @@
 
     cache = {
       url = "https://cache.phlip9.com";
-      publicKey = "cache.phlip9.com-1:XKElS8qFXxVXcXIGFjRkGpyxiernJzHeQhMJ59VUdf4=";
       s3.endpoint = "30faeb30dcb2a77a72fdc0948c99de62.r2.cloudflarestorage.com";
       s3.bucket = "phlip9-nix-cache";
     };
@@ -316,13 +315,18 @@
     # Don't need to expose the postgres to non-local connections
     enableTCPIP = false;
   };
-  # Per-repo secrets.json that is available in post-build effects as
-  # `$HERCULES_CI_SECRETS_JSON`.
-  #
-  # Format: <https://docs.hercules-ci.com/hercules-ci-agent/secrets-json/>
-  services.nixbot.effects.perRepoSecretFiles = {
-    "github:phlip9/notes-private" =
-      config.sops.secrets.ci-secrets-phlip9-notes-private.path;
+  services.nixbot = {
+    # Tune eval and build concurrency for sauna's 6c/12t CPU.
+    evalWorkerCount = 4;
+    buildConcurrency = 10;
+
+    # Per-repo secrets.json for post-build effects, available as
+    # `$HERCULES_CI_SECRETS_JSON`.
+    # Format: <https://docs.hercules-ci.com/hercules-ci-agent/secrets-json/>
+    effects.perRepoSecretFiles = {
+      "github:phlip9/notes-private" =
+        config.sops.secrets.ci-secrets-phlip9-notes-private.path;
+    };
   };
   sops.secrets.ci-secrets-phlip9-notes-private = { };
 

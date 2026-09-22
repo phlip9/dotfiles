@@ -2,7 +2,7 @@
 #
 # - fake GitHub API advertises a local test repo and records check runs
 # - signed push webhook triggers nixbot eval and build
-# - niks3 post-build step uploads the output
+# - niks3 streaming uploader uploads the output
 # - niks3 server writes signed cache objects to S3 (local RustFS S3 API in test)
 # - reads the output's narinfo directly from S3, verifies its signature, and
 #   copies the output into an empty Nix store
@@ -120,7 +120,6 @@ in
 
         cache = {
           url = "http://localhost:5751";
-          publicKey = signingPublicKey;
           s3 = {
             endpoint = "127.0.0.1:9000";
             bucket = s3Bucket;
@@ -291,7 +290,7 @@ in
         machine.wait_for_unit("rustfs-setup.service")
         machine.wait_for_unit("niks3.service")
         machine.wait_until_succeeds(
-            "curl --noproxy '*' --fail -g -s 'http://[::1]:5751/health'",
+            "curl --noproxy '*' --fail -g -s 'http://[::1]:5751/readyz'",
             timeout=120,
         )
 
@@ -388,7 +387,7 @@ in
         log = nbo("log", str(build_number), "test", "-R", repo)
         assert "building-test" in log
 
-    with subtest("cache: post-build upload is signed and readable from S3"):
+    with subtest("cache: streaming upload is signed and readable from S3"):
         store_path = machine.succeed(
             "nix eval --raw "
             "'git+file:///var/lib/test-repo?ref=master"
