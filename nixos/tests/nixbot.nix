@@ -2,6 +2,7 @@
 #
 # - fake GitHub API advertises a local test repo and records check runs
 # - signed push webhook triggers nixbot eval and build
+# - outside PRs require maintainer approval. same-repo PRs remain trusted
 # - niks3 streaming uploader uploads the output
 # - niks3 server writes signed cache objects to S3 (local RustFS S3 API in test)
 # - reads the output's narinfo directly from S3, verifies its signature, and
@@ -280,6 +281,22 @@ in
             f"NIXBOT_URL={shlex.quote(nixbot_url)} nbo {shlex.join(args)}"
         )
 
+    # Deliver signed GitHub events through the production webhook endpoint.
+    def webhook(event, payload, delivery):
+        body = json.dumps(payload).encode()
+        secret = machine.succeed(
+            "cat /run/secrets/nixbot-github-webhook-secret"
+        ).strip().encode()
+        sig = hmac.new(secret, body, hashlib.sha256).hexdigest()
+        machine.succeed(
+            f"curl --fail -s -X POST {nixbot_url}/webhooks/github "
+            "-H 'Content-Type: application/json' "
+            f"-H {shlex.quote('X-GitHub-Event: ' + event)} "
+            f"-H {shlex.quote('X-GitHub-Delivery: ' + delivery)} "
+            f"-H 'X-Hub-Signature-256: sha256={sig}' "
+            f"-d {shlex.quote(body.decode())}"
+        )
+
     start_all()
 
     with subtest("secrets: sops decrypts the nixbot CI fixture"):
@@ -338,24 +355,12 @@ in
 
     with subtest("nixbot: webhook triggers eval, build, and statuses"):
         sha = machine.succeed("git -C /var/lib/test-repo rev-parse master").strip()
-        body = json.dumps({
+        webhook("push", {
             "ref": "refs/heads/master",
             "after": sha,
             "repository": {"id": 1, "default_branch": "master"},
             "head_commit": {"message": "initial commit"},
-        }).encode()
-        webhook_secret = machine.succeed(
-            "cat /run/secrets/nixbot-github-webhook-secret"
-        ).strip().encode()
-        sig = hmac.new(webhook_secret, body, hashlib.sha256).hexdigest()
-        machine.succeed(
-            f"curl --fail -s -X POST {nixbot_url}/webhooks/github "
-            "-H 'Content-Type: application/json' "
-            "-H 'X-GitHub-Event: push' "
-            "-H 'X-GitHub-Delivery: test-delivery-1' "
-            f"-H 'X-Hub-Signature-256: sha256={sig}' "
-            f"-d {shlex.quote(body.decode())}"
-        )
+        }, "test-push")
 
         def github_checks_posted(_ignore):
             out = machine.execute("cat /var/lib/fake-github/check_runs.jsonl")[1]
@@ -434,6 +439,78 @@ in
             f"nix --store /tmp/cache-store store cat {store_path}"
         ).strip()
         assert content == "hello"
+
+    # Give each PR a distinct tree so nixbot's build reuse cannot merge them.
+    def open_pr(number, association, head_repo_id=2):
+        machine.succeed(
+            "git -C /tmp/test-flake checkout --detach master\n"
+            f"echo {number} > /tmp/test-flake/pr-number\n"
+            "git -C /tmp/test-flake add pr-number\n"
+            f"git -C /tmp/test-flake commit -m 'test PR {number}'\n"
+            "git -C /tmp/test-flake push /var/lib/test-repo "
+            f"HEAD:refs/pull/{number}/head"
+        )
+        head_sha = machine.succeed(
+            f"git -C /var/lib/test-repo rev-parse refs/pull/{number}/head"
+        ).strip()
+        webhook("pull_request", {
+            "action": "opened",
+            "repository": {"id": 1},
+            "sender": {"login": "contributor"},
+            "pull_request": {
+                "number": number,
+                "state": "open",
+                "user": {"login": "contributor"},
+                "author_association": association,
+                "base": {"ref": "master", "sha": sha},
+                "head": {"sha": head_sha, "repo": {"id": head_repo_id}},
+            },
+        }, f"test-pr-{number}")
+
+    # Assert on actual builds, independent of GitHub check-run delivery timing.
+    def pr_builds(number):
+        return json.loads(
+            nbo("build", "list", "-R", repo, "--pr", str(number), "--json")
+        )
+
+    # A green build proves the gate released both evaluation and builds.
+    def pr_succeeded(number):
+        return any(build["status"] == "succeeded" for build in pr_builds(number))
+
+    with subtest("approval: outside and previous contributors are gated"):
+        for number, association in (
+            (7, "FIRST_TIME_CONTRIBUTOR"),
+            (8, "CONTRIBUTOR"),
+        ):
+            open_pr(number, association)
+
+            # Wait until nixbot processes the event before asserting no build.
+            def gate_posted(_ignore):
+                out = machine.succeed("cat /var/lib/fake-github/check_runs.jsonl")
+                return any(
+                    check.get("external_id") == f"approve-pr-{number}"
+                    and check.get("conclusion") == "action_required"
+                    for check in map(json.loads, out.splitlines())
+                )
+
+            retry(gate_posted, timeout_seconds=60)
+            assert pr_builds(number) == []
+
+    with subtest("approval: maintainer approval releases the held PR"):
+        webhook("check_run", {
+            "action": "requested_action",
+            "repository": {"id": 1},
+            "sender": {"login": "acme"},
+            "requested_action": {"identifier": "approve"},
+            "check_run": {"external_id": "approve-pr-7", "head_sha": sha},
+        }, "test-approve-pr-7")
+        retry(lambda _: pr_succeeded(7), timeout_seconds=120)
+        # Approving one PR must not approve another from the same author.
+        assert pr_builds(8) == []
+
+    with subtest("approval: same-repo PRs build without approval"):
+        open_pr(9, "NONE", head_repo_id=1)
+        retry(lambda _: pr_succeeded(9), timeout_seconds=120)
 
     with subtest("metrics: nginx vhost exposes nixbot metrics over loopback"):
         machine.succeed(

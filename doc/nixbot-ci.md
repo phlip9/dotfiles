@@ -73,6 +73,17 @@ services.phlip9-nixbot-ci = {
 Host concurrency is set in `nixos/sauna/default.nix`. Client cache trust is
 configured separately in `nixos/mods/nix-cache.nix`.
 
+### PR approval
+
+`services.nixbot.prApproval.enable = true` halts outside GitHub PRs before
+eval/build. Only `OWNER`, `MEMBER`, and `COLLABORATOR` are trusted.
+`CONTRIBUTOR` still needs approval. PRs with a head branch in the base repo are
+trusted, including GitHub Apps/bots with association `NONE`.
+
+Use **Approve CI** on the GitHub check or approve in the nixbot UI. Upstream
+approval covers the whole PR, including later pushes. A repo can opt out with
+`require_approval = false` in its default branch's `nixbot.toml`.
+
 ### Cache lifetime
 
 Configured in `ops/zone/phlip9.com.nix`:

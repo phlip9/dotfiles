@@ -122,6 +122,17 @@ in
 
       buildSystems = [ "x86_64-linux" ];
 
+      # Outside PRs need approval.
+      prApproval = {
+        enable = true;
+        trustedAssociations = [
+          "OWNER"
+          "MEMBER"
+          "COLLABORATOR"
+          # "CONTRIBUTOR" # Allow anyone who has previously landed PRs
+        ];
+      };
+
       github = {
         enable = true;
         inherit (cfg.github)
