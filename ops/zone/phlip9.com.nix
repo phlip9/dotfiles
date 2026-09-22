@@ -43,43 +43,63 @@ in
   resource.cloudflare_ruleset.phlip9_nix_cache_settings = {
     zone_id = zone_id;
     name = "phlip9-nix-cache nix binary cache settings";
-    description = "cache everything in nix binary cache";
+    description = "cache NARs and metadata with separate lifetimes";
     kind = "zone";
     phase = "http_request_cache_settings";
 
-    rules = [
-      {
-        description = "cache everything in nix binary cache";
-        expression = ''(http.host eq "cache.phlip9.com")'';
-        action = "set_cache_settings";
-
-        action_parameters = {
-          cache = true;
-          edge_ttl = {
-            mode = "override_origin";
-            default = 1 * 365 * 24 * 60 * 60; # 1 year
-
-            status_code_ttl = [
-              # cache negative results for a bit
-              {
-                status_code_range = {
-                  from = 300;
-                  to = 499;
-                };
-                value = 10 * 60; # 10 minutes
-              }
-              # don't cache server errors
-              {
-                status_code_range = {
-                  from = 500;
-                };
-                value = -1; # never
-              }
-            ];
+    rules =
+      let
+        cacheRule =
+          {
+            description,
+            pathFilter,
+            ttl,
+          }:
+          {
+            inherit description;
+            expression = ''(http.host eq "cache.phlip9.com" and ${pathFilter})'';
+            action = "set_cache_settings";
+            action_parameters = {
+              cache = true;
+              edge_ttl = {
+                mode = "override_origin";
+                default = ttl;
+                status_code_ttl = [
+                  # cache negative results for a bit
+                  {
+                    status_code = 404;
+                    value = 10 * 60; # 10 minutes
+                  }
+                  # Don't cache other client or server errors.
+                  {
+                    status_code_range = {
+                      from = 400;
+                      to = 403;
+                    };
+                    value = -1;
+                  }
+                  {
+                    status_code_range.from = 405;
+                    value = -1;
+                  }
+                ];
+              };
+            };
           };
-        };
-      }
-    ];
+      in
+      [
+        (cacheRule {
+          description = "cache content-addressed NARs for one year";
+          pathFilter = ''starts_with(http.request.uri.path, "/nar/")'';
+          ttl = 365 * 24 * 60 * 60; # 1 year
+        })
+        (cacheRule {
+          description = "revalidate narinfo and cache metadata every two hours";
+          pathFilter = ''not starts_with(http.request.uri.path, "/nar/")'';
+          # Metadata may outlive GC'd objects. Use the Free plan's minimum TTL.
+          ttl = 2 * 60 * 60; # 2 hours
+        })
+      ];
   };
 
   # DNS records

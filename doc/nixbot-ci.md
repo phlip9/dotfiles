@@ -73,6 +73,17 @@ services.phlip9-nixbot-ci = {
 Host concurrency is set in `nixos/sauna/default.nix`. Client cache trust is
 configured separately in `nixos/mods/nix-cache.nix`.
 
+### Cache lifetime
+
+Configured in `ops/zone/phlip9.com.nix`:
+
+| Response | TTL |
+|----------|-----|
+| `/nar/*` object | 1 year |
+| metadata (`nix-cache-info`, `*.narinfo`, `*.ls`) | 2 hours |
+| 404 | 10 minutes |
+| Other 4xx/5xx | Not cached |
+
 ### Secrets
 
 All secrets in `nixos/sauna/secrets.yaml`:
