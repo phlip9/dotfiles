@@ -92,9 +92,9 @@
   be tackled independently.
 - create clean, atomic, readable, and easily-reviewable commits. after I review
   your work, structure new changes as either new commits or fixups into your
-  prior commits to maintain a clear linear history. don't rebase or autosquash
-  your changes unless asked--I will rebase and auto-squash fixup commits as I
-  approve them.
+  prior commits to maintain a clear linear history. sequence fixups immediately
+  after the commit that they modify. don't rebase or autosquash your changes
+  unless asked.
 - aim for maintainability, clarity, and elegance first.
 
 ## nixos
