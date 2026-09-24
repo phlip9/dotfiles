@@ -88,4 +88,13 @@
 
   # Headless server, no need for ssh-askpass
   services.nix-ssh-agent.ssh-askpass = null;
+
+  # per-user postgres systemd service: ./mods/postgres.nix
+  services.postgres = {
+    enable = true;
+    ensureDatabases = [
+      "lexe-dev"
+      "ldk-vss-server-dev"
+    ];
+  };
 }
