@@ -10,6 +10,7 @@
       environment.systemPackages = [
         config.services.paseo.package
         pkgs.curl
+        pkgs.git
         pkgs.jq
       ];
 
