@@ -18,9 +18,7 @@
   boot.tmp.cleanOnBoot = true;
 
   # Limit max journal size
-  services.journald.extraConfig = ''
-    SystemMaxUse=512M
-  '';
+  services.journald.settings.Journal.SystemMaxUse = "512M";
 
   #
   # Nix
