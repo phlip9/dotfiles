@@ -3,10 +3,8 @@
 # See: pkgs/matugen-themes.nix
 {
   fetchFromGitHub,
-  linkFarm,
   matugen-themes,
   nix-update-script,
-  noctalia-shell,
   runCommand,
   rustPlatform,
 }:
@@ -34,22 +32,8 @@ let
     passthru = {
       updateScript = nix-update-script { };
 
-      # noctalia-shell color templates
-      noctalia-templates =
-        runCommand "noctalia-templates"
-          {
-            src = noctalia-shell.src;
-          }
-          ''
-            mkdir $out
-            cp -r $src/Assets/Templates/. $out/
-          '';
-
-      # collect all templates
-      templates = linkFarm "templates" {
-        matugen = finalAttrs.passthru.matugen-themes;
-        noctalia = finalAttrs.passthru.noctalia-templates;
-      };
+      # matugen color templates
+      templates = matugen-themes;
 
       # Generate color themes from an image.
       mkConfigs =
@@ -74,39 +58,35 @@ let
             [config]
 
             # [templates.alacritty]
-            # input_path = "$templates/matugen/alacritty.toml"
+            # input_path = "$templates/alacritty.toml"
             # output_path = "$out/config/alacritty/colors/$name.toml"
 
             [templates.fuzzel]
-            input_path = "$templates/matugen/fuzzel.ini"
+            input_path = "$templates/fuzzel.ini"
             output_path = "$out/config/fuzzel/colors/$name.ini"
 
             [templates.gtk3]
-            input_path = "$templates/matugen/gtk-colors.css"
+            input_path = "$templates/gtk-colors.css"
             output_path = "$out/config/gtk-3.0/colors/$name.css"
 
             [templates.gtk4]
-            input_path = "$templates/matugen/gtk-colors.css"
+            input_path = "$templates/gtk-colors.css"
             output_path = "$out/config/gtk-4.0/colors/$name.css"
 
             [templates.niri]
-            input_path = "$templates/matugen/niri-colors.kdl"
+            input_path = "$templates/niri-colors.kdl"
             output_path = "$out/config/niri/colors/$name.kdl"
 
-            [templates.noctalia]
-            input_path = "$templates/noctalia/noctalia.json"
-            output_path = "$out/config/noctalia/colors.json"
-
             [templates.qt5ct]
-            input_path = "$templates/matugen/qtct-colors.conf"
+            input_path = "$templates/qtct-colors.conf"
             output_path = "$out/config/qt5ct/colors/$name.conf"
 
             [templates.qt6ct]
-            input_path = "$templates/matugen/qtct-colors.conf"
+            input_path = "$templates/qtct-colors.conf"
             output_path = "$out/config/qt6ct/colors/$name.conf"
 
             [templates.tmux]
-            input_path = "$templates/matugen/tmux-colors.conf"
+            input_path = "$templates/tmux-colors.conf"
             output_path = "$out/config/tmux/colors/$name.conf"
             EOF
 
