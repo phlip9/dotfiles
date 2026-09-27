@@ -350,8 +350,8 @@ window-rule {
     // block-out-from "screencast"
 }
 
-// noctalia-shell recommendations
-// <https://docs.noctalia.dev/getting-started/compositor-settings/>
+// noctalia shell recommendations
+// <https://docs.noctalia.dev/noctalia/compositor-settings/niri/>
 window-rule {
     // Rounded corners for a modern look
     geometry-corner-radius 12
@@ -363,7 +363,7 @@ debug {
   // Allows notification actions and window activation from Noctalia.
   honor-xdg-activation-with-invalid-serial
 }
-// Show the noctalia-shell wallpaper in the backdrop.
+// Show the noctalia wallpaper in the backdrop.
 layer-rule {
   match namespace="^noctalia-wallpaper*"
   place-within-backdrop true
@@ -401,9 +401,9 @@ binds {
     Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }
     // Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
 
-    // See all noctalia-shell ipc fns: `noctalia-shell ipc show`
-    Mod+Space hotkey-overlay-title="Launcher" { spawn "noctalia-shell" "ipc" "call" "launcher" "toggle"; }
-    Alt+L hotkey-overlay-title="Lock" { spawn "noctalia-shell" "ipc" "call" "lockScreen" "lock"; }
+    // See all noctalia ipc fns: `noctalia ipc show`
+    Mod+Space hotkey-overlay-title="Launcher" { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
+    Alt+L hotkey-overlay-title="Lock" { spawn "noctalia" "msg" "session" "lock"; }
 
     // // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
     // // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
@@ -419,16 +419,12 @@ binds {
     // XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
     // XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
 
-    F12       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "increase"; }
-    F11       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "decrease"; }
-    F10       allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "muteOutput"; }
+    F12       allow-when-locked=true { spawn "noctalia" "msg" "volume-up"; }
+    F11       allow-when-locked=true { spawn "noctalia" "msg" "volume-down"; }
+    F10       allow-when-locked=true { spawn "noctalia" "msg" "volume-mute"; }
 
-    Shift+F12 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "increaseInput"; }
-    Shift+F11 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "decreaseInput"; }
-    Shift+F10 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "volume" "muteOutputInput"; }
-
-    CTRL+F12 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "brightness" "increase"; }
-    CTRL+F11 allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "brightness" "decrease"; }
+    CTRL+F12 allow-when-locked=true { spawn "noctalia" "msg" "brightness-up"; }
+    CTRL+F11 allow-when-locked=true { spawn "noctalia" "msg" "brightness-down"; }
 
     // Example media keys mapping using playerctl.
     // This will work with any MPRIS-enabled media player.
@@ -649,8 +645,8 @@ binds {
     // Mod+Space       { switch-layout "next"; }
     // Mod+Shift+Space { switch-layout "prev"; }
 
-    Print { screenshot; }
-    Ctrl+Print { screenshot-screen; }
+    Print { spawn "noctalia" "msg" "screenshot-region"; }
+    Ctrl+Print { spawn "noctalia" "msg" "screenshot-fullscreen"; }
     Alt+Print { screenshot-window; }
 
     // // Applications such as remote-desktop clients and software KVM switches may
@@ -662,7 +658,7 @@ binds {
     // // The allow-inhibiting=false property can be applied to other binds as well,
     // // which ensures niri always processes them, even when an inhibitor is active.
     // Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
-    Mod+Escape allow-when-locked=true { spawn "noctalia-shell" "ipc" "call" "sessionMenu" "toggle"; }
+    // Mod+Escape allow-when-locked=true { spawn "noctalia" "ipc" "call" "sessionMenu" "toggle"; }
 
     // The quit action will show a confirmation dialog to avoid accidental exits.
     Mod+Shift+E { quit; }

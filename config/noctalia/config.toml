@@ -1,0 +1,268 @@
+[audio]
+enable_sounds = false
+
+[bar.default]
+capsule_fill = "surface"
+center = []
+end = [ "tray", "group:g2", "clock" ]
+margin_ends = 0
+radius_top_left = 0
+radius_top_right = 0
+shadow = false
+start = [ "group:g3", "group:g1" ]
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface"
+    id = "g1"
+    members = [ "cpu", "ram", "sysmon" ]
+    opacity = 1.0
+    padding = 16.0
+    widget_spacing = 6
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface"
+    id = "g2"
+    members = [ "notifications", "clipboard", "network", "bluetooth", "volume", "brightness" ]
+    opacity = 1.0
+    padding = 16.0
+    widget_spacing = 6
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface"
+    id = "g3"
+    members = [ "session", "control-center", "launcher" ]
+    opacity = 1.0
+    padding = 6.0
+    widget_spacing = 6
+
+[calendar]
+enabled = true
+
+[[control_center.shortcuts]]
+type = "nightlight"
+
+[[control_center.shortcuts]]
+type = "notification"
+
+[[control_center.shortcuts]]
+type = "power_profile"
+
+[[control_center.shortcuts]]
+type = "clipboard"
+
+[[control_center.shortcuts]]
+type = "mic_mute"
+
+[[control_center.shortcuts]]
+type = "system"
+
+[desktop_widgets]
+enabled = false
+schema_version = 2
+widget_order = []
+
+    [desktop_widgets.grid]
+    cell_size = 16
+    major_interval = 4
+    visible = true
+
+    [desktop_widgets.widget]
+
+[dock]
+shadow = false
+
+[location]
+address = "Redwood City, California"
+
+[lockscreen]
+fingerprint = false
+
+[lockscreen_widgets]
+enabled = true
+schema_version = 2
+widget_order = [ "lockscreen-login-box@DP-3", "lockscreen-login-box@DP-2" ]
+
+    [lockscreen_widgets.grid]
+    cell_size = 16
+    major_interval = 4
+    visible = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@DP-2"]
+    box_height = 196.0
+    box_width = 810.0
+    cx = 1280.0
+    cy = 1258.0
+    output = "DP-2"
+    placement_height = 1440.0
+    placement_width = 2560.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@DP-2".settings]
+        background_color = "surface_variant"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@DP-3"]
+    box_height = 196.0
+    box_width = 810.0
+    cx = 1280.0
+    cy = 1258.0
+    output = "DP-3"
+    placement_height = 1440.0
+    placement_width = 2560.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@DP-3".settings]
+        background_color = "surface_variant"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
+
+[nightlight]
+enabled = true
+
+[notification]
+border = false
+
+[osd]
+border = false
+
+[shell]
+button_borders = false
+card_borders = false
+input_borders = false
+launch_apps_as_systemd_services = true
+polkit_agent = true
+popup_borders = false
+popup_shadows = false
+
+    [shell.animation]
+    speed = 2.0000000298023224
+
+    [shell.launcher.providers.calculator]
+    global = false
+
+    [shell.launcher.providers.session]
+    global = true
+
+    [shell.panel]
+    borders = false
+    launcher_placement = "attached"
+    open_near_click_session = true
+    polkit_placement = "attached"
+    shadow = false
+
+    [shell.screenshot]
+    annotate = true
+    directory = "/home/phlip9/Pictures/Screenshots"
+    remember_last_region = true
+
+    [[shell.session.actions]]
+    action = "lock"
+    countdown_seconds = 0.0
+    enabled = true
+    shortcut = "1"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "logout"
+    countdown_seconds = 0.0
+    enabled = true
+    shortcut = "2"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "lock_and_suspend"
+    countdown_seconds = 0.0
+    enabled = false
+    shortcut = "3"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "reboot"
+    countdown_seconds = 0.0
+    enabled = true
+    shortcut = "4"
+    variant = "default"
+
+    [[shell.session.actions]]
+    action = "shutdown"
+    countdown_seconds = 0.0
+    enabled = true
+    shortcut = "5"
+    variant = "destructive"
+
+    [shell.shadow]
+    alpha = 0.0
+
+[theme]
+custom_palette = "sand-dunes-cropped-rb"
+source = "custom"
+wallpaper_scheme = "m3-rainbow"
+
+    [theme.templates]
+    enable_builtin_templates = false
+
+[wallpaper]
+directory = "/home/phlip9/Pictures/Wallpapers"
+
+    [wallpaper.default]
+    path = "/home/phlip9/Pictures/Wallpapers/sand_dunes_cropped.jpeg"
+
+    [wallpaper.last]
+    path = "/home/phlip9/Pictures/Wallpapers/sand_dunes_cropped.jpeg"
+
+    [wallpaper.monitors.DP-2]
+    path = "/home/phlip9/Pictures/Wallpapers/sand_dunes_cropped.jpeg"
+
+    [wallpaper.monitors.DP-3]
+    path = "/home/phlip9/Pictures/Wallpapers/sand_dunes_cropped.jpeg"
+
+[widget.cpu]
+label_min_width = 30
+show_value = false
+
+[widget.network]
+show_label = false
+
+[widget.ram]
+show_value = false
+
+[widget.sysmon]
+show_value = false
+stat = "disk_used_pct"
+
+[widget.volume]
+show_label = false

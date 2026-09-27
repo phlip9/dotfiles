@@ -62,16 +62,20 @@
   # - docs: <https://github.com/YaLTeR/niri/wiki/Getting-Started>
   programs.niri.enable = true;
 
-  # noctalia desktop shell
-  # - repo: <https://github.com/noctalia-dev/noctalia-shell>
-  # - docs: <https://docs.noctalia.dev/>
-  services.noctalia-shell.enable = true;
+  # noctalia wayland desktop shell
+  # - repo: <https://github.com/noctalia-dev/noctalia>
+  # - docs: <https://docs.noctalia.dev/noctalia/>
+  programs.noctalia = {
+    enable = true;
+    systemd.enable = true;
+    recommendedServices.enable = false;
+  };
 
   # desktop environment packages
   environment.systemPackages = with pkgs; [
     # oculante # fast and simple image viewer and editor (broken)
     adwaita-icon-theme # mouse cursor and icons
-    app2unit # have noctalia-shell launcher open apps in their own units
+    app2unit # have noctalia launcher open apps in their own units
     apple-cursor # macOS-looking cursor
     eog # GNOME image viewer
     ffmpegthumbnailer # nautilus uses this for video thumbnails

@@ -21,7 +21,6 @@
   ./github-agent-authd.nix
   ./github-webhook.nix
   ./nix-cache.nix
-  ./noctalia-shell.nix
   ./o11y.nix
   (sources.paseo + "/nix/module.nix")
   ./paseo.nix

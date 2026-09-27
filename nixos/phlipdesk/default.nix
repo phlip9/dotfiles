@@ -277,6 +277,7 @@
   #   enable = true;
   #   # enable NSS plugin so local applications see *.local DNS names
   #   nssmdns4 = true;
+  #   openFirewall = true;
   # };
 
   # # TODO(phlip9): more robust brightness control
@@ -285,7 +286,7 @@
   # # Writes to the monitor brightness really should be intermediated by a
   # # persistent service vs. writing with ddcutil directly.
   # # Either use something like ddccontrol or ddcutil-service and update
-  # # noctalia-shell, or maybe the ddcci_backlight driver handles this
+  # # noctalia, or maybe the ddcci_backlight driver handles this
   # # correctly?
   # services.ddccontrol.enable = true;
 
@@ -411,13 +412,13 @@
   };
 
   # # mullvad VPN
-  # services.mullvad-vpn.enable = false;
-  #
+  # services.mullvad-vpn.enable = true;
+
   # # transmission torrents
   # # - ui: http://localhost:9091
   # # - downloads: /var/lib/transmission/Downloads
   # services.transmission = {
-  #   enable = false;
+  #   enable = true;
   #   package = pkgs.transmission_4;
   #   downloadDirPermissions = "775";
   # };

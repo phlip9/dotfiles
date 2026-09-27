@@ -1,6 +1,6 @@
 # @phlip9's dotfiles
 
-- stack: lix, nixos, home-manager, niri, noctalia-shell, neovim, tmux, bash,
+- stack: lix, nixos, home-manager, niri, noctalia, neovim, tmux, bash,
   alacritty.
 - nix based, non-flake default.nix.
 - home-manager manages non-GUI user dotfiles on all Linux and macOS machines.
@@ -107,7 +107,7 @@
 - server: nixos/profiles/server.nix
 - desktop: nixos/profiles/desktop.nix
 - niri: scrolling+tiling wayland compositor
-- noctalia-shell: beautiful, minimal wayland desktop built using quickshell+Qt
+- noctalia: beautiful, minimal wayland desktop shell
 
 ## just commands (non-exhaustive)
 
