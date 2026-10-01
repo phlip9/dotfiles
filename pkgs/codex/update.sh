@@ -12,60 +12,47 @@ LATEST_TAG=$(curl -fsSL \
 VERSION="${LATEST_TAG#rust-v}"
 echo "Latest version: $VERSION"
 
-# Prefetch one platform-specific release artifact and print its Nix hash.
+BASE_URL="https://github.com/openai/codex/releases/download/rust-v${VERSION}"
+
+# Prefetch one release artifact and print its Nix hash.
 prefetch_hash() {
-  local artifact=$1
-  local target=$2
-  local url="https://github.com/openai/codex/releases/download/rust-v${VERSION}/${artifact}-${target}.zst"
-  echo "Prefetching $artifact for $target..." >&2
+  local url=$1
+  echo "Prefetching $url..." >&2
   nix store prefetch-file "$url" --json | jq -r '.hash'
 }
 
-X86_64_LINUX_CODEX_HASH=$(
-  prefetch_hash codex "x86_64-unknown-linux-musl"
-)
-X86_64_LINUX_CODE_MODE_HOST_HASH=$(
-  prefetch_hash codex-code-mode-host "x86_64-unknown-linux-musl"
-)
-AARCH64_DARWIN_CODEX_HASH=$(
-  prefetch_hash codex "aarch64-apple-darwin"
-)
-AARCH64_DARWIN_CODE_MODE_HOST_HASH=$(
-  prefetch_hash codex-code-mode-host "aarch64-apple-darwin"
-)
+# Print the sources.json entry for one rust target's release artifacts.
+platform_sources() {
+  local target=$1
+  local codex_url="$BASE_URL/codex-${target}.zst"
+  local code_mode_host_url="$BASE_URL/codex-code-mode-host-${target}.zst"
+  local codex_hash code_mode_host_hash
+  codex_hash=$(prefetch_hash "$codex_url")
+  code_mode_host_hash=$(prefetch_hash "$code_mode_host_url")
+  jq -n \
+    --arg target "$target" \
+    --arg codex_url "$codex_url" \
+    --arg codex_hash "$codex_hash" \
+    --arg code_mode_host_url "$code_mode_host_url" \
+    --arg code_mode_host_hash "$code_mode_host_hash" \
+    '{
+      target: $target,
+      codex: { url: $codex_url, hash: $codex_hash },
+      codeModeHost: { url: $code_mode_host_url, hash: $code_mode_host_hash }
+    }'
+}
+
+X86_64_LINUX=$(platform_sources "x86_64-unknown-linux-musl")
+AARCH64_DARWIN=$(platform_sources "aarch64-apple-darwin")
 
 jq -n \
   --arg version "$VERSION" \
-  --arg base_url \
-    "https://github.com/openai/codex/releases/download/rust-v${VERSION}" \
-  --arg x86_64_linux_codex_hash "$X86_64_LINUX_CODEX_HASH" \
-  --arg x86_64_linux_code_mode_host_hash \
-    "$X86_64_LINUX_CODE_MODE_HOST_HASH" \
-  --arg aarch64_darwin_codex_hash "$AARCH64_DARWIN_CODEX_HASH" \
-  --arg aarch64_darwin_code_mode_host_hash \
-    "$AARCH64_DARWIN_CODE_MODE_HOST_HASH" \
+  --argjson x86_64_linux "$X86_64_LINUX" \
+  --argjson aarch64_darwin "$AARCH64_DARWIN" \
   '{
     version: $version,
-    "x86_64-linux": {
-      codex: {
-        url: "\($base_url)/codex-x86_64-unknown-linux-musl.zst",
-        hash: $x86_64_linux_codex_hash
-      },
-      codeModeHost: {
-        url: "\($base_url)/codex-code-mode-host-x86_64-unknown-linux-musl.zst",
-        hash: $x86_64_linux_code_mode_host_hash
-      }
-    },
-    "aarch64-darwin": {
-      codex: {
-        url: "\($base_url)/codex-aarch64-apple-darwin.zst",
-        hash: $aarch64_darwin_codex_hash
-      },
-      codeModeHost: {
-        url: "\($base_url)/codex-code-mode-host-aarch64-apple-darwin.zst",
-        hash: $aarch64_darwin_code_mode_host_hash
-      }
-    }
+    "x86_64-linux": $x86_64_linux,
+    "aarch64-darwin": $aarch64_darwin
   }' > "$SOURCES_FILE"
 
 echo "Updated $SOURCES_FILE to version $VERSION"

@@ -4,6 +4,7 @@
   installShellFiles,
   lib,
   makeBinaryWrapper,
+  ripgrep,
   stdenv,
   versionCheckHook,
   zstd,
@@ -33,27 +34,60 @@ stdenv.mkDerivation {
     zstd
   ];
 
+  # Mirrors the `codex-package.json` in upstream's `codex-package-*` tarballs.
+  # `codex` checks `target`, `entrypoint`, and `version` against itself.
+  env.CODEX_PACKAGE_MANIFEST_JSON = builtins.toJSON {
+    layoutVersion = 1;
+    inherit (sources) version;
+    inherit (source) target;
+    variant = "codex";
+    entrypoint = "bin/codex";
+    resourcesDir = "codex-resources";
+    pathDir = "codex-path";
+  };
+
+  # Since 0.159, `codex` locates its package root via `realpath(current_exe)`
+  # and refuses to start its app-server daemon unless the package is complete:
+  #
+  # - codex-package.json
+  # - bin/codex
+  # - bin/codex-code-mode-host
+  # - codex-path/rg
+  # - codex-resources/bwrap (linux only)
+  #
+  # The daemon copies the package dir into `$CODEX_HOME/packages/` and rejects
+  # symlinks that escape the package, so `codex-path/` gets small exec wrappers
+  # pointing at nixpkgs `rg` and `bwrap` instead. `codex` prepends `codex-path`
+  # to its own PATH at startup, so the daemon, sandbox helper, and agent shells
+  # all find them.
+  #
+  # linux: `codex` prefers a `bwrap` on PATH over `codex-resources/bwrap`,
+  # which must match a sha256 digest baked into the release binary. Leave an
+  # empty executable placeholder there to satisfy the completeness check. If
+  # codex ever uses the fallback, the digest check will fail closed.
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/bin
+    pkg=$out/libexec/codex
+    mkdir -p $out/bin $pkg/bin $pkg/codex-path
 
-    codex_bin=$out/bin/${
-      if stdenv.hostPlatform.isLinux then "codex-unwrapped" else "codex"
-    }
-    code_mode_host_bin=$out/bin/codex-code-mode-host
+    printenv CODEX_PACKAGE_MANIFEST_JSON > $pkg/codex-package.json
 
-    zstd --decompress --stdout ${codexSource} > "$codex_bin"
-    zstd --decompress --stdout ${codeModeHostSource} > "$code_mode_host_bin"
-    chmod +x "$codex_bin" "$code_mode_host_bin"
+    zstd --decompress ${codexSource} -o $pkg/bin/codex
+    zstd --decompress ${codeModeHostSource} -o $pkg/bin/codex-code-mode-host
+    chmod +x $pkg/bin/codex $pkg/bin/codex-code-mode-host
+
+    makeBinaryWrapper ${lib.getExe ripgrep} $pkg/codex-path/rg
+
+    ln -s $pkg/bin/codex $out/bin/codex
 
     runHook postInstall
   '';
 
   postInstall =
     lib.optionalString stdenv.hostPlatform.isLinux ''
-      makeBinaryWrapper $out/bin/codex-unwrapped $out/bin/codex \
-        --prefix PATH : ${lib.makeBinPath [ bubblewrap ]}
+      makeBinaryWrapper ${lib.getExe bubblewrap} $pkg/codex-path/bwrap
+      install -Dm755 /dev/null $pkg/codex-resources/bwrap
     ''
     + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
       installShellCompletion --cmd codex \
