@@ -154,6 +154,10 @@
     ];
     openssh.authorizedKeys.keys = import ../../nix/ssh-pubkeys.nix;
 
+    # Pin the auto-allocated uid so services can locate the user manager and
+    # runtime dir at eval time (ex: services.paseo).
+    uid = 1000;
+
     # Enable "linger" so that systemd will start the user service and all
     # `default.target`-triggered user services automatically on boot.
     linger = true;

@@ -10,6 +10,11 @@
 
 let
   cfg = config.services.paseo;
+  user = config.users.users.${cfg.user};
+
+  # The daemon needs our runtime dir and services (Postgres socket, ssh-agent)
+  userRuntimeDir = "/run/user/${toString user.uid}";
+  userManager = "user@${toString user.uid}.service";
 
   isIpv6Addr = addr: lib.hasInfix ":" addr && !(lib.hasPrefix "[" addr);
   formatHost = addr: if isIpv6Addr addr then "[${addr}]" else addr;
@@ -169,6 +174,16 @@ in
         assertion = cfg.serviceProxy.domain == null || cfg.serviceProxy.enable;
         message = "services.paseo.serviceProxy.domain requires serviceProxy.enable.";
       }
+      {
+        assertion = user.uid != null;
+        message = "services.paseo.user must have a declared uid.";
+      }
+      {
+        # Without linger, logind stops the user manager and removes the
+        # runtime dir when the user's last login session ends.
+        assertion = user.linger == true;
+        message = "services.paseo.user must have linger enabled.";
+      }
     ];
 
     services.paseo = {
@@ -177,14 +192,17 @@ in
     };
 
     systemd.services.paseo = {
-      path = [
-        pkgs.bashInteractive
-        pkgs.coreutils
-        pkgs.git
-        pkgs.openssh
-      ];
+      # Start the user manager (runtime dir, socket-activated services) before
+      # the daemon, even on headless boot w/o a prior login.
+      requires = [ userManager ];
+      after = [ userManager ];
 
       environment = {
+        # A system service gets no login session, so provide the session
+        # basics that user env (PGHOST, SSH_AUTH_SOCK, ...) derives from.
+        XDG_RUNTIME_DIR = userRuntimeDir;
+        DBUS_SESSION_BUS_ADDRESS = "unix:path=${userRuntimeDir}/bus";
+
         # Disable unused speech features and their model downloads.
         PASEO_DICTATION_ENABLED = "false";
         PASEO_PASSWORD_FILE = "%d/daemon-password";
@@ -208,6 +226,9 @@ in
       };
 
       serviceConfig = {
+        # Run via a login shell so the daemon, and every agent and terminal
+        # gets the full NixOS session env + Home Manager session vars
+        # (sessionPath, PGHOST, ...). Login shell PATH replaces unit's PATH.
         ExecStart =
           let
             daemonCommand =
