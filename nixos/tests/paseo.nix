@@ -16,6 +16,9 @@
 
       users.users.testuser = {
         isNormalUser = true;
+        # Match headless startup and catch hardcoded UID 1000 runtime paths.
+        uid = 1234;
+        linger = true;
         shell = pkgs.bashInteractive;
       };
 
@@ -66,6 +69,14 @@
 
     machine.start()
     machine.wait_for_unit("multi-user.target")
+
+    # Resolve the configured user's runtime paths without a prior login.
+    user_uid = machine.succeed("id -u testuser").strip()
+    runtime_dir = f"/run/user/{user_uid}"
+    expected_env = {
+        "XDG_RUNTIME_DIR": runtime_dir,
+        "DBUS_SESSION_BUS_ADDRESS": f"unix:path={runtime_dir}/bus",
+    }
 
     with subtest("relay starts and reports health"):
         machine.wait_for_unit("paseo-relay.service")
@@ -125,6 +136,14 @@
             "| grep -Ev '^(127[.]0[.]0[.]1|\\[::1\\]):'"
         )
 
+    with subtest("daemon inherits the user's runtime environment"):
+        for env_key, env_value in expected_env.items():
+            machine.succeed(
+                "pid=$(systemctl show paseo.service -p MainPID --value); "
+                "tr '\\0' '\\n' < /proc/$pid/environ "
+                f"| grep -Fx '{env_key}={env_value}'"
+            )
+
     with subtest("terminal CLI drives a workspace terminal"):
         machine.succeed("install -d -m 0777 /tmp/paseo-terminal-test")
         machine.succeed(
@@ -137,7 +156,9 @@
         machine.succeed(
             f"PASEO_PASSWORD_FILE={password_file} "
             "paseo terminal send-keys --host '[::1]:6767' vm-terminal "
-            "'echo paseo-terminal-file-ok > terminal-result; "
+            "'env | grep -E \"^(XDG_RUNTIME_DIR|DBUS_SESSION_BUS_ADDRESS)=\" "
+            "> terminal-env; "
+            "echo paseo-terminal-file-ok > terminal-result; "
             "echo paseo-terminal-output-ok' Enter"
         )
         machine.wait_until_succeeds(
@@ -145,6 +166,12 @@
             "/tmp/paseo-terminal-test/terminal-result",
             timeout=30,
         )
+        # Check exports from the actual terminal, not the test runner's shell.
+        for env_key, env_value in expected_env.items():
+            machine.succeed(
+                f"grep -Fx '{env_key}={env_value}' "
+                "/tmp/paseo-terminal-test/terminal-env"
+            )
         machine.succeed(
             f"PASEO_PASSWORD_FILE={password_file} "
             "paseo terminal capture --host '[::1]:6767' "
