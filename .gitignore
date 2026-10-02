@@ -23,6 +23,9 @@ config/htop/htoprc
 /result
 /result-*
 
+# Local scratch files
+/tmp/
+
 # home-manager generated files in this repo.
 /.vim/coc-settings.json
 /.luarc.json
