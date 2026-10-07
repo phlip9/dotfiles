@@ -76,6 +76,11 @@
         HostName = "lexe-prod-www.uswest2.prod.lexe.app";
         Port = 22022;
       };
+      "lexe-prod-vss-external" = {
+        User = "deploy";
+        HostName = "lexe-prod-vss-external.uswest2.prod.lexe.app";
+        Port = 22022;
+      };
       "lexe-staging-sgx" = {
         User = "deploy";
         HostName = "lexe-staging-sgx.uswest2.staging.lexe.app";
