@@ -49,6 +49,7 @@
       pkgs.just
       pkgs.npins
       pkgs.patchelf
+      pkgs.perl
       pkgs.ripgrep
 
       # network
