@@ -39,7 +39,7 @@ let
     listen_addresses = ''' # Only allow connections via unix socket
     unix_socket_permissions = 0700
     ssl = off
-    max_connections = 64
+    max_connections = 256
 
     # Remove brakes
     fsync = off
