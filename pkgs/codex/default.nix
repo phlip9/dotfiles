@@ -35,7 +35,8 @@ stdenv.mkDerivation {
   ];
 
   # Mirrors the `codex-package.json` in upstream's `codex-package-*` tarballs.
-  # `codex` checks `target`, `entrypoint`, and `version` against itself.
+  # Without it, `codex` doesn't recognize the package layout below and reports
+  # its runtime build version (ex: exec-server metadata) as 0.0.0.
   env.CODEX_PACKAGE_MANIFEST_JSON = builtins.toJSON {
     layoutVersion = 1;
     inherit (sources) version;
@@ -47,24 +48,22 @@ stdenv.mkDerivation {
   };
 
   # Since 0.159, `codex` locates its package root via `realpath(current_exe)`
-  # and refuses to start its app-server daemon unless the package is complete:
+  # and expects upstream's standalone package layout:
   #
   # - codex-package.json
   # - bin/codex
   # - bin/codex-code-mode-host
   # - codex-path/rg
-  # - codex-resources/bwrap (linux only)
+  # - codex-path/bwrap (linux only)
   #
-  # The daemon copies the package dir into `$CODEX_HOME/packages/` and rejects
-  # symlinks that escape the package, so `codex-path/` gets small exec wrappers
-  # pointing at nixpkgs `rg` and `bwrap` instead. `codex` prepends `codex-path`
-  # to its own PATH at startup, so the daemon, sandbox helper, and agent shells
-  # all find them.
+  # `codex` prepends `codex-path` to its own PATH at startup, so the sandbox
+  # helper and agent shells all find nixpkgs `rg` and `bwrap` via the small
+  # exec wrappers there.
   #
-  # linux: `codex` prefers a `bwrap` on PATH over `codex-resources/bwrap`,
-  # which must match a sha256 digest baked into the release binary. Leave an
-  # empty executable placeholder there to satisfy the completeness check. If
-  # codex ever uses the fallback, the digest check will fail closed.
+  # Upstream's layout also ships a bundled `codex-resources/bwrap`, but `codex`
+  # only falls back to it when there's no `bwrap` on PATH. The app-server
+  # daemon's package completeness check is the only thing that requires it,
+  # and we disable the daemon below.
   installPhase = ''
     runHook preInstall
 
@@ -95,7 +94,6 @@ stdenv.mkDerivation {
   postInstall =
     lib.optionalString stdenv.hostPlatform.isLinux ''
       makeBinaryWrapper ${lib.getExe bubblewrap} $pkg/codex-path/bwrap
-      install -Dm755 /dev/null $pkg/codex-resources/bwrap
     ''
     + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
       installShellCompletion --cmd codex \
