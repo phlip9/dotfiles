@@ -79,7 +79,15 @@ stdenv.mkDerivation {
 
     makeBinaryWrapper ${lib.getExe ripgrep} $pkg/codex-path/rg
 
-    ln -s $pkg/bin/codex $out/bin/codex
+    # Since 0.159, the interactive TUI auto-starts a persistent, detached
+    # app-server daemon by default. The daemon also runs an updater loop that
+    # periodically fetches and runs `chatgpt.com/codex/install.sh` to install
+    # a new codex into `$CODEX_HOME/packages/`, bypassing nix. Force the
+    # `daemon_auto_start` feature off so the TUI uses its embedded app-server
+    # instead. `--disable` is a global flag, so it's valid before any
+    # subcommand. CLI flags override `config.toml`.
+    makeBinaryWrapper $pkg/bin/codex $out/bin/codex \
+      --add-flags "--disable daemon_auto_start"
 
     runHook postInstall
   '';
