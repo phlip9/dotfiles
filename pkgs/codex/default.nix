@@ -85,8 +85,14 @@ stdenv.mkDerivation {
     # `daemon_auto_start` feature off so the TUI uses its embedded app-server
     # instead. `--disable` is a global flag, so it's valid before any
     # subcommand. CLI flags override `config.toml`.
+    #
+    # Also run the TUI inline instead of in the alternate screen, which breaks
+    # terminal scrollback. `--no-alt-screen` is TUI-only and would break
+    # subcommands like `codex exec` or `codex app-server`, so set the
+    # equivalent `tui.alternate_screen` config via the global `-c` instead.
     makeBinaryWrapper $pkg/bin/codex $out/bin/codex \
-      --add-flags "--disable daemon_auto_start"
+      --add-flags "--disable daemon_auto_start" \
+      --add-flags "-c tui.alternate_screen=never"
 
     runHook postInstall
   '';
