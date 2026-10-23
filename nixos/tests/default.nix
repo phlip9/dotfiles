@@ -53,6 +53,7 @@ let
 in
 
 {
+  desktop-login = runNixOSTest ./desktop-login.nix;
   github-agent-authd = runNixOSTest ./github-agent-authd.nix;
   github-webhook = runNixOSTest ./github-webhook.nix;
   nixbot = runNixOSTest ./nixbot.nix;
