@@ -1,0 +1,42 @@
+diff --git a/packages/server/src/server/bootstrap.ts b/packages/server/src/server/bootstrap.ts
+index 727c7b789..a1a86ddff 100644
+--- a/packages/server/src/server/bootstrap.ts
++++ b/packages/server/src/server/bootstrap.ts
+@@ -1743,7 +1743,9 @@ export async function createPaseoDaemon(
+               },
+               serviceProxyPublicBaseUrl,
+               browserToolsBroker,
+-              hubRelationships,
++              // Hub disabled: hub.management.* requests fail, so no session can
++              // enroll this daemon w/ a hosted control plane.
++              undefined,
+               workspaceSetupRuntime,
+               pluginRuntime,
+               orchestrationSkills,
+@@ -1772,7 +1774,7 @@ export async function createPaseoDaemon(
+             daemonConfigStore.onFieldChange("relay.enabled", (value) => {
+               relayRuntime?.setEnabled(value === true);
+             });
+-            await hubRelationships.start();
++            // Hub disabled: never dial out, even w/ a stale hub-relationship.json.
+           };
+ 
+           logAndResolve().then(resolve, reject);
+diff --git a/packages/server/src/server/websocket-server.ts b/packages/server/src/server/websocket-server.ts
+index e833a07ce..4f82b938a 100644
+--- a/packages/server/src/server/websocket-server.ts
++++ b/packages/server/src/server/websocket-server.ts
+@@ -1007,6 +1007,13 @@ export class VoiceAssistantWebSocketServer {
+     admission: SessionAdmission | null = null,
+     initialHello?: WSHelloMessage,
+   ): Promise<void> {
++    // Hub disabled: only relay sockets may attach externally, and they must
++    // authenticate through hello like any direct client. Reject pre-admitted
++    // sockets, which would skip password admission.
++    if (metadata?.transport !== "relay" || admission !== null || initialHello) {
++      ws.close(1008, "External socket rejected");
++      throw new Error(`External socket rejected: ${metadata?.transport ?? "unknown"}`);
++    }
+     if (metadata?.transport === "relay") {
+       this.incrementRuntimeCounter("relayExternalSocketAttached");
+     }

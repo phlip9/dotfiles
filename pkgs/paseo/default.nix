@@ -32,6 +32,9 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     # Require the daemon password on relay connections. Upstream admits relay
     # clients w/o a credential, so the daemon public key alone grants owner.
     ./paseo-require-relay-password.patch
+    # Hard-disable the Paseo Cloud hub control channel, which attaches
+    # pre-admitted sockets that bypass the daemon password.
+    ./paseo-disable-hub.patch
   ];
 
   # Paseo uses ps to manage process trees and tar to extract speech models.
