@@ -20,6 +20,9 @@ Release notes are incomplete: option removals and default changes often
 land without an entry. Module diffs, the eval probe, and system diffs are
 mandatory, not optional.
 
+Use dumber and cheaper subagents for bulk information retrieval, search, and
+package + release notes scanning and summarization.
+
 ## Blast radius
 
 `nixos-unstable` feeds (see `default.nix`, `nixos/default.nix`):
