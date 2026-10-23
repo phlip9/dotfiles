@@ -1,0 +1,26 @@
+diff --git a/packages/server/src/server/plugins/managed-source.ts b/packages/server/src/server/plugins/managed-source.ts
+index 5373b7453..6f0a7e9c2 100644
+--- a/packages/server/src/server/plugins/managed-source.ts
++++ b/packages/server/src/server/plugins/managed-source.ts
+@@ -55,6 +55,9 @@ interface OwnedLocation {
+   identity: PluginInstallation["identity"];
+ }
+ 
++// Typed as boolean so tsc keeps checking the disabled install path.
++const MANAGED_PLUGIN_INSTALLS_DISABLED: boolean = true;
++
+ export class ManagedPluginSources {
+   private readonly root: string;
+   private readonly metadataPath: string;
+@@ -147,6 +150,11 @@ export class ManagedPluginSources {
+     input: InstallInput,
+     target?: PluginUpdateTarget,
+   ): Promise<ManagedPluginCandidate> {
++    // Managed plugin installs disabled: never fetch third-party plugin code
++    // from a registry, npm, or git.
++    if (MANAGED_PLUGIN_INSTALLS_DISABLED) {
++      throw new Error(`Managed plugin installs are disabled: ${input.source}`);
++    }
+     const registry = parsePluginRegistryReference(input.source, this.registryOptions.defaultUrl);
+     if (registry) {
+       if (input.ref)

@@ -310,6 +310,14 @@
         assert "password" in output.lower(), output
         machine.succeed(f"PASEO_PASSWORD_FILE={password_file} {relay_ls}")
 
+    with subtest("managed plugin installs are disabled"):
+        status, output = machine.execute(
+            f"PASEO_PASSWORD_FILE={password_file} timeout 30 "
+            "paseo plugin install --host '[::1]:6767' npm:left-pad 2>&1"
+        )
+        assert status != 0, output
+        assert "Managed plugin installs are disabled" in output, output
+
     with subtest("stop kills terminal children and restart restores env"):
         machine.succeed(
             f"PASEO_PASSWORD_FILE={password_file} "

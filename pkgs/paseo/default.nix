@@ -35,6 +35,8 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     # Hard-disable the Paseo Cloud hub control channel, which attaches
     # pre-admitted sockets that bypass the daemon password.
     ./paseo-disable-hub.patch
+    # Never fetch third-party plugin code from a registry, npm, or git.
+    ./paseo-disable-plugin-installs.patch
   ];
 
   # Paseo uses ps to manage process trees and tar to extract speech models.
