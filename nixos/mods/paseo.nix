@@ -35,6 +35,11 @@ let
     proxy_read_timeout 3600s;
     proxy_send_timeout 3600s;
   '';
+
+  configFile = "${cfg.dataDir}/config.json";
+  enforcedSettingsFile =
+    (pkgs.formats.json { }).generate "paseo-enforced-config.json"
+      cfg.enforcedSettings;
 in
 {
   options.services.paseo = {
@@ -47,6 +52,17 @@ in
         This should point at a runtime secret file, usually
         config.sops.secrets.<name>.path. The service reads it through systemd
         LoadCredential and passes only the credential path to the daemon.
+      '';
+    };
+
+    enforcedSettings = lib.mkOption {
+      type = (pkgs.formats.json { }).type;
+      default = { };
+      description = ''
+        Settings deep-merged into the mutable `$PASEO_HOME/config.json` on
+        every service start. Objects merge recursively; enforced scalars and
+        arrays replace existing values. All other keys stay managed by the UI
+        or CLI, unlike upstream `settings`, which overwrites the whole file.
       '';
     };
 
@@ -189,6 +205,20 @@ in
     services.paseo = {
       listenAddress = lib.mkDefault "::1";
       package = lib.mkDefault phlipPkgs.paseo;
+
+      # Hardening pins that runtime config edits can't keep across restarts.
+      enforcedSettings = {
+        # Only allow CORS origins passed via env (webUi.publicBaseUrl).
+        # Upstream seeds new configs w/ the hosted https://app.paseo.sh.
+        daemon.cors.allowedOrigins = lib.mkDefault [ ];
+        # Third-party plugins run unsandboxed in the daemon.
+        pluginsEnabled = lib.mkDefault false;
+        # Unused built-in plugin providers, enabled by default upstream.
+        agents.providers = {
+          antigravity.enabled = lib.mkDefault false;
+          muse.enabled = lib.mkDefault false;
+        };
+      };
     };
 
     systemd.services.paseo = {
@@ -196,6 +226,22 @@ in
       # the daemon, even on headless boot w/o a prior login.
       requires = [ userManager ];
       after = [ userManager ];
+
+      # Runs after upstream's `settings` install. Merge into a temp file then
+      # rename, so a failed merge (ex: invalid JSON) fails the unit w/o
+      # truncating config.json, and the daemon never reads a partial file.
+      preStart = lib.mkIf (cfg.enforcedSettings != { }) (
+        lib.mkAfter ''
+          umask 077
+          if [ -e ${configFile} ]; then
+            ${lib.getExe pkgs.jq} --slurpfile enforced ${enforcedSettingsFile} \
+              '. * $enforced[0]' ${configFile} > ${configFile}.tmp
+          else
+            cp ${enforcedSettingsFile} ${configFile}.tmp
+          fi
+          mv ${configFile}.tmp ${configFile}
+        ''
+      );
 
       environment = {
         # A system service gets no login session, so provide the session

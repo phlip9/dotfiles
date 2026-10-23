@@ -32,6 +32,32 @@
         mv "nonlogin-env.$$" nonlogin-env
         mv "login-env.$$" login-env
       '';
+
+      # Pre-existing, UI-managed config.json, like sauna's. Includes stale
+      # values that conflict w/ declarative policy: an enabled service proxy,
+      # upstream's default app.paseo.sh CORS origin, and enabled plugins.
+      seedConfig = pkgs.writeText "paseo-seed-config.json" (
+        builtins.toJSON {
+          version = 1;
+          daemon = {
+            cors.allowedOrigins = [ "https://app.paseo.sh" ];
+            serviceProxy = {
+              enabled = true;
+              listen = "[::1]:6768";
+              publicBaseUrl = "http://services.test";
+            };
+          };
+          pluginsEnabled = true;
+          agents.providers = {
+            antigravity.enabled = true;
+            env-probe = {
+              extends = "acp";
+              label = "Env probe";
+              command = [ "${agentEnvProbe}" ];
+            };
+          };
+        }
+      );
     in
     {
       environment.systemPackages = [
@@ -51,6 +77,7 @@
 
       systemd.tmpfiles.rules = [
         "L+ /home/testuser/.profile - - - - ${hmProfile}"
+        "C /home/testuser/.paseo/config.json 0600 testuser users - ${seedConfig}"
       ];
 
       # Resolve nginx vhosts locally, so pairing offers reach the relay.
@@ -88,18 +115,6 @@
         hostnames = [
           "paseo.test"
         ];
-        # Simulate stale mutable config that conflicts with the declarative
-        # service-proxy policy.
-        settings.daemon.serviceProxy = {
-          enabled = true;
-          listen = "[::1]:6768";
-          publicBaseUrl = "http://services.test";
-        };
-        settings.agents.providers.env-probe = {
-          extends = "acp";
-          label = "Env probe";
-          command = [ "${agentEnvProbe}" ];
-        };
         nginx = {
           forceSSL = false;
           enableACME = false;
@@ -111,6 +126,7 @@
 
   testScript = ''
     password_file = "/run/credentials/paseo.service/daemon-password"
+    config_file = "/home/testuser/.paseo/config.json"
 
     machine.start()
     machine.wait_for_unit("multi-user.target")
@@ -218,6 +234,30 @@
         machine.fail(
             "ss -H -ltnp | grep -F 'Paseo Daemon' | awk '{print $4}' "
             "| grep -Ev '^(127[.]0[.]0[.]1|\\[::1\\]):'"
+        )
+
+    with subtest("enforced settings merge into mutable config"):
+        machine.succeed(
+            f"jq -e '.daemon.cors.allowedOrigins == [] "
+            "and .pluginsEnabled == false "
+            "and .agents.providers.antigravity.enabled == false "
+            "and .agents.providers.muse.enabled == false "
+            "and .agents.providers[\"env-probe\"].label == \"Env probe\" "
+            f"and .daemon.serviceProxy.enabled == true' {config_file}"
+        )
+        machine.succeed(
+            f"test \"$(stat -c %a:%U {config_file})\" = 600:testuser"
+        )
+        # Only the env-provided web UI origin may make CORS requests.
+        machine.fail(
+            "curl -g -sf -o /dev/null -D - -H 'Origin: https://app.paseo.sh' "
+            "http://[::1]:6767/api/health "
+            "| grep -i '^access-control-allow-origin: https://app.paseo.sh'"
+        )
+        machine.succeed(
+            "curl -g -sf -o /dev/null -D - -H 'Origin: http://paseo.test' "
+            "http://[::1]:6767/api/health "
+            "| grep -i '^access-control-allow-origin: http://paseo.test'"
         )
 
     with subtest("daemon inherits the user's runtime environment"):
@@ -355,9 +395,20 @@
             timeout=30,
         )
         machine.succeed(f"systemctl is-active user@{user_uid}.service")
+        # Simulate UI edits while stopped: one unrelated, one undoing a pin.
+        machine.succeed(
+            "su testuser -c \"jq '.daemon.autoArchiveAfterMerge = true "
+            "| .pluginsEnabled = true' "
+            f"{config_file} > {config_file}.edit && "
+            f"mv {config_file}.edit {config_file}\""
+        )
         machine.succeed("systemctl start paseo.service")
         machine.wait_for_unit("paseo.service")
         machine.wait_until_succeeds("curl -g -sf http://[::1]:6767/api/health")
         assert_session_env(daemon_env_cmd)
+        machine.succeed(
+            "jq -e '.daemon.autoArchiveAfterMerge == true "
+            f"and .pluginsEnabled == false' {config_file}"
+        )
   '';
 }
