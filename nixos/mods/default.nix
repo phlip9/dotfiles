@@ -25,6 +25,7 @@
   (sources.paseo + "/nix/module.nix")
   ./paseo.nix
   ./phlippkgs.nix
+  ./postgres.nix
   ./xremap.nix
 
   # nixbot CI module + its dependencies (nixbot and niks3)
