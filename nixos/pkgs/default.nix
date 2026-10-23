@@ -31,6 +31,9 @@ fix (phlipPkgsNixos: {
   # exiled-exchange-2 - Path of Exile 2 trading app for price checking
   exiled-exchange-2 = callPackage ./exiled-exchange-2.nix { };
 
+  # greetd with PAM auth for the initial autologin session
+  greetd = callPackage ./greetd { };
+
   # GitHub App installation-token broker for agent VMs
   github-agent-authd = callPackage ./github-agent-authd { };
 
