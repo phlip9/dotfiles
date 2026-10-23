@@ -14,7 +14,8 @@ set -euo pipefail
 # - toplevel text files (activate, kernel-params, ...)
 # - etc/ files added/removed/changed. Unit enablement symlinks (*.wants/,
 #   *.requires/, *.upholds/) compare by name only. Binary or large files
-#   compare by size only.
+#   compare by size only. Data-only dirs (tzdata, CA bundles) compare as one
+#   content digest each.
 # - small generated store files referenced from the above (unit scripts,
 #   config files), up to 2 levels deep
 #
@@ -35,6 +36,13 @@ max_file_kib=256
 # Max NAR size of a referenced store path we'll follow. Keeps us to generated
 # files/scripts and out of real packages.
 max_ref_bytes=$((256 * 1024))
+
+# etc/ dirs that churn on every bump w/o config meaning (tzdata, CA bundles).
+# Compared as one content digest per dir instead of per file.
+data_dirs=(zoneinfo ssl/certs ssl/trust-source pki/tls/certs)
+# find -regex matching any data dir: \./\(zoneinfo\|ssl/certs\|...\)
+data_re=$(printf '%s\\|' "${data_dirs[@]}")
+data_re="\./\(${data_re%\\|}\)"
 
 store_re='/nix/store/[a-z0-9]{32}-[^ "'\''=:;,()<>`]+'
 
@@ -80,7 +88,7 @@ dump_system() {
   local all="$tmp/all" text="$tmp/text"
   local -A seen=() is_text=()
   local dumped=() next=()
-  local file rel size ref key _level
+  local file rel size ref key dir digest _level
 
   mkdir -p "$out/toplevel" "$out/etc" "$out/refs"
 
@@ -93,11 +101,21 @@ dump_system() {
     fi
   done
 
+  # etc/ data dirs: one digest each
+  for dir in "${data_dirs[@]}"; do
+    [[ -d "$etc/$dir" ]] || continue
+    mkdir -p "$out/etc/$(dirname "$dir")"
+    digest=$(cd "$etc/$dir" && find -L . -type f -print0 | sort -z |
+      xargs -0r sha256sum | sha256sum)
+    echo "<data dir digest: ${digest%% *}>" >"$out/etc/$dir.digest"
+  done
+
   # etc/: list all files w/ sizes, then find the small text files in one grep
-  (cd "$etc" && find -L . -type f -printf '%P\t%s\n' 2>/dev/null) >"$all"
-  (cd "$etc" && find -L . -type f -size -"$max_file_kib"k \
-    -not -regex '.*\.\(wants\|requires\|upholds\)/.*' -printf '%P\0' \
-    2>/dev/null | xargs -0r grep -IlZ '' --) >"$text"
+  (cd "$etc" && find -L . -regex "$data_re" -prune -o -type f \
+    -printf '%P\t%s\n' 2>/dev/null) >"$all"
+  (cd "$etc" && find -L . -regex "$data_re" -prune -o -type f \
+    -size -"$max_file_kib"k -not -regex '.*\.\(wants\|requires\|upholds\)/.*' \
+    -printf '%P\0' 2>/dev/null | xargs -0r grep -IlZ '' --) >"$text"
 
   # copy text files, preserving relative paths
   (cd "$etc" &&

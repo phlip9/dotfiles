@@ -36,7 +36,8 @@ package + release notes scanning and summarization.
 - external NixOS modules pinned separately in npins, imported in
   `nixos/mods/default.nix`: sops-nix, disko, nixbot, niks3, paseo. They can
   break against new nixpkgs (removed options, removed toolchain builders
-  like `buildGo1XXModule`).
+  like `buildGo1XXModule`). So can packages built from them, e.g.
+  `phlipPkgsNixos.nixbot-cli` and `nixbot-eval-jobs` (patched nix).
 
 Not affected: `homeConfigs` and top-level `phlipPkgs` (stable `nixpkgs` pin).
 
@@ -48,8 +49,21 @@ np=~/dev/nixpkgs   # local nixpkgs checkout, `nixos-unstable` branch
 # OLD: channel release in the current pin url,
 #   e.g. .../nixos-26.11pre1057119.ec2d622de077/nixexprs.tar.xz
 jq -r '.pins["nixos-unstable"].url' npins/sources.json
-# NEW: latest channel release
-npins update nixos-unstable --frozen --dry-run
+
+art=/tmp/nixos-upgrade-<old-rev12>   # logs, out-links, diffs
+mkdir -p "$art"
+
+# baseline builds (OLD pin), before bumping. skip `nixos-iso`. Usually
+# cached by CI. Out-links keep GC roots.
+for m in phlipdesk sauna; do
+  nix build -f . nixosConfigs.$m.config.system.build.toplevel \
+    -o "$art/old-$m"
+done
+
+# NEW: bump to the latest channel release, then read NEW from the pin url.
+# (`--dry-run` doesn't print the new rev.)
+npins update nixos-unstable --frozen
+jq -r '.pins["nixos-unstable"].url' npins/sources.json
 
 # fast-forward the local nixos-unstable branch to NEW (checkout must be clean)
 git -C "$np" status --porcelain
@@ -60,12 +74,9 @@ git -C "$np" merge --ff-only <new-rev>
 # full revs + committer dates (for the commit title)
 git -C "$np" log -1 --format='%H %cs %s' <old-rev>
 git -C "$np" log -1 --format='%H %cs %s' <new-rev>
-
-art=/tmp/nixos-upgrade-<new-rev12>   # logs, out-links, diffs
-mkdir -p "$art"
 ```
 
-If the user named a rev that differs from the npins dry-run, ask first.
+If the user named a rev that differs from the bumped pin, ask first.
 
 ## Phase 1: research
 
@@ -107,20 +118,9 @@ files, runtime migrations.
 When a module stops setting a value explicitly, check the upstream default
 actually in use (e.g. compile-time defaults in the package's man pages).
 
-### 1d. Baseline builds (OLD pin)
-
-Before bumping the pin, build each real machine (skip `nixos-iso`). Usually
-cached by CI. Out-links keep GC roots.
+### 1d. Eval probe (NEW pin)
 
 ```bash
-nix build -f . nixosConfigs.<machine>.config.system.build.toplevel \
-  -o "$art/old-<machine>"
-```
-
-### 1e. Bump pin + eval probe
-
-```bash
-npins update nixos-unstable --frozen
 nix eval --json -f . nixosTests --apply builtins.attrNames
 for m in phlipdesk sauna nixos-iso; do
   nix eval --raw -f . nixosConfigs.$m.config.system.build.toplevel.drvPath
@@ -137,7 +137,7 @@ nix eval --raw -f . <attr>.drvPath 2>&1 >/dev/null \
   in range for behavior changes and check each against our config, e.g.
   `curl -s https://api.github.com/repos/<owner>/<repo>/compare/<old>...<new>`.
 
-### 1f. New builds + diffs
+### 1e. New builds + diffs
 
 ```bash
 nix build -f . nixosConfigs.<machine>.config.system.build.toplevel \
@@ -154,16 +154,28 @@ nix store diff-closures "$art/old-<machine>" "$art/new-<machine>"
   masked: `etc/` files, unit files, and small generated scripts they
   reference (`refs/`). `Only in` = file added/removed. Shows the concrete
   effect of module changes: dropped/changed config lines, unit ordering and
-  hardening, script flags. ~90s per machine; run it in the background.
+  hardening, script flags. tzdata and CA bundle dirs show as one digest
+  line each. ~30s per machine; run it in the background.
   Known issue: `refs/` keys collide when several generated files share a
   name (e.g. per-cert `acme-postrun`), producing false diffs; confirm those
   against the real store files.
+- External pin build failures (builder default changes like
+  structuredAttrs, nix bumps breaking carried patches): check upstream HEAD
+  for a fix before patching locally, e.g.
+  `curl -s "https://api.github.com/repos/<owner>/<repo>/commits?path=<file>"`.
+  Then bump and review the range as in 1d.
+- systemd major bump: parse the generated tmpfiles with the new
+  `systemd-tmpfiles`; new versions tighten parsing. Diff old vs new output:
+  `"$art/<v>-<m>/sw/bin/systemd-tmpfiles" --dry-run --create --remove
+  "$art/<v>-<m>"/etc/tmpfiles.d/*.conf 2>&1 | grep -v '^Would'`.
+- Once machines build, start the Phase 3 NixOS test build in the
+  background; failures are research findings.
 - Upstream changelogs for bumps of stateful or public-facing services (DBs,
   web/metrics services), boot-critical packages (kernel, grub, limine,
   nvidia), and anything security-relevant. Source changelogs:
   `nix build -f "$np" <pkg>.src`, or GitHub releases.
 
-### 1g. Classify
+### 1f. Classify
 
 - **Breaking**: eval/build failure, removed option/package we use, behavior
   change needing a config change or decision.
@@ -194,7 +206,9 @@ Final history, in order, per AGENTS.md conventions:
 
 1. One commit per external pin bump: `sops-nix: a8627b2 -> 2bd00bd` (7-char
    revs). Verify it evals/builds against the OLD nixos-unstable so the commit
-   stands alone; otherwise bundle it into (2).
+   stands alone; otherwise bundle it into (2). Use a temp worktree w/ only
+   that pin: `git worktree add --detach "$art/wt-<pin>" HEAD`, then
+   `jq --slurpfile new npins/sources.json '.pins.<pin> = $new[0].pins.<pin>'`.
 2. `nixos-unstable: ec2d622de077 (2026-08-17) -> e94cb152ed51 (2026-09-25)`
    (12-char revs, committer dates). Include config migrations required to
    eval; new options don't exist on the old pin, so they can't be split
@@ -226,7 +240,7 @@ just nix-fmt && just nix-lint && git status --short
 ```
 
 Done when: both logs `exit=0`, all tests passed, no eval warnings, fmt/lint
-clean, re-run of 1f diffs shows nothing unexplained.
+clean, re-run of 1e diffs shows nothing unexplained.
 
 ## Final report
 
