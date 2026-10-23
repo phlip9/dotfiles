@@ -315,10 +315,10 @@ let
     systems = linuxSystems;
   };
 
-  # Top-level NixOS system build jobs
+  # Top-level NixOS system build jobs, excluding the installer ISO.
   nixosConfigs = builtins.mapAttrs (
     _: cfg: ciJob cfg.config.system.build.toplevel
-  ) (repoFor buildSystem).nixosConfigs;
+  ) (builtins.removeAttrs (repoFor buildSystem).nixosConfigs [ "nixos-iso" ]);
 
   # NixOS test jobs (linux only, from unstable pkgs)
   nixosTests = wrapDerivations buildSystem (repoFor buildSystem).nixosTests;
