@@ -219,7 +219,7 @@
         machine.execute(
             f"PASEO_PASSWORD_FILE={password_file} timeout 15 "
             "paseo run --host '[::1]:6767' --provider env-probe "
-            "--cwd /tmp/paseo-agent-env --background env-probe"
+            "--cwd /tmp/paseo-agent-env --no-wait env-probe"
         )
         machine.wait_until_succeeds(
             "test -s /tmp/paseo-agent-env/login-env", timeout=30

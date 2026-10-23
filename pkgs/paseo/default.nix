@@ -12,7 +12,7 @@ let
   # fetchNpmDeps output differs across nixpkgs revisions. Keep the hash for
   # this repo's pinned nixpkgs while upstream maintains the package logic.
   upstreamPaseo = callPackage (sources.paseo + "/nix/package.nix") {
-    npmDepsHash = "sha256-UXnB6q5tubKpTs+A5+u/NLSzc8ZK6rAsQs+kEphEKd8=";
+    npmDepsHash = "sha256-ObBdUmNSW+vDjzA7EbCDfZrB0nYDmcWmWe+UCoTMh/M=";
   };
 in
 
@@ -29,8 +29,6 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     ./paseo-kill-git-process-tree.patch
     # Add support for setting password via more secure PASEO_PASSWORD_FILE env.
     ./paseo-password-file.patch
-    # Keep node-pty's prebuilt native addon in the traced runtime closure.
-    ./paseo-node-pty-runtime.patch
   ];
 
   # Paseo uses ps to manage process trees and tar to extract speech models.
