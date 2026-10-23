@@ -136,6 +136,10 @@
         "/proc/$(systemctl show paseo.service -p MainPID --value)/environ"
     )
 
+    def assert_no_secret_env(env_dump_cmd: str) -> None:
+        """Daemon children must not inherit the daemon password env."""
+        machine.fail(f"{env_dump_cmd} | grep -E '^PASEO_PASSWORD(_FILE)?='")
+
     def assert_session_env(env_dump_cmd: str) -> None:
         """Check selected keys in `env`-style output from env_dump_cmd."""
         env_lines = machine.succeed(
@@ -235,6 +239,7 @@
         )
         for env_dump in ["agent-env", "nonlogin-env", "login-env"]:
             assert_session_env(f"cat /tmp/paseo-agent-env/{env_dump}")
+            assert_no_secret_env(f"cat /tmp/paseo-agent-env/{env_dump}")
 
     with subtest("terminal CLI drives a workspace terminal"):
         machine.succeed("install -d -m 0777 /tmp/paseo-terminal-test")
@@ -259,6 +264,7 @@
         )
         # Check exports from the actual terminal, not the test runner's shell.
         assert_session_env("cat /tmp/paseo-terminal-test/terminal-env")
+        assert_no_secret_env("cat /tmp/paseo-terminal-test/terminal-env")
         machine.succeed(
             f"PASEO_PASSWORD_FILE={password_file} "
             "paseo terminal capture --host '[::1]:6767' "

@@ -37,6 +37,8 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     ./paseo-disable-hub.patch
     # Never fetch third-party plugin code from a registry, npm, or git.
     ./paseo-disable-plugin-installs.patch
+    # Don't leak PASEO_PASSWORD{,_FILE} into agent and terminal envs.
+    ./paseo-scrub-secret-env.patch
   ];
 
   # Paseo uses ps to manage process trees and tar to extract speech models.
