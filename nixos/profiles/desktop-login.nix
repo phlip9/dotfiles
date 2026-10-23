@@ -48,10 +48,7 @@
   };
 
   systemd.services.greetd.serviceConfig = {
-    # agreety writes prompts to stderr; the text-greeter preset journals it.
-    StandardError = lib.mkForce "tty";
-    # agreety exits after five bad attempts; greetd can then exit with 0.
-    # /run/greetd.run survives restarts, preventing another initial autologin.
+    # `agreety` exits after five bad attempts. `greetd` can then exit with 0
     Restart = lib.mkForce "always";
   };
 
