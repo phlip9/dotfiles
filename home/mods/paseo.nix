@@ -77,7 +77,16 @@ let
 
     ${lib.getExe' pkgs.coreutils "install"} -d -m 0700 "$PASEO_HOME"
 
-    ${lib.getExe pkgs.openssl} rand -hex 32 > "$PASEO_PASSWORD_FILE"
+    # Remote relay clients must send this password, so keep it stable across
+    # restarts. Generate once, via temp file + rename to avoid a partial file.
+    if [ ! -s "$PASEO_PASSWORD_FILE" ]; then
+      (
+        umask 077
+        ${lib.getExe pkgs.openssl} rand -hex 32 > "$PASEO_PASSWORD_FILE.tmp"
+      )
+      ${lib.getExe' pkgs.coreutils "mv"} \
+        "$PASEO_PASSWORD_FILE.tmp" "$PASEO_PASSWORD_FILE"
+    fi
     ${lib.getExe' pkgs.coreutils "chmod"} 0600 "$PASEO_PASSWORD_FILE"
 
     exec ${

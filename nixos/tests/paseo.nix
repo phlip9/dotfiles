@@ -53,6 +53,12 @@
         "L+ /home/testuser/.profile - - - - ${hmProfile}"
       ];
 
+      # Resolve nginx vhosts locally, so pairing offers reach the relay.
+      networking.hosts."127.0.0.1" = [
+        "paseo.test"
+        "relay.test"
+      ];
+
       # NixOS set-environment var, only loaded by login shells.
       environment.variables.TEST_SYSTEM_VAR = "1";
 
@@ -285,6 +291,24 @@
             "curl -sf -H 'Host: relay.test' http://127.0.0.1/health "
             "| jq -e '.status == \"ok\"'"
         )
+
+    with subtest("relay clients must send the daemon password"):
+        pairing_url = machine.succeed(
+            f"PASEO_PASSWORD_FILE={password_file} "
+            "paseo daemon pair --host '[::1]:6767' --json | jq -r .url"
+        ).strip()
+        assert pairing_url.startswith("http://paseo.test/#offer="), pairing_url
+        relay_ls = f"timeout 30 paseo ls --host '{pairing_url}' --json"
+        # Upstream admits credential-less relay clients as owner.
+        status, output = machine.execute(f"{relay_ls} 2>&1")
+        assert status != 0, f"relay w/o password admitted: {output}"
+        assert "password" in output.lower(), output
+        status, output = machine.execute(
+            f"PASEO_PASSWORD=wrong-password {relay_ls} 2>&1"
+        )
+        assert status != 0, f"relay w/ wrong password admitted: {output}"
+        assert "password" in output.lower(), output
+        machine.succeed(f"PASEO_PASSWORD_FILE={password_file} {relay_ls}")
 
     with subtest("stop kills terminal children and restart restores env"):
         machine.succeed(

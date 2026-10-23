@@ -29,6 +29,9 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     ./paseo-kill-git-process-tree.patch
     # Add support for setting password via more secure PASEO_PASSWORD_FILE env.
     ./paseo-password-file.patch
+    # Require the daemon password on relay connections. Upstream admits relay
+    # clients w/o a credential, so the daemon public key alone grants owner.
+    ./paseo-require-relay-password.patch
   ];
 
   # Paseo uses ps to manage process trees and tar to extract speech models.
