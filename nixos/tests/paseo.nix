@@ -185,7 +185,10 @@
             "tr '\\0' '\\n' < /proc/$pid/environ "
             "| grep '^PASEO_PASSWORD='"
         )
-        machine.succeed("curl -g -sf http://[::1]:6767/api/health")
+        # Type=simple unit: active before the worker listens.
+        machine.wait_until_succeeds(
+            "curl -g -sf http://[::1]:6767/api/health", timeout=60
+        )
         machine.succeed(
             "test \"$(curl -g -s -o /dev/null -w '%{http_code}' "
             "http://[::1]:6767/api/status)\" = 401"
