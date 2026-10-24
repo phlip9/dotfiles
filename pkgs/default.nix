@@ -69,6 +69,9 @@ fix (phlipPkgs: {
   };
   marinara-engine-unwrapped = callPackage ./marinara-engine { };
 
+  # multios-usb - USB boot directly from .iso images
+  multios-usb = callPackage ./multios-usb.nix { };
+
   # nethack - roguelike game
   nethack = callPackage ./nethack { };
 
