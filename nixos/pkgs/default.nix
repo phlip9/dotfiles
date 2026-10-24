@@ -75,6 +75,9 @@ fix (phlipPkgsNixos: {
   # paseo-relay - self-hosted relay for Paseo daemon/client traffic
   paseo-relay = callPackage ./paseo-relay.nix { };
 
+  # rbitcoin - Bitcoin full node + Electrum + Esplora server (dynamic glibc)
+  rbitcoin = callPackage ./rbitcoin.nix { inherit sources; };
+
   # seahorse-ssh-askpass - tiny package that links to seahorse's ssh-askpass
   seahorse-ssh-askpass = callPackage ./seahorse-ssh-askpass.nix { };
 
