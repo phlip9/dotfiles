@@ -106,7 +106,10 @@ alias bash-trace="bash -lixc exit 2>&1 | sed -n 's/^+* \(source\|\.\) //p'"
 
 # git shortcut
 alias g='git'
-complete -o bashdefault -o default -o nospace -F __git_wrap__git_main g
+_complete_g() {
+    __comp_ensure git __git_wrap__git_main && __git_wrap__git_main "$@"
+}
+complete -o bashdefault -o default -o nospace -F _complete_g g
 
 # common git typos
 alias gs='git s'
@@ -115,11 +118,15 @@ alias gcm='git cm'
 
 # cargo shortcut
 alias c='cargo'
-complete -F _cargo c
+_complete_c() { __comp_ensure cargo _cargo && _cargo "$@"; }
+complete -F _complete_c c
 
 # just shortcut
 alias j='just'
-complete -o bashdefault -o nosort -o nospace -F _clap_complete_just j
+_complete_j() {
+    __comp_ensure just _clap_complete_just && _clap_complete_just "$@"
+}
+complete -o bashdefault -o nosort -o nospace -F _complete_j j
 
 # neovim shortcut
 alias v='nvim'
@@ -252,16 +259,26 @@ fi
 
 ## COMPLETIONS {{{
 
-# Bash completions from nix profiles
-for PROFILE in $NIX_PROFILES; do
-    for COMPLETION in "${PROFILE}/share/bash-completion/completions/"*; do
-        [[ -r "${COMPLETION}" ]] && source "${COMPLETION}"
-    done
-done
+# Ensure completion fn `$2` exists, lazy-loading the completion for command
+# `$1` if needed.
+#
+# bash-completion lazy-loads completions on first <TAB>, searching
+# `$(dirname cmd)/../share` and `$XDG_DATA_DIRS` for
+# `bash-completion/completions/<cmd>`.
+# It only looks up the typed command name, so alias completions
+# (ex: `c` -> `cargo`) must trigger the underlying command's load themselves.
+#
+# Don't eagerly source every completion at startup: some run commands when
+# sourced. ex: rustup's `cargo.bash` runs `rustc --print sysroot`, which
+# auto-installs the toolchain from any `rust-toolchain.toml` in the cwd.
+__comp_ensure() {
+    declare -F "$2" >/dev/null && return 0
+    _comp_load "$1" && declare -F "$2" >/dev/null
+}
 
 # Adjust nix alias completions so they behave like the underlying nix commands.
 __complete_nix_alias() {
-    declare -F _complete_nix >/dev/null || return 1
+    __comp_ensure nix _complete_nix || return 1
 
     local -a alias_words
     case "${COMP_WORDS[0]}" in
