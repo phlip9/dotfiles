@@ -64,4 +64,5 @@ in
   nixbot = runNixOSTest ./nixbot.nix;
   o11y = runNixOSTest ./o11y.nix;
   paseo = runNixOSTest ./paseo.nix;
+  rbitcoin = runNixOSTest ./rbitcoin.nix;
 }
