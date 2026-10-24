@@ -136,6 +136,8 @@
     };
 
   testScript = ''
+    from datetime import timedelta
+
     password_file = "/run/credentials/paseo.service/daemon-password"
     config_file = "/home/testuser/.paseo/config.json"
 
@@ -224,7 +226,8 @@
         )
         # Type=simple unit: active before the worker listens.
         machine.wait_until_succeeds(
-            "curl -g -sf http://[::1]:6767/api/health", timeout=60
+            "curl -g -sf http://[::1]:6767/api/health",
+            timeout=timedelta(seconds=60),
         )
         machine.succeed(
             "test \"$(curl -g -s -o /dev/null -w '%{http_code}' "
@@ -286,7 +289,8 @@
             "--cwd /tmp/paseo-agent-env --no-wait env-probe"
         )
         machine.wait_until_succeeds(
-            "test -s /tmp/paseo-agent-env/login-env", timeout=30
+            "test -s /tmp/paseo-agent-env/login-env",
+            timeout=timedelta(seconds=30),
         )
         for env_dump in ["agent-env", "nonlogin-env", "login-env"]:
             assert_session_env(f"cat /tmp/paseo-agent-env/{env_dump}")
@@ -311,7 +315,7 @@
         machine.wait_until_succeeds(
             "grep -Fx paseo-terminal-file-ok "
             "/tmp/paseo-terminal-test/terminal-result",
-            timeout=30,
+            timeout=timedelta(seconds=30),
         )
         # Check exports from the actual terminal, not the test runner's shell.
         assert_session_env("cat /tmp/paseo-terminal-test/terminal-env")
@@ -332,7 +336,7 @@
         machine.wait_until_succeeds(
             "curl -g -sf -H 'Host: paseo.test' http://[::1]:6767/ "
             "| grep -i '<html'",
-            timeout=30,
+            timeout=timedelta(seconds=30),
         )
 
     with subtest("nginx proxies web UI"):
@@ -390,7 +394,7 @@
         )
         machine.wait_until_succeeds(
             "test -s /tmp/paseo-terminal-test/shell-pid",
-            timeout=30,
+            timeout=timedelta(seconds=30),
         )
         terminal_pid = machine.succeed(
             "cat /tmp/paseo-terminal-test/shell-pid"
@@ -403,7 +407,7 @@
         machine.succeed("systemctl stop paseo.service")
         machine.wait_until_succeeds(
             f"test ! -e /proc/{terminal_pid} && test ! -e /proc/{child_pid}",
-            timeout=30,
+            timeout=timedelta(seconds=30),
         )
         machine.succeed(f"systemctl is-active user@{user_uid}.service")
         # Simulate UI edits while stopped

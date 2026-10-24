@@ -168,16 +168,23 @@ in
 
   testScript = ''
     import json
+    from datetime import timedelta
 
     def read_probe(path):
         """Read a probe written by the actual greetd child, not runuser."""
         try:
-            machine.wait_for_file(path, timeout=30)
+            machine.wait_for_file(path, timeout=timedelta(seconds=30))
         except Exception:
             machine.log(machine.succeed("journalctl -b -u greetd --no-pager"))
             machine.log(machine.get_tty_text("1"))
             raise
         return json.loads(machine.succeed(f"cat {path}"))
+
+    def wait_for_tty1(pattern):
+        """Wait for the tty1 console text to match `pattern`."""
+        machine.wait_until_tty_matches(
+            "1", pattern, timeout=timedelta(seconds=30)
+        )
 
     def assert_isolated(result, uid):
         """Both discovery and direct reads must fail for the cached key."""
@@ -211,15 +218,15 @@ in
 
     with subtest("manual login requires the Unix password, not the LUKS cache"):
         daemon_pid = machine.succeed("systemctl show greetd -p MainPID --value")
-        machine.wait_until_tty_matches("1", r"login: \s*$", timeout=30)
+        wait_for_tty1(r"login: \s*$")
         machine.send_chars("alice\n")
-        machine.wait_until_tty_matches("1", r"Password: \s*$", timeout=30)
+        wait_for_tty1(r"Password: \s*$")
         machine.send_chars("${luksPassword}\n")
-        machine.wait_until_tty_matches("1", "Login incorrect", timeout=30)
+        wait_for_tty1("Login incorrect")
         machine.fail("test -e /home/alice/session.json")
-        machine.wait_until_tty_matches("1", r"login: \s*$", timeout=30)
+        wait_for_tty1(r"login: \s*$")
         machine.send_chars("alice\n")
-        machine.wait_until_tty_matches("1", r"Password: \s*$", timeout=30)
+        wait_for_tty1(r"Password: \s*$")
         machine.send_chars("${unixPassword}\n")
         assert_isolated(read_probe("/home/alice/session.json"), 1000)
         assert daemon_pid == machine.succeed(

@@ -147,7 +147,7 @@
             "'http://127.0.0.1:8428/api/v1/query"
             "?query=up%7Bjob%3D%22node-exporter%22%7D' "
             "| jq -e '.data.result[0].value[1] == \"1\"'",
-            timeout=30,
+            timeout=dt.timedelta(seconds=30),
         )
 
     # VictoriaMetrics scrapes itself.
@@ -157,7 +157,7 @@
             "'http://127.0.0.1:8428/api/v1/query"
             "?query=up%7Bjob%3D%22victoriametrics%22%7D' "
             "| jq -e '.data.result[0].value[1] == \"1\"'",
-            timeout=30,
+            timeout=dt.timedelta(seconds=30),
         )
 
     # Grafana credentials directory exists with secrets.
@@ -242,7 +242,7 @@
             "'http://127.0.0.1:3000/api/datasources/proxy"
             "/uid/victoriametrics/api/v1/query?query=up' "
             "| jq -e '.data.result | length > 0'",
-            timeout=30,
+            timeout=dt.timedelta(seconds=30),
         )
 
     # Grafana can list available metrics from VictoriaMetrics.
@@ -252,7 +252,7 @@
             "'http://127.0.0.1:3000/api/datasources/proxy"
             "/uid/victoriametrics/api/v1/label/__name__/values' "
             "| jq -e '.data | any(index(\"vm_app_version\"))'",
-            timeout=30,
+            timeout=dt.timedelta(seconds=30),
         )
 
     gf_curl = "curl -sS --fail-with-body -u testadmin:gf-admin-testpwd"
@@ -296,7 +296,8 @@
         ).strip()
         job = json.loads(
             machine.wait_until_succeeds(
-                f"{gf_curl} {gs_repo_url}/jobs/{job_uid}", timeout=60
+                f"{gf_curl} {gs_repo_url}/jobs/{job_uid}",
+                timeout=dt.timedelta(seconds=60),
             )
         )
         assert job["status"]["state"] == "success", job["status"]
@@ -313,7 +314,7 @@
         machine.wait_until_succeeds(
             f"{gf_curl} {gs_repo_url} "
             "| jq -e '.status.health.healthy == true'",
-            timeout=60,
+            timeout=dt.timedelta(seconds=60),
         )
 
     # Number of setup runs that reached the startup pull: either queued one,
@@ -334,7 +335,7 @@
         machine.wait_until_succeeds(
             f"{gf_curl} {gs_repo_url}/jobs | jq -e '.items | any("
             ".spec.action == \"pull\" and .status.state == \"success\")'",
-            timeout=60,
+            timeout=dt.timedelta(seconds=60),
         )
 
     # Re-running the setup unit takes the update (PUT) path, then pulls again.
@@ -366,7 +367,8 @@
         # setup is still active. Wait for the new setup run's pull instead.
         machine.succeed("systemctl kill --signal=KILL grafana.service")
         machine.wait_until_succeeds(
-            f"{gs_setup_pulls} | grep -qx {pulls + 3}", timeout=180
+            f"{gs_setup_pulls} | grep -qx {pulls + 3}",
+            timeout=dt.timedelta(seconds=180),
         )
         machine.wait_for_unit(setup)
         machine.succeed(
@@ -432,7 +434,7 @@
         machine.wait_until_succeeds(
             "jq -e '.spec.title == \"Git Sync Test (edited)\"' "
             f"{gs_dash_file}",
-            timeout=30,
+            timeout=dt.timedelta(seconds=30),
         )
         machine.succeed(
             f"{gf_curl} {dash_url} "

@@ -304,6 +304,7 @@ in
     import hmac
     import json
     import shlex
+    from datetime import timedelta
 
     # Exercise the same nginx-to-Unix-socket boundary used in production.
     nixbot_url = "http://localhost"
@@ -351,7 +352,7 @@ in
         machine.wait_for_unit("niks3.service")
         machine.wait_until_succeeds(
             "curl --noproxy '*' --fail -g -s 'http://[::1]:5751/readyz'",
-            timeout=120,
+            timeout=timedelta(seconds=120),
         )
 
     with subtest("nixbot: nginx proxies to the service Unix socket"):
@@ -359,7 +360,8 @@ in
         machine.wait_for_unit("nixbot.service")
         machine.fail("curl --fail -s http://127.0.0.1:8010/health")
         machine.wait_until_succeeds(
-            f"curl --fail -s {nixbot_url}/health", timeout=120
+            f"curl --fail -s {nixbot_url}/health",
+            timeout=timedelta(seconds=120),
         )
 
     with subtest("nixbot: project discovered from fake GitHub"):
@@ -473,7 +475,7 @@ in
                 f"set -o pipefail\n{s3_env}\n"
                 f"s5cmd cat s3://${s3Bucket}/{store_hash}.narinfo "
                 "| zstd --decompress",
-                timeout=60,
+                timeout=timedelta(seconds=60),
             )
             assert f"StorePath: {store_path}" in narinfo
             assert "Sig: niks3-test-1:" in narinfo
@@ -580,7 +582,7 @@ in
                 "curl -sfG http://127.0.0.1:8428/api/v1/query "
                 f"--data-urlencode {shlex.quote('query=' + query)} "
                 "| jq -e '.data.result | length > 0'",
-                timeout=60,
+                timeout=timedelta(seconds=60),
             )
   '';
 }
