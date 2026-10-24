@@ -51,6 +51,61 @@ in
             "nix-command"
             "flakes"
           ];
+
+          # need to support booting off multios-usb stick
+          boot.initrd = {
+            systemd.enable = false;
+            availableKernelModules = [ "exfat" ];
+            kernelModules = [ "exfat" ];
+            supportedFilesystems = [ "exfat" ];
+          };
+
+          # zfs is incompatible with the latest kernel and not needed here.
+          boot.supportedFilesystems.zfs = lib.mkForce false;
+        }
+      )
+    ];
+  };
+
+  # NixOS headless installer ISO configuration
+  nixos-iso-headless = nixosSystem {
+    modules = [
+      (
+        {
+          lib,
+          config,
+          modulesPath,
+          ...
+        }:
+        {
+          imports = [
+            (modulesPath + "/misc/nixpkgs/read-only.nix")
+            (modulesPath + "/installer/cd-dvd/installation-cd-minimal-new-kernel.nix")
+          ];
+
+          # force external, read-only pkgs for iso
+          nixpkgs = {
+            pkgs = pkgs;
+            overlays = lib.mkForce pkgs.overlays;
+            flake.source = nixpkgs.outPath;
+          };
+
+          # enable `nix` command and flakes support
+          nix.settings.experimental-features = [
+            "nix-command"
+            "flakes"
+          ];
+
+          # need to support booting off multios-usb stick
+          boot.initrd = {
+            systemd.enable = false;
+            availableKernelModules = [ "exfat" ];
+            kernelModules = [ "exfat" ];
+            supportedFilesystems = [ "exfat" ];
+          };
+
+          # zfs is incompatible with the latest kernel and not needed here.
+          boot.supportedFilesystems.zfs = lib.mkForce false;
         }
       )
     ];

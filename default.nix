@@ -93,6 +93,9 @@ rec {
 
   # NixOS graphical installer .iso image
   nixos-iso = nixosConfigs.nixos-iso.config.system.build.isoImage;
+  # NixOS headless installer .iso image
+  nixos-iso-headless =
+    nixosConfigs.nixos-iso-headless.config.system.build.isoImage;
 
   # NixOS VM tests
   nixosTests = import ./nixos/tests {
