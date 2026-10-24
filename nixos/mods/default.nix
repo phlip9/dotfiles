@@ -26,6 +26,14 @@
   ./paseo.nix
   ./phlippkgs.nix
   ./postgres.nix
+
+  # Upstream takes its default package as an import arg, which can't see our
+  # module args. ./rbitcoin.nix sets `services.rbitcoin.package` instead.
+  (import (sources.rbitcoin + "/nix/modules/rbitcoin.nix") {
+    defaultPackage = throw "services.rbitcoin.package: unset";
+  })
+  ./rbitcoin.nix
+
   ./xremap.nix
 
   # nixbot CI module + its dependencies (nixbot and niks3)
