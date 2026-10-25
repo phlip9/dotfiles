@@ -98,6 +98,11 @@ Run in parallel subagents:
 4. **Patch review**: per patch in `pkgs/paseo/default.nix`, fixed upstream
    (drop), still applies, or needs a rebase? Grep for the patch's
    functions/keys in `<OLD>..<NEW>` history.
+   - TEMPORARY: our `preBuild = "npm run postinstall"` works around
+     getpaseo/paseo#7673 (upstream skips `patches/*.patch`). Drop it if
+     the issue is closed or upstream `nix/package.nix` now runs
+     `postinstall`/`patch-package`; double-applying fails the build. Remove
+     this note once the workaround is gone.
 
 ## Gate: report
 
