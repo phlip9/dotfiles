@@ -213,6 +213,14 @@
           runOnStartup = true;
         };
 
+        "phlip9/rbitcoin" = {
+          secretName = "github-webhook-secret-phlip9-rbitcoin";
+          branches = [ "master" ];
+          command = [ cmdFetchResetMaster ];
+          workingDir = "/home/phlip9/dev/rbitcoin";
+          runOnStartup = true;
+        };
+
         "phlip9/vss-server" = {
           secretName = "github-webhook-secret-phlip9-vss-server";
           branches = [ "main" ];
@@ -231,6 +239,7 @@
       };
   };
   sops.secrets.github-webhook-secret-phlip9-dotfiles = { };
+  sops.secrets.github-webhook-secret-phlip9-rbitcoin = { };
   sops.secrets.github-webhook-secret-phlip9-vss-server = { };
   sops.secrets.github-webhook-secret-lexeapp-lexe = { };
 
