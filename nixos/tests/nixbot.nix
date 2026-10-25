@@ -4,6 +4,8 @@
 # - signed push webhook triggers nixbot eval and build
 # - outside PRs require maintainer approval. same-repo PRs remain trusted
 # - niks3 streaming uploader uploads the output
+# - an output already in the local store (built outside nixbot) is skipped
+#   but still uploaded (see: nixos/pkgs/nixbot/default.nix)
 # - niks3 server writes signed cache objects to S3 (local RustFS S3 API in test)
 # - reads the output's narinfo directly from S3, verifies its signature, and
 #   copies the output into an empty Nix store
@@ -238,7 +240,8 @@ in
         script = ''
           rm -rf /var/lib/test-repo /tmp/test-flake
 
-          # setupTestFlake - build a minimal test flake with one check
+          # setupTestFlake - build a minimal test flake. `test` is built by
+          # nixbot. `prebuilt` is built outside nixbot before the first push.
           mkdir -p /tmp/test-flake
           cd /tmp/test-flake
           git init -b master
@@ -252,6 +255,12 @@ in
                 system = "x86_64-linux";
                 builder = "/bin/sh";
                 args = [ "-c" "echo building-test; echo hello > $out" ];
+              };
+              checks.x86_64-linux.prebuilt = derivation {
+                name = "prebuilt";
+                system = "x86_64-linux";
+                builder = "/bin/sh";
+                args = [ "-c" "echo prebuilt > $out" ];
               };
             };
           }
@@ -354,6 +363,14 @@ in
         )
 
     with subtest("nixbot: webhook triggers eval, build, and statuses"):
+        # Simulate a build on the CI host outside nixbot, so nixbot sees the
+        # output as already local and skips building it.
+        machine.succeed(
+            "nix build --no-link "
+            "'git+file:///var/lib/test-repo?ref=master"
+            "#checks.x86_64-linux.prebuilt'"
+        )
+
         sha = machine.succeed("git -C /var/lib/test-repo rev-parse master").strip()
         webhook("push", {
             "ref": "refs/heads/master",
@@ -390,10 +407,13 @@ in
             nbo("build", "view", str(build_number), "-R", repo, "--json")
         )
         assert detail["build"]["branch"] == "master"
-        assert [
+        assert sorted(
             (attribute["attr"], attribute["status"])
             for attribute in detail["attributes"]
-        ] == [("checks.x86_64-linux.test", "succeeded")]
+        ) == [
+            ("checks.x86_64-linux.prebuilt", "skipped_local"),
+            ("checks.x86_64-linux.test", "succeeded"),
+        ]
 
         watch = nbo("build", "watch", str(build_number), "-R", repo)
         assert "checks.x86_64-linux.test" in watch
@@ -402,12 +422,6 @@ in
         assert "building-test" in log
 
     with subtest("cache: streaming upload is signed and readable from S3"):
-        store_path = machine.succeed(
-            "nix eval --raw "
-            "'git+file:///var/lib/test-repo?ref=master"
-            "#checks.x86_64-linux.test.outPath'"
-        ).strip()
-        store_hash = store_path.rsplit("/", 1)[1].split("-", 1)[0]
         s3_env = (
             "export S3_ENDPOINT_URL=http://127.0.0.1:9000\n"
             "export AWS_ACCESS_KEY_ID="
@@ -415,30 +429,41 @@ in
             "export AWS_SECRET_ACCESS_KEY="
             "$(cat /run/secrets/niks3-s3-secret-key)"
         )
-        narinfo = machine.succeed(
-            f"{s3_env}\n"
-            f"s5cmd cat s3://${s3Bucket}/{store_hash}.narinfo "
-            "| zstd --decompress"
-        )
-        assert f"StorePath: {store_path}" in narinfo
-        assert "Sig: niks3-test-1:" in narinfo
-
-        # Fetching into an empty store verifies the nar and its signature, not
-        # only the presence of an S3 metadata object.
         binary_cache_url = (
             "s3://${s3Bucket}?endpoint=http://127.0.0.1:9000"
             "&region=us-east-1"
         )
-        machine.succeed(
-            f"{s3_env}\n"
-            "mkdir -p /tmp/cache-store\n"
-            f"nix copy --from '{binary_cache_url}' "
-            f"--to /tmp/cache-store {store_path}"
-        )
-        content = machine.succeed(
-            f"nix --store /tmp/cache-store store cat {store_path}"
-        ).strip()
-        assert content == "hello"
+        machine.succeed("mkdir -p /tmp/cache-store")
+
+        # Built (`test`) and skipped-as-local (`prebuilt`) outputs must both
+        # reach the cache. Skipped uploads are async, so wait for them.
+        for attr, expected in (("test", "hello"), ("prebuilt", "prebuilt")):
+            store_path = machine.succeed(
+                "nix eval --raw "
+                "'git+file:///var/lib/test-repo?ref=master"
+                f"#checks.x86_64-linux.{attr}.outPath'"
+            ).strip()
+            store_hash = store_path.rsplit("/", 1)[1].split("-", 1)[0]
+            narinfo = machine.wait_until_succeeds(
+                f"set -o pipefail\n{s3_env}\n"
+                f"s5cmd cat s3://${s3Bucket}/{store_hash}.narinfo "
+                "| zstd --decompress",
+                timeout=60,
+            )
+            assert f"StorePath: {store_path}" in narinfo
+            assert "Sig: niks3-test-1:" in narinfo
+
+            # Fetching into an empty store verifies the nar and its signature,
+            # not only the presence of an S3 metadata object.
+            machine.succeed(
+                f"{s3_env}\n"
+                f"nix copy --from '{binary_cache_url}' "
+                f"--to /tmp/cache-store {store_path}"
+            )
+            content = machine.succeed(
+                f"nix --store /tmp/cache-store store cat {store_path}"
+            ).strip()
+            assert content == expected
 
     # Give each PR a distinct tree so nixbot's build reuse cannot merge them.
     def open_pr(number, association, head_repo_id=2):
