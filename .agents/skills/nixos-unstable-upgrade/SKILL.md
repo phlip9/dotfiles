@@ -28,7 +28,7 @@ package + release notes scanning and summarization.
 `nixos-unstable` feeds (see `default.nix`, `nixos/default.nix`):
 
 - `nixosConfigs`: `phlipdesk` (desktop), `sauna` (remote Hetzner bare metal),
-  `nixos-iso`
+  `nixos-iso`, `nixos-iso-headless`
 - `nixosTests` (`nixos/tests/default.nix`), built from `pkgsUnstable`
 - `phlipPkgsNixos` (`nixos/pkgs/`), built from `pkgsUnstable`
 - `config.phlipPkgs` inside NixOS (`nixos/mods/phlippkgs.nix`) rebuilds
@@ -120,19 +120,28 @@ actually in use (e.g. compile-time defaults in the package's man pages).
 
 ### 1d. Eval probe (NEW pin)
 
+Eval every machine and every test; tests set options machines don't.
+
 ```bash
-nix eval --json -f . nixosTests --apply builtins.attrNames
-for m in phlipdesk sauna nixos-iso; do
-  nix eval --raw -f . nixosConfigs.$m.config.system.build.toplevel.drvPath
+attrs=$(
+  nix eval --raw -f . nixosConfigs \
+    --apply 'cs: toString (map (m: "nixosConfigs.${m}.config.system.build.toplevel") (builtins.attrNames cs))'
+  echo
+  nix eval --raw -f . nixosTests \
+    --apply 'ts: toString (map (t: "nixosTests.${t}") (builtins.attrNames ts))'
+)
+# errors + warnings/deprecations, per attr
+for a in $attrs; do
+  echo "== $a"
+  nix eval --raw -f . "$a.drvPath" 2>&1 >/dev/null \
+    | grep -iE 'error|warn|trace|deprec'
 done
-for t in <tests>; do nix eval --raw -f . nixosTests.$t.drvPath; done
-# warnings/deprecations
-nix eval --raw -f . <attr>.drvPath 2>&1 >/dev/null \
-  | grep -iE 'warn|trace|deprec'
 ```
 
 - `mkRemovedOptionModule` assertions stop eval early and hide later errors.
-  Fix each one and re-eval until clean.
+  Fix each one and re-eval until clean. For each removed option, grep the
+  whole repo (`nixos/`, incl. `nixos/tests/` and the ISO configs in
+  `nixos/default.nix`), not just the attr that failed.
 - External pin failures: `npins update <pin>`, then review upstream commits
   in range for behavior changes and check each against our config, e.g.
   `curl -s https://api.github.com/repos/<owner>/<repo>/compare/<old>...<new>`.
@@ -145,6 +154,9 @@ nix build -f . nixosConfigs.<machine>.config.system.build.toplevel \
 nix store diff-closures "$art/old-<machine>" "$art/new-<machine>"
 .agents/skills/nixos-unstable-upgrade/scripts/system-diff.sh \
   "$art/old-<machine>" "$art/new-<machine>" > "$art/<machine>.system.diff"
+nix shell -f . pkgs.cpio pkgs.zstd pkgs.xz pkgs.gzip --command \
+  .agents/skills/nixos-unstable-upgrade/scripts/initrd-diff.sh \
+  "$art/old-<machine>" "$art/new-<machine>" > "$art/<machine>.initrd.diff"
 ```
 
 - `diff-closures`: every package version change. Verify unexpected
@@ -159,6 +171,10 @@ nix store diff-closures "$art/old-<machine>" "$art/new-<machine>"
   Known issue: `refs/` keys collide when several generated files share a
   name (e.g. per-cert `acme-postrun`), producing false diffs; confirm those
   against the real store files.
+- `initrd-diff.sh`: initrd file list (added/removed) and small text file
+  contents (initrd units, udev rules, generated config), masked. Run it
+  whenever `diff-closures` shows `initrd-linux` changed. Kernel module
+  sizes are ignored; they churn on every kernel rebuild. ~10s per machine.
 - External pin build failures (builder default changes like
   structuredAttrs, nix bumps breaking carried patches): check upstream HEAD
   for a fix before patching locally, e.g.
