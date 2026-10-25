@@ -41,6 +41,14 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     ./paseo-scrub-secret-env.patch
   ];
 
+  # Upstream builds w/ `--ignore-scripts`, so the root postinstall never
+  # applies `patches/*.patch` to node_modules. W/o the @gorhom/bottom-sheet
+  # patch, the web UI crashes w/ React error #130 when opening a chat.
+  # https://github.com/getpaseo/paseo/issues/7673
+  preBuild = (prevAttrs.preBuild or "") + ''
+    npm run postinstall
+  '';
+
   # Paseo uses ps to manage process trees and tar to extract speech models.
   # Upstream's wrappers do not include their Linux providers in PATH.
   postFixup =
