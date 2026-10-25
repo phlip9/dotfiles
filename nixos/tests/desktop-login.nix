@@ -60,9 +60,8 @@ in
           }
         ];
 
-      # Match phlipdesk's kernel and initrd implementation.
+      # Match phlipdesk's kernel.
       boot.kernelPackages = pkgs.linuxPackages_latest;
-      boot.initrd.systemd.enable = true;
       # qemu-vm clears LUKS devices at priority 10. Keep a real initrd unlock,
       # even though the test framework supplies the VM's unencrypted root.
       boot.initrd.luks.devices = lib.mkOverride 5 {

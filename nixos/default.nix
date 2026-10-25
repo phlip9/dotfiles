@@ -52,13 +52,17 @@ in
             "flakes"
           ];
 
-          # need to support booting off multios-usb stick
-          boot.initrd = {
-            systemd.enable = false;
-            availableKernelModules = [ "exfat" ];
-            kernelModules = [ "exfat" ];
-            supportedFilesystems = [ "exfat" ];
-          };
+          # TODO(phlip9): support booting off multios-usb stick. nixpkgs
+          # dropped scripted stage-1, which implemented `findiso=` and grub
+          # `loopback.cfg` ISO-in-file boot. Needs a systemd initrd unit that
+          # loop-mounts `findiso=<path>` so `/dev/disk/by-label/<volumeID>`
+          # appears. Fix next time we run a NixOS ISO off multios-usb.
+          # boot.initrd = {
+          #   systemd.enable = false;
+          #   availableKernelModules = [ "exfat" ];
+          #   kernelModules = [ "exfat" ];
+          #   supportedFilesystems = [ "exfat" ];
+          # };
 
           # zfs is incompatible with the latest kernel and not needed here.
           boot.supportedFilesystems.zfs = lib.mkForce false;
@@ -96,13 +100,17 @@ in
             "flakes"
           ];
 
-          # need to support booting off multios-usb stick
-          boot.initrd = {
-            systemd.enable = false;
-            availableKernelModules = [ "exfat" ];
-            kernelModules = [ "exfat" ];
-            supportedFilesystems = [ "exfat" ];
-          };
+          # TODO(phlip9): support booting off multios-usb stick. nixpkgs
+          # dropped scripted stage-1, which implemented `findiso=` and grub
+          # `loopback.cfg` ISO-in-file boot. Needs a systemd initrd unit that
+          # loop-mounts `findiso=<path>` so `/dev/disk/by-label/<volumeID>`
+          # appears. Fix next time we run a NixOS ISO off multios-usb.
+          # boot.initrd = {
+          #   systemd.enable = false;
+          #   availableKernelModules = [ "exfat" ];
+          #   kernelModules = [ "exfat" ];
+          #   supportedFilesystems = [ "exfat" ];
+          # };
 
           # zfs is incompatible with the latest kernel and not needed here.
           boot.supportedFilesystems.zfs = lib.mkForce false;
