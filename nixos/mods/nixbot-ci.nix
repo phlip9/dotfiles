@@ -114,6 +114,10 @@ in
       inherit (cfg) admins domain;
       outputsPath = "/var/www/nixbot/nix-outputs/";
 
+      # Patched to also upload outputs already present in the local store.
+      # See: nixos/pkgs/nixbot/default.nix
+      packages.nixbot = phlipPkgsNixos.nixbot;
+
       # expose via NGINX
       nginx = {
         enable = true;

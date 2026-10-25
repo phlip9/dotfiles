@@ -1,0 +1,20 @@
+--- a/nixbot/build_run.py
++++ b/nixbot/build_run.py
+@@ -551,6 +551,17 @@
+         """Persist skips and dependency failures as they happen;
+         otherwise they stay pending until the whole build ends."""
+         await db.complete_attribute(o.pool, build.id_, result, if_unfinished=True)
++        # Outputs already in the local store were built outside nixbot
++        # (e.g. by hand on the CI host) and never uploaded. Enqueue the
++        # .drv like `on_built` does; the uploader resolves it to its
++        # valid outputs and the cache skips paths it already has.
++        if (
++            result.status == AttributeStatus.skipped_local
++            and result.out_path is not None
++            and result.drv_path is not None
++        ):
++            for uploader in o.uploaders:
++                uploader.enqueue_nowait(result.drv_path)
+ 
+     failed_build_cache: FailedBuildCache | None = (
+         o.failed_build_cache(build.project_id)

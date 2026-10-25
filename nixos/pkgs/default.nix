@@ -54,6 +54,12 @@ fix (phlipPkgsNixos: {
   # niks3 - S3-backed Nix binary cache with garbage collection
   niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
 
+  # nixbot - CI service, patched to upload already-local outputs
+  nixbot = pkgs.python3Packages.callPackage ./nixbot {
+    inherit sources;
+    inherit (phlipPkgsNixos) nixbot-eval-jobs;
+  };
+
   # nixbot-cli - inspect and control nixbot CI from the `nbo` CLI
   nixbot-cli = pkgs.python3Packages.callPackage (
     sources.nixbot + "/packages/nixbot-cli.nix"
