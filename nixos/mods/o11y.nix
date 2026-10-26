@@ -78,6 +78,15 @@ in
           In production, use config.sops.secrets.*.path.
         '';
       };
+
+      secretsManagerKeyFile = lib.mkOption {
+        type = lib.types.path;
+        description = ''
+          Path to a file containing the key that encrypts data keys in
+          Grafana's secrets manager (Git Sync tokens, other secure values).
+          In production, use config.sops.secrets.*.path.
+        '';
+      };
     };
   };
 
@@ -233,6 +242,20 @@ in
           ];
         };
 
+        # The secrets manager encrypts secure values (ex: Git Sync tokens)
+        # w/ data keys, which are encrypted by the current KMS provider.
+        # The default `secret_key.v1` provider uses a PUBLIC key from
+        # `conf/defaults.ini` and does NOT fall back to
+        # `[security] secret_key`. Grafana loads every
+        # `[secrets_manager.encryption.secret_key.*]` section as a separate
+        # provider, so adding `v2` and switching `encryption_provider` is the
+        # supported rotation path: new data keys use our key while any data
+        # keys created under `v1` stay readable.
+        # See: pkg/registry/apis/secret/encryption/kmsproviders/kmsproviders.go
+        secrets_manager.encryption_provider = "secret_key.v2";
+        "secrets_manager.encryption.secret_key.v2".secret_key =
+          "$__file{${gfCredsDir}/secrets-manager-key}";
+
         users = {
           allow_sign_up = false;
           allow_org_create = false;
@@ -291,6 +314,7 @@ in
     systemd.services.grafana.serviceConfig.LoadCredential = [
       "admin-password:${cfg.grafana.adminPasswordFile}"
       "secret-key:${cfg.grafana.secretKeyFile}"
+      "secrets-manager-key:${cfg.grafana.secretsManagerKeyFile}"
     ];
 
     # ===================================================================

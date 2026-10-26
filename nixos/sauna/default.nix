@@ -435,8 +435,10 @@
       domain = "grafana.phlip9.com";
       adminPasswordFile = config.sops.secrets.grafana-admin-password.path;
       secretKeyFile = config.sops.secrets.grafana-secret-key.path;
+      secretsManagerKeyFile = config.sops.secrets.grafana-secrets-manager-key.path;
     };
   };
   sops.secrets.grafana-admin-password = { };
   sops.secrets.grafana-secret-key = { };
+  sops.secrets.grafana-secrets-manager-key = { };
 }

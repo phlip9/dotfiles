@@ -1,7 +1,8 @@
 # NixOS VM test for the phlip9-o11y module.
 #
 # Single VM with VictoriaMetrics + node-exporter + Grafana.
-# Verifies scraping, querying, and Grafana datasource provisioning.
+# Verifies scraping, querying, Grafana datasource provisioning, and that
+# Grafana's secrets manager encrypts with our key.
 #
 # In production, sops-nix provides the secret file paths. Here we
 # pass writeText files directly to the module's *File options.
@@ -16,11 +17,13 @@
       grafanaAdminPassword = "gf-admin-testpwd";
       grafanaAdminPasswordFile = pkgs.writeText "gf-admin-pwd" grafanaAdminPassword;
       grafanaSecretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key-0123456789abcdef";
+      grafanaSecretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key-0123456789";
     in
     {
       environment.systemPackages = [
         pkgs.jq
         pkgs.curl
+        pkgs.sqlite
       ];
 
       services.phlip9-o11y = {
@@ -28,6 +31,7 @@
         retentionPeriod = "1d";
         grafana.adminPasswordFile = grafanaAdminPasswordFile;
         grafana.secretKeyFile = grafanaSecretKeyFile;
+        grafana.secretsManagerKeyFile = grafanaSecretsManagerKeyFile;
       };
 
       # Use a fast scrape interval for tests.
@@ -35,9 +39,16 @@
 
       # Override admin user for test assertions.
       services.grafana.settings.security.admin_user = "testadmin";
+
+      # The VM has no DNS. Let the throwaway github Repository below pass
+      # Git Sync's URL validator, which otherwise resolves the host.
+      services.grafana.settings.provisioning.allowed_git_urls = "github.com";
     };
 
   testScript = ''
+    import json
+    import shlex
+
     machine.start()
     machine.wait_for_unit("multi-user.target")
 
@@ -86,6 +97,10 @@
             "test -f /run/credentials/"
             "grafana.service/secret-key"
         )
+        machine.succeed(
+            "test -f /run/credentials/"
+            "grafana.service/secrets-manager-key"
+        )
 
     # Grafana starts and API is accessible.
     with subtest("Grafana health"):
@@ -95,6 +110,47 @@
             "curl -sf -u testadmin:gf-admin-testpwd "
             "http://127.0.0.1:3000/api/health "
             "| jq -e '.database == \"ok\"'"
+        )
+
+    # Secure values (ex: Git Sync tokens) must get data keys from our
+    # secret_key.v2 provider, not the public default secret_key.v1 key.
+    # Store a dummy token on a throwaway, read-only github Repository.
+    with subtest("Grafana secrets manager encrypts w/ secret_key.v2"):
+        repos_url = (
+            "http://127.0.0.1:3000/apis/provisioning.grafana.app"
+            "/v0alpha1/namespaces/default/repositories"
+        )
+        repo = {
+            "apiVersion": "provisioning.grafana.app/v0alpha1",
+            "kind": "Repository",
+            "metadata": {"name": "secrets-test", "namespace": "default"},
+            "spec": {
+                "title": "secrets-test",
+                "type": "github",
+                "workflows": [],
+                "sync": {"enabled": False, "target": "folder"},
+                "webhook": {"disabled": True},
+                "github": {
+                    "url": "https://github.com/example/test",
+                    "branch": "main",
+                },
+            },
+            "secure": {"token": {"create": "dummy-token"}},
+        }
+        machine.succeed(
+            "curl -sS --fail-with-body -u testadmin:gf-admin-testpwd "
+            "-H 'Content-Type: application/json' "
+            f"-d {shlex.quote(json.dumps(repo))} {repos_url}"
+        )
+        providers = machine.succeed(
+            # Grafana writes concurrently; wait out its locks.
+            "sqlite3 -cmd '.timeout 10000' /var/lib/grafana/data/grafana.db "
+            "'SELECT DISTINCT provider FROM secret_data_key'"
+        )
+        assert providers.strip() == "secret_key.v2", providers
+        machine.succeed(
+            "curl -sS --fail-with-body -u testadmin:gf-admin-testpwd "
+            f"-X DELETE {repos_url}/secrets-test"
         )
 
     # Provisioned datasource exists.

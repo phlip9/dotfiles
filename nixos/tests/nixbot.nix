@@ -143,6 +143,7 @@ in
         retentionPeriod = "1d";
         grafana.adminPasswordFile = pkgs.writeText "gf-admin-pwd" "test-password";
         grafana.secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
+        grafana.secretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key";
       };
       services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
 
