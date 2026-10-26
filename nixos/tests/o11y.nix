@@ -1,15 +1,16 @@
 # NixOS VM test for the phlip9-o11y module.
 #
 # Single VM with VictoriaMetrics + node-exporter + Grafana.
-# Verifies scraping, querying, Grafana datasource provisioning, and that
-# Grafana's secrets manager encrypts with our key.
+# Verifies scraping, querying, Grafana datasource provisioning, that
+# Grafana's secrets manager encrypts with our key, and a Git Sync round trip
+# (file -> dashboard -> API save -> file) w/ a `local` repository.
 #
 # In production, sops-nix provides the secret file paths. Here we
 # pass writeText files directly to the module's *File options.
 {
   name = "o11y";
 
-  globalTimeout = 300;
+  globalTimeout = 600;
 
   nodes.machine =
     { pkgs, ... }:
@@ -32,6 +33,14 @@
         grafana.adminPasswordFile = grafanaAdminPasswordFile;
         grafana.secretKeyFile = grafanaSecretKeyFile;
         grafana.secretsManagerKeyFile = grafanaSecretsManagerKeyFile;
+
+        # A `local` repository needs no network or token. Poll at the floor.
+        grafana.gitSync = {
+          enable = true;
+          type = "local";
+          local.path = "/var/lib/grafana-git-sync";
+          intervalSeconds = 10;
+        };
       };
 
       # Use a fast scrape interval for tests.
@@ -180,6 +189,148 @@
             "/uid/victoriametrics/api/v1/label/__name__/values' "
             "| jq -e '.data | any(index(\"vm_app_version\"))'",
             timeout=30,
+        )
+
+    gf_curl = "curl -sS --fail-with-body -u testadmin:gf-admin-testpwd"
+    gs_dir = "/var/lib/grafana-git-sync"
+    gs_repo_url = f"{repos_url}/dotfiles"
+    gs_dash_file = f"{gs_dir}/test-sync.json"
+    dashes_url = (
+        "http://127.0.0.1:3000/apis/dashboard.grafana.app/v2"
+        "/namespaces/default/dashboards"
+    )
+    dash_url = f"{dashes_url}/test-sync"
+
+    # The setup unit creates our declared Repository, which turns healthy.
+    with subtest("Git Sync repository provisioned"):
+        machine.wait_for_unit("grafana-git-sync-setup.service")
+        machine.succeed(
+            f"{gf_curl} {gs_repo_url} | jq -e '"
+            ".spec.type == \"local\" "
+            "and .spec.sync.target == \"folderless\" "
+            "and .spec.workflows == [\"write\"]'"
+        )
+        machine.wait_until_succeeds(
+            f"{gf_curl} {gs_repo_url} "
+            "| jq -e '.status.health.healthy == true'",
+            timeout=60,
+        )
+
+    # Grafana never syncs on startup, so the setup unit queues an incremental
+    # pull on every start. GET .../jobs lists finished jobs (kept 10 min).
+    # Ours is created by the admin (`user:<uid>`), the controller's syncs by
+    # `access-policy:provisioning`. The repo dir is still empty: nothing to
+    # pull yet.
+    with subtest("Git Sync setup triggers a pull on start"):
+        machine.succeed(
+            "journalctl -o cat -u grafana-git-sync-setup.service "
+            "| grep -q 'triggered pull job for repository dotfiles'"
+        )
+        machine.wait_until_succeeds(
+            f"{gf_curl} {gs_repo_url}/jobs | jq -e '.items | any("
+            ".spec.action == \"pull\" and .status.state == \"success\" "
+            "and (.metadata.annotations[\"grafana.app/createdBy\"] // \"\" "
+            "| startswith(\"user:\")))'",
+            timeout=60,
+        )
+
+    # Re-running the setup unit takes the update (PUT) path, then pulls again.
+    with subtest("Git Sync setup is idempotent"):
+        machine.succeed("systemctl restart grafana-git-sync-setup.service")
+        machine.succeed(
+            "journalctl -o cat -u grafana-git-sync-setup.service "
+            "| grep -q 'updated repository dotfiles'",
+            "journalctl -o cat -u grafana-git-sync-setup.service "
+            "| grep -c 'triggered pull job for repository dotfiles' "
+            "| grep -qx 2",
+        )
+
+    # Number of setup runs that queued a pull, from the setup unit's journal.
+    gs_setup_pulls = (
+        "journalctl -o cat -u grafana-git-sync-setup.service "
+        "| grep -c 'triggered pull job for repository dotfiles'"
+    )
+
+    # Setup is wanted by + part of grafana.service, so it re-runs on every
+    # Grafana start: restart, stop + start, and Restart= crash recovery.
+    with subtest("Git Sync setup re-runs on every Grafana start"):
+        setup = "grafana-git-sync-setup.service"
+        pulls = int(machine.succeed(gs_setup_pulls))
+
+        machine.succeed("systemctl restart grafana.service")
+        machine.wait_for_unit(setup)
+        machine.succeed(f"{gs_setup_pulls} | grep -qx {pulls + 1}")
+
+        machine.succeed("systemctl stop grafana.service")
+        machine.require_unit_state(setup, "inactive")
+        machine.succeed("systemctl start grafana.service")
+        machine.wait_for_unit(setup)
+        machine.succeed(f"{gs_setup_pulls} | grep -qx {pulls + 2}")
+
+        # `systemctl kill` returns before systemd restarts Grafana, while
+        # setup is still active. Wait for the new setup run's pull instead.
+        machine.succeed("systemctl kill --signal=KILL grafana.service")
+        machine.wait_until_succeeds(
+            f"{gs_setup_pulls} | grep -qx {pulls + 3}", timeout=180
+        )
+        machine.wait_for_unit(setup)
+        machine.succeed(
+            "systemctl show -P NRestarts grafana.service | grep -qx 1"
+        )
+
+    # A minimal v2 dashboard manifest, like nixos/sauna/grafana/*.json.
+    dashboard = {
+        "apiVersion": "dashboard.grafana.app/v2",
+        "kind": "Dashboard",
+        "metadata": {"name": "test-sync"},
+        "spec": {
+            "title": "Git Sync Test",
+            "timeSettings": {"from": "now-6h", "to": "now"},
+            "variables": [],
+            "elements": {},
+            "layout": {"kind": "GridLayout", "spec": {"items": []}},
+        },
+    }
+
+    # A dashboard manifest dropped into the repo dir gets synced in.
+    with subtest("Git Sync pulls dashboard from repository"):
+        machine.succeed(
+            f"echo {shlex.quote(json.dumps(dashboard))} > /tmp/test-sync.json",
+            "install -o grafana -g grafana -m 0640 "
+            f"/tmp/test-sync.json {gs_dash_file}",
+        )
+        machine.wait_until_succeeds(
+            f"{gf_curl} {dash_url} "
+            "| jq -e '.spec.title == \"Git Sync Test\"'",
+            timeout=150,
+        )
+        machine.succeed(
+            f"{gf_curl} {dash_url} | jq -e '.metadata.annotations "
+            "| .[\"grafana.app/managedBy\"] == \"repo\" "
+            "and .[\"grafana.app/managerId\"] == \"dotfiles\"'"
+        )
+
+    # Saving a repo-managed dashboard through the dashboard API gets
+    # re-routed to the repository, i.e. it writes the file. GET + PUT keeps
+    # the manager annotations; dropping them would detach the dashboard from
+    # the repo instead.
+    # See: pkg/storage/unified/apistore/managed.go
+    with subtest("Git Sync writes API saves to repository"):
+        machine.succeed(
+            f"{gf_curl} {dash_url} "
+            "| jq '.spec.title = \"Git Sync Test (edited)\"' "
+            "> /tmp/edited.json",
+            f"{gf_curl} -X PUT -H 'Content-Type: application/json' "
+            f"--data-binary @/tmp/edited.json {dash_url}",
+        )
+        machine.wait_until_succeeds(
+            "jq -e '.spec.title == \"Git Sync Test (edited)\"' "
+            f"{gs_dash_file}",
+            timeout=30,
+        )
+        machine.succeed(
+            f"{gf_curl} {dash_url} "
+            "| jq -e '.spec.title == \"Git Sync Test (edited)\"'"
         )
   '';
 }
