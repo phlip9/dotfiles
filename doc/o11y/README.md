@@ -49,6 +49,9 @@ DNS: `grafana.phlip9.com`
 | `nixos/mods/o11y.nix` | NixOS module: VM + Grafana + exporters |
 | `nixos/tests/o11y.nix` | NixOS VM test |
 | `nixos/sauna/default.nix` | NixOS machine config |
+| `nixos/sauna/grafana/` | Dashboards (Git Sync manifests) |
+| `.mcp.json` | mcp-grafana config for Claude Code |
+| `doc/o11y/dashboards.md` | Dashboards research + design |
 
 ## Components
 
@@ -134,6 +137,8 @@ for `grafana.phlip9.com` with:
 |--------|-------|---------|
 | `grafana-admin-password` | `grafana` | Grafana admin login |
 | `grafana-secret-key` | `grafana` | Grafana cookie/token signing |
+| `grafana-secrets-manager-key` | `grafana` | Secrets manager key (Git Sync) |
+| `grafana-git-sync-token` | `grafana` | GitHub fine-grained PAT for Git Sync |
 
 Loaded into Grafana via the `$__file{path}` provider pattern,
 which reads the secret from disk at runtime without leaking into
@@ -146,25 +151,51 @@ services.grafana.settings.security = {
 };
 ```
 
-## Default Dashboards
+## Dashboards
 
-Provisioned via Grafana's dashboard provisioning:
+Dashboards are managed by Grafana 13 "Git Sync" (API group
+`provisioning.grafana.app`). Design + research: `doc/o11y/dashboards.md`.
 
-1. **Node Exporter Full** (grafana.com gnetId: 1860)
-   Standard community dashboard for prometheus-node-exporter.
-   CPU, memory, disk I/O, network, filesystem usage.
+- Source of truth: `nixos/sauna/grafana/*.json` on `master`, one k8s-style
+  manifest per dashboard (`apiVersion: dashboard.grafana.app/v1|v2`,
+  `metadata.name` = uid, `spec` = dashboard JSON). Subdirs become folders.
+- Grafana polls GitHub every 60s (webhook disabled) and imports changes. No
+  redeploy needed to change a dashboard.
+- Saving a synced dashboard in the UI opens the "Provisioned dashboard"
+  drawer: pick the branch (`master` = direct commit, anything else = new
+  branch + PR) and a commit message.
+- API writes to a synced dashboard via the k8s-style API (`PUT
+  /apis/dashboard.grafana.app/...`, annotations preserved) are re-routed
+  into commits. The legacy `POST /api/dashboards/db` is rejected with 400
+  "Cannot save provisioned dashboard"; mcp-grafana's `update_dashboard` uses
+  the legacy API for v1 dashboards, so agents edit synced v1 dashboards by
+  editing the manifest in git instead. New (v2) dashboards created via
+  `update_dashboard` do become commits; its `message` is the commit message.
+- Schema policy: imported community dashboards stay v1 and are patched in
+  place; the VictoriaMetrics dashboard and new dashboards are v2.
+- The Repository resource is created/updated at boot by
+  `grafana-git-sync-setup.service` (`services.phlip9-o11y.grafana.gitSync`),
+  so the setup is declarative except for the two sops secrets.
+- Agent access: Claude Code uses `mcp-grafana` (stdio, `.mcp.json`) with a
+  service account token in `~/.config/grafana/mcp-sa-token` for reads,
+  metric queries, and new dashboards; existing dashboards are edited as
+  files in `nixos/sauna/grafana/` + commit + push (Grafana pulls in <=60s).
 
-2. **VictoriaMetrics Single** (grafana.com gnetId: 10229)
-   Official VM dashboard. Ingestion rate, query performance,
-   storage size, active time series, cache hit rates.
+Current dashboards (community imports, datasource switched to
+`victoriametrics-metrics-datasource`):
 
-Both downloaded at build time and provisioned as JSON files.
+| file | upstream |
+|------|----------|
+| `node-exporter-full.json` | [rfmoz/grafana-dashboards](https://github.com/rfmoz/grafana-dashboards/blob/master/prometheus/node-exporter-full.json) |
+| `nginx.json` | [nginx-prometheus-exporter](https://github.com/nginx/nginx-prometheus-exporter/blob/main/grafana/dashboard.json) |
+| `postgres-overview.json` | [postgres_exporter mixin](https://github.com/prometheus-community/postgres_exporter/blob/master/postgres_mixin/dashboards/postgres-overview.json) |
+| `victoriametrics-single-node.json` | [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/dashboards/vm/victoriametrics.json) |
 
 ### Future Work
 
 - **Alerting**: vmalert + alertmanager for on-call notifications.
-- **Additional exporters**: postgres-exporter, systemd-exporter,
-  blackbox-exporter for endpoint probing.
+- **Additional exporters**: systemd-exporter, blackbox-exporter for endpoint
+  probing.
 - **Log aggregation**: Loki + promtail, separate from metrics.
 
 ## Runbooks
@@ -205,15 +236,73 @@ Both downloaded at build time and provisioned as JSON files.
    * Interface theme: Gilded grove
 
 
-### Dashboards
+### Git Sync setup
 
-After importing a new dashboard, change the datasource type under "Variables"
-to `victoriametrics-metrics-datasource`.
+1. Add the two sops secrets (see `doc/SECRETS.md`):
 
-* [Node Exporter Full](https://github.com/rfmoz/grafana-dashboards/blob/master/prometheus/node-exporter-full.json)
+   ```bash
+   $ sops set nixos/sauna/secrets.yaml '["grafana-secrets-manager-key"]' \
+       "\"$(head -c 32 /dev/urandom | base64 -w0)\""
+   $ sops nixos/sauna/secrets.yaml  # add grafana-git-sync-token: github_pat_..
+   ```
 
-* [NGINX](https://github.com/nginx/nginx-prometheus-exporter/blob/main/grafana/dashboard.json)
+   (Use the editor for the PAT so it stays out of shell history.)
 
-* [Postgres Overview](https://github.com/prometheus-community/postgres_exporter/blob/master/postgres_mixin/dashboards/postgres-overview.json)
+   GitHub PAT: Settings > Developer settings > Fine-grained tokens. Resource
+   owner `phlip9`, repository access: only `phlip9/dotfiles`. Permissions:
+   Contents: Read and write; Metadata: Read; Pull requests: Read and write.
+   No webhook/administration permission (webhook disabled). Set a long
+   expiry and note the rotation date.
 
-* [VictoriaMetrics - single-node (VM)](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/dashboards/vm/victoriametrics.json)
+   The secrets-manager key must be in place before the first Git Sync
+   repository is created. To rotate it later, add a `secret_key.v3` provider
+   and switch `encryption_provider` to it, keeping `v2` so older data keys
+   stay readable; the setup unit re-sends the PAT on every run, so it gets
+   re-encrypted under the new key.
+
+2. Deploy: `just deploy sauna`. Check:
+
+   ```bash
+   $ systemctl status grafana-git-sync-setup.service
+   $ curl -s -u admin:$PW -H 'Host: grafana.phlip9.com' \
+       http://127.0.0.1:3000/apis/provisioning.grafana.app/v0alpha1/namespaces/default/repositories/dotfiles \
+       | jq .status
+   ```
+
+3. One-time migration of pre-existing (unmanaged) dashboards: Git Sync can
+   not adopt a dashboard whose uid already exists outside the repo. The
+   manifests in `nixos/sauna/grafana/` were exported from the live instance,
+   so delete the originals in the UI (Dashboards > select > Delete), then
+   wait one sync interval (or Administration > Provisioning > repository >
+   Pull). Deleted dashboards stay restorable under "Recently deleted".
+
+4. Verify the round trip: edit a panel in the UI, Save, pick `master`, write a
+   commit message, then `git pull` and confirm the commit.
+
+### Agent access (mcp-grafana)
+
+1. Service account: Administration > Users and access > Service accounts >
+   Add service account. Name `claude-code`, role `Editor` (OSS has no
+   finer-grained RBAC for service accounts; `Viewer` + `--disable-write` in
+   `.mcp.json` for a read-only variant).
+
+2. Add service account token > Generate. Copy the `glsa_...` token (shown
+   once). Install on each machine that runs Claude Code:
+
+   ```bash
+   $ mkdir -p -m 0700 ~/.config/grafana
+   $ (umask 077 && cat > ~/.config/grafana/mcp-sa-token)   # paste, Ctrl-D
+   ```
+
+   mcp-grafana re-reads the file on every request; rotate by overwriting.
+
+3. `hms` to install `mcp-grafana` (`pkgsUnstable.mcp-grafana`; stable is too
+   old). In the dotfiles repo, `claude` prompts once to trust the project
+   server `grafana`. `claude mcp list` should show it connected; in a session
+   `user_info` should report service account `claude-code`, role Editor. A
+   401 means a bad token file; a redirect error means `GRAFANA_URL` is not
+   the final https URL.
+
+4. Read-only tools are pre-allowed in `.claude/settings.json`; writes
+   (`update_dashboard`, `create_folder`, ...) prompt every time. Git Sync
+   turns each write into a commit on `master`.
