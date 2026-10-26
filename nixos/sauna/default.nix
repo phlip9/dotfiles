@@ -436,11 +436,29 @@
       adminPasswordFile = config.sops.secrets.grafana-admin-password.path;
       secretKeyFile = config.sops.secrets.grafana-secret-key.path;
       secretsManagerKeyFile = config.sops.secrets.grafana-secrets-manager-key.path;
+
+      # Sync dashboards w/ this repo. UI saves commit to master or open a PR.
+      # see: doc/o11y/README.md
+      gitSync = {
+        enable = true;
+        # Grafana folder that holds the synced dashboards.
+        title = "sauna";
+        type = "github";
+        github.url = "https://github.com/phlip9/dotfiles";
+        github.branch = "master";
+        github.path = "nixos/sauna/grafana";
+        tokenFile = config.sops.secrets.grafana-git-sync-token.path;
+      };
     };
   };
   sops.secrets.grafana-admin-password = { };
   sops.secrets.grafana-secret-key = { };
-  sops.secrets.grafana-secrets-manager-key = { };
+  # Grafana reads the key at start only.
+  sops.secrets.grafana-secrets-manager-key.restartUnits = [ "grafana.service" ];
+  # Re-run setup on rotation; it re-sends the PAT to Grafana.
+  sops.secrets.grafana-git-sync-token.restartUnits = [
+    "grafana-git-sync-setup.service"
+  ];
 
   environment.systemPackages = [
     # mcp-grafana - Grafana MCP server for claude code (see .mcp.json)
