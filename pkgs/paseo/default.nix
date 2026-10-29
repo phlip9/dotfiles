@@ -41,6 +41,8 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     ./paseo-scrub-secret-env.patch
     # Stop multi-KB log lines from flooding the journal. Silence esp. bad ones.
     ./paseo-quiet-logs.patch
+    # Show more lines of context (vs git's default 3) in Diff and commit diffs.
+    ./paseo-diff-context.patch
   ];
 
   # Upstream builds w/ `--ignore-scripts`, so the root postinstall never

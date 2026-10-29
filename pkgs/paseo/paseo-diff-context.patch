@@ -1,0 +1,24 @@
+diff --git a/packages/server/src/utils/checkout-git.ts b/packages/server/src/utils/checkout-git.ts
+index ce0070290..c5132fe59 100644
+--- a/packages/server/src/utils/checkout-git.ts
++++ b/packages/server/src/utils/checkout-git.ts
+@@ -635,8 +635,18 @@ function normalizeNumstatPath(pathField: string): string {
+   return unquoteGitPath(pathField);
+ }
+ 
++// Lines of unchanged context around each change in displayed diffs. Git's
++// default of 3 (or the user's diff.context) is too little to review changes.
++const GIT_PATCH_CONTEXT_LINES = 15;
++
+ // Parsed patches need a stable wire format regardless of terminal presentation settings.
+-const GIT_PATCH_FORMAT_ARGS = ["--no-ext-diff", "--no-color", "--src-prefix=a/", "--dst-prefix=b/"];
++const GIT_PATCH_FORMAT_ARGS = [
++  "--no-ext-diff",
++  "--no-color",
++  "--src-prefix=a/",
++  "--dst-prefix=b/",
++  `--unified=${GIT_PATCH_CONTEXT_LINES}`,
++];
+ 
+ function buildGitDiffArgs(args: { ignoreWhitespace?: boolean; extra: string[] }): string[] {
+   return [
