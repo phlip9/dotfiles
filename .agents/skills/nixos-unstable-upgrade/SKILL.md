@@ -41,6 +41,15 @@ package + release notes scanning and summarization.
 
 Not affected: `homeConfigs` and top-level `phlipPkgs` (stable `nixpkgs` pin).
 
+## Temporary pins
+
+Check each on every upgrade; drop the pin (and its note here) once obsolete.
+
+- sauna `nix.package = pkgs.nixVersions.latest` (`nixos/sauna/default.nix`):
+  Nix <= 2.34 daemons answer substituter queries serially, which slowed
+  nixbot evals. Drop once the NEW pin's default nix is >= 2.35:
+  `nix eval --raw -f . nixosConfigs.sauna.pkgs.nix.version`.
+
 ## Setup
 
 ```bash
