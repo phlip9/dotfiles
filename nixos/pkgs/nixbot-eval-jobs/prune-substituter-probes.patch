@@ -1,0 +1,306 @@
+From 756e7950ae23634834e4674e2fb9568f1fbeb62a Mon Sep 17 00:00:00 2001
+From: Philip Kannegaard Hayes <philiphayes9@gmail.com>
+Date: Thu, 29 Oct 2026 03:17:35 +0000
+Subject: [PATCH] cache-status-resolver: don't probe substituters below
+ unresolved drvs
+
+While a derivation's output validity is still pending, visitDrv()
+recurses into its inputs so that one queryValidPaths round covers the
+whole closure. But each input got a full visit: one whose validity was
+already known and missing queued a narinfo probe right away, although
+the pending dependant may turn out valid or substitutable, and then
+nothing below it is needed.
+
+Validity is known early for much of a shared closure: the first jobs to
+resolve sweep it, and stdenv bootstrap, source and patch derivations are
+mostly missing locally because they are build-time only. Every later job
+with a fresh derivation on top of that then probed the shared layer. On
+an eval of 82 jobs this probed 632 paths instead of 434 (5425 instead of
+3087 when rebuilding systemd and its dependants), each a serial narinfo
+request per substituter: 106s vs 64s with a cold narinfo cache.
+
+Below a pending derivation, only sweep validity now and leave substituter
+probes to the next walk, which reaches inputs only through dependants
+known to need building. The sweep stops where visitDrv() would, so it
+queues the same validity probes as before. Swept derivations are tracked
+apart from visited ones, so a later full visit in the same walk still
+probes them. Results are unchanged: the final, complete walk never
+sweeps.
+---
+ src/cache-status-resolver.cc  |  58 +++++++++++++--
+ src/cache-status-resolver.hh  |   7 ++
+ tests-functional/test_eval.py | 130 +++++++++++++++++++++++++++++++++-
+ 3 files changed, 188 insertions(+), 7 deletions(-)
+
+diff --git a/src/cache-status-resolver.cc b/src/cache-status-resolver.cc
+index 878f256..1ee38e4 100644
+--- a/src/cache-status-resolver.cc
++++ b/src/cache-status-resolver.cc
+@@ -183,6 +183,20 @@ auto CacheStatusResolver::allSubstitutable(
+     return all;
+ }
+ 
++/* Like allSubstitutable(), but never queues a substituter probe. */
++auto CacheStatusResolver::knownSubstitutable(
++    const std::vector<nix::StorePath> &paths) const -> std::optional<bool> {
++    bool all = true;
++    for (const auto &path : paths) {
++        auto cached = probeCache.find(path);
++        if (cached == probeCache.end()) {
++            return std::nullopt;
++        }
++        all = all && cached->second;
++    }
++    return all;
++}
++
+ auto CacheStatusResolver::probeValidity(const nix::StorePath &path)
+     -> std::optional<bool> {
+     if (auto cached = validCache.find(path); cached != validCache.end()) {
+@@ -246,11 +260,11 @@ void CacheStatusResolver::visitDrv(Traversal *traversal,
+         traversal->unknownPaths.push_back(drvPath);
+         return;
+     }
+-    /* Validity probes are cheap daemon lookups: recurse anyway so a single
+-     * queryValidPaths round covers the whole closure. */
++    /* Validity probes are cheap daemon lookups: sweep the inputs anyway so a
++     * single queryValidPaths round covers the whole closure. */
+     if (!outputs.complete) {
+         for (const auto &[inputDrvPath, inputNode] : derivation.inputDrvs.map) {
+-            visitDrv(traversal, inputDrvPath, inputNode.value);
++            sweepValidity(traversal, inputDrvPath, inputNode.value);
+         }
+         return;
+     }
+@@ -258,8 +272,8 @@ void CacheStatusResolver::visitDrv(Traversal *traversal,
+         return;
+     }
+ 
+-    /* Substituter probes are per-path narinfo requests: stay pruned, a
+-     * substitutable derivation's inputs are never probed. */
++    /* Substituter probes are per-path narinfo requests: stay pruned, inputs
++     * are only probed once their dependant is known to need building. */
+     auto substitutable = allSubstitutable(outputs.missing);
+     if (!substitutable) {
+         return;
+@@ -277,6 +291,40 @@ void CacheStatusResolver::visitDrv(Traversal *traversal,
+     traversal->neededBuilds.push_back(drvPath);
+ }
+ 
++/* Queue the validity probes below a derivation whose own validity is still
++ * pending. It may turn out valid or substitutable, so its inputs may not be
++ * needed at all: unlike visitDrv() never queue a substituter probe here. The
++ * next walk probes whatever it reaches. Recurses where visitDrv() would,
++ * given the results so far, so that walk finds the validity it needs. */
++// NOLINTNEXTLINE(misc-no-recursion): walking a DAG of derivations
++void CacheStatusResolver::sweepValidity(Traversal *traversal,
++                                        const nix::StorePath &drvPath,
++                                        const nix::StringSet &wantedOutputs) {
++    /* A full visit already covers everything a sweep does. */
++    if (traversal->visited.contains(drvPath) ||
++        !traversal->swept.insert(drvPath).second) {
++        return;
++    }
++    const auto &derivation = readDerivation(drvPath);
++
++    auto outputs = missingOutputs(derivation, wantedOutputs);
++    if (!outputs.known) {
++        return;
++    }
++    if (outputs.complete) {
++        if (outputs.missing.empty()) {
++            return;
++        }
++        auto substitutable = knownSubstitutable(outputs.missing);
++        if (!substitutable || *substitutable) {
++            return;
++        }
++    }
++    for (const auto &[inputDrvPath, inputNode] : derivation.inputDrvs.map) {
++        sweepValidity(traversal, inputDrvPath, inputNode.value);
++    }
++}
++
+ /* Resolve a job using only cached probe results.
+  * Returns false when a needed probe is still unknown.
+  * The job is retried after the next resolveWanted() round.
+diff --git a/src/cache-status-resolver.hh b/src/cache-status-resolver.hh
+index 325eed1..51a7212 100644
+--- a/src/cache-status-resolver.hh
++++ b/src/cache-status-resolver.hh
+@@ -53,6 +53,9 @@ class CacheStatusResolver {
+     /* Per-attempt state of the slow-path input graph walk. */
+     struct Traversal {
+         nix::StorePathSet visited;
++        /* Only had their validity probed, see sweepValidity(). Apart from
++         * visited: a later full visit must still probe substituters. */
++        nix::StorePathSet swept;
+         std::vector<nix::StorePath> neededBuilds;
+         std::vector<nix::StorePath> unknownPaths;
+         std::set<nix::StorePath> substitutePaths;
+@@ -71,10 +74,14 @@ class CacheStatusResolver {
+     auto tryResolve(Drv &drv) -> bool;
+     void visitDrv(Traversal *traversal, const nix::StorePath &drvPath,
+                   const nix::StringSet &wantedOutputs);
++    void sweepValidity(Traversal *traversal, const nix::StorePath &drvPath,
++                       const nix::StringSet &wantedOutputs);
+     auto missingOutputs(const nix::Derivation &derivation,
+                         const nix::StringSet &wantedOutputs) -> MissingOutputs;
+     auto allSubstitutable(const std::vector<nix::StorePath> &paths)
+         -> std::optional<bool>;
++    auto knownSubstitutable(const std::vector<nix::StorePath> &paths) const
++        -> std::optional<bool>;
+     auto probeValidity(const nix::StorePath &path) -> std::optional<bool>;
+     auto readDerivation(const nix::StorePath &drvPath)
+         -> const nix::Derivation &;
+diff --git a/tests-functional/test_eval.py b/tests-functional/test_eval.py
+index 29817c5..23be32f 100644
+--- a/tests-functional/test_eval.py
++++ b/tests-functional/test_eval.py
+@@ -782,8 +782,13 @@ def _make_nix_runner(env: dict[str, str], cwd: Path):
+ 
+ 
+ @contextlib.contextmanager
+-def _http_server(directory: Path):
+-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
++def _http_server(
++    directory: Path,
++    handler_class: type[
++        http.server.SimpleHTTPRequestHandler
++    ] = http.server.SimpleHTTPRequestHandler,
++):
++    handler = functools.partial(handler_class, directory=str(directory))
+     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+     thread = threading.Thread(target=server.serve_forever, daemon=True)
+     thread.start()
+@@ -902,6 +907,127 @@ def test_ifd_with_separate_eval_store(tmp_path: Path) -> None:
+     assert list((tmp_path / "store").glob("*-gen")), "IFD was not built in --store"
+ 
+ 
++@pytest.mark.skipif(shutil.which("nix") is None, reason="requires nix CLI")
++def test_no_substituter_probes_below_pending_validity(tmp_path: Path) -> None:
++    """A derivation's inputs must not be probed in substituters before the
++    derivation itself is known to need building.
++
++    Job `a` resolves first and leaves `deep` known missing, but unprobed: its
++    dependant `cached-a` is substitutable. Job `b` then reaches `deep` again
++    below `cached-b`, whose validity is not known yet. `cached-b` turns out
++    substitutable too, so probing `deep` would be a wasted narinfo request.
++    Evaluating `b` fetches a URL that is only answered once `a` is printed,
++    which makes that order deterministic.
++    """
++    env = _hermetic_nix_env(tmp_path)
++    nix = _make_nix_runner(env, tmp_path)
++    cache = tmp_path / "cache"
++
++    requests: list[str] = []
++    a_printed = threading.Event()
++
++    class Handler(http.server.SimpleHTTPRequestHandler):
++        def send_head(self) -> Any:
++            requests.append(self.path)
++            if self.path == "/release-b":
++                a_printed.wait(timeout=120)
++            return super().send_head()
++
++    jobs: dict[str, dict[str, Any]] = {}
++    with _http_server(cache, Handler) as url:
++        tmp_path.joinpath("graph.nix").write_text(
++            f"""
++            let
++              # Inputs are build-time only: outputs reference nothing.
++              mk = name: inputs: derivation {{
++                inherit name;
++                system = builtins.currentSystem;
++                builder = "/bin/sh";
++                args = [ "-c" "echo ${{name}} > $out; : ${{toString inputs}}" ];
++              }};
++            in rec {{
++              deep = mk "deep" [ ];
++              cachedA = mk "cached-a" [ deep ];
++              cachedB = mk "cached-b" [ deep ];
++              a = mk "a" [ cachedA ];
++              b = builtins.seq (builtins.fetchurl "{url}/release-b") (mk "b" [ cachedB ]);
++            }}
++            """
++        )
++        tmp_path.joinpath("jobs.nix").write_text("{ inherit (import ./graph.nix) a b; }")
++
++        deep_out = nix("eval", "--raw", "--file", "graph.nix", "deep.outPath", capture=True)
++        cached_outs = {
++            attr: nix(
++                "build",
++                "--no-link",
++                "--print-out-paths",
++                "--file",
++                "graph.nix",
++                f"cached{attr.upper()}",
++                capture=True,
++            )
++            for attr in ["a", "b"]
++        }
++        # Only the cached-* outputs reach the cache, nothing stays valid locally.
++        nix("copy", "--to", f"file://{cache}", *cached_outs.values())
++        subprocess.check_call(["nix-collect-garbage", "-d"], env=env)
++        cache.joinpath("release-b").write_text("")
++
++        proc = subprocess.Popen(
++            [
++                str(BIN),
++                "--gc-roots-dir",
++                str(tmp_path / "gc"),
++                *COMMON_FLAGS,
++                "--option",
++                "substituters",
++                url,
++                "--option",
++                "require-sigs",
++                "false",
++                "--workers",
++                "1",
++                "--check-cache-status",
++                "jobs.nix",
++            ],
++            cwd=tmp_path,
++            env=env,
++            text=True,
++            stdout=subprocess.PIPE,
++        )
++        # Never hang the suite, even if `a` is never printed.
++        watchdog = threading.Timer(120, proc.kill)
++        watchdog.start()
++        try:
++            assert proc.stdout is not None
++            for line in proc.stdout:
++                job = json.loads(line)
++                jobs[job["attr"]] = job
++                if job["attr"] == "a":
++                    a_printed.set()
++            assert proc.wait() == 0
++        finally:
++            watchdog.cancel()
++            proc.kill()
++
++    # Results are unaffected: each job builds itself on top of a cached input.
++    for attr, cached_out in cached_outs.items():
++        job = jobs[attr]
++        assert job["cacheStatus"] == "notBuilt", job
++        assert job["neededBuilds"] == [job["drvPath"]], job
++        assert job["neededSubstitutes"] == [cached_out], job
++
++    def narinfo(path: str) -> str:
++        return f"/{Path(path).name[:32]}.narinfo"
++
++    probed = {path for path in requests if path.endswith(".narinfo")}
++    assert narinfo(deep_out) not in probed, requests
++    # Exactly what the pruned walk needs: the jobs and their cached inputs.
++    expected = [*(job["outputs"]["out"] for job in jobs.values()), *cached_outs.values()]
++    assert probed == {narinfo(path) for path in expected}, requests
++
++
+ def test_worker_log_format_survives_fork(tmp_path: Path) -> None:
+     env = _hermetic_nix_env(tmp_path)
+     assets = TEST_ROOT.joinpath("assets")
+-- 
+2.54.0
+
