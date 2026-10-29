@@ -117,6 +117,8 @@ in
       # Patched to also upload outputs already present in the local store.
       # See: nixos/pkgs/nixbot/default.nix
       packages.nixbot = phlipPkgsNixos.nixbot;
+      # See: nixos/pkgs/nixbot-eval-jobs/default.nix
+      packages.nix-eval-jobs = phlipPkgsNixos.nixbot-eval-jobs;
 
       # expose via NGINX
       nginx = {
