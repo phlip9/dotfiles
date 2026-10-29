@@ -1,0 +1,89 @@
+diff --git a/packages/server/src/server/websocket-server.ts b/packages/server/src/server/websocket-server.ts
+index 4f82b938a..fd33068fc 100644
+--- a/packages/server/src/server/websocket-server.ts
++++ b/packages/server/src/server/websocket-server.ts
+@@ -2559,7 +2559,9 @@ export class VoiceAssistantWebSocketServer {
+       collectedAt: new Date().toISOString(),
+       ...loggedMetrics,
+     };
+-    this.logger.info(loggedMetrics, "ws_runtime_metrics");
++    // Debug, not info: a multi-KB line every 30s floods the journal. The
++    // snapshot above stays available via the diagnostics API.
++    this.logger.debug(loggedMetrics, "ws_runtime_metrics");
+   }
+ 
+   private getClientActivityState(session: Session, source: object): ClientPresenceState {
+diff --git a/packages/server/src/server/workspace-git-service.ts b/packages/server/src/server/workspace-git-service.ts
+index a2b89bed3..bb9dbbb5d 100644
+--- a/packages/server/src/server/workspace-git-service.ts
++++ b/packages/server/src/server/workspace-git-service.ts
+@@ -2831,7 +2831,9 @@ export class WorkspaceGitServiceImpl implements WorkspaceGitService {
+           );
+         },
+         onError: (error) => {
+-          this.logger.warn(
++          // Debug, not warn: fails on every poll for workspaces whose upstream
++          // repo gh can't see (ex: third-party forks), flooding the journal.
++          this.logger.debug(
+             {
+               err: error,
+               cwd: target.cwd,
+@@ -2908,7 +2910,8 @@ export class WorkspaceGitServiceImpl implements WorkspaceGitService {
+         }
+       } catch (error) {
+         consecutiveErrors += 1;
+-        this.logger.warn(
++        // Debug, not warn: same per-poll flood as the service poll above.
++        this.logger.debug(
+           {
+             err: error,
+             cwd: target.cwd,
+diff --git a/packages/server/src/services/forge-cli-command.ts b/packages/server/src/services/forge-cli-command.ts
+index 798f79c65..c8b657f4d 100644
+--- a/packages/server/src/services/forge-cli-command.ts
++++ b/packages/server/src/services/forge-cli-command.ts
+@@ -159,22 +159,39 @@ export interface ForgeCommandFailureParams {
+   stdout?: string;
+ }
+ 
++// Max length of the command summary embedded in a ForgeCommandError message.
++const FORGE_COMMAND_SUMMARY_MAX_CHARS = 200;
++
++// One-line, length-capped `<binary> <args...>` for error messages. Batched
++// `gh api graphql` argv carries the full multi-KB query.
++function summarizeForgeCommand(binary: string, args: string[]): string {
++  const command = `${binary} ${args.join(" ")}`.replace(/\s+/g, " ");
++  return command.length > FORGE_COMMAND_SUMMARY_MAX_CHARS
++    ? `${command.slice(0, FORGE_COMMAND_SUMMARY_MAX_CHARS)}...`
++    : command;
++}
++
+ export class ForgeCommandError extends Error {
+   readonly kind = "command-error";
+-  readonly args: string[];
++  // `args` and `stdout` are non-enumerable so pino's err serializer skips
++  // them. Logged, a failed batched GraphQL poll was 10-80 KB per line (full
++  // query argv + response body), repeated every poll.
++  declare readonly args: string[];
+   readonly cwd: string;
+   readonly exitCode: number | null;
+   readonly stderr: string;
+-  readonly stdout?: string;
++  declare readonly stdout?: string;
+ 
+   constructor(label: { brand: string; binary: string }, params: ForgeCommandFailureParams) {
+-    super(`${label.brand} CLI command failed: ${label.binary} ${params.args.join(" ")}`);
+-    this.args = [...params.args];
++    super(
++      `${label.brand} CLI command failed: ${summarizeForgeCommand(label.binary, params.args)}`,
++    );
++    Object.defineProperty(this, "args", { value: [...params.args] });
+     this.cwd = params.cwd;
+     this.exitCode = params.exitCode;
+     this.stderr = params.stderr;
+     if (params.stdout !== undefined) {
+-      this.stdout = params.stdout;
++      Object.defineProperty(this, "stdout", { value: params.stdout });
+     }
+   }
+ }

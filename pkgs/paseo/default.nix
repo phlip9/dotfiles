@@ -39,6 +39,8 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     ./paseo-disable-plugin-installs.patch
     # Don't leak PASEO_PASSWORD{,_FILE} into agent and terminal envs.
     ./paseo-scrub-secret-env.patch
+    # Stop multi-KB log lines from flooding the journal. Silence esp. bad ones.
+    ./paseo-quiet-logs.patch
   ];
 
   # Upstream builds w/ `--ignore-scripts`, so the root postinstall never
