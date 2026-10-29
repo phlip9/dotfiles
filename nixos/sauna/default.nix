@@ -163,18 +163,59 @@
     linger = true;
   };
 
-  # Backstop vs. a runaway service (ex: nix-daemon builds) thrashing the whole
-  # machine. NixOS runs systemd-oomd but monitors no cgroups by default. With
-  # 32G of disk swap, the kernel OOM killer fires far too late.
+  # =========================================================================
+  # resource control
+  # =========================================================================
+  # setup different cgroup tiers so important services stay responsive even
+  # under heavy CPU/memory pressure:
+  # - system.slice: infra (sshd, nginx, grafana, victoriametrics, ...)
+  # - workload.slice: killable, restartable agent + CI work
+  # - user.slice: my ssh/tmux sessions + user services
+
+  # ### system.slice
+  # avoid reclaiming pages from important services when under mem pressure
+  systemd.slices.system.sliceConfig.MemoryLow = "4G";
+
+  # ### workload.slice
+  # reserve 15% mem for system services. cap swap for faster OOMs (instead of
+  # thrashing to swap). no IOWeight since NVMe `none` scheduler ignores it.
+  systemd.slices.workload = {
+    description = "nix, paseo, and CI workloads";
+    sliceConfig = {
+      MemoryMax = "85%";
+      MemorySwapMax = "8G";
+      CPUWeight = 25;
+    };
+  };
+  systemd.services.niks3.serviceConfig.Slice = "workload.slice";
+  systemd.services.nix-daemon.serviceConfig.Slice = "workload.slice";
+  systemd.services.nix-gc.serviceConfig.Slice = "workload.slice";
+  systemd.services.nix-optimise.serviceConfig.Slice = "workload.slice";
+  systemd.services.nixbot.serviceConfig.Slice = "workload.slice";
+  systemd.services.paseo.serviceConfig.Slice = "workload.slice";
+
+  # ### user.slice
+  systemd.slices.user.sliceConfig = {
+    MemoryMax = "75%";
+    MemorySwapMax = "8G";
+  };
+
+  # systemd-oomd: userspace backstop OOM killer. Doesn't monitor any cgroups by
+  # default. oomd SIGKILLs a whole leaf cgroup (e.g. paseo.service). memory
+  # pressure in system.slice is usually caused by other tiers, so monitoring it
+  # would likely kill more critical system services.
   #
-  # systemd-oomd SIGKILLs a whole system.slice service when either:
-  # - pressure: system.slice memory PSI full > 80% for 30s -> kill service w/
-  #   the highest reclaim rate.
-  # - swap: free mem < 10% and free swap < 10% -> kill service w/ the most
-  #   swap. PSI stayed low (~2%) deep into the 2026-10-29 thrash, so this is
-  #   the more reliable trigger.
-  systemd.oomd.enableSystemSlice = true;
-  systemd.slices.system.sliceConfig.ManagedOOMSwap = "kill";
+  # - pressure: workload.slice or a user slice has memory PSI full > 80% for
+  #   30s -> kill its child w/ the highest reclaim rate. Catches page cache
+  #   refault thrash under a MemoryMax, where the kernel never OOMs.
+  # - swap: free mem < 10% and free swap < 10% -> kill the cgroup w/ the most
+  #   swap, anywhere.
+  systemd.oomd.enableUserSlices = true;
+  systemd.slices.workload.sliceConfig = {
+    ManagedOOMMemoryPressure = "kill";
+    ManagedOOMMemoryPressureLimit = "80%";
+  };
+  systemd.slices."-".sliceConfig.ManagedOOMSwap = "kill";
 
   # Run non-NixOS binaries
   programs.nix-ld = {
