@@ -299,6 +299,24 @@
   };
   sops.secrets.paseo-daemon-password = { };
 
+  # Contain runaway agent procs to the paseo cgroup.
+  #
+  # 2026-10-29: an agent `cargo test` with an infinite loop leaked ~12G/min,
+  # filled RAM + 25G swap, and thrashed the whole machine until I had to hard
+  # reset.
+  #
+  # Hitting MemoryMax triggers a cgroup-local kernel OOM kill of the largest
+  # proc (the runaway), not the daemon. OOMPolicy=continue keeps the daemon +
+  # other agents alive; the default (stop) would stop the whole unit.
+  # No MemoryHigh: w/o an external handler it throttles a runaway into a slow
+  # crawl instead of a prompt kill. Cap swap so the cgroup OOMs instead of
+  # thrashing the shared swap partition.
+  systemd.services.paseo.serviceConfig = {
+    MemoryMax = "75%";
+    MemorySwapMax = "4G";
+    OOMPolicy = "continue";
+  };
+
   # =========================================================================
   # nixbot CI
   # =========================================================================
