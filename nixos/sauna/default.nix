@@ -163,6 +163,19 @@
     linger = true;
   };
 
+  # Backstop vs. a runaway service (ex: nix-daemon builds) thrashing the whole
+  # machine. NixOS runs systemd-oomd but monitors no cgroups by default. With
+  # 32G of disk swap, the kernel OOM killer fires far too late.
+  #
+  # systemd-oomd SIGKILLs a whole system.slice service when either:
+  # - pressure: system.slice memory PSI full > 80% for 30s -> kill service w/
+  #   the highest reclaim rate.
+  # - swap: free mem < 10% and free swap < 10% -> kill service w/ the most
+  #   swap. PSI stayed low (~2%) deep into the 2026-10-29 thrash, so this is
+  #   the more reliable trigger.
+  systemd.oomd.enableSystemSlice = true;
+  systemd.slices.system.sliceConfig.ManagedOOMSwap = "kill";
+
   # Run non-NixOS binaries
   programs.nix-ld = {
     enable = true;
