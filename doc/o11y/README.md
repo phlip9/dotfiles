@@ -159,8 +159,10 @@ Dashboards are managed by Grafana 13 "Git Sync" (API group
 - Source of truth: `nixos/sauna/grafana/*.json` on `master`, one k8s-style
   manifest per dashboard (`apiVersion: dashboard.grafana.app/v1|v2`,
   `metadata.name` = uid, `spec` = dashboard JSON). Subdirs become folders.
-- Grafana polls GitHub every 60s (webhook disabled) and imports changes. No
-  redeploy needed to change a dashboard.
+- Grafana registers its own push + pull_request webhook on the GitHub repo
+  (HMAC-verified, no Grafana login; nginx proxies `/` so nothing to add) and
+  imports changes within seconds; a 60s poll is the fallback. No redeploy
+  needed to change a dashboard.
 - Saving a synced dashboard in the UI opens the "Provisioned dashboard"
   drawer: pick the branch (`master` = direct commit, anything else = new
   branch + PR) and a commit message.
@@ -250,9 +252,11 @@ Current dashboards (community imports, datasource switched to
 
    GitHub PAT: Settings > Developer settings > Fine-grained tokens. Resource
    owner `phlip9`, repository access: only `phlip9/dotfiles`. Permissions:
-   Contents: Read and write; Metadata: Read; Pull requests: Read and write.
-   No webhook/administration permission (webhook disabled). Set a long
-   expiry and note the rotation date.
+   Administration: Read; Contents: Read and write; Metadata: Read; Pull
+   requests: Read and write; Webhooks: Read and write. (Webhooks RW is only
+   offered to repo admins; Administration R is for branch-protection
+   checks. Both can be dropped with `gitSync.github.webhook = false`.) Set
+   a long expiry and note the rotation date.
 
    The secrets-manager key must be in place before the first Git Sync
    repository is created. To rotate it later, add a `secret_key.v3` provider
@@ -269,6 +273,13 @@ Current dashboards (community imports, datasource switched to
        | jq .status
    ```
 
+   `status.health.healthy` should be true and `status.webhook` should carry
+   the hook id + URL (`https://grafana.phlip9.com/apis/.../webhook`). The
+   hook also shows up under GitHub > dotfiles > Settings > Webhooks with a
+   green check after the first delivery. Grafana owns it: don't edit it by
+   hand; it is removed when the Repository is deleted or webhooks are
+   disabled.
+
 3. One-time migration of pre-existing (unmanaged) dashboards: Git Sync can
    not adopt a dashboard whose uid already exists outside the repo. The
    manifests in `nixos/sauna/grafana/` were exported from the live instance,
@@ -277,7 +288,9 @@ Current dashboards (community imports, datasource switched to
    Pull). Deleted dashboards stay restorable under "Recently deleted".
 
 4. Verify the round trip: edit a panel in the UI, Save, pick `master`, write a
-   commit message, then `git pull` and confirm the commit.
+   commit message, then `git pull` and confirm the commit. Then push a
+   manifest change from the desktop and confirm it shows in Grafana within
+   a few seconds (`status.webhook.lastEvent` updates).
 
 ### Agent access (mcp-grafana)
 

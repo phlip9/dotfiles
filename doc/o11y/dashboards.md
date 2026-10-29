@@ -279,8 +279,9 @@ Docs: `docs/sources/as-code/observability-as-code/git-sync/`,
 ### A. Git Sync, `github` type, dotfiles repo
 
 Grafana commits directly to `phlip9/dotfiles` at `nixos/sauna/grafana/`
-(branch `master` or a dedicated branch), pulls via 60s polling (webhook
-disabled, or proxied unauthenticated through nginx + HMAC).
+(branch `master` or a dedicated branch), pulls via Grafana-registered
+webhook (unauthenticated HMAC-verified endpoint, passes through nginx as-is)
+with 60s polling as fallback.
 
 - (+) Native UX: save drawer with branch + commit message, optional PR flow,
   pull from git within a minute, agent writes become commits. Zero sidecar.
@@ -362,7 +363,11 @@ dashboard schema to use.
 
 ## Decisions (2026-10-26)
 
-1. Mechanism: A, Git Sync `github` type, polling, webhook disabled.
+1. Mechanism: A, Git Sync `github` type. Webhook enabled (2026-10-29,
+   initially disabled to keep the PAT narrow): Grafana registers and owns
+   the hook itself and rejects deliveries for hooks it didn't register, so
+   the manual-hook + sops-secret pattern of `github-webhook.nix` doesn't
+   apply. Cost: PAT additionally needs Webhooks RW + Administration R.
 2. Target: `phlip9/dotfiles`, branch `master`, path `nixos/sauna/grafana/`.
    Write workflow (direct commit) + branch workflow (PR) both enabled.
 3. Schema: mixed. Server keeps v2 preferred. Imported community dashboards

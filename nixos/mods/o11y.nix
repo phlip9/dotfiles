@@ -70,10 +70,11 @@ let
       };
     }
     // lib.optionalAttrs (cfgGs.type == "github") {
-      # Poll only. Webhooks need an unauthenticated public endpoint and a
-      # PAT w/ repo admin + webhook permissions.
-      webhook.disabled = true;
       github = { inherit (cfgGs.github) url branch path; };
+    }
+    // lib.optionalAttrs (cfgGs.type == "github" && !cfgGs.github.webhook) {
+      # Poll only. Grafana neither registers nor accepts a webhook.
+      webhook.disabled = true;
     }
     // lib.optionalAttrs (cfgGs.type == "local") {
       local = { inherit (cfgGs.local) path; };
@@ -246,10 +247,11 @@ let
 
       # Grafana never syncs a repository on startup. Its controller only pulls
       # once `intervalSeconds` passed since the last sync, the spec changed,
-      # or the repository recovered from unhealthy. So a push made while
-      # Grafana was down would wait up to a full poll interval. Instead, queue
-      # one incremental pull (a no-op if the branch didn't move) on every
-      # start. See: pkg/registry/apis/provisioning/controller/repository.go
+      # or the repository recovered from unhealthy. A webhook only covers
+      # pushes while Grafana runs, so a push made while Grafana was down would
+      # wait up to a full poll interval. Instead, queue one incremental pull
+      # (a no-op if the branch didn't move) on every start.
+      # See: pkg/registry/apis/provisioning/controller/repository.go
       echo "waiting for repository $name to turn healthy"
       wait_for_repo_ready
       echo '{"action":"pull","pull":{"incremental":true}}' > "$tmp/pull.json"
@@ -381,6 +383,22 @@ in
               the repo root.
             '';
           };
+
+          webhook = lib.mkOption {
+            type = lib.types.bool;
+            default = true;
+            description = ''
+              Let Grafana register (and own) a push + pull_request webhook
+              on the GitHub repo, for instant sync and PR integration.
+              Grafana only registers it when `[server] root_url` is a
+              public https URL; polling stays on as a fallback either way.
+              Requires the PAT to have Webhooks: Read and write (repo
+              admin) and Administration: Read. Deliveries go to the
+              unauthenticated, HMAC-verified
+              `/apis/provisioning.grafana.app/.../repositories/<name>/webhook`
+              endpoint. false: poll only.
+            '';
+          };
         };
 
         local.path = lib.mkOption {
@@ -407,9 +425,10 @@ in
           type = lib.types.int;
           default = 60;
           description = ''
-            Seconds between polls for repo changes. Grafana's floor is
-            `[provisioning] min_sync_interval` (10s). The setup unit also
-            triggers one pull on every start.
+            Seconds between polls for repo changes. W/ `github.webhook`,
+            the webhook handles real-time updates and this is the fallback
+            poll. The setup unit also triggers one pull on every start.
+            Grafana's floor is `[provisioning] min_sync_interval` (10s).
           '';
         };
 
