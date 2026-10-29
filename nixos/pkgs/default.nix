@@ -66,8 +66,7 @@ fix (phlipPkgsNixos: {
   ) { };
 
   # Use nixbot's exported evaluator, including its matching patched Nix CLI.
-  nixbot-eval-jobs =
-    (callPackage (sources.nixbot + "/packages") { }).nix-eval-jobs;
+  nixbot-eval-jobs = callPackage ./nixbot-eval-jobs { inherit sources; };
 
   # paseo-relay - self-hosted relay for Paseo daemon/client traffic
   paseo-relay = callPackage ./paseo-relay.nix { };
