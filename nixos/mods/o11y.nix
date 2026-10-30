@@ -160,12 +160,12 @@ let
 
       # wait_for_200 URL
       #
-      # Poll until GET URL returns 200, for up to ~5 min. grafana.service is
+      # Poll until GET URL returns 200, for up to ~1 min. grafana.service is
       # Type=simple, so it may still be starting (DB migrations, slow under
       # load) or not have registered its k8s-style APIs yet.
       wait_for_200() {
         local status=000
-        for _ in $(seq 150); do
+        for _ in $(seq 30); do
           status=$(api GET "$1" 2>/dev/null)
           if [[ $status == 200 ]]; then
             return 0
@@ -179,9 +179,7 @@ let
       wait_for_200 "$base_url/api/health"
       wait_for_200 "$api_url"
 
-      # Request body: the static manifest + the token credential (if any).
-      # jq reads the token from the file, so it never hits the nix store or
-      # argv.
+      # Request body: the static manifest + the token credential (if any)
       if [[ -e $creds/token ]]; then
         jq --rawfile token "$creds/token" '
           ($token | trim) as $token
@@ -217,12 +215,12 @@ let
       # wait_for_repo_ready
       #
       # Poll until the controller has reconciled the current spec and the
-      # repository is healthy, for up to ~3 min. Jobs need a healthy
+      # repository is healthy, for up to ~1 min. Jobs need a healthy
       # repository. After an update, the stored health is stale until the
       # controller observes the new generation and re-runs its health check.
       wait_for_repo_ready() {
         local status=000
-        for _ in $(seq 90); do
+        for _ in $(seq 30); do
           status=$(api GET "$repos_url/$name")
           if [[ $status == 200 ]] && jq -e '
             .metadata.generation == .status.observedGeneration
@@ -258,8 +256,8 @@ let
       # A repository has at most one sync job, named `<name>-sync`, so this
       # fails w/ 409 AlreadyExists while another is queued or running, ex: the
       # controller's full sync after a spec change (incl. every token
-      # re-send). Retry until ours is queued, for up to ~3 min.
-      for _ in $(seq 90); do
+      # re-send). Retry until ours is queued, for up to ~1 min.
+      for _ in $(seq 30); do
         status=$(api POST "$repos_url/$name/jobs" "$tmp/pull.json")
         if [[ $status != 409 ]] \
           || ! jq -e '.reason == "AlreadyExists"' "$tmp/resp" > /dev/null; then
@@ -756,8 +754,8 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = lib.getExe gsSetup;
-        # Room for all the waits in the setup script: 2x ~5 min, 2x ~3 min.
-        TimeoutStartSec = "20min";
+        # Room for all the waits in the setup script: 2x ~1 min, 2x ~1 min.
+        TimeoutStartSec = "4min";
         LoadCredential = [
           "admin-password:${cfg.grafana.adminPasswordFile}"
         ]

@@ -437,7 +437,8 @@
       secretKeyFile = config.sops.secrets.grafana-secret-key.path;
       secretsManagerKeyFile = config.sops.secrets.grafana-secrets-manager-key.path;
 
-      # Sync dashboards w/ this repo. UI saves commit to master or open a PR.
+      # sync dashboards w/ this repo. saving in UI will commit to master or
+      # open a PR.
       # see: doc/o11y/README.md
       gitSync = {
         enable = true;
@@ -453,10 +454,9 @@
   };
   sops.secrets.grafana-admin-password = { };
   sops.secrets.grafana-secret-key = { };
-  # Grafana reads the key at start only.
   sops.secrets.grafana-secrets-manager-key.restartUnits = [ "grafana.service" ];
-  # Re-run setup on rotation; it re-sends the PAT to Grafana.
   sops.secrets.grafana-git-sync-token.restartUnits = [
+    # Re-run setup on rotation as it re-sends the PAT to Grafana.
     "grafana-git-sync-setup.service"
   ];
 
