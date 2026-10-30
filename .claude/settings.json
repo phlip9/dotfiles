@@ -10,6 +10,8 @@
       "Bash(grep:*)",
       "Bash(just --list:*)",
       "Bash(just bash-lint:*)",
+      "Bash(just grafana-check:*)",
+      "Bash(just grafana-promote:*)",
       "Bash(just just-fmt:*)",
       "Bash(just nix-ci:*)",
       "Bash(just nix-fmt:*)",

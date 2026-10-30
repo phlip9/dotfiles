@@ -185,6 +185,18 @@ sops-test-fixtures-set key:
 ssh-updatekeys:
     curl https://github.com/phlip9.keys > nix/phlip9.keys
 
+# --- grafana --- #
+
+# Dry-run save Grafana dashboard manifests (default: nixos/sauna/grafana/*.json)
+[positional-arguments]
+grafana-check *files:
+    nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-check.sh "$@"
+
+# Write a Grafana dashboard (ex: scratch-nginx) to a Git Sync manifest file
+[positional-arguments]
+grafana-promote scratch-uid file uid="":
+    nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-promote.sh "$@"
+
 # --- github-agent --- #
 
 # Set GitHub repo ruleset to deny agents access to non-`agents/**` branches.
