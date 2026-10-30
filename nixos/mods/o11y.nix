@@ -6,12 +6,11 @@
 # - prometheus-node-exporter (system metrics)
 # - prometheus-nginx-exporter (nginx metrics, if nginx is enabled)
 # - nginx virtualHost for Grafana (if grafana.domain is set)
-# - Grafana Git Sync: bidirectional dashboard sync w/ a git repo (if
-#   grafana.gitSync.enable is set)
+# - Grafana Git Sync: dashboard sync w/ git repo
 #
 # All services listen on localhost only. Only nginx is public-facing.
 # Grafana secrets are injected via systemd LoadCredential and read
-# via $__file{} providers from sops-nix managed secret files.
+# via `$__file{}` providers from sops-nix managed secret files.
 #
 # See: doc/o11y/README.md
 {
@@ -324,8 +323,7 @@ in
         '';
       };
 
-      # Grafana Git Sync: bidirectional sync of dashboards + folders w/ a git
-      # repository. Declares a single Repository resource.
+      # Grafana Git Sync: sync dashboards + folders w/ git repo
       # See: doc/o11y/README.md
       gitSync = {
         enable = lib.mkEnableOption "Grafana Git Sync repository";
@@ -335,8 +333,7 @@ in
           default = "dotfiles";
           description = ''
             Repository resource name (`metadata.name`). Renaming creates a
-            new Repository; delete the old one by hand (which also deletes
-            the dashboards it synced).
+            new Repository. Delete the old one by hand.
           '';
         };
 
@@ -388,15 +385,12 @@ in
             type = lib.types.bool;
             default = true;
             description = ''
-              Let Grafana register (and own) a push + pull_request webhook
-              on the GitHub repo, for instant sync and PR integration.
-              Grafana only registers it when `[server] root_url` is a
-              public https URL; polling stays on as a fallback either way.
-              Requires the PAT to have Webhooks: Read and write (repo
-              admin) and Administration: Read. Deliveries go to the
-              unauthenticated, HMAC-verified
-              `/apis/provisioning.grafana.app/.../repositories/<name>/webhook`
-              endpoint. false: poll only.
+              Let Grafana register and own a push + pull_request webhook on
+              the GitHub repo (instant sync, PR integration). Needs a public
+              https `root_url` and a PAT with Webhooks RW + Administration R.
+              Deliveries hit an unauthenticated, HMAC-verified
+              `.../repositories/<name>/webhook` endpoint. Polling stays on
+              as a fallback. false: poll only.
             '';
           };
         };
@@ -423,7 +417,7 @@ in
 
         intervalSeconds = lib.mkOption {
           type = lib.types.int;
-          default = 60;
+          default = 3600;
           description = ''
             Seconds between polls for repo changes. W/ `github.webhook`,
             the webhook handles real-time updates and this is the fallback
@@ -444,9 +438,10 @@ in
             [ "write" ] ++ lib.optional (gitSync.type == "github") "branch"
           '';
           description = ''
-            Allowed UI save workflows. `write`: commit directly to the
-            configured branch. `branch`: commit to a new branch (+ PR on
-            GitHub). Empty: read-only.
+            Allowed UI save workflows:
+            - `write`: commit directly to the configured branch
+            - `branch`: commit to a new branch (+ PR on GitHub)
+            - (empty): read-only
           '';
         };
 
@@ -459,16 +454,16 @@ in
           description = ''
             Sync target. Grafana rejects changes once a sync has run.
 
-            `folder`: everything under a root folder w/ uid `gitSync.name`
-            and title `gitSync.title`; subdirs become subfolders. Git Sync
-            creates that folder w/ default role permissions (Editor: edit,
-            Viewer: view), which its dashboards inherit.
+            - `folder`: everything under a root folder w/ uid `gitSync.name`
+              and title `gitSync.title`. Git Sync creates that folder w/
+              default role permissions (Editor: edit, Viewer: view), which its
+              dashboards also inherit.
 
-            `folderless`: top level; subdirs become folders. Root dashboards
-            get no role permissions, so only org Admins can access them;
-            Editors, Viewers, and their service accounts get 403.
+            - `folderless`: top level. Root dashboards get no role permissions,
+              so only org Admins can access them; Editors, Viewers, and their
+              service accounts get 403.
 
-            See: pkg/registry/apis/provisioning/resources/folders.go
+            See: `<grafana>/pkg/registry/apis/provisioning/resources/folders.go`
           '';
         };
       };
@@ -703,7 +698,7 @@ in
     ];
 
     # ===================================================================
-    # Grafana Git Sync - dashboards <-> git repository
+    # Grafana Git Sync - dashboards <-> git repo
     # ===================================================================
     #
     # Repository resources can't be file-provisioned, so a oneshot unit
@@ -715,7 +710,7 @@ in
       }
       {
         # Grafana rejects the branch workflow on non-git repositories.
-        # See: apps/provisioning/pkg/repository/validator.go
+        # See: `<grafana>/apps/provisioning/pkg/repository/validator.go`
         assertion = gsIsLocal -> !(lib.elem "branch" cfgGs.workflows);
         message = "phlip9-o11y: gitSync.workflows: local can't use branch";
       }
@@ -740,10 +735,8 @@ in
     systemd.services.grafana-git-sync-setup = lib.mkIf cfgGs.enable {
       description = "Grafana Git Sync repository setup";
       # Re-run on every Grafana start, so each start queues a pull.
-      # WantedBy= pulls us into each grafana.service start job (boot,
-      # `systemctl start`). PartOf= propagates its stops + restarts (incl.
-      # Restart= crash recovery), so we never stay active across two Grafana
-      # processes.
+      # WantedBy= pulls us into grafana.service start job
+      # PartOf= propagates stops + restarts (incl. Restart= crash recovery)
       wantedBy = [ "grafana.service" ];
       partOf = [ "grafana.service" ];
       after = [ "grafana.service" ];

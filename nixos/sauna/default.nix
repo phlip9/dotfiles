@@ -448,8 +448,6 @@
         github.branch = "master";
         github.path = "nixos/sauna/grafana";
         tokenFile = config.sops.secrets.grafana-git-sync-token.path;
-        # The webhook syncs pushes in real time. Poll hourly as a fallback.
-        intervalSeconds = 3600;
       };
     };
   };

@@ -13,6 +13,8 @@
 #
 # env: GRAFANA_URL, GRAFANA_USER + GRAFANA_PASSWORD, GRAFANA_TOKEN_FILE. See
 # grafana-check.sh.
+#
+# Keep logic consistent with `just/grafana-check.sh`
 set -euo pipefail
 
 grafana_url=${GRAFANA_URL:-https://grafana.phlip9.com}

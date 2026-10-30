@@ -13,8 +13,8 @@
 ## Non-Goals
 
 - High availability, clustering, or replication
-- Log aggregation (Loki, etc.) — separate concern
-- Alerting (vmalert, alertmanager) — future work
+- Log aggregation (Loki, etc.) - separate concern
+- Alerting (vmalert, alertmanager) - future work
 
 ## Architecture
 
@@ -50,8 +50,7 @@ DNS: `grafana.phlip9.com`
 | `nixos/tests/o11y.nix` | NixOS VM test |
 | `nixos/sauna/default.nix` | NixOS machine config |
 | `nixos/sauna/grafana/` | Dashboards (Git Sync manifests) |
-| `.mcp.json` | mcp-grafana config for Claude Code |
-| `doc/o11y/dashboards.md` | Dashboards research + design |
+| `.mcp.json` | `mcp-grafana` config for agents |
 
 ## Components
 
@@ -137,8 +136,8 @@ for `grafana.phlip9.com` with:
 |--------|-------|---------|
 | `grafana-admin-password` | `grafana` | Grafana admin login |
 | `grafana-secret-key` | `grafana` | Grafana cookie/token signing |
-| `grafana-secrets-manager-key` | `grafana` | Secrets manager key (Git Sync) |
-| `grafana-git-sync-token` | `grafana` | GitHub fine-grained PAT for Git Sync |
+| `grafana-secrets-manager-key` | `grafana` | Encrypts the stored Git Sync PAT |
+| `grafana-git-sync-token` | `grafana` | GitHub PAT for Git Sync |
 
 Loaded into Grafana via the `$__file{path}` provider pattern,
 which reads the secret from disk at runtime without leaking into
@@ -153,38 +152,56 @@ services.grafana.settings.security = {
 
 ## Dashboards
 
-Dashboards are managed by Grafana 13 "Git Sync" (API group
-`provisioning.grafana.app`). Design + research: `doc/o11y/dashboards.md`.
+Dashboards in `nixos/sauna/grafana/*.json` on our `master` branch are the
+source-of-truth.
 
-- Source of truth: `nixos/sauna/grafana/*.json` on `master`, one k8s-style
-  manifest per dashboard (`apiVersion: dashboard.grafana.app/v1|v2`,
-  `metadata.name` = uid, `spec` = dashboard JSON). Subdirs become folders.
-- Grafana registers its own push + pull_request webhook on the GitHub repo
-  (HMAC-verified, no Grafana login; nginx proxies `/` so nothing to add) and
-  imports changes within seconds; a 60s poll is the fallback. No redeploy
-  needed to change a dashboard.
-- Saving a synced dashboard in the UI opens the "Provisioned dashboard"
-  drawer: pick the branch (`master` = direct commit, anything else = new
-  branch + PR) and a commit message.
-- API writes to a synced dashboard via the k8s-style API (`PUT
-  /apis/dashboard.grafana.app/...`, annotations preserved) are re-routed
-  into commits. The legacy `POST /api/dashboards/db` is rejected with 400
-  "Cannot save provisioned dashboard"; mcp-grafana's `update_dashboard` uses
-  the legacy API for v1 dashboards, so agents edit synced v1 dashboards by
-  editing the manifest in git instead. New (v2) dashboards created via
-  `update_dashboard` do become commits; its `message` is the commit message.
-- Schema policy: imported community dashboards stay v1 and are patched in
-  place; the VictoriaMetrics dashboard and new dashboards are v2.
-- The Repository resource is created/updated at boot by
-  `grafana-git-sync-setup.service` (`services.phlip9-o11y.grafana.gitSync`),
-  so the setup is declarative except for the two sops secrets.
-- Agent access: Claude Code uses `mcp-grafana` (stdio, `.mcp.json`) with a
-  service account token in `~/.config/grafana/mcp-sa-token` for reads,
-  metric queries, and new dashboards; existing dashboards are edited as
-  files in `nixos/sauna/grafana/` + commit + push (Grafana pulls in <=60s).
+- All dashboards are `apiVersion: dashboard.grafana.app/v2`, `metadata.name` =
+  uid, `spec` = dashboard.
+- In Grafana they live in the `sauna` folder (uid `dotfiles`) and subdirs
+  become subfolders.
+- Dashboards use Grafana's on-disk JSON format, i.e., sorted keys, 2-space
+  indent, `<>&` as `\u003c \u003e \u0026`.
 
-Current dashboards (community imports, datasource switched to
-`victoriametrics-metrics-datasource`):
+### Sync
+
+Grafana Git Sync to sync updates between Grafana and GitHub.
+
+- GitHub -> Grafana: a Grafana webhook on `phlip9/dotfiles` pulls dashboard
+  changes on `master` into Grafana.
+- Grafana -> GitHub: every server-side save of a synced dashboard (UI, API,
+  `mcp-grafana`) gets pushed as a commit on `master`.
+- Only dashboards originally provisioned by Git Sync are updated by Git Sync.
+  Unmanaged folders and dashboards (ex: `Scratch`) are ignored.
+- Config: `services.phlip9-o11y.grafana.gitSync` in `nixos/sauna/default.nix`.
+  `grafana-git-sync-setup.service` creates/updates the Grafana `Repository`
+  resource, re-sends the PAT, and triggers a pull on every Grafana start
+  (Grafana itself doesn't sync on startup).
+
+### Agent Workflows
+
+1. Metrics exploration, incidents: Agent + `mcp-grafana` read tools
+   (`query_prometheus`, `get_dashboard_summary`, ...).
+2. Light edits in git: edit the manifest, optionally dry-run save it on the
+   live server (`just grafana-check [files...]`, default: all), commit, push.
+3. UI edits: Save opens the "Provisioned dashboard" drawer. Branch `master`
+   commits directly; any other branch name creates that branch + a PR.
+4. Live iteration w/ an agent: the agent edits an unmanaged copy in the
+   `Scratch` folder (uid `scratch`). We open the copy open in the browser.
+   Agents never `update_dashboard` outside `Scratch` (= commit on `master`).
+
+   ```bash
+   # keep the result
+   $ just grafana-promote scratch-nginx nixos/sauna/grafana/nginx.json
+   # review + commit
+   $ git diff
+   ```
+
+`grafana-check` and `grafana-promote` use basic auth if `GRAFANA_USER` +
+`GRAFANA_PASSWORD` are set, else the `mcp-grafana` token
+(`~/.config/grafana/mcp-sa-token`). A dry run never saves or commits, but
+open browser tabs of a checked dashboard reload once.
+
+### Imported community dashboards
 
 | file | upstream |
 |------|----------|
@@ -193,7 +210,7 @@ Current dashboards (community imports, datasource switched to
 | `postgres-overview.json` | [postgres_exporter mixin](https://github.com/prometheus-community/postgres_exporter/blob/master/postgres_mixin/dashboards/postgres-overview.json) |
 | `victoriametrics-single-node.json` | [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/dashboards/vm/victoriametrics.json) |
 
-### Future Work
+## Future Work
 
 - **Alerting**: vmalert + alertmanager for on-call notifications.
 - **Additional exporters**: systemd-exporter, blackbox-exporter for endpoint
@@ -240,82 +257,79 @@ Current dashboards (community imports, datasource switched to
 
 ### Git Sync setup
 
-1. Add the two sops secrets (see `doc/SECRETS.md`):
+1. Create a fine-grained PAT:
+   <https://github.com/settings/personal-access-tokens/new>
+   - Resource owner: `phlip9`
+   - Repository access: `phlip9/dotfiles`
+   - Permissions:
+     - Administration: Read
+     - Contents: Read and write
+     - Metadata: Read
+     - Pull requests: Read and write
+     - Webhooks: Read and write
+   - Expiry: 1 year
+
+2. Add the secrets:
 
    ```bash
    $ sops set nixos/sauna/secrets.yaml '["grafana-secrets-manager-key"]' \
        "\"$(head -c 32 /dev/urandom | base64 -w0)\""
-   $ sops nixos/sauna/secrets.yaml  # add grafana-git-sync-token: github_pat_..
+   $ sops nixos/sauna/secrets.yaml   # grafana-git-sync-token: github_pat_...
    ```
 
-   (Use the editor for the PAT so it stays out of shell history.)
+3. Merge `nixos/sauna/grafana/` to `master` (Grafana syncs from there), then
+   `just deploy sauna`.
 
-   GitHub PAT: Settings > Developer settings > Fine-grained tokens. Resource
-   owner `phlip9`, repository access: only `phlip9/dotfiles`. Permissions:
-   Administration: Read; Contents: Read and write; Metadata: Read; Pull
-   requests: Read and write; Webhooks: Read and write. (Webhooks RW is only
-   offered to repo admins; Administration R is for branch-protection
-   checks. Both can be dropped with `gitSync.github.webhook = false`.) Set
-   a long expiry and note the rotation date.
-
-   The secrets-manager key must be in place before the first Git Sync
-   repository is created. To rotate it later, add a `secret_key.v3` provider
-   and switch `encryption_provider` to it, keeping `v2` so older data keys
-   stay readable; the setup unit re-sends the PAT on every run, so it gets
-   re-encrypted under the new key.
-
-2. Deploy: `just deploy sauna`. Check:
+4. Check:
 
    ```bash
-   $ systemctl status grafana-git-sync-setup.service
-   $ curl -s -u admin:$PW -H 'Host: grafana.phlip9.com' \
-       http://127.0.0.1:3000/apis/provisioning.grafana.app/v0alpha1/namespaces/default/repositories/dotfiles \
+   $ ssh sauna systemctl status grafana-git-sync-setup.service
+   $ curl -s -u phlip9 https://grafana.phlip9.com/apis/provisioning.grafana.app/v0alpha1/namespaces/default/repositories/dotfiles \
        | jq .status
    ```
 
-   `status.health.healthy` should be true and `status.webhook` should carry
-   the hook id + URL (`https://grafana.phlip9.com/apis/.../webhook`). The
-   hook also shows up under GitHub > dotfiles > Settings > Webhooks with a
-   green check after the first delivery. Grafana owns it: don't edit it by
-   hand; it is removed when the Repository is deleted or webhooks are
-   disabled.
+   Expect `health.healthy: true` and `webhook.id` set. The hook is listed
+   under GitHub > dotfiles > Settings > Webhooks. Grafana owns it; don't
+   edit it there.
 
-3. One-time migration of pre-existing (unmanaged) dashboards: Git Sync can
-   not adopt a dashboard whose uid already exists outside the repo. The
-   manifests in `nixos/sauna/grafana/` were exported from the live instance,
-   so delete the originals in the UI (Dashboards > select > Delete), then
-   wait one sync interval (or Administration > Provisioning > repository >
-   Pull). Deleted dashboards stay restorable under "Recently deleted".
+5. First time only: delete the pre-existing dashboards in the UI
+   (Dashboards > select all > Delete). Git Sync can't adopt a uid that
+   already exists. Then Administration > Provisioning > dotfiles > Pull.
+   Deleted dashboards stay under Dashboards > Recently deleted.
 
-4. Verify the round trip: edit a panel in the UI, Save, pick `master`, write a
-   commit message, then `git pull` and confirm the commit. Then push a
-   manifest change from the desktop and confirm it shows in Grafana within
-   a few seconds (`status.webhook.lastEvent` updates).
+6. Round trip: edit a panel, Save, branch `master`, commit message, Save.
+   `git pull` shows the commit. Push a manifest edit; Grafana shows it
+   within seconds.
+
+### Rotate Git Sync secrets
+
+- PAT: new token (step 1 above), `sops nixos/sauna/secrets.yaml`, `just
+  deploy sauna`. The secret change restarts the setup unit, which re-sends
+  the token.
+- Secrets-manager key: in `o11y.nix` add a `secret_key.v3` provider,
+  switch `encryption_provider` to it, keep `v2` so old data keys stay
+  readable. Deploy; the PAT is re-stored under the new key.
 
 ### Agent access (mcp-grafana)
 
-1. Service account: Administration > Users and access > Service accounts >
-   Add service account. Name `claude-code`, role `Editor` (OSS has no
-   finer-grained RBAC for service accounts; `Viewer` + `--disable-write` in
-   `.mcp.json` for a read-only variant).
+1. Grafana > Administration > Users and access > Service accounts > Add
+   service account: name `phlipdesk`, role `Editor`. Add service account
+   token > Generate. Copy the `glsa_...` token (shown once).
 
-2. Add service account token > Generate. Copy the `glsa_...` token (shown
-   once). Install on each machine that runs Claude Code:
+2. On each machine that runs agents (e.g. phlipdesk, sauna):
 
    ```bash
    $ mkdir -p -m 0700 ~/.config/grafana
    $ (umask 077 && cat > ~/.config/grafana/mcp-sa-token)   # paste, Ctrl-D
    ```
 
-   mcp-grafana re-reads the file on every request; rotate by overwriting.
+3. In the dotfiles repo run e.g. `claude`, approve the project MCP server
+   `grafana` once, then `claude mcp list` -> `grafana ... connected`. Ask for
+   `user_info`. Expect service account `phlipdesk`, role Editor.
 
-3. `hms` to install `mcp-grafana` (`pkgsUnstable.mcp-grafana`; stable is too
-   old). In the dotfiles repo, `claude` prompts once to trust the project
-   server `grafana`. `claude mcp list` should show it connected; in a session
-   `user_info` should report service account `claude-code`, role Editor. A
-   401 means a bad token file; a redirect error means `GRAFANA_URL` is not
-   the final https URL.
+Read tools are pre-allowed in `.claude/settings.json`; write tools prompt.
+Read-only variant: role `Viewer` + `--disable-write` in `.mcp.json`.
 
-4. Read-only tools are pre-allowed in `.claude/settings.json`; writes
-   (`update_dashboard`, `create_folder`, ...) prompt every time. Git Sync
-   turns each write into a commit on `master`.
+The Scratch workflow needs no setup: the agent creates the `Scratch` folder
+on first use, and `just grafana-check` / `just grafana-promote` reuse the
+token file.

@@ -18,22 +18,7 @@
 # - GRAFANA_TOKEN_FILE: else, service account token file. Default:
 #   ~/.config/grafana/mcp-sa-token (the mcp-grafana token)
 #
-# A dry run can't write or commit (Grafana 13.2.4, k8s.io/apiserver v0.36.2):
-# - The generic k8s registry wraps storage in `DryRunnableStorage`
-#   (k8s.io/apiserver pkg/registry/generic/registry/{store,dryrun}.go). On a
-#   dry run, Create/GuaranteedUpdate only Get the current object, run the
-#   strategy + admission, and echo the result. They never call the wrapped
-#   storage's Create/GuaranteedUpdate.
-# - The wrapped storage is unified storage
-#   (pkg/storage/unified/apistore/store.go). Its Create/GuaranteedUpdate hold
-#   the Git Sync re-routing of repo-managed writes
-#   (apistore/managed.go: handleManagedResourceRouting), so no commit.
-# - pkg/storage/legacysql/dualwrite/dualwriter.go sends dry runs straight to
-#   unified storage. pkg/registry/apis/dashboard/register.go skips folder and
-#   quota side effects on IsDryRun().
-# - Caveat: dashboardStorageWrapper.Update
-#   (pkg/registry/apis/dashboard/dashboard_storage.go) still broadcasts a
-#   Grafana Live "saved" event, so open browser tabs of the dashboard reload.
+# Keep logic consistent with `just/grafana-promote.sh`
 set -euo pipefail
 
 grafana_url=${GRAFANA_URL:-https://grafana.phlip9.com}
