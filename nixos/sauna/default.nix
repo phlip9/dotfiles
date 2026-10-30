@@ -441,4 +441,9 @@
   sops.secrets.grafana-admin-password = { };
   sops.secrets.grafana-secret-key = { };
   sops.secrets.grafana-secrets-manager-key = { };
+
+  environment.systemPackages = [
+    # mcp-grafana - Grafana MCP server for claude code (see .mcp.json)
+    pkgs.mcp-grafana
+  ];
 }

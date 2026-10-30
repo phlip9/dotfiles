@@ -359,6 +359,9 @@
     # EFI
     pkgs.efibootmgr
 
+    # mcp-grafana - Grafana MCP server for claude code (see .mcp.json)
+    pkgs.mcp-grafana
+
     # nvtop
     pkgs.nvtopPackages.nvidia
 
