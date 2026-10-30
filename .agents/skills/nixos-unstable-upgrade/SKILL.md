@@ -50,6 +50,13 @@ Check each on every upgrade; drop the pin (and its note here) once obsolete.
   nixbot evals. Drop once the NEW pin's default nix is >= 2.35:
   `nix eval --raw -f . nixosConfigs.sauna.pkgs.nix.version`.
 
+## Version mentions
+
+Update in the `nixos-unstable` commit when NEW changes the version.
+
+- `.mcp.json` `--instructions-append` states the Grafana version:
+  `nix eval --raw -f . nixosConfigs.sauna.config.services.grafana.package.version`.
+
 ## Setup
 
 ```bash
