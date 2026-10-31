@@ -319,8 +319,12 @@ open browser tabs of a checked dashboard reload once.
 2. On each machine that runs agents (e.g. phlipdesk, sauna):
 
    ```bash
-   $ mkdir -p -m 0700 ~/.config/grafana
-   $ (umask 077 && cat > ~/.config/grafana/mcp-sa-token)   # paste, Ctrl-D
+   $ cd ~/.config
+   $ mkdir -m 0700 grafana
+   # paste + Ctrl-D
+   $ (umask 077 && cat > ~/.config/grafana/mcp-sa-token)
+   # strip trailing newline just in case
+   $ perl -0777 -i -pe 's/\s+\z//' -- ~/.config/grafana/mcp-sa-token
    ```
 
 3. In the dotfiles repo run e.g. `claude`, approve the project MCP server
