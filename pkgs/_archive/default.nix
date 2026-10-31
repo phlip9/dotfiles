@@ -30,6 +30,13 @@ fix (phlipPkgs: {
   # ctz/graviola - devshell for graviola development
   graviola-tools = callPackage ./graviola-tools.nix { };
 
+  # Marinara Engine lite wrapped in a bubblewrap sandbox
+  # Disabled: stable pnpm_10 is marked insecure.
+  marinara-engine = callPackage ./marinara-engine/sandbox.nix {
+    inherit (phlipPkgs) marinara-engine-unwrapped;
+  };
+  marinara-engine-unwrapped = callPackage ./marinara-engine { };
+
   # MOMW Tools Pack pre-built unstable
   # TODO(phlip9): GitLab CI artifacts expired, need to update URL
   momw-tools-pack = callPackage ./momw-tools-pack.nix { };
