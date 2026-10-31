@@ -4,7 +4,7 @@ default:
 
 # --- top-level --- #
 
-ci: just-ci bash-ci nix-ci go-ci nvim-ci
+ci: just-ci bash-ci nix-ci go-ci nvim-ci grafana-ci
 
 fmt: just-fmt nix-fmt go-fmt nvim-fmt
 
@@ -26,7 +26,7 @@ bash-ci: bash-lint
 bash-lint:
     nix shell -f . pkgs.shellcheck pkgs.fd --command \
         fd --type file '^.*(\.sh|\.bash|bashrc|bwrap-game|hms|nor|rgs)$' \
-            --exec shellcheck {}
+            --exec shellcheck --external-sources {}
 
 # --- nix --- #
 
@@ -196,6 +196,12 @@ grafana-check *files:
 [positional-arguments]
 grafana-promote scratch-uid file uid="":
     nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-promote.sh "$@"
+
+grafana-ci: grafana-test
+
+# Unit test the shared jq defs (just/grafana.jq) w/ jq --run-tests
+grafana-test:
+    nix shell -f . pkgs.jq --command jq -L just --run-tests just/grafana.jq.test
 
 # --- github-agent --- #
 

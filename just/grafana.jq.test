@@ -1,0 +1,28 @@
+# Tests for grafana.jq. Run: just grafana-test
+#
+# jq --run-tests format: a program line, an input line, the expected output
+# lines, then a blank line.
+
+# --- manifests + specs --- #
+
+include "grafana"; spec_of
+{"apiVersion": "dashboard.grafana.app/v2", "spec": {"title": "t"}}
+{"title": "t"}
+
+include "grafana"; spec_of
+{"title": "t"}
+{"title": "t"}
+
+include "grafana"; manifest("x")
+{"title": "t"}
+{"apiVersion": "dashboard.grafana.app/v2", "kind": "Dashboard", "metadata": {"name": "x"}, "spec": {"title": "t"}}
+
+# --- API objects --- #
+
+include "grafana"; error_message
+{"message": "nope"}
+"nope"
+
+include "grafana"; error_message
+{"code": 1}
+"{\"code\":1}"

@@ -12,15 +12,11 @@
 # its `scratch-` prefix.
 #
 # env: GRAFANA_URL, GRAFANA_USER + GRAFANA_PASSWORD, GRAFANA_TOKEN_FILE. See
-# grafana-check.sh.
-#
-# Keep logic consistent with `just/grafana-check.sh`
+# grafana-lib.sh.
 set -euo pipefail
 
-grafana_url=${GRAFANA_URL:-https://grafana.phlip9.com}
-token_file=${GRAFANA_TOKEN_FILE:-$HOME/.config/grafana/mcp-sa-token}
-dash_url="$grafana_url/apis/dashboard.grafana.app/v2/namespaces/default"
-dash_url+="/dashboards"
+# shellcheck source=just/grafana-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/grafana-lib.sh"
 
 usage() {
   cat >&2 <<'USAGE'
@@ -42,11 +38,6 @@ scratch_uid=$1
 file=$2
 uid=${3:-}
 
-die() {
-  echo "error: $*" >&2
-  exit 1
-}
-
 # Pick the manifest uid.
 if [[ -z $uid && -f $file ]]; then
   uid=$(jq -r '.metadata.name // empty' "$file") \
@@ -61,48 +52,7 @@ if [[ -z $uid ]]; then
   uid=${scratch_uid#scratch-}
 fi
 
-tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
-
-# Auth header file, so secrets never hit argv. Explicit basic auth beats
-# the default token file.
-if [[ -n ${GRAFANA_USER:-} && -n ${GRAFANA_PASSWORD:-} ]]; then
-  jq --null-input --raw-output \
-    '"Authorization: Basic \("\(env.GRAFANA_USER):\(env.GRAFANA_PASSWORD)"
-      | @base64)"' >"$tmp/auth"
-elif [[ -r $token_file ]]; then
-  jq --null-input --raw-output --rawfile token "$token_file" \
-    '"Authorization: Bearer \($token | trim)"' >"$tmp/auth"
-else
-  die "no Grafana credentials: no token file at $token_file and" \
-    "GRAFANA_USER/GRAFANA_PASSWORD unset"
-fi
-
-# api METHOD URL
-#
-# Send an authenticated request to Grafana. Prints the HTTP status ("000" if
-# the connection failed). Response body goes to $tmp/resp.
-api() {
-  rm -f "$tmp/resp"
-  curl --silent --show-error \
-    --request "$1" \
-    --header @"$tmp/auth" \
-    --output "$tmp/resp" \
-    --write-out '%{http_code}' \
-    "$2" || true
-}
-
-# resp_error
-#
-# Print the error from the last response: the `.message` of a k8s Status (or
-# Grafana error), else the compact JSON, else the start of the raw body.
-resp_error() {
-  if ! jq -j '
-    if (.message? // "") != "" then .message else tojson end
-  ' "$tmp/resp" 2>/dev/null; then
-    head -c 500 "$tmp/resp" 2>/dev/null
-  fi
-}
+grafana_init
 
 # Fetch the dashboard as v2. Grafana converts dashboards stored as another
 # version on read and flags a failed conversion in `.status.conversion`.
@@ -122,12 +72,9 @@ fi
 # json.MarshalIndent sorts map keys, indents by 2, and escapes <, >, & as
 # \u003c, \u003e, \u0026. jq emits those raw, and JSON only has them inside
 # strings, so a global sed is safe.
-jq --sort-keys --indent 2 --arg uid "$uid" '{
-  apiVersion: "dashboard.grafana.app/v2",
-  kind,
-  metadata: {name: $uid},
-  spec
-}' "$tmp/resp" \
+# shellcheck disable=SC2016 # jq vars
+gjq '.spec | manifest($uid)' --sort-keys --indent 2 --arg uid "$uid" \
+  "$tmp/resp" \
   | sed 's/</\\u003c/g; s/>/\\u003e/g; s/&/\\u0026/g' >"$tmp/manifest.json"
 jq -e . "$tmp/manifest.json" >/dev/null \
   || die "generated manifest is not valid JSON"

@@ -4,7 +4,7 @@
 # Verifies scraping, querying, Grafana datasource provisioning, that
 # Grafana's secrets manager encrypts with our key, a Git Sync round trip
 # (file -> dashboard -> API save -> file) w/ a `local` repository, and the
-# just/grafana-{check,promote}.sh dashboard scripts.
+# just/grafana-*.sh dashboard scripts.
 #
 # In production, sops-nix provides the secret file paths. Here we
 # pass writeText files directly to the module's *File options.
@@ -21,28 +21,47 @@
       grafanaSecretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key-0123456789abcdef";
       grafanaSecretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key-0123456789";
 
-      # A just/<name>.sh script as a VM command. The repo script stays the
-      # single source of truth; writeShellApplication adds its own shebang.
-      justScript =
-        name:
-        pkgs.writeShellApplication {
-          inherit name;
-          runtimeInputs = [
-            pkgs.curl
-            pkgs.jq
-          ];
-          text = lib.removePrefix "#!/usr/bin/env bash\n" (
-            builtins.readFile ../../just/${name}.sh
-          );
-        };
+      # The just/grafana-*.sh scripts as VM commands, unmodified: installed
+      # side by side (they source grafana-lib.sh + include grafana.jq from
+      # their own dir), w/ bin/ wrappers that add curl + jq to PATH.
+      grafanaScripts =
+        pkgs.runCommand "grafana-scripts"
+          {
+            src = lib.fileset.toSource {
+              root = ../../just;
+              fileset = lib.fileset.fileFilter (
+                file:
+                file.name == "grafana.jq"
+                || (lib.hasPrefix "grafana-" file.name && file.hasExt "sh")
+              ) ../../just;
+            };
+            nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+            buildInputs = [ pkgs.bash ];
+          }
+          ''
+            mkdir -p $out/bin $out/libexec
+            cp $src/grafana-*.sh $src/grafana.jq $out/libexec/
+            patchShebangs --host $out/libexec
+            for script in $out/libexec/grafana-*.sh; do
+              name=$(basename "$script" .sh)
+              if [[ $name != grafana-lib ]]; then
+                makeWrapper "$script" "$out/bin/$name" \
+                  --prefix PATH : ${
+                    lib.makeBinPath [
+                      pkgs.curl
+                      pkgs.jq
+                    ]
+                  }
+              fi
+            done
+          '';
     in
     {
       environment.systemPackages = [
         pkgs.jq
         pkgs.curl
         pkgs.sqlite
-        (justScript "grafana-check")
-        (justScript "grafana-promote")
+        grafanaScripts
       ];
 
       services.phlip9-o11y = {
