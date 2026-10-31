@@ -15,5 +15,10 @@ gh-stack.overrideAttrs (
 
     # Upstream integration tests create and rebase real Git repos.
     nativeCheckInputs = (prevAttrs.nativeCheckInputs or [ ]) ++ [ gitMinimal ];
+
+    # TUI insertion tests expect a Git checkout, but src is a tarball.
+    preCheck = (prevAttrs.preCheck or "") + ''
+      git init --quiet
+    '';
   }
 )
