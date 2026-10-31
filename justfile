@@ -218,6 +218,11 @@ grafana-push *args:
 grafana-queries *args:
     nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-queries.sh "$@"
 
+# Screenshot a Grafana dashboard or panel to PNG (see --help)
+[positional-arguments]
+grafana-screenshot *args:
+    nix shell -f . grafana-screenshot --command grafana-screenshot "$@"
+
 # --- github-agent --- #
 
 # Set GitHub repo ruleset to deny agents access to non-`agents/**` branches.
