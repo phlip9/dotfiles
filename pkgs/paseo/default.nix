@@ -43,6 +43,9 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     ./paseo-quiet-logs.patch
     # Show more lines of context (vs git's default 3) in Diff and commit diffs.
     ./paseo-diff-context.patch
+    # Show the full commit message (subject, body, author, date, sha) above
+    # the diff when viewing a single commit.
+    ./paseo-commit-message.patch
   ];
 
   # Upstream builds w/ `--ignore-scripts`, so the root postinstall never

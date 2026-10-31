@@ -1,0 +1,280 @@
+diff --git a/packages/app/src/git/commit-message-header.tsx b/packages/app/src/git/commit-message-header.tsx
+new file mode 100644
+index 000000000..819d414de
+--- /dev/null
++++ b/packages/app/src/git/commit-message-header.tsx
+@@ -0,0 +1,101 @@
++import { memo, useMemo } from "react";
++import { ScrollView, Text, View } from "react-native";
++import { StyleSheet } from "react-native-unistyles";
++import type { CheckoutCommit } from "@getpaseo/protocol/messages";
++import { CODE_SURFACE_DATASET } from "@/styles/code-surface";
++
++/**
++ * The full commit message above a commit's diff: subject, an author / date /
++ * sha line, then the body preformatted in monospace like `git show`. Long
++ * messages scroll inside a capped area so the diff stays visible on phones.
++ */
++export const CommitMessageHeader = memo(function CommitMessageHeader({
++  commit,
++}: {
++  commit: CheckoutCommit;
++}) {
++  const authorDate = useMemo(() => formatCommitDate(commit.authorDate), [commit.authorDate]);
++  const body = commit.body ?? "";
++
++  return (
++    <ScrollView
++      style={styles.container}
++      contentContainerStyle={styles.content}
++      testID="commit-message-header"
++    >
++      <Text selectable style={styles.subject} testID="commit-message-subject">
++        {commit.subject}
++      </Text>
++      <View style={styles.meta}>
++        <Text selectable style={styles.metaText}>
++          {commit.authorName}
++        </Text>
++        <Text selectable style={styles.metaText}>
++          {authorDate}
++        </Text>
++        <Text selectable dataSet={CODE_SURFACE_DATASET} style={styles.sha}>
++          {commit.sha}
++        </Text>
++      </View>
++      {body.length > 0 ? (
++        <Text
++          selectable
++          dataSet={CODE_SURFACE_DATASET}
++          style={styles.body}
++          testID="commit-message-body"
++        >
++          {body}
++        </Text>
++      ) : null}
++    </ScrollView>
++  );
++});
++
++// Absolute local date + time; the commit list already shows the relative age.
++function formatCommitDate(isoDate: string): string {
++  const date = new Date(isoDate);
++  if (Number.isNaN(date.getTime())) {
++    return isoDate;
++  }
++  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
++}
++
++const styles = StyleSheet.create((theme) => ({
++  container: {
++    flexGrow: 0,
++    flexShrink: 0,
++    maxHeight: "40%",
++    borderBottomWidth: 1,
++    borderBottomColor: theme.colors.border,
++  },
++  content: {
++    gap: theme.spacing[2],
++    paddingHorizontal: theme.spacing[3],
++    paddingVertical: theme.spacing[2],
++  },
++  subject: {
++    fontSize: theme.fontSize.base,
++    fontWeight: theme.fontWeight.semibold,
++    color: theme.colors.foreground,
++  },
++  meta: {
++    flexDirection: "row",
++    flexWrap: "wrap",
++    columnGap: theme.spacing[3],
++    rowGap: theme.spacing[1],
++  },
++  metaText: {
++    fontSize: theme.fontSize.sm,
++    color: theme.colors.foregroundMuted,
++  },
++  sha: {
++    fontSize: theme.fontSize.sm,
++    fontFamily: theme.fontFamily.mono,
++    color: theme.colors.foregroundMuted,
++  },
++  body: {
++    fontSize: theme.fontSize.code,
++    fontFamily: theme.fontFamily.mono,
++    color: theme.colors.foreground,
++  },
++}));
+diff --git a/packages/app/src/git/use-diff-files.ts b/packages/app/src/git/use-diff-files.ts
+index 9623a3117..da2cc06e9 100644
+--- a/packages/app/src/git/use-diff-files.ts
++++ b/packages/app/src/git/use-diff-files.ts
+@@ -1,5 +1,9 @@
+ import { useMemo } from "react";
+-import type { CheckoutCommitFile, ParsedDiffFile } from "@getpaseo/protocol/messages";
++import type {
++  CheckoutCommit,
++  CheckoutCommitFile,
++  ParsedDiffFile,
++} from "@getpaseo/protocol/messages";
+ import { useRetainedPanelActive } from "@/components/retained-panel";
+ import { useFetchQueries } from "@/data/query";
+ import { commitFileDiffQueryOptions } from "./commit-file-diff-query";
+@@ -19,6 +23,8 @@ export interface CommitDiffFilesContext {
+ }
+ 
+ export interface CommitDiffFilesResult {
++  // Metadata (subject, body, author, ...) for `sha`, once the commit list loads.
++  commit: CheckoutCommit | null;
+   files: ParsedDiffFile[];
+   isLoading: boolean;
+   error: Error | null;
+@@ -64,12 +70,13 @@ export function useCommitDiffFiles(ctx: CommitDiffFilesContext): CommitDiffFiles
+   const isConnected = useHostRuntimeIsConnected(serverId);
+   const commitsQuery = useCheckoutCommitsQuery({ serverId, cwd, enabled: queryEnabled });
+   const commitsData = commitsQuery.status === "loaded" ? commitsQuery.data : null;
+-  const commitFiles = useMemo(() => {
++  const commit = useMemo(() => {
+     if (!sha || !commitsData) {
+-      return [];
++      return null;
+     }
+-    return commitsData.commits.find((commit) => commit.sha === sha)?.files ?? [];
++    return commitsData.commits.find((candidate) => candidate.sha === sha) ?? null;
+   }, [commitsData, sha]);
++  const commitFiles = useMemo(() => commit?.files ?? [], [commit]);
+ 
+   const fileDiffsEnabled =
+     queryEnabled &&
+@@ -109,10 +116,11 @@ export function useCommitDiffFiles(ctx: CommitDiffFilesContext): CommitDiffFiles
+       }
+     }
+     return {
++      commit,
+       files,
+       isLoading: commitsLoading || fileDiffResults.some((r) => r.isLoading),
+       error: commitsError ?? firstFileError,
+       capabilityMissing,
+     };
+-  }, [capabilityMissing, commitFiles, commitsError, commitsLoading, fileDiffResults]);
++  }, [capabilityMissing, commit, commitFiles, commitsError, commitsLoading, fileDiffResults]);
+ }
+diff --git a/packages/app/src/panels/diff-panel.tsx b/packages/app/src/panels/diff-panel.tsx
+index 1297b278b..dddd072e5 100644
+--- a/packages/app/src/panels/diff-panel.tsx
++++ b/packages/app/src/panels/diff-panel.tsx
+@@ -8,6 +8,7 @@ import { useRetainedPanelActive } from "@/components/retained-panel";
+ import { useIsCompactFormFactor } from "@/constants/layout";
+ import { PaneContentToolbar } from "@/components/ui/pane-content-toolbar";
+ import { isWeb } from "@/constants/platform";
++import { CommitMessageHeader } from "@/git/commit-message-header";
+ import { DiffDocument } from "@/git/diff-document";
+ import { ChangesSurface, DiffLayoutToggle, resolveDiffLayout } from "@/git/diff-pane";
+ import { useCommitDiffFiles } from "@/git/use-diff-files";
+@@ -155,7 +156,7 @@ function CommitDiffPanel() {
+   const cwd = useWorkspaceDirectory(serverId, workspaceId);
+   const panelPreferences = useDiffPanelPreferences();
+   invariant(target.kind === "commit_diff", "CommitDiffPanel requires commit_diff target");
+-  const { files, isLoading, error, capabilityMissing } = useCommitDiffFiles({
++  const { commit, files, isLoading, error, capabilityMissing } = useCommitDiffFiles({
+     serverId,
+     cwd: cwd ?? "",
+     sha: target.sha,
+@@ -205,6 +206,7 @@ function CommitDiffPanel() {
+           </View>
+         </PaneContentToolbar>
+       ) : null}
++      {cwd && commit ? <CommitMessageHeader commit={commit} /> : null}
+       <View style={styles.body}>{body}</View>
+     </View>
+   );
+diff --git a/packages/protocol/src/messages.ts b/packages/protocol/src/messages.ts
+index a7a2182d9..85b83abdf 100644
+--- a/packages/protocol/src/messages.ts
++++ b/packages/protocol/src/messages.ts
+@@ -2307,6 +2307,9 @@ const CheckoutCommitSchema = z.object({
+   sha: z.string(),
+   shortSha: z.string(),
+   subject: z.string(),
++  // Commit message body after the subject, trailing newlines trimmed. Optional
++  // so clients tolerate daemons that don't send it.
++  body: z.string().optional(),
+   authorName: z.string(),
+   authorDate: z.string(), // ISO 8601
+   isOnRemote: z.boolean(), // false = local-only (unpushed)
+diff --git a/packages/server/src/utils/checkout-git.ts b/packages/server/src/utils/checkout-git.ts
+index 300e90f65..cd568ce14 100644
+--- a/packages/server/src/utils/checkout-git.ts
++++ b/packages/server/src/utils/checkout-git.ts
+@@ -2377,7 +2377,10 @@ const COMMIT_RECORD_SEPARATOR = "\x1e";
+ // Record-separated, NUL-field-separated so arbitrary subject text stays parseable.
+ // `%x1e`/`%x00` are git placeholders (literal text in the arg, real bytes in the
+ // output) — passing actual NUL bytes as a process arg is rejected by Node.
+-const COMMIT_LOG_FORMAT = "%x1e%H%x00%h%x00%an%x00%aI%x00%s";
++// The multi-line body (`%b`) is NUL-terminated so the parser can find where the
++// `--raw`/`--numstat` lines start.
++const COMMIT_LOG_FORMAT = "%x1e%H%x00%h%x00%an%x00%aI%x00%s%x00%b%x00";
++const COMMIT_HEADER_FIELD_COUNT = 6;
+ 
+ type CheckoutCommitFileStatus = NonNullable<CheckoutCommitFile["status"]>;
+ 
+@@ -2387,6 +2390,7 @@ interface ParsedCheckoutCommit {
+   authorName: string;
+   authorDate: string;
+   subject: string;
++  body: string;
+   files: CheckoutCommitFile[];
+ }
+ 
+@@ -2464,26 +2468,27 @@ function parseNumstatLine(
+ }
+ 
+ // Parses the single combined `git log ... --raw --numstat -M` stream. Each record
+-// (split on the record separator) starts with the NUL-field-separated header line,
+-// then a blank line, then the interleaved `--raw` (status) and `--numstat` (counts)
+-// blocks. We merge both by destination path so each file carries counts + status.
++// (split on the record separator) starts with the NUL-terminated header fields
++// (the body may span lines), then a blank line, then the interleaved `--raw`
++// (status) and `--numstat` (counts) blocks. We merge both by destination path so
++// each file carries counts + status.
+ function parseCheckoutCommitRecords(stdout: string): ParsedCheckoutCommit[] {
+   const records = stdout.split(COMMIT_RECORD_SEPARATOR).filter((record) => record.length > 0);
+   const commits: ParsedCheckoutCommit[] = [];
+   for (const record of records) {
+-    const lines = record.split("\n");
+-    const fields = (lines[0] ?? "").split(COMMIT_FIELD_SEPARATOR);
+-    if (fields.length < 5) {
++    const fields = record.split(COMMIT_FIELD_SEPARATOR);
++    if (fields.length <= COMMIT_HEADER_FIELD_COUNT) {
+       continue;
+     }
+     const sha = (fields[0] ?? "").trim();
+     if (!sha) {
+       continue;
+     }
++    const lines = fields.slice(COMMIT_HEADER_FIELD_COUNT).join(COMMIT_FIELD_SEPARATOR).split("\n");
+ 
+     const stats = new Map<string, { additions: number; deletions: number }>();
+     const statuses = new Map<string, CheckoutCommitFileStatus>();
+-    for (let index = 1; index < lines.length; index += 1) {
++    for (let index = 0; index < lines.length; index += 1) {
+       const line = lines[index] ?? "";
+       if (!line) {
+         continue;
+@@ -2512,6 +2517,8 @@ function parseCheckoutCommitRecords(stdout: string): ParsedCheckoutCommit[] {
+       authorName: fields[2] ?? "",
+       authorDate: (fields[3] ?? "").trim(),
+       subject: fields[4] ?? "",
++      // Drop the trailing newline(s) git emits after the body.
++      body: (fields[5] ?? "").trimEnd(),
+       files,
+     });
+   }
+@@ -2643,6 +2650,7 @@ export async function listCheckoutCommits({
+     sha: record.sha,
+     shortSha: record.shortSha,
+     subject: record.subject,
++    body: record.body,
+     authorName: record.authorName,
+     authorDate: record.authorDate,
+     isOnRemote: !unpushedShas.has(record.sha),
