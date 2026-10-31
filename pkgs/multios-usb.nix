@@ -4,7 +4,7 @@
   lib,
   stdenv,
   fetchFromGitHub,
-  makeWrapper,
+  makeBinaryWrapper,
   bash,
   coreutils,
   gnugrep,
@@ -53,7 +53,7 @@ stdenv.mkDerivation (finalAttrs: {
   strictDeps = true;
   __structuredAttrs = true;
 
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [ makeBinaryWrapper ];
 
   # Let fixup pin the installer's Bash shebang with strictDeps enabled.
   buildInputs = [ bash ];

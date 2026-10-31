@@ -164,6 +164,8 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
   `nixos/pkgs/<name>.nix`. if a package requires more than one file, say for an
   update script or patch file, it must be moved into a separate directory, like
   `pkgs/<name>/default.nix` or `nixos/pkgs/<name>/default.nix`.
+- wrappers: strongly prefer `makeBinaryWrapper` over `makeWrapper`. the hook
+  still provides `makeWrapper`/`wrapProgram` fns.
 
 
 ## nvim
