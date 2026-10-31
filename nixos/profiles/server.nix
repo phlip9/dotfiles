@@ -222,8 +222,8 @@
     nixos.enable = true;
   };
 
-  # Servers don't need fonts
-  fonts.fontconfig.enable = false;
+  # Servers don't need fonts, unless they run headless browsers.
+  fonts.fontconfig.enable = lib.mkDefault false;
 
   # conflicts with "minimal.nix" profile
   programs.command-not-found.enable = lib.mkForce false;

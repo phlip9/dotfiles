@@ -217,6 +217,11 @@
   };
   systemd.slices."-".sliceConfig.ManagedOOMSwap = "kill";
 
+  # Agents run headless browsers here (ex: `grafana-screenshot`), which
+  # abort or render tofu w/o a system fontconfig + fonts.
+  fonts.fontconfig.enable = true;
+  fonts.packages = [ pkgs.dejavu_fonts ];
+
   # Run non-NixOS binaries
   programs.nix-ld = {
     enable = true;
