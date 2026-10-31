@@ -54,8 +54,8 @@ Check each on every upgrade; drop the pin (and its note here) once obsolete.
 
 Update in the `nixos-unstable` commit when NEW changes the version.
 
-- `.mcp.json` `--instructions-append` states the Grafana version:
-  `nix eval --raw -f . nixosConfigs.sauna.config.services.grafana.package.version`.
+- `.agents/skills/grafana-dashboard/SKILL.md` the overview states the Grafana
+  major version (ex: "Grafana 13 OSS")
 
 ## Setup
 

@@ -26,6 +26,9 @@ config/htop/htoprc
 # Local scratch files
 /tmp/
 
+# Python bytecode
+__pycache__/
+
 # home-manager generated files in this repo.
 /.vim/coc-settings.json
 /.luarc.json

@@ -98,6 +98,11 @@
   unless asked.
 - aim for maintainability, clarity, and elegance first.
 
+## workflow
+
+- use the gitignored `tmp/` dir in the repo root for all temporary notes,
+  plans, scratch work, etc.
+
 ## nixos
 
 - machine: nixos/phlipdesk/default.nix - main desktop
@@ -125,6 +130,7 @@
 - `nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
 - `tf`: convert config.nix -> config.tf.json, run terraform `tofu` with sops
    secrets injected in env
+- `grafana-*`: dashboard tools. writes only touch Scratch dir, see skill.
 
 before presenting changes, run the relevant lint/format/test commands and fix
 any issues.

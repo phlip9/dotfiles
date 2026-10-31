@@ -50,7 +50,9 @@ DNS: `grafana.phlip9.com`
 | `nixos/tests/o11y.nix` | NixOS VM test |
 | `nixos/sauna/default.nix` | NixOS machine config |
 | `nixos/sauna/grafana/` | Dashboards (Git Sync manifests) |
-| `.mcp.json` | `mcp-grafana` config for agents |
+| `.mcp.json` | `mcp-grafana` config for agents (points them at the skill) |
+| `.agents/skills/grafana-dashboard/` | agent skill build/rework dashboards |
+| `just/grafana-*.sh`, `just/grafana.jq`, `pkgs/grafana-screenshot/` | dashboard tools |
 
 ## Components
 
@@ -181,25 +183,32 @@ Grafana Git Sync to sync updates between Grafana and GitHub.
 
 1. Metrics exploration, incidents: Agent + `mcp-grafana` read tools
    (`query_prometheus`, `get_dashboard_summary`, ...).
-2. Light edits in git: edit the manifest, optionally dry-run save it on the
-   live server (`just grafana-check [files...]`, default: all), commit, push.
+2. Edits in git: edit the manifest in place (agents: `grafana-outline` to
+   map it, the `grafana-dashboard` skill's `dash.py` to edit it), dry-run
+   save it on the live server (`just grafana-check [files...]`, default:
+   all), commit, push.
 3. UI edits: Save opens the "Provisioned dashboard" drawer. Branch `master`
    commits directly; any other branch name creates that branch + a PR.
 4. Live iteration w/ an agent: the agent edits an unmanaged copy in the
-   `Scratch` folder (uid `scratch`). We open the copy open in the browser.
-   Agents never `update_dashboard` outside `Scratch` (= commit on `master`).
+   `Scratch` folder (uid `scratch`). We open the copy in the browser.
+   Agents never write outside `Scratch` (= commit on `master`). The
+   workflow lives in the `grafana-dashboard` skill; each tool documents
+   itself (`--help`, script header). Cheat sheet:
 
    ```bash
-   # keep the result
+   $ just grafana-outline nixos/sauna/grafana/nginx.json  # map it
+   $ just grafana-push nixos/sauna/grafana/nginx.json     # -> scratch-nginx
+   $ just grafana-queries --from now-7d scratch-nginx     # ok/EMPTY/FAIL
+   $ just grafana-screenshot scratch-nginx -o tmp/nginx.png
+   $ just grafana-resave scratch-nginx                    # UI defaults
    $ just grafana-promote scratch-nginx nixos/sauna/grafana/nginx.json
-   # review + commit
-   $ git diff
    ```
 
-`grafana-check` and `grafana-promote` use basic auth if `GRAFANA_USER` +
-`GRAFANA_PASSWORD` are set, else the `mcp-grafana` token
-(`~/.config/grafana/mcp-sa-token`). A dry run never saves or commits, but
-open browser tabs of a checked dashboard reload once.
+The `grafana-*` tools use basic auth if `GRAFANA_USER` + `GRAFANA_PASSWORD`
+are set, else the `mcp-grafana` token (`~/.config/grafana/mcp-sa-token`). A
+dry run never saves or commits, but open browser tabs of a checked dashboard
+reload once. Grafana has no image renderer plugin; `grafana-screenshot`
+renders the real UI w/ playwright instead.
 
 ### Imported community dashboards
 
@@ -330,10 +339,3 @@ open browser tabs of a checked dashboard reload once.
 3. In the dotfiles repo run e.g. `claude`, approve the project MCP server
    `grafana` once, then `claude mcp list` -> `grafana ... connected`. Ask for
    `user_info`. Expect service account `phlipdesk`, role Editor.
-
-Read tools are pre-allowed in `.claude/settings.json`; write tools prompt.
-Read-only variant: role `Viewer` + `--disable-write` in `.mcp.json`.
-
-The Scratch workflow needs no setup: the agent creates the `Scratch` folder
-on first use, and `just grafana-check` / `just grafana-promote` reuse the
-token file.
