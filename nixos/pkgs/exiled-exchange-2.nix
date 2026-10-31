@@ -13,11 +13,11 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "exiled-exchange-2";
-  version = "0.16.1";
+  version = "0.16.3";
 
   src = fetchurl {
     url = "https://github.com/Kvan7/Exiled-Exchange-2/releases/download/v${finalAttrs.version}/Exiled-Exchange-2-${finalAttrs.version}.AppImage";
-    hash = "sha256-S7Y1ckANTL55Wg+zQjKsYDVIpWWohVPq5qFHeczVEYc=";
+    hash = "sha256-aAHFELdlL7cccpzAW9ROHF1hZDAnQGTLLtDonS0CT2Q=";
   };
 
   passthru = {
