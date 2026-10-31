@@ -63,11 +63,12 @@ fix (phlipPkgs: {
   # lego - patched Let's Encrypt ACME client
   lego = callPackage ./lego.nix { };
 
-  # Marinara Engine lite wrapped in a bubblewrap sandbox
-  marinara-engine = callPackage ./marinara-engine/sandbox.nix {
-    inherit (phlipPkgs) marinara-engine-unwrapped;
-  };
-  marinara-engine-unwrapped = callPackage ./marinara-engine { };
+  # # Marinara Engine lite wrapped in a bubblewrap sandbox
+  # # Disabled: stable pnpm_10 is marked insecure.
+  # marinara-engine = callPackage ./marinara-engine/sandbox.nix {
+  #   inherit (phlipPkgs) marinara-engine-unwrapped;
+  # };
+  # marinara-engine-unwrapped = callPackage ./marinara-engine { };
 
   # multios-usb - USB boot directly from .iso images
   multios-usb = callPackage ./multios-usb.nix { };
