@@ -3,6 +3,8 @@
 #
 # - grafana-screenshot: PNG of a dashboard or panel, so agents can see the
 #   dashboards they build.
+# - grafana-resave: save a Scratch copy through the UI, which fills in the
+#   UI's panel defaults (like a user clicking Save).
 #
 # ex: grafana-screenshot scratch-nginx --from now-7d -o tmp/nginx.png
 {
@@ -42,7 +44,7 @@ runCommand "grafana-screenshot"
   ''
     # playwright's python + driver + browsers come from the same nixpkgs, so
     # their versions match.
-    for command in screenshot; do
+    for command in screenshot resave; do
       makeWrapper ${unwrapped}/bin/grafana-browser \
         $out/bin/grafana-$command \
         --add-flags $command \

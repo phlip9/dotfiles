@@ -3,6 +3,9 @@
 commands (installed as `grafana-<command>` wrappers):
 - screenshot: PNG of a dashboard or panel, so agents can see what they
   built. No Grafana image renderer needed.
+- resave: save a Scratch copy through the UI, like a user clicking Save. The
+  UI fills in its panel defaults, so promoting the copy doesn't leave a big
+  noise diff for the user's first UI save.
 
 Auth is an `Authorization` header on requests to Grafana's origin only
 (see `new_context`), so it works w/ the same service account token as
@@ -18,11 +21,14 @@ env:
 import argparse
 import asyncio
 import base64
+import json
 import os
+import re
 import sys
 import time
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
+from playwright.async_api import TimeoutError as PlaywrightTimeout
 from playwright.async_api import async_playwright
 
 # Grafana's kiosk footer is `position: fixed`; hide it so it doesn't cover
@@ -39,6 +45,14 @@ FATAL_TEXTS = {
 # Row headers in v2 RowsLayout dashboards, and the collapsed ones.
 ROW_TOGGLES = '[data-testid^="data-testid dashboard-row-toggle-for-"]'
 COLLAPSED_ROWS = f'{ROW_TOGGLES}[aria-expanded="false"]'
+
+# Edit mode toggle, its Save button, and the Save drawer's confirm button.
+EDIT_BUTTON = "data-testid Edit dashboard button"
+SAVE_BUTTON = "data-testid Save dashboard button"
+SAVE_DRAWER_BUTTON = "data-testid Save dashboard drawer button"
+
+# Dashboards k8s API (v2 schema), relative to GRAFANA_URL.
+DASH_API = "/apis/dashboard.grafana.app/v2/namespaces/default/dashboards"
 
 
 def grafana_url():
@@ -149,6 +163,16 @@ async def new_context(browser, width, height, theme="dark"):
 
     await context.route(f"{grafana_url()}/**", add_auth)
     return context
+
+
+async def api_get(context, path):
+    """Authenticated GET of Grafana API `path` (bypasses page routes).
+    Doesn't follow redirects, which would carry the credentials along."""
+    return await context.request.get(
+        f"{grafana_url()}{path}",
+        headers={"Authorization": auth_header()},
+        max_redirects=0,
+    )
 
 
 async def load(page, tracker, url, timeout):
@@ -275,10 +299,177 @@ async def screenshot(args):
     print(f"wrote {out} ({url})")
 
 
+# --- resave --- #
+
+
+def resave_args(p):
+    p.description = (
+        "Save a Scratch copy through the Grafana UI (fills in panel "
+        "defaults), like a user clicking Save. Only `scratch-*` uids in "
+        "the Scratch folder."
+    )
+    p.add_argument("uid", help="Scratch copy uid, ex: scratch-nginx")
+    p.add_argument(
+        "--timeout", type=float, default=60, help="max seconds per wait"
+    )
+
+
+def is_unmanaged_scratch(metadata, uid):
+    """Whether dashboard `metadata` is copy `uid` in the Scratch folder,
+    not managed by Git Sync: saving it can't commit to `master`."""
+    annotations = metadata.get("annotations") or {}
+    return all([
+        metadata.get("name") == uid,
+        annotations.get("grafana.app/folder") == "scratch",
+        "grafana.app/managedBy" not in annotations,
+    ])
+
+
+async def check_scratch(context, uid):
+    """Exit early (w/ a clear error) unless `uid` is an unmanaged Scratch
+    copy. `WriteGuard` enforces it on the save itself."""
+    if not uid.startswith("scratch-"):
+        sys.exit(f"error: uid {uid} has no scratch- prefix")
+    resp = await api_get(context, f"{DASH_API}/{uid}")
+    if not resp.ok:
+        sys.exit(f"error: GET dashboard {uid}: HTTP {resp.status}")
+    if not is_unmanaged_scratch((await resp.json())["metadata"], uid):
+        sys.exit(
+            f"error: dashboard {uid} is outside the scratch folder or "
+            "managed by Git Sync; refusing to save it"
+        )
+
+
+class WriteGuard:
+    """Page route that only lets through the writes a resave needs (an
+    allowlist): panel queries, feature flag evaluation, and the save of
+    the unmanaged Scratch copy `uid`, judged by the request body. Aborts
+    the rest, ex: Git Sync (provisioning) saves, other dashboards, or the
+    copy after a move out of Scratch since `check_scratch`."""
+
+    # Paths of read-only POSTs, relative to GRAFANA_URL.
+    READ_POSTS = (
+        re.compile(r"/api/ds/query"),
+        re.compile(r"/apis/features\.grafana\.app/[^/]+/namespaces/[^/]+"
+                   r"/ofrep/v1/evaluate/flags(/.*)?"),
+    )
+
+    def __init__(self, uid):
+        self.uid = uid
+        self.save_path = re.compile(
+            r"/apis/dashboard\.grafana\.app/[^/]+/namespaces/[^/]+"
+            rf"/dashboards/{re.escape(uid)}"
+        )
+        self.blocked = []
+
+    def reason(self, req):
+        """Why `req` must not be sent, or None."""
+        if req.method in ("GET", "HEAD", "OPTIONS"):
+            return None
+        # Path relative to GRAFANA_URL, which may have a base path.
+        base = urlsplit(grafana_url()).path.rstrip("/")
+        path = urlsplit(req.url).path
+        if not path.startswith(f"{base}/"):
+            return "outside GRAFANA_URL"
+        path = path[len(base):]
+        if req.method == "POST" and any(
+            pattern.fullmatch(path) for pattern in self.READ_POSTS
+        ):
+            return None
+        if req.method != "PUT" or not self.save_path.fullmatch(path):
+            return "not an allowed write"
+        try:
+            metadata = json.loads(req.post_data or "")["metadata"]
+        except (ValueError, KeyError, TypeError):
+            return "unreadable body"
+        if not is_unmanaged_scratch(metadata, self.uid):
+            return "body isn't the unmanaged Scratch copy"
+        return None
+
+    async def handle(self, route):
+        reason = self.reason(route.request)
+        if reason is None:
+            # On to the context's auth route.
+            await route.fallback()
+            return
+        self.blocked.append(
+            f"{route.request.method} {route.request.url}: {reason}"
+        )
+        await route.abort()
+
+
+async def resave(args):
+    url = f"{grafana_url()}/d/{args.uid}"
+    async with async_playwright() as pw:
+        browser = await pw.firefox.launch()
+        try:
+            context = await new_context(browser, 1600, 1000)
+            await check_scratch(context, args.uid)
+            page = await context.new_page()
+            page.set_default_timeout(args.timeout * 1000)
+            guard = WriteGuard(args.uid)
+            await page.route(f"{grafana_url()}/**", guard.handle)
+            tracker = QueryTracker(page)
+            await load(page, tracker, url, args.timeout)
+
+            await page.get_by_test_id(EDIT_BUTTON).click()
+
+            # Grafana doesn't fill in the defaults of panels in collapsed
+            # rows: their plugins never load. Expand them, then restore the
+            # collapse state, which is part of the saved spec. Innermost
+            # rows first.
+            expanded = await expand_rows(page, tracker, args.timeout)
+            for test_id in reversed(expanded):
+                await page.get_by_test_id(test_id).click()
+                await page.wait_for_timeout(200)
+
+            await page.get_by_test_id(SAVE_BUTTON).click()
+            save = page.get_by_test_id(SAVE_DRAWER_BUTTON)
+            await save.wait_for()
+            if await save.is_disabled():
+                print(f"no changes: {args.uid}")
+                return
+
+            # Wait for the save request + its response, within --timeout.
+            def is_save(req):
+                path = urlsplit(req.url).path
+                return req.method == "PUT" and path.endswith(
+                    f"/dashboards/{args.uid}"
+                )
+
+            async def click_save():
+                async with page.expect_request(is_save) as req_info:
+                    await save.click()
+                return await (await req_info.value).response()
+
+            try:
+                resp = await asyncio.wait_for(click_save(), args.timeout)
+            except (PlaywrightTimeout, asyncio.TimeoutError):
+                resp = None
+            for blocked in guard.blocked:
+                print(f"warning: blocked: {blocked}", file=sys.stderr)
+            if resp is None:
+                sys.exit(f"error: save {args.uid}: no response")
+            if not resp.ok:
+                sys.exit(f"error: save {args.uid}: HTTP {resp.status}")
+            # Firefox can't always hand over the save resp's body; re-GET.
+            saved = await api_get(context, f"{DASH_API}/{args.uid}")
+            if not saved.ok:
+                sys.exit(
+                    f"error: GET dashboard {args.uid}: HTTP {saved.status}"
+                )
+            generation = (await saved.json())["metadata"].get("generation")
+        finally:
+            await browser.close()
+
+    print(f"saved {args.uid} via the UI (generation {generation}): {url}")
+
+
 # --- main --- #
 
 COMMANDS = {
     "screenshot": (screenshot_args, screenshot),
+    "resave": (resave_args, resave),
 }
 
 

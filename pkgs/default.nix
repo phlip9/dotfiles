@@ -42,7 +42,8 @@ fix (phlipPkgs: {
   # gh-stack - GitHub stacked PRs CLI extension
   gh-stack = callPackage ./gh-stack.nix { };
 
-  # grafana-screenshot - screenshot Grafana dashboards w/ headless Firefox
+  # grafana-screenshot - screenshot/resave Grafana dashboards w/ headless
+  # Firefox
   grafana-screenshot = callPackage ./grafana-screenshot { };
 
   # restore fs mtimes from git

@@ -15,6 +15,7 @@
       "Bash(just grafana-promote:*)",
       "Bash(just grafana-push:*)",
       "Bash(just grafana-queries:*)",
+      "Bash(just grafana-resave:*)",
       "Bash(just grafana-screenshot:*)",
       "Bash(just just-fmt:*)",
       "Bash(just nix-ci:*)",

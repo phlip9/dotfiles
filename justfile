@@ -218,6 +218,11 @@ grafana-push *args:
 grafana-queries *args:
     nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-queries.sh "$@"
 
+# Save a Scratch copy through the Grafana UI (fills in UI panel defaults)
+[positional-arguments]
+grafana-resave *args:
+    nix shell -f . grafana-screenshot --command grafana-resave "$@"
+
 # Screenshot a Grafana dashboard or panel to PNG (see --help)
 [positional-arguments]
 grafana-screenshot *args:
