@@ -208,6 +208,11 @@ grafana-test:
 grafana-push *args:
     nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-push.sh "$@"
 
+# Run every panel query of dashboards (files or uids) via Grafana
+[positional-arguments]
+grafana-queries *args:
+    nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-queries.sh "$@"
+
 # --- github-agent --- #
 
 # Set GitHub repo ruleset to deny agents access to non-`agents/**` branches.

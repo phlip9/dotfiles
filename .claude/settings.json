@@ -13,6 +13,7 @@
       "Bash(just grafana-check:*)",
       "Bash(just grafana-promote:*)",
       "Bash(just grafana-push:*)",
+      "Bash(just grafana-queries:*)",
       "Bash(just just-fmt:*)",
       "Bash(just nix-ci:*)",
       "Bash(just nix-fmt:*)",

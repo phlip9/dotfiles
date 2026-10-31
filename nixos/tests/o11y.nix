@@ -671,5 +671,107 @@
             f"echo '{{}}' > /tmp/empty.json; {push} /tmp/empty.json 2>&1"
         )
         assert status == 1 and "not a v2 dashboard spec" in out, (status, out)
+
+    # grafana-queries runs each panel query through /api/ds/query w/ the
+    # datasource variable resolved + other variables substituted, and reports
+    # ok / EMPTY / FAIL per query.
+    with subtest("grafana-queries runs panel queries"):
+
+        # A v2 timeseries panel `key` w/ PromQL `exprs`.
+        def panel(key, exprs):
+            queries = [
+                {
+                    "kind": "PanelQuery",
+                    "spec": {
+                        "refId": ref,
+                        "hidden": False,
+                        "query": {
+                            "kind": "DataQuery",
+                            "group": "victoriametrics-metrics-datasource",
+                            "version": "v0",
+                            "datasource": {"name": "''${DS}"},
+                            "spec": {"expr": expr},
+                        },
+                    },
+                }
+                for ref, expr in zip("ABC", exprs)
+            ]
+            return {
+                "kind": "Panel",
+                "spec": {
+                    "id": 1,
+                    "title": key,
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {"queries": queries},
+                    },
+                    "vizConfig": {
+                        "kind": "VizConfig",
+                        "group": "timeseries",
+                        "spec": {},
+                    },
+                },
+            }
+
+        spec = {
+            "title": "Queries",
+            "variables": [
+                {
+                    "kind": "DatasourceVariable",
+                    "spec": {
+                        "name": "DS",
+                        "pluginId": "victoriametrics-metrics-datasource",
+                        "current": {"value": "victoriametrics"},
+                    },
+                },
+                {
+                    "kind": "QueryVariable",
+                    "spec": {"name": "job", "current": {"value": ["$__all"]}},
+                },
+                # Custom All value: matches no job.
+                {
+                    "kind": "QueryVariable",
+                    "spec": {
+                        "name": "nojob",
+                        "includeAll": True,
+                        "allValue": "none",
+                        "current": {"value": "$__all"},
+                    },
+                },
+            ],
+            "elements": {
+                "good": panel("good", [
+                    'up{job=~"$job"}',
+                    "rate(vm_http_requests_total[$__rate_interval])",
+                ]),
+                "empty": panel("empty", ["no_such_metric"]),
+                "bad": panel("bad", ["up{"]),
+                "allvalue": panel("allvalue", ['up{job=~"$nojob"}']),
+                "fmt": panel("fmt", ['up{job=~"''${job:json}"}']),
+            },
+            "layout": {"kind": "GridLayout", "spec": {"items": []}},
+        }
+        machine.succeed(
+            f"echo {shlex.quote(json.dumps(spec))} > /tmp/queries.json"
+        )
+        queries = f"{editor_env} grafana-queries --from now-5m"
+        status, out = machine.execute(f"{queries} /tmp/queries.json")
+        print(out)
+        assert status == 1, out
+        lines = {line.split()[1]: line for line in out.splitlines()[1:]}
+        assert lines["bad/A"].startswith("FAIL "), out
+        assert lines["empty/A"].startswith("EMPTY "), out
+        assert lines["good/A"].startswith("ok "), out
+        assert lines["good/B"].startswith("ok "), out
+        assert lines["allvalue/A"].startswith("EMPTY "), out
+        assert lines["fmt"].startswith("SKIP "), out
+        assert "unsupported variable format :json" in lines["fmt"], out
+
+        # Only good queries: exit 0. Also takes a server uid.
+        machine.succeed(
+            "jq 'del(.elements.bad)' /tmp/queries.json > /tmp/queries-ok.json",
+            f"{queries} /tmp/queries-ok.json",
+            f"{queries} scratch-promote",
+        )
   '';
 }

@@ -1,7 +1,8 @@
 # Tests for grafana.jq. Run: just grafana-test
 #
 # jq --run-tests format: a program line, an input line, the expected output
-# lines, then a blank line.
+# lines, then a blank line. Escaping fixtures follow the VictoriaMetrics
+# datasource's own tests (src/datasource.test.ts).
 
 # --- manifests + specs --- #
 
@@ -50,3 +51,89 @@ include "grafana"; error_message
 include "grafana"; error_message
 {"code": 1}
 "{\"code\":1}"
+
+# --- time --- #
+
+include "grafana"; [.[] | dur_ms]
+["250ms", "15s", "1.5m", "2h", "7d"]
+[250, 15000, 90000, 7200000, 604800000]
+
+include "grafana"; try dur_ms catch .
+"bad"
+"invalid duration: bad"
+
+include "grafana"; [.[] | time_ms(1000000)]
+["now", "now-15s", "123"]
+[1000000, 985000, 123]
+
+include "grafana"; try time_ms(0) catch .
+"now-bad"
+"invalid duration: bad"
+
+# --- variables --- #
+
+include "grafana"; promql_string_escape
+"loo\\king'glass"
+"loo\\\\king\\\\'glass"
+
+include "grafana"; promql_regex_escape
+"a.b|c\\d'e"
+"a\\\\.b\\\\|c\\\\\\\\d\\\\'e"
+
+include "grafana"; regex_escape
+"a.b/c"
+"a\\.b\\/c"
+
+# Single-value variable: string escaping, no regex escaping.
+include "grafana"; saved_variables as $v | "x=\"$v\"" | interpolate($v)
+{"variables": [{"spec": {"name": "v", "current": {"value": "a.b\\c"}}}]}
+"x=\"a.b\\\\c\""
+
+# Multi-value: regex escaping, grouped alternatives.
+include "grafana"; saved_variables as $v | "$v ${v} ${v:regex} ${v:pipe} ${v:csv} ${v:raw}" | interpolate($v)
+{"variables": [{"spec": {"name": "v", "multi": true, "current": {"value": ["a.b", "c"]}}}]}
+"(a\\\\.b|c) (a\\\\.b|c) (a\\.b|c) a.b|c a.b,c a.b,c"
+
+# One selected value of a multi-value variable: no group.
+include "grafana"; saved_variables as $v | "$v" | interpolate($v)
+{"variables": [{"spec": {"name": "v", "multi": true, "current": {"value": ["a|b"]}}}]}
+"a\\\\|b"
+
+# All: custom allValue as is.
+include "grafana"; saved_variables as $v | "$v" | interpolate($v)
+{"variables": [{"spec": {"name": "v", "includeAll": true, "allValue": ".+", "current": {"value": "$__all"}}}]}
+".+"
+
+# All w/ a blank allValue: the saved options.
+include "grafana"; saved_variables as $v | "$v" | interpolate($v)
+{"variables": [{"spec": {"name": "v", "includeAll": true, "allValue": "", "current": {"value": ["$__all"]}, "options": [{"value": "$__all"}, {"value": "a.b"}, {"value": "c"}]}}]}
+"(a\\\\.b|c)"
+
+# All w/o allValue or saved options: anything.
+include "grafana"; saved_variables as $v | "$v" | interpolate($v)
+{"variables": [{"spec": {"name": "v", "includeAll": true, "current": {"value": "$__all"}}}]}
+".*"
+
+# Only whole variable names; unknown ones stay.
+include "grafana"; saved_variables as $v | "$v $vv $other" | interpolate($v)
+{"variables": [{"spec": {"name": "v", "current": {"value": "x"}}}]}
+"x $vv $other"
+
+include "grafana"; saved_variables as $v | try ("${v:json}" | interpolate($v)) catch .
+{"variables": [{"spec": {"name": "v", "includeAll": true, "current": {"value": "$__all"}}}]}
+"unsupported variable format :json"
+
+# --- grafana-queries --- #
+
+# Points: non-null values after each frame's time field.
+include "grafana"; query_results
+{"results": {"A": {"frames": [{"data": {"values": [[1, 2], [null, null]]}}]}, "B": {"frames": [{"data": {"values": [[1, 2], [null, 3]]}}, {"data": {"values": [[1], [4]]}}]}, "C": {"error": "boom"}}}
+"EMPTY\tA\t0 series, 0 points"
+"ok\tB\t2 series, 2 points"
+"FAIL\tC\tboom"
+
+# Requests: datasource variable resolved, step from maxDataPoints, hidden
+# queries dropped, unsupported formats + unresolved datasources skipped.
+include "grafana"; [panel_requests(3600000; "now-1h"; "now") | {element, skip, step: .body.queries[0].intervalMs, ds: .body.queries[0].datasource.uid, expr: .body.queries[0].expr, n: (.body.queries | length)}]
+{"variables": [{"spec": {"name": "DS", "current": {"value": "vm"}}}, {"spec": {"name": "job", "current": {"value": "j"}}}], "elements": {"a": {"kind": "Panel", "spec": {"data": {"spec": {"queryOptions": {"maxDataPoints": 100}, "queries": [{"spec": {"refId": "A", "query": {"datasource": {"name": "${DS}"}, "spec": {"expr": "up{job=\"$job\"}"}}}}, {"spec": {"refId": "B", "hidden": true, "query": {"datasource": {"name": "${DS}"}, "spec": {"expr": "x"}}}}]}}}}, "b": {"kind": "Panel", "spec": {"data": {"spec": {"queries": [{"spec": {"refId": "A", "query": {"datasource": {"name": "${DS}"}, "spec": {"expr": "${job:json}"}}}}]}}}}, "c": {"kind": "Panel", "spec": {"data": {"spec": {"queries": [{"spec": {"refId": "A", "query": {"datasource": {"name": "${NOPE}"}, "spec": {"expr": "up"}}}}]}}}}, "d": {"kind": "Panel", "spec": {}}}, "layout": {}}
+[{"element": "a", "skip": null, "step": 36000, "ds": "vm", "expr": "up{job=\"j\"}", "n": 1}, {"element": "b", "skip": "unsupported variable format :json", "step": null, "ds": null, "expr": null, "n": 0}, {"element": "c", "skip": "unresolved datasource", "step": null, "ds": null, "expr": null, "n": 0}, {"element": "d", "skip": "no queries", "step": null, "ds": null, "expr": null, "n": 0}]
