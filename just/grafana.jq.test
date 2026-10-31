@@ -13,11 +13,35 @@ include "grafana"; spec_of
 {"title": "t"}
 {"title": "t"}
 
+include "grafana"; is_v2_spec
+{"elements": {}, "layout": {"kind": "GridLayout"}}
+true
+
+include "grafana"; is_v2_spec
+{"elements": [], "layout": {}}
+false
+
 include "grafana"; manifest("x")
 {"title": "t"}
 {"apiVersion": "dashboard.grafana.app/v2", "kind": "Dashboard", "metadata": {"name": "x"}, "spec": {"title": "t"}}
 
 # --- API objects --- #
+
+include "grafana"; unmanaged_in("scratch")
+{"metadata": {"annotations": {"grafana.app/folder": "scratch"}}}
+true
+
+include "grafana"; unmanaged_in("scratch")
+{"metadata": {"annotations": {"grafana.app/folder": "scratch", "grafana.app/managedBy": "repo"}}}
+false
+
+include "grafana"; unmanaged_in("scratch")
+{"metadata": {}}
+false
+
+include "grafana"; saved_by
+{"metadata": {"annotations": {"grafana.app/updatedBy": "user:u", "grafana.app/updatedTimestamp": "t"}}}
+"user:u at t"
 
 include "grafana"; error_message
 {"message": "nope"}

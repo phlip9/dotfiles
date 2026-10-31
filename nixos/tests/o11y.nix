@@ -465,26 +465,24 @@
         assert status == 1, out
         assert out.startswith(f"FAIL {gs_dash_file}: HTTP 401"), out
 
-    # The agent's live iteration loop, as the Editor service account: create
-    # the Scratch folder (create_folder uses /api/folders, which grants default
-    # role permissions), seed an unmanaged copy in it, then patch it (GET +
-    # PUT, like update_dashboard).
+    # The agent's live iteration loop, as the Editor service account:
+    # grafana-push creates the Scratch folder (via /api/folders, which grants
+    # default role permissions) and seeds an unmanaged copy in it, then the
+    # agent patches it (GET + PUT, like update_dashboard).
     with subtest("Editor iterates on a Scratch copy"):
-        folder = shlex.quote(json.dumps({"uid": "scratch", "title": "Scratch"}))
-        scratch = {
-            "apiVersion": "dashboard.grafana.app/v2",
-            "kind": "Dashboard",
-            "metadata": {
-                "name": "scratch-promote",
-                "annotations": {"grafana.app/folder": "scratch"},
-            },
-            "spec": dict(dashboard["spec"], title="Scratch Seed"),
-        }
+        machine.fail(f"{gf_curl} {gf_api}/folders/scratch")
+        seed = dict(dashboard["spec"], title="Scratch Seed")
+        out = machine.succeed(
+            f"echo {shlex.quote(json.dumps(seed))} > /tmp/promote.json",
+            f"{editor_env} grafana-push /tmp/promote.json",
+        )
+        assert out.endswith("/d/scratch-promote\n"), out
         machine.succeed(
-            f"{editor_curl} {json_hdr} -d {folder} {gf_api}/folders",
-            f"echo {shlex.quote(json.dumps(scratch))} > /tmp/scratch.json",
-            f"{editor_curl} {json_hdr} --data-binary @/tmp/scratch.json "
-            f"{dashes_url}",
+            f"{gf_curl} {gf_api}/folders/scratch "
+            "| jq -e '.title == \"Scratch\"'",
+            f"{editor_curl} {dashes_url}/scratch-promote "
+            "| jq -e '.spec.title == \"Scratch Seed\" "
+            "and .metadata.annotations[\"grafana.app/folder\"] == \"scratch\"'",
             f"{editor_curl} {dashes_url}/scratch-promote "
             "| jq '.spec.title = \"Promote <&> Test\"' > /tmp/edit.json",
             f"{editor_curl} -X PUT {json_hdr} --data-binary @/tmp/edit.json "
@@ -573,5 +571,105 @@
         out = machine.succeed(f"{gf_env} grafana-check {promoted}")
         assert out == f"ok   {promoted}\n", out
         machine.fail(f"{gf_curl} {dashes_url}/promote")
+
+    # grafana-push replaces an existing copy's spec, from a manifest or a bare
+    # spec, and refuses anything that could save a Git Sync managed dashboard.
+    with subtest("grafana-push replaces Scratch copies, refuses others"):
+        push = f"{editor_env} grafana-push"
+        title_is = (
+            f"{editor_curl} {dashes_url}/scratch-promote "
+            "| jq -e --arg t {} '.spec.title == $t'"
+        ).format
+
+        # Someone else saves the copy w/ title `title` (like a UI edit).
+        def ui_edit(title):
+            machine.succeed(
+                f"{gf_curl} {dashes_url}/scratch-promote | jq --arg t "
+                f"{shlex.quote(title)} '.spec.title = $t' > /tmp/ui-edit.json",
+                f"{gf_curl} -X PUT {json_hdr} --data-binary @/tmp/ui-edit.json "
+                f"{dashes_url}/scratch-promote",
+            )
+
+        # Push a refusal: exits 1 w/ `msg`.
+        def refused(args, msg):
+            status, out = machine.execute(f"{push} {args} 2>&1")
+            assert status == 1 and msg in out, (args, status, out)
+
+        # The promoted file, edited in place: its baseline matches.
+        machine.succeed(
+            f"jq '.spec.title = \"Pushed\"' {promoted} > /tmp/edit.json",
+            f"mv /tmp/edit.json {promoted}",
+            f"{push} {promoted} scratch-promote",
+            title_is("Pushed"),
+        )
+        # Another file (a bare spec) has no baseline: only w/ --force.
+        machine.succeed(f"jq '.spec' {gs_dash_file} > /tmp/bare.json")
+        refused("/tmp/bare.json scratch-promote", "never pushed/promoted")
+        machine.succeed(
+            f"{push} --force /tmp/bare.json scratch-promote",
+            title_is("'Git Sync Test (edited)'"),
+        )
+        # Someone else saved the copy since: refused, also after pulling it
+        # into another file, which doesn't vouch for this one.
+        ui_edit("UI Edit")
+        refused("/tmp/bare.json scratch-promote", "changed since our last push")
+        machine.succeed(
+            f"{editor_env} grafana-promote scratch-promote /tmp/pulled.json"
+        )
+        refused("/tmp/bare.json scratch-promote", "changed since our last push")
+        # Editing the pulled file in place + pushing it works.
+        machine.succeed(
+            "jq '.spec.title = \"Pulled\"' /tmp/pulled.json > /tmp/edit.json",
+            "mv /tmp/edit.json /tmp/pulled.json",
+            f"{push} /tmp/pulled.json scratch-promote",
+            title_is("Pulled"),
+        )
+        # --force discards someone else's save.
+        ui_edit("UI Edit 2")
+        machine.succeed(
+            f"{push} --force /tmp/bare.json scratch-promote",
+            title_is("'Git Sync Test (edited)'"),
+        )
+        # No `scratch-` prefix, ex: the synced dashboard's own uid.
+        status, out = machine.execute(f"{push} {gs_dash_file} test-sync 2>&1")
+        assert status == 1 and "no scratch- prefix" in out, (status, out)
+        # `scratch-` uids outside the Scratch folder: in another folder the
+        # Editor can read (refused by the folder check), and in the root
+        # folder, which Editors can't even read (refused w/ the GET's 403).
+        machine.succeed(
+            f"{gf_curl} {json_hdr} "
+            "-d '{\"uid\": \"other\", \"title\": \"Other\"}' "
+            f"{gf_api}/folders"
+        )
+        for name, folder in [("in-other", "other"), ("in-root", None)]:
+            meta = {"name": f"scratch-{name}"}
+            if folder:
+                meta["annotations"] = {"grafana.app/folder": folder}
+            elsewhere = {
+                "apiVersion": "dashboard.grafana.app/v2",
+                "kind": "Dashboard",
+                "metadata": meta,
+                "spec": dict(dashboard["spec"], title="Elsewhere"),
+            }
+            machine.succeed(
+                f"echo {shlex.quote(json.dumps(elsewhere))} > /tmp/else.json",
+                f"{gf_curl} {json_hdr} --data-binary @/tmp/else.json "
+                f"{dashes_url}",
+            )
+            status, out = machine.execute(
+                f"{push} /tmp/bare.json scratch-{name} 2>&1"
+            )
+            assert status == 1, (name, status, out)
+            if folder:
+                assert "refusing to overwrite" in out, (name, out)
+            machine.succeed(
+                f"{gf_curl} {dashes_url}/scratch-{name} "
+                "| jq -e '.spec.title == \"Elsewhere\"'"
+            )
+        # Not a v2 spec.
+        status, out = machine.execute(
+            f"echo '{{}}' > /tmp/empty.json; {push} /tmp/empty.json 2>&1"
+        )
+        assert status == 1 and "not a v2 dashboard spec" in out, (status, out)
   '';
 }

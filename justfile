@@ -203,6 +203,11 @@ grafana-ci: grafana-test
 grafana-test:
     nix shell -f . pkgs.jq --command jq -L just --run-tests just/grafana.jq.test
 
+# Upload a dashboard file to its Scratch copy (scratch-<stem>); see --help
+[positional-arguments]
+grafana-push *args:
+    nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-push.sh "$@"
+
 # --- github-agent --- #
 
 # Set GitHub repo ruleset to deny agents access to non-`agents/**` branches.

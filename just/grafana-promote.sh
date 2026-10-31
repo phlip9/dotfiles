@@ -11,6 +11,9 @@
 # Manifest uid: UID, else FILE's current metadata.name, else SCRATCH_UID w/o
 # its `scratch-` prefix.
 #
+# Records the fetched generation for FILE, so a later `grafana-push.sh` of
+# FILE (now incl. the pulled edits) to SCRATCH_UID isn't refused.
+#
 # env: GRAFANA_URL, GRAFANA_USER + GRAFANA_PASSWORD, GRAFANA_TOKEN_FILE. See
 # grafana-lib.sh.
 set -euo pipefail
@@ -81,5 +84,6 @@ jq -e . "$tmp/manifest.json" >/dev/null \
 
 mkdir -p "$(dirname "$file")"
 cp "$tmp/manifest.json" "$file"
+record_sync "$scratch_uid" "$file"
 echo "wrote $file (uid $uid)"
 echo "review: git diff -- $file"

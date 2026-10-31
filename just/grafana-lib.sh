@@ -17,6 +17,14 @@ lib_dir=$(dirname "${BASH_SOURCE[0]}")
 # Dashboards k8s API (v2 schema).
 dash_url="$grafana_url/apis/dashboard.grafana.app/v2/namespaces/default"
 dash_url+="/dashboards"
+# Scratch copy sync state: a copy's `metadata.generation` as of our last
+# push of, or pull (promote) into, a local file. Grafana bumps the
+# generation on every spec change, so a newer one means someone saved the
+# copy since (ex: the user in the UI). See grafana-push.sh. Per Grafana
+# host, file path, and uid: a file only vouches for itself, not for others
+# (ex: an older file, or another worktree's).
+sync_dir=${XDG_STATE_HOME:-$HOME/.local/state}/grafana-scratch
+sync_dir+=/${grafana_url#*://}
 
 # gjq FILTER [JQ ARGS...]
 #
@@ -85,6 +93,34 @@ resp_error() {
   if ! gjq error_message -j "$tmp/resp" 2>/dev/null; then
     head -c 500 "$tmp/resp" 2>/dev/null
   fi
+}
+
+# sync_file UID FILE
+#
+# Print the sync state path of dashboard UID w/ local FILE (must exist).
+sync_file() {
+  echo "$sync_dir$(realpath -- "$2")/$1"
+}
+
+# synced_generation UID FILE
+#
+# Print the generation of dashboard UID as of our last push of / pull into
+# FILE, or nothing if we never synced the two.
+synced_generation() {
+  cat "$(sync_file "$1" "$2")" 2>/dev/null || true
+}
+
+# record_sync UID FILE
+#
+# Record the generation of dashboard UID from the last response ($tmp/resp:
+# a dashboard we just saved from / fetched into FILE).
+record_sync() {
+  local generation state
+  generation=$(jq -r '.metadata.generation // empty' "$tmp/resp")
+  [[ -n $generation ]] || return 0
+  state=$(sync_file "$1" "$2")
+  mkdir -p "$(dirname "$state")"
+  echo "$generation" >"$state"
 }
 
 # spec_of FILE
