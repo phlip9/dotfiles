@@ -256,19 +256,17 @@ let
       # A repository has at most one sync job, named `<name>-sync`, so this
       # fails w/ 409 AlreadyExists while another is queued or running, ex: the
       # controller's full sync after a spec change (incl. every token
-      # re-send). Retry until ours is queued, for up to ~1 min.
-      for _ in $(seq 30); do
-        status=$(api POST "$repos_url/$name/jobs" "$tmp/pull.json")
-        if [[ $status != 409 ]] \
-          || ! jq -e '.reason == "AlreadyExists"' "$tmp/resp" > /dev/null; then
-          break
-        fi
-        sleep 2
-      done
-      if [[ $status != 2?? ]]; then
+      # re-send) or one left over from a crash. That sync covers the startup
+      # pull, so treat it as done rather than racing it.
+      status=$(api POST "$repos_url/$name/jobs" "$tmp/pull.json")
+      if [[ $status == 2?? ]]; then
+        echo "triggered pull job for repository $name"
+      elif [[ $status == 409 ]] \
+        && jq -e '.reason == "AlreadyExists"' "$tmp/resp" > /dev/null; then
+        echo "sync job already queued for repository $name"
+      else
         die_http "trigger pull job for repository $name" "$status"
       fi
-      echo "triggered pull job for repository $name"
     '';
   };
 in

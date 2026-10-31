@@ -238,21 +238,24 @@
             timeout=60,
         )
 
+    # Number of setup runs that reached the startup pull: either queued one,
+    # or found the controller's sync job already queued (409), which covers
+    # it. The repository has a single sync job name, so which one happens
+    # depends on timing.
+    gs_setup_pulls = (
+        "journalctl -o cat -u grafana-git-sync-setup.service "
+        "| grep -cE '(triggered pull job|sync job already queued) "
+        "for repository dotfiles'"
+    )
+
     # Grafana never syncs on startup, so the setup unit queues an incremental
     # pull on every start. GET .../jobs lists finished jobs (kept 10 min).
-    # Ours is created by the admin (`user:<uid>`), the controller's syncs by
-    # `access-policy:provisioning`. The repo dir is still empty: nothing to
-    # pull yet.
+    # The repo dir is still empty: nothing to pull yet.
     with subtest("Git Sync setup triggers a pull on start"):
-        machine.succeed(
-            "journalctl -o cat -u grafana-git-sync-setup.service "
-            "| grep -q 'triggered pull job for repository dotfiles'"
-        )
+        machine.succeed(f"{gs_setup_pulls} | grep -qx 1")
         machine.wait_until_succeeds(
             f"{gf_curl} {gs_repo_url}/jobs | jq -e '.items | any("
-            ".spec.action == \"pull\" and .status.state == \"success\" "
-            "and (.metadata.annotations[\"grafana.app/createdBy\"] // \"\" "
-            "| startswith(\"user:\")))'",
+            ".spec.action == \"pull\" and .status.state == \"success\")'",
             timeout=60,
         )
 
@@ -262,16 +265,8 @@
         machine.succeed(
             "journalctl -o cat -u grafana-git-sync-setup.service "
             "| grep -q 'updated repository dotfiles'",
-            "journalctl -o cat -u grafana-git-sync-setup.service "
-            "| grep -c 'triggered pull job for repository dotfiles' "
-            "| grep -qx 2",
+            f"{gs_setup_pulls} | grep -qx 2",
         )
-
-    # Number of setup runs that queued a pull, from the setup unit's journal.
-    gs_setup_pulls = (
-        "journalctl -o cat -u grafana-git-sync-setup.service "
-        "| grep -c 'triggered pull job for repository dotfiles'"
-    )
 
     # Setup is wanted by + part of grafana.service, so it re-runs on every
     # Grafana start: restart, stop + start, and Restart= crash recovery.
