@@ -85,10 +85,11 @@
 
     pkgs.clangStdenv.cc
     pkgs.gh
+    pkgs.go
+    pkgs.htmlq
     pkgs.protobuf
     pkgs.rustup
     pkgs.uv
-    pkgs.htmlq
 
     # terraform/opentofu
     phlipPkgs.opentofu
