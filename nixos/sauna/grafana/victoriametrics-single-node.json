@@ -11216,7 +11216,7 @@
       "victoriametrics"
     ],
     "timeSettings": {
-      "autoRefresh": "10s",
+      "autoRefresh": "30s",
       "autoRefreshIntervals": [
         "10s",
         "30s",

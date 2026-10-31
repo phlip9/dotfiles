@@ -1642,7 +1642,7 @@
       "postgres"
     ],
     "timeSettings": {
-      "autoRefresh": "5s",
+      "autoRefresh": "30s",
       "autoRefreshIntervals": [
         "5s",
         "10s",

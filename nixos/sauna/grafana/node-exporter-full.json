@@ -1231,7 +1231,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -3015,6 +3015,7 @@
                         "editorMode": "code",
                         "exemplar": false,
                         "expr": "count(count(node_cpu_seconds_total{instance=\"$node\",job=\"$job\"}) by (cpu))",
+                        "format": "time_series",
                         "instant": true,
                         "legendFormat": "__auto",
                         "range": false
@@ -3082,6 +3083,9 @@
                   "values": false
                 },
                 "showPercentChange": false,
+                "text": {
+                  "valueSize": 28
+                },
                 "textMode": "auto",
                 "wideLayout": true
               }
@@ -3427,7 +3431,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -3581,7 +3585,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -3735,7 +3739,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -3889,7 +3893,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -4020,7 +4024,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -4151,7 +4155,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -4489,6 +4493,7 @@
                         "editorMode": "code",
                         "exemplar": false,
                         "expr": "node_time_seconds{instance=\"$node\",job=\"$job\"} - node_boot_time_seconds{instance=\"$node\",job=\"$job\"}",
+                        "format": "time_series",
                         "instant": true,
                         "range": false,
                         "step": 240
@@ -4561,6 +4566,9 @@
                   "values": false
                 },
                 "showPercentChange": false,
+                "text": {
+                  "valueSize": 28
+                },
                 "textMode": "auto",
                 "wideLayout": true
               }
@@ -5203,7 +5211,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -5555,7 +5563,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -6220,7 +6228,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -6373,7 +6381,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -6398,6 +6406,7 @@
                         "editorMode": "code",
                         "exemplar": false,
                         "expr": "node_memory_SwapTotal_bytes{instance=\"$node\",job=\"$job\"}",
+                        "format": "time_series",
                         "instant": true,
                         "range": false,
                         "step": 240
@@ -6470,6 +6479,9 @@
                   "values": false
                 },
                 "showPercentChange": false,
+                "text": {
+                  "valueSize": 28
+                },
                 "textMode": "auto",
                 "wideLayout": true
               }
@@ -7166,7 +7178,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -7638,7 +7650,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -7740,6 +7752,9 @@
                   "values": false
                 },
                 "showPercentChange": false,
+                "text": {
+                  "valueSize": 28
+                },
                 "textMode": "auto",
                 "wideLayout": true
               }
@@ -7862,7 +7877,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -7980,7 +7995,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -8111,7 +8126,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -8715,7 +8730,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -9264,7 +9279,7 @@
                 "valueMode": "color"
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -9356,7 +9371,7 @@
                 "valueMode": "color"
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -10659,7 +10674,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -10797,7 +10812,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -11098,7 +11113,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -11534,7 +11549,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -11792,7 +11807,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -13171,7 +13186,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -13493,7 +13508,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -13757,7 +13772,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -15245,7 +15260,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -16773,7 +16788,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -16938,7 +16953,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -17523,7 +17538,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -17694,7 +17709,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -18811,6 +18826,7 @@
                         "editorMode": "code",
                         "exemplar": false,
                         "expr": "node_memory_MemTotal_bytes{instance=\"$node\",job=\"$job\"}",
+                        "format": "time_series",
                         "instant": true,
                         "range": false,
                         "step": 240
@@ -18883,6 +18899,9 @@
                   "values": false
                 },
                 "showPercentChange": false,
+                "text": {
+                  "valueSize": 28
+                },
                 "textMode": "auto",
                 "wideLayout": true
               }
@@ -19911,7 +19930,7 @@
                 }
               }
             },
-            "version": "12.4.0"
+            "version": "13.2.4"
           }
         }
       },
@@ -20708,7 +20727,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 0,
-                        "y": 1932
+                        "y": 12
                       }
                     },
                     {
@@ -20721,7 +20740,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 12,
-                        "y": 1932
+                        "y": 12
                       }
                     },
                     {
@@ -20734,7 +20753,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 0,
-                        "y": 1944
+                        "y": 24
                       }
                     },
                     {
@@ -20747,7 +20766,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 12,
-                        "y": 1944
+                        "y": 24
                       }
                     },
                     {
@@ -20760,7 +20779,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 0,
-                        "y": 1956
+                        "y": 36
                       }
                     },
                     {
@@ -20773,7 +20792,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 12,
-                        "y": 1956
+                        "y": 36
                       }
                     },
                     {
@@ -20786,7 +20805,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 0,
-                        "y": 1968
+                        "y": 48
                       }
                     },
                     {
@@ -20799,7 +20818,7 @@
                         "height": 12,
                         "width": 12,
                         "x": 12,
-                        "y": 1968
+                        "y": 48
                       }
                     }
                   ]
@@ -21022,7 +21041,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 1490
+                        "y": 10
                       }
                     },
                     {
@@ -21035,7 +21054,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 12,
-                        "y": 1490
+                        "y": 10
                       }
                     }
                   ]
@@ -21364,7 +21383,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 1220
+                        "y": 10
                       }
                     },
                     {
@@ -21377,7 +21396,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 12,
-                        "y": 1220
+                        "y": 10
                       }
                     }
                   ]
@@ -21693,7 +21712,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 170
+                        "y": 10
                       }
                     },
                     {
@@ -21706,7 +21725,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 12,
-                        "y": 170
+                        "y": 10
                       }
                     },
                     {
@@ -21719,7 +21738,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 180
+                        "y": 20
                       }
                     },
                     {
@@ -21732,7 +21751,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 12,
-                        "y": 180
+                        "y": 20
                       }
                     },
                     {
@@ -21745,7 +21764,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 190
+                        "y": 30
                       }
                     },
                     {
@@ -21758,7 +21777,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 12,
-                        "y": 190
+                        "y": 30
                       }
                     },
                     {
@@ -21771,7 +21790,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 200
+                        "y": 40
                       }
                     },
                     {
@@ -21784,7 +21803,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 12,
-                        "y": 200
+                        "y": 40
                       }
                     },
                     {
@@ -21797,7 +21816,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 210
+                        "y": 50
                       }
                     },
                     {
@@ -21810,7 +21829,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 12,
-                        "y": 210
+                        "y": 50
                       }
                     },
                     {
@@ -21823,7 +21842,7 @@
                         "height": 10,
                         "width": 12,
                         "x": 0,
-                        "y": 220
+                        "y": 60
                       }
                     },
                     {
@@ -21836,7 +21855,7 @@
                         "height": 10,
                         "width": 6,
                         "x": 12,
-                        "y": 220
+                        "y": 60
                       }
                     },
                     {
@@ -21849,7 +21868,7 @@
                         "height": 10,
                         "width": 6,
                         "x": 18,
-                        "y": 220
+                        "y": 60
                       }
                     }
                   ]
