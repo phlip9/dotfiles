@@ -192,6 +192,11 @@ ssh-updatekeys:
 grafana-check *files:
     nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-check.sh "$@"
 
+# Print a dashboard's (file or uid) rows + panels; --queries adds exprs
+[positional-arguments]
+grafana-outline *args:
+    nix shell -f . pkgs.curl pkgs.jq --command ./just/grafana-outline.sh "$@"
+
 # Write a Grafana dashboard (ex: scratch-nginx) to a Git Sync manifest file
 [positional-arguments]
 grafana-promote scratch-uid file uid="":

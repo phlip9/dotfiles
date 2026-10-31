@@ -773,5 +773,88 @@
             f"{queries} /tmp/queries-ok.json",
             f"{queries} scratch-promote",
         )
+
+    # grafana-outline prints the layout tree w/ one line per panel, for files
+    # and server uids, w/o reading the whole spec.
+    with subtest("grafana-outline prints the layout tree"):
+
+        # A v2 panel `key` (id `id`) w/ one query `expr`.
+        def element(id, title, expr):
+            return {
+                "kind": "Panel",
+                "spec": {
+                    "id": id,
+                    "title": title,
+                    "data": {
+                        "kind": "QueryGroup",
+                        "spec": {"queries": [{
+                            "kind": "PanelQuery",
+                            "spec": {
+                                "refId": "A",
+                                "query": {"spec": {"expr": expr}},
+                            },
+                        }]},
+                    },
+                    "vizConfig": {"kind": "VizConfig", "group": "stat"},
+                },
+            }
+
+        # Element reference to `key`, w/ grid geometry `geo` if any.
+        def item(kind, key, **geo):
+            ref = {"kind": "ElementReference", "name": key}
+            return {"kind": kind, "spec": {"element": ref, **geo}}
+
+        spec = {
+            "title": "Outline",
+            "elements": {
+                "left": element(1, "Left", "up"),
+                "right": element(2, "Right", "rate(x[5m])\n  * 2"),
+                "auto": element(3, "Auto", "y"),
+                "orphan": element(4, "Orphan", "z"),
+            },
+            "layout": {"kind": "TabsLayout", "spec": {"tabs": [
+                {"kind": "TabsLayoutTab", "spec": {
+                    "title": "Grid",
+                    "layout": {"kind": "GridLayout", "spec": {"items": [
+                        item("GridLayoutItem", "right",
+                             x=12, y=0, width=12, height=8),
+                        item("GridLayoutItem", "left",
+                             x=0, y=0, width=12, height=8),
+                    ]}},
+                }},
+                {"kind": "TabsLayoutTab", "spec": {
+                    "title": "Auto",
+                    "layout": {"kind": "AutoGridLayout", "spec": {"items": [
+                        item("AutoGridLayoutItem", "auto"),
+                    ]}},
+                }},
+            ]}},
+        }
+        machine.succeed(
+            f"echo {shlex.quote(json.dumps(spec))} > /tmp/outline.json"
+        )
+        outline = f"{editor_env} grafana-outline"
+        out = machine.succeed(f"{outline} --queries /tmp/outline.json")
+        print(out)
+        lines = [line.split() for line in out.splitlines()]
+        assert lines[0] == ["#", "/tmp/outline.json"], out
+        assert lines[1][:3] == ['"Outline":', "4", "elements,"], out
+        assert lines[2] == ["tab", '"Grid"'], out
+        # Grid items in reading order, then their queries.
+        assert lines[3] == [
+            "1", "left", "stat", "0,0", "12x8", "q=1", '"Left"'
+        ], out
+        assert lines[4] == ["A:", "up"], out
+        assert lines[5][:5] == ["2", "right", "stat", "12,0", "12x8"], out
+        assert lines[6] == ["A:", "rate(x[5m])", "*", "2"], out
+        assert lines[7] == ["tab", '"Auto"'], out
+        assert lines[8][:4] == ["3", "auto", "stat", "auto"], out
+        assert lines[10] == ["unplaced:", "orphan"], out
+
+        # Also takes a server uid; rejects non-dashboards.
+        out = machine.succeed(f"{outline} scratch-promote")
+        assert out.startswith("# scratch-promote\n"), out
+        status, out = machine.execute(f"{outline} /tmp/empty.json 2>&1")
+        assert status == 1 and "not a v2 dashboard spec" in out, (status, out)
   '';
 }

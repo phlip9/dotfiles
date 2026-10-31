@@ -190,3 +190,69 @@ def query_results:
          "\($series) series, \($points) points"]
     end
   | @tsv;
+
+# --- grafana-outline --- #
+
+def _pad($n): if $n > 0 then " " * $n else "" end;
+def _rpad($n): tostring | . + _pad($n - length);
+def _lpad($n): tostring | _pad($n - length) + .;
+def _indent($depth): _pad(2 * $depth);
+
+# Outline lines of a placed element (input: a layout item's spec): a summary
+# line, then (if `$queries`) its query exprs.
+def _outline_item($els; $depth; $queries):
+  .element.name as $key
+  | ($els[$key] // {kind: "missing", spec: {}}) as $el
+  | ($el.spec | panel_queries) as $qs
+  | (if .width then "\(.x // 0),\(.y // 0) \(.width)x\(.height)"
+     else "auto" end) as $geo
+  | _indent($depth) + ($el.spec.id // "-" | _lpad(4)) + " "
+    + ($key | _rpad(24)) + " "
+    + ($el.spec.vizConfig.group // ($el.kind | ascii_downcase) | _rpad(14))
+    + " " + ($geo | _rpad(11)) + " q=\($qs | length) "
+    + ($el.spec.title // "" | @json),
+    if $queries then
+      $qs[]
+      | _indent($depth + 3) + "\(.refId):"
+        + (if .hidden then " (hidden)" else "" end) + " "
+        + (.query.spec.expr // (.query.spec | tojson) | gsub("\\s+"; " "))
+    else empty end;
+
+# Outline lines of a layout (input) and its nested layouts.
+def _outline_layout($els; $depth; $queries):
+  .kind as $kind
+  | .spec as $spec
+  | if $kind == "RowsLayout" then
+      $spec.rows[].spec
+      | _indent($depth) + "row " + (.title // "" | @json)
+        + (if .collapse then " (collapsed)" else "" end),
+        (.layout | _outline_layout($els; $depth + 1; $queries))
+    elif $kind == "TabsLayout" then
+      $spec.tabs[].spec
+      | _indent($depth) + "tab " + (.title // "" | @json),
+        (.layout | _outline_layout($els; $depth + 1; $queries))
+    elif $kind == "GridLayout" then
+      # Reading order.
+      $spec.items | sort_by(.spec.y // 0, .spec.x // 0) | .[]
+      | .spec | _outline_item($els; $depth; $queries)
+    elif $kind == "AutoGridLayout" then
+      $spec.items[].spec | _outline_item($els; $depth; $queries)
+    else
+      _indent($depth) + "(\($kind))"
+    end;
+
+# All element names referenced by the input layout.
+def element_refs:
+  [.. | objects | select(.kind? == "ElementReference") | .name];
+
+# Outline of the input v2 spec, one line per row/tab/panel:
+#   <id> <element key> <viz> <x>,<y> <w>x<h> q=<queries> "<title>"
+# then unplaced elements. `$queries`: also print query exprs.
+def outline($queries):
+  .elements as $els
+  | (.layout | element_refs) as $placed
+  | "\(.title // "" | @json): \($els | length) elements, vars: "
+    + ([.variables[]?.spec.name] | join(", ")),
+    (.layout | _outline_layout($els; 0; $queries)),
+    (($els | keys) - $placed | select(length > 0)
+     | "unplaced: " + join(", "));
