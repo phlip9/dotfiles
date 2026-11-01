@@ -26,10 +26,28 @@ import os
 import re
 import sys
 import time
+from dataclasses import dataclass
+from typing import Any, Literal
 from urllib.parse import urlencode, urlsplit
 
+from playwright.async_api import (
+    APIResponse,
+    Browser,
+    BrowserContext,
+    Page,
+    Request,
+    Response,
+    Route,
+    async_playwright,
+)
 from playwright.async_api import TimeoutError as PlaywrightTimeout
-from playwright.async_api import async_playwright
+
+# A JSON object, ex: a dashboard's metadata.
+JsonObj = dict[str, Any]
+# Any JSON value, ex: from `json.loads`. Narrow it w/ isinstance.
+Json = JsonObj | list[Any] | str | float | bool | None
+
+Theme = Literal["dark", "light"]
 
 # Grafana's kiosk footer is `position: fixed`; hide it so it doesn't cover
 # panels in full-page shots.
@@ -55,13 +73,13 @@ SAVE_DRAWER_BUTTON = "data-testid Save dashboard drawer button"
 DASH_API = "/apis/dashboard.grafana.app/v2/namespaces/default/dashboards"
 
 
-def grafana_url():
+def grafana_url() -> str:
     return os.environ.get("GRAFANA_URL", "https://grafana.phlip9.com").rstrip(
         "/"
     )
 
 
-def auth_header():
+def auth_header() -> str:
     """`Authorization` header value from env, like just/grafana-*.sh."""
     user = os.environ.get("GRAFANA_USER")
     password = os.environ.get("GRAFANA_PASSWORD")
@@ -82,7 +100,7 @@ def auth_header():
         )
 
 
-def ensure_fontconfig():
+def ensure_fontconfig() -> None:
     """Use the wrapper's fallback fontconfig on hosts w/o a system one.
 
     Headless Linux hosts w/o /etc/fonts make the browser abort or render
@@ -98,30 +116,30 @@ def ensure_fontconfig():
 class QueryTracker:
     """Tracks in-flight panel data requests to tell when panels finished."""
 
-    def __init__(self, page):
-        self.pending = set()
-        self.failed = []
+    def __init__(self, page: Page) -> None:
+        self.pending: set[Request] = set()
+        self.failed: list[str] = []
         page.on("request", self._start)
         page.on("requestfinished", self._finish)
         page.on("requestfailed", self._fail)
 
     @staticmethod
-    def _is_query(req):
+    def _is_query(req: Request) -> bool:
         return "/api/ds/query" in req.url
 
-    def _start(self, req):
+    def _start(self, req: Request) -> None:
         if self._is_query(req):
             self.pending.add(req)
 
-    def _finish(self, req):
+    def _finish(self, req: Request) -> None:
         self.pending.discard(req)
 
-    def _fail(self, req):
+    def _fail(self, req: Request) -> None:
         if req in self.pending:
             self.failed.append(f"{req.url}: {req.failure}")
         self.pending.discard(req)
 
-    async def idle(self, timeout, quiet=1.0):
+    async def idle(self, timeout: float, quiet: float = 1.0) -> None:
         """Wait until no query was in flight for `quiet` seconds."""
         # Give lazy panels a moment to start their queries.
         await asyncio.sleep(0.5)
@@ -139,7 +157,9 @@ class QueryTracker:
         )
 
 
-async def new_context(browser, width, height, theme="dark"):
+async def new_context(
+    browser: Browser, width: int, height: int, theme: Theme = "dark"
+) -> BrowserContext:
     """Browser context that authenticates its requests to Grafana."""
     context = await browser.new_context(
         viewport={"width": width, "height": height},
@@ -156,7 +176,7 @@ async def new_context(browser, width, height, theme="dark"):
     # each hop as a new request: only Grafana-origin hops get auth.
     auth = auth_header()
 
-    async def add_auth(route):
+    async def add_auth(route: Route) -> None:
         headers = {**route.request.headers, "authorization": auth}
         resp = await route.fetch(headers=headers, max_redirects=0)
         await route.fulfill(response=resp)
@@ -165,7 +185,7 @@ async def new_context(browser, width, height, theme="dark"):
     return context
 
 
-async def api_get(context, path):
+async def api_get(context: BrowserContext, path: str) -> APIResponse:
     """Authenticated GET of Grafana API `path` (bypasses page routes).
     Doesn't follow redirects, which would carry the credentials along."""
     return await context.request.get(
@@ -175,7 +195,21 @@ async def api_get(context, path):
     )
 
 
-async def load(page, tracker, url, timeout):
+async def dashboard_metadata(context: BrowserContext, uid: str) -> JsonObj:
+    """`metadata` of dashboard `uid` from the API; exits on errors."""
+    resp = await api_get(context, f"{DASH_API}/{uid}")
+    if not resp.ok:
+        sys.exit(f"error: GET dashboard {uid}: HTTP {resp.status}")
+    body: Json = await resp.json()
+    metadata = body.get("metadata") if isinstance(body, dict) else None
+    if not isinstance(metadata, dict):
+        sys.exit(f"error: GET dashboard {uid}: no metadata")
+    return metadata
+
+
+async def load(
+    page: Page, tracker: QueryTracker, url: str, timeout: float
+) -> None:
     """Open `url`, wait for its panel queries, and fail on error pages."""
     resp = await page.goto(url, wait_until="load", timeout=timeout * 1000)
     if resp is None or not resp.ok:
@@ -187,15 +221,20 @@ async def load(page, tracker, url, timeout):
             sys.exit(f"error: {reason}: page shows {text!r}: {url}")
 
 
-async def expand_rows(page, tracker, timeout):
+async def expand_rows(
+    page: Page, tracker: QueryTracker, timeout: float
+) -> list[str]:
     """Expand all collapsed rows, incl. nested ones revealed by expanding.
     Returns the expanded rows' toggle test ids, outermost first."""
-    expanded = []
+    expanded: list[str] = []
     # Expanding a row shifts the others; re-query each time.
     rows = page.locator(COLLAPSED_ROWS)
     while await rows.count() > 0:
         toggle = rows.first
-        expanded.append(await toggle.get_attribute("data-testid"))
+        test_id = await toggle.get_attribute("data-testid")
+        # ROW_TOGGLES only matches elements w/ a data-testid.
+        assert test_id is not None
+        expanded.append(test_id)
         await toggle.click()
         await page.wait_for_timeout(200)
     await tracker.idle(timeout)
@@ -205,41 +244,62 @@ async def expand_rows(page, tracker, timeout):
 # --- screenshot --- #
 
 
-def screenshot_args(p):
-    p.description = "Screenshot a Grafana dashboard (or one panel) to PNG."
-    p.add_argument("uid", help="dashboard uid, ex: scratch-nginx")
-    p.add_argument("-o", "--out", help="output PNG (default: <uid>.png)")
-    p.add_argument("--from", dest="time_from", default="now-24h")
-    p.add_argument("--to", dest="time_to", default="now")
-    p.add_argument(
+@dataclass(frozen=True)
+class ScreenshotArgs:
+    """`grafana-screenshot` args; see `screenshot_args`."""
+
+    uid: str
+    out: str | None
+    time_from: str
+    time_to: str
+    panel: int | None
+    expand: bool
+    width: int
+    height: int | None
+    theme: Theme
+    var: list[str]
+    timeout: float
+
+
+def screenshot_args(argv: list[str]) -> ScreenshotArgs:
+    parser = argparse.ArgumentParser(
+        prog="grafana-screenshot",
+        description="Screenshot a Grafana dashboard (or one panel) to PNG.",
+    )
+    parser.add_argument("uid", help="dashboard uid, ex: scratch-nginx")
+    parser.add_argument("-o", "--out", help="output PNG (default: <uid>.png)")
+    parser.add_argument("--from", dest="time_from", default="now-24h")
+    parser.add_argument("--to", dest="time_to", default="now")
+    parser.add_argument(
         "--panel",
         type=int,
         help="only this panel, by numeric panel id (v2: element .spec.id)",
     )
-    p.add_argument(
+    parser.add_argument(
         "--expand", action="store_true", help="expand all collapsed rows"
     )
-    p.add_argument("--width", type=int, default=1600)
-    p.add_argument(
+    parser.add_argument("--width", type=int, default=1600)
+    parser.add_argument(
         "--height",
         type=int,
         help="viewport + image height (default: full dashboard, or 900 w/ "
         "--panel)",
     )
-    p.add_argument("--theme", choices=["dark", "light"], default="dark")
-    p.add_argument(
+    parser.add_argument("--theme", choices=["dark", "light"], default="dark")
+    parser.add_argument(
         "--var",
         action="append",
         default=[],
         metavar="NAME=VALUE",
         help="dashboard variable, repeatable",
     )
-    p.add_argument(
+    parser.add_argument(
         "--timeout", type=float, default=60, help="max seconds per wait"
     )
+    return ScreenshotArgs(**vars(parser.parse_args(argv)))
 
 
-def screenshot_url(args):
+def screenshot_url(args: ScreenshotArgs) -> str:
     params = [
         ("from", args.time_from),
         ("to", args.time_to),
@@ -257,7 +317,7 @@ def screenshot_url(args):
     return f"{grafana_url()}/d/{args.uid}?{query}"
 
 
-async def screenshot(args):
+async def screenshot(args: ScreenshotArgs) -> None:
     out = args.out or f"{args.uid}.png"
     url = screenshot_url(args)
     async with async_playwright() as pw:
@@ -277,8 +337,10 @@ async def screenshot(args):
             # Grow the viewport to the whole dashboard, so every panel
             # renders (Grafana lazy-loads off-screen panels).
             if args.panel is None and args.height is None:
-                full = await page.evaluate(
-                    "() => document.documentElement.scrollHeight"
+                full = int(
+                    await page.evaluate(
+                        "() => document.documentElement.scrollHeight"
+                    )
                 )
                 await page.set_viewport_size(
                     {"width": args.width, "height": max(full, 600)}
@@ -302,22 +364,38 @@ async def screenshot(args):
 # --- resave --- #
 
 
-def resave_args(p):
-    p.description = (
-        "Save a Scratch copy through the Grafana UI (fills in panel "
-        "defaults), like a user clicking Save. Only `scratch-*` uids in "
-        "the Scratch folder."
+@dataclass(frozen=True)
+class ResaveArgs:
+    """`grafana-resave` args; see `resave_args`."""
+
+    uid: str
+    timeout: float
+
+
+def resave_args(argv: list[str]) -> ResaveArgs:
+    parser = argparse.ArgumentParser(
+        prog="grafana-resave",
+        description=(
+            "Save a Scratch copy through the Grafana UI (fills in panel "
+            "defaults), like a user clicking Save. Only `scratch-*` uids in "
+            "the Scratch folder."
+        ),
     )
-    p.add_argument("uid", help="Scratch copy uid, ex: scratch-nginx")
-    p.add_argument(
+    parser.add_argument("uid", help="Scratch copy uid, ex: scratch-nginx")
+    parser.add_argument(
         "--timeout", type=float, default=60, help="max seconds per wait"
     )
+    return ResaveArgs(**vars(parser.parse_args(argv)))
 
 
-def is_unmanaged_scratch(metadata, uid):
+def is_unmanaged_scratch(metadata: Json, uid: str) -> bool:
     """Whether dashboard `metadata` is copy `uid` in the Scratch folder,
     not managed by Git Sync: saving it can't commit to `master`."""
+    if not isinstance(metadata, dict):
+        return False
     annotations = metadata.get("annotations") or {}
+    if not isinstance(annotations, dict):
+        return False
     return all([
         metadata.get("name") == uid,
         annotations.get("grafana.app/folder") == "scratch",
@@ -325,15 +403,12 @@ def is_unmanaged_scratch(metadata, uid):
     ])
 
 
-async def check_scratch(context, uid):
+async def check_scratch(context: BrowserContext, uid: str) -> None:
     """Exit early (w/ a clear error) unless `uid` is an unmanaged Scratch
     copy. `WriteGuard` enforces it on the save itself."""
     if not uid.startswith("scratch-"):
         sys.exit(f"error: uid {uid} has no scratch- prefix")
-    resp = await api_get(context, f"{DASH_API}/{uid}")
-    if not resp.ok:
-        sys.exit(f"error: GET dashboard {uid}: HTTP {resp.status}")
-    if not is_unmanaged_scratch((await resp.json())["metadata"], uid):
+    if not is_unmanaged_scratch(await dashboard_metadata(context, uid), uid):
         sys.exit(
             f"error: dashboard {uid} is outside the scratch folder or "
             "managed by Git Sync; refusing to save it"
@@ -354,15 +429,15 @@ class WriteGuard:
                    r"/ofrep/v1/evaluate/flags(/.*)?"),
     )
 
-    def __init__(self, uid):
+    def __init__(self, uid: str) -> None:
         self.uid = uid
         self.save_path = re.compile(
             r"/apis/dashboard\.grafana\.app/[^/]+/namespaces/[^/]+"
             rf"/dashboards/{re.escape(uid)}"
         )
-        self.blocked = []
+        self.blocked: list[str] = []
 
-    def reason(self, req):
+    def reason(self, req: Request) -> str | None:
         """Why `req` must not be sent, or None."""
         if req.method in ("GET", "HEAD", "OPTIONS"):
             return None
@@ -379,14 +454,15 @@ class WriteGuard:
         if req.method != "PUT" or not self.save_path.fullmatch(path):
             return "not an allowed write"
         try:
-            metadata = json.loads(req.post_data or "")["metadata"]
-        except (ValueError, KeyError, TypeError):
+            body: Json = json.loads(req.post_data or "")
+        except ValueError:
             return "unreadable body"
+        metadata = body.get("metadata") if isinstance(body, dict) else None
         if not is_unmanaged_scratch(metadata, self.uid):
             return "body isn't the unmanaged Scratch copy"
         return None
 
-    async def handle(self, route):
+    async def handle(self, route: Route) -> None:
         reason = self.reason(route.request)
         if reason is None:
             # On to the context's auth route.
@@ -398,7 +474,7 @@ class WriteGuard:
         await route.abort()
 
 
-async def resave(args):
+async def resave(args: ResaveArgs) -> None:
     url = f"{grafana_url()}/d/{args.uid}"
     async with async_playwright() as pw:
         browser = await pw.firefox.launch()
@@ -431,13 +507,13 @@ async def resave(args):
                 return
 
             # Wait for the save request + its response, within --timeout.
-            def is_save(req):
+            def is_save(req: Request) -> bool:
                 path = urlsplit(req.url).path
                 return req.method == "PUT" and path.endswith(
                     f"/dashboards/{args.uid}"
                 )
 
-            async def click_save():
+            async def click_save() -> Response | None:
                 async with page.expect_request(is_save) as req_info:
                     await save.click()
                 return await (await req_info.value).response()
@@ -453,12 +529,8 @@ async def resave(args):
             if not resp.ok:
                 sys.exit(f"error: save {args.uid}: HTTP {resp.status}")
             # Firefox can't always hand over the save resp's body; re-GET.
-            saved = await api_get(context, f"{DASH_API}/{args.uid}")
-            if not saved.ok:
-                sys.exit(
-                    f"error: GET dashboard {args.uid}: HTTP {saved.status}"
-                )
-            generation = (await saved.json())["metadata"].get("generation")
+            saved = await dashboard_metadata(context, args.uid)
+            generation = saved.get("generation")
         finally:
             await browser.close()
 
@@ -467,23 +539,18 @@ async def resave(args):
 
 # --- main --- #
 
-COMMANDS = {
-    "screenshot": (screenshot_args, screenshot),
-    "resave": (resave_args, resave),
-}
-
-
-def main():
+def main() -> None:
     # The `grafana-<command>` wrappers pass the command as the first arg.
-    if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
-        sys.exit(f"usage: grafana-browser {{{','.join(COMMANDS)}}} ...")
-    command = sys.argv[1]
-    add_args, run = COMMANDS[command]
-    parser = argparse.ArgumentParser(prog=f"grafana-{command}")
-    add_args(parser)
-    args = parser.parse_args(sys.argv[2:])
+    argv = sys.argv[2:]
+    match sys.argv[1:2]:
+        case ["screenshot"]:
+            run = screenshot(screenshot_args(argv))
+        case ["resave"]:
+            run = resave(resave_args(argv))
+        case _:
+            sys.exit("usage: grafana-browser {screenshot,resave} ...")
     ensure_fontconfig()
-    asyncio.run(run(args))
+    asyncio.run(run)
 
 
 if __name__ == "__main__":
