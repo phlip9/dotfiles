@@ -1,21 +1,36 @@
 diff --git a/packages/app/src/git/commit-message-header.tsx b/packages/app/src/git/commit-message-header.tsx
 new file mode 100644
-index 000000000..819d414de
+index 000000000..55af3741b
 --- /dev/null
 +++ b/packages/app/src/git/commit-message-header.tsx
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,113 @@
 +import { memo, useMemo } from "react";
-+import { ScrollView, Text, View } from "react-native";
++import { Text, View } from "react-native";
 +import { StyleSheet } from "react-native-unistyles";
 +import type { CheckoutCommit } from "@getpaseo/protocol/messages";
 +import { CODE_SURFACE_DATASET } from "@/styles/code-surface";
 +
++/** The commit subject, pinned above a commit's diff. */
++export const CommitSubjectBar = memo(function CommitSubjectBar({
++  commit,
++}: {
++  commit: CheckoutCommit;
++}) {
++  return (
++    <View style={styles.subjectBar} testID="commit-message-subject-bar">
++      <Text selectable style={styles.subject} testID="commit-message-subject">
++        {commit.subject}
++      </Text>
++    </View>
++  );
++});
++
 +/**
-+ * The full commit message above a commit's diff: subject, an author / date /
-+ * sha line, then the body preformatted in monospace like `git show`. Long
-+ * messages scroll inside a capped area so the diff stays visible on phones.
++ * The rest of the commit message: an author / date / sha line, then the body
++ * preformatted in monospace like `git show`. Meant as the diff's
++ * `leadingContent`, so a long body scrolls away with the diff.
 + */
-+export const CommitMessageHeader = memo(function CommitMessageHeader({
++export const CommitMessageDetails = memo(function CommitMessageDetails({
 +  commit,
 +}: {
 +  commit: CheckoutCommit;
@@ -24,14 +39,7 @@ index 000000000..819d414de
 +  const body = commit.body ?? "";
 +
 +  return (
-+    <ScrollView
-+      style={styles.container}
-+      contentContainerStyle={styles.content}
-+      testID="commit-message-header"
-+    >
-+      <Text selectable style={styles.subject} testID="commit-message-subject">
-+        {commit.subject}
-+      </Text>
++    <View style={styles.details} testID="commit-message-details">
 +      <View style={styles.meta}>
 +        <Text selectable style={styles.metaText}>
 +          {commit.authorName}
@@ -53,7 +61,7 @@ index 000000000..819d414de
 +          {body}
 +        </Text>
 +      ) : null}
-+    </ScrollView>
++    </View>
 +  );
 +});
 +
@@ -67,26 +75,30 @@ index 000000000..819d414de
 +}
 +
 +const styles = StyleSheet.create((theme) => ({
-+  container: {
-+    flexGrow: 0,
-+    flexShrink: 0,
-+    maxHeight: "40%",
-+    borderBottomWidth: 1,
-+    borderBottomColor: theme.colors.border,
-+  },
-+  content: {
-+    gap: theme.spacing[2],
++  subjectBar: {
 +    paddingHorizontal: theme.spacing[3],
 +    paddingVertical: theme.spacing[2],
++    borderBottomWidth: 1,
++    borderBottomColor: theme.colors.border,
 +  },
 +  subject: {
 +    fontSize: theme.fontSize.base,
 +    fontWeight: theme.fontWeight.semibold,
 +    color: theme.colors.foreground,
 +  },
++  details: {
++    gap: theme.spacing[2],
++    paddingHorizontal: theme.spacing[3],
++    paddingVertical: theme.spacing[2],
++    borderBottomWidth: 1,
++    borderBottomColor: theme.colors.border,
++  },
++  // Baseline-align b/c the sha's mono font has different metrics than the UI
++  // font of its neighbors.
 +  meta: {
 +    flexDirection: "row",
 +    flexWrap: "wrap",
++    alignItems: "baseline",
 +    columnGap: theme.spacing[3],
 +    rowGap: theme.spacing[1],
 +  },
@@ -105,6 +117,238 @@ index 000000000..819d414de
 +    color: theme.colors.foreground,
 +  },
 +}));
+diff --git a/packages/app/src/git/diff-document/surface.native.tsx b/packages/app/src/git/diff-document/surface.native.tsx
+index 206319871..30bd182d5 100644
+--- a/packages/app/src/git/diff-document/surface.native.tsx
++++ b/packages/app/src/git/diff-document/surface.native.tsx
+@@ -264,7 +264,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
+     }),
+     [contentInsetBottom, model.height, viewport.height],
+   );
+-  return (
++  const surface = (
+     <View style={[styles.root, { backgroundColor: props.palette.surface }]} onLayout={layout}>
+       <AnimatedScrollView
+         ref={scrollRef}
+@@ -313,6 +313,16 @@ export function DiffSurface(props: DiffSurfaceProps) {
+       </AnimatedScrollView>
+     </View>
+   );
++  // Native fallback: pin `leadingContent` above the diff instead of scrolling
++  // it. Scrolling it would need offsets through the shared-value scroll
++  // worklets; only the web surface implements that.
++  if (props.leadingContent == null) return surface;
++  return (
++    <View style={styles.root}>
++      {props.leadingContent}
++      {surface}
++    </View>
++  );
+ }
+ 
+ function NativeCanvasSlabLayer({
+diff --git a/packages/app/src/git/diff-document/surface.web.tsx b/packages/app/src/git/diff-document/surface.web.tsx
+index 97801b708..e52e849d1 100644
+--- a/packages/app/src/git/diff-document/surface.web.tsx
++++ b/packages/app/src/git/diff-document/surface.web.tsx
+@@ -85,7 +85,15 @@ export function DiffSurface(props: DiffSurfaceProps) {
+   const modelRef = useRef<ReturnType<typeof buildDiffDocumentModel> | null>(null);
+   const previousModelRef = useRef<ReturnType<typeof buildDiffDocumentModel> | null>(null);
+   const consumedFocusRef = useRef<string | null>(null);
++  // Document scroll offset (scroll container offset minus `leadingContent`),
++  // clamped at 0 for windowing and sticky headers.
+   const scrollTopRef = useRef(0);
++  const leadingRef = useRef<HTMLDivElement>(null);
++  // Measured `leadingContent` height; document y = scroll y - this.
++  const leadingHeightRef = useRef(0);
++  const [leadingHeight, setLeadingHeight] = useState(0);
++  // Latest `handleVerticalScroll`, for the `leadingContent` resize observer.
++  const handleVerticalScrollRef = useRef<((scrollElement: HTMLDivElement) => void) | null>(null);
+   const horizontalOffsetsRef = useRef(new Map<string, number>());
+   const selectionRef = useRef<DiffSelection | null>(null);
+   const dragRef = useRef<{
+@@ -424,10 +432,13 @@ export function DiffSurface(props: DiffSurfaceProps) {
+   useLayoutEffect(() => {
+     const previous = previousModelRef.current;
+     const scroll = scrollRef.current;
+-    if (previous && scroll && previous !== model) {
+-      const nextScrollTop = resolveRelayoutScrollTop(previous, model, scroll.scrollTop);
++    // Only anchor once scrolled into the diff; above it, `leadingContent`
++    // stays put and the first file can't move.
++    const documentTop = scroll ? scroll.scrollTop - leadingHeightRef.current : -1;
++    if (previous && scroll && previous !== model && documentTop >= 0) {
++      const nextScrollTop = resolveRelayoutScrollTop(previous, model, documentTop);
+       scrollTopRef.current = nextScrollTop;
+-      scroll.scrollTop = nextScrollTop;
++      scroll.scrollTop = nextScrollTop + leadingHeightRef.current;
+     }
+     previousModelRef.current = model;
+   }, [model]);
+@@ -481,14 +492,36 @@ export function DiffSurface(props: DiffSurfaceProps) {
+     if (collapsedFilePaths.has(focusPath)) onToggleFile(focusPath);
+     const file = model.files.find((entry) => entry.path === focusPath);
+     if (file && scrollRef.current) {
+-      scrollRef.current.scrollTop = file.top;
++      scrollRef.current.scrollTop = file.top + leadingHeightRef.current;
+       consumedFocusRef.current = requestKey;
+     }
+   }, [collapsedFilePaths, mode, model.files, onToggleFile]);
+ 
++  // Track `leadingContent` height so scroll offsets map to document coords.
++  // A height change shifts the diff, so resync scroll-derived state.
++  const hasLeadingContent = props.leadingContent != null;
++  useLayoutEffect(() => {
++    const leading = leadingRef.current;
++    if (!leading) {
++      leadingHeightRef.current = 0;
++      setLeadingHeight(0);
++      return;
++    }
++    const measure = () => {
++      const height = leading.offsetHeight;
++      if (height === leadingHeightRef.current) return;
++      leadingHeightRef.current = height;
++      setLeadingHeight(height);
++      if (scrollRef.current) handleVerticalScrollRef.current?.(scrollRef.current);
++    };
++    measure();
++    const observer = new ResizeObserver(measure);
++    observer.observe(leading);
++    return () => observer.disconnect();
++  }, [hasLeadingContent]);
+   const handleVerticalScroll = useCallback(
+     (scrollElement: HTMLDivElement) => {
+-      const scrollTop = scrollElement.scrollTop;
++      const scrollTop = Math.max(0, scrollElement.scrollTop - leadingHeightRef.current);
+       scrollTopRef.current = scrollTop;
+       const clearedActiveHeader = activeHeaderPathRef.current !== null;
+       if (clearedActiveHeader) {
+@@ -523,6 +556,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
+     },
+     [paintStickyHeaderPool, schedulePaint, updateInteractionFiles, viewport.height],
+   );
++  handleVerticalScrollRef.current = handleVerticalScroll;
+   useEffect(() => {
+     const scroll = scrollRef.current;
+     if (!scroll) return;
+@@ -543,7 +577,8 @@ export function DiffSurface(props: DiffSurfaceProps) {
+     if (!currentModel || !root) return null;
+     const bounds = root.getBoundingClientRect();
+     const x = clientX - bounds.left;
+-    const documentY = clientY - bounds.top + scrollTopRef.current;
++    // Unclamped: points over `leadingContent` map above the first file.
++    const documentY = clientY - bounds.top + scrollOffsetToDocument(scrollRef, leadingHeightRef);
+     const file = currentModel.files.find(
+       (entry) => entry.top <= documentY && documentY < entry.bottom,
+     );
+@@ -585,7 +620,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
+       if (
+         target instanceof Element &&
+         target.closest(
+-          '[data-diff-header="true"], [data-diff-review="true"], [role="menuitem"], button, input, textarea',
++          '[data-diff-header="true"], [data-diff-review="true"], [data-diff-leading="true"], [role="menuitem"], button, input, textarea',
+         )
+       )
+         return;
+@@ -650,7 +685,10 @@ export function DiffSurface(props: DiffSurfaceProps) {
+             setHoveredAffordance({
+               hit,
+               left: gutterBorder - 12,
+-              top: row.top - scrollTopRef.current + (modelRef.current!.lineHeight - 22) / 2,
++              top:
++                row.top -
++                scrollOffsetToDocument(scrollRef, leadingHeightRef) +
++                (modelRef.current!.lineHeight - 22) / 2,
+             });
+           } else {
+             hasHoveredAffordanceRef.current = false;
+@@ -776,9 +814,9 @@ export function DiffSurface(props: DiffSurfaceProps) {
+   const contentStyle = useMemo<React.CSSProperties>(
+     () => ({
+       ...CONTENT_STYLE,
+-      height: Math.max(model.height, viewport.height) + contentInsetBottom,
++      height: Math.max(model.height, viewport.height - leadingHeight) + contentInsetBottom,
+     }),
+-    [contentInsetBottom, model.height, viewport.height],
++    [contentInsetBottom, leadingHeight, model.height, viewport.height],
+   );
+   const affordanceStyle = useMemo<ViewStyle>(
+     () => ({
+@@ -819,6 +857,17 @@ export function DiffSurface(props: DiffSurfaceProps) {
+         onKeyDown={keyDown}
+         style={SCROLL_STYLE}
+       >
++        {props.leadingContent != null ? (
++          <div
++            ref={leadingRef}
++            data-diff-leading="true"
++            style={LEADING_STYLE}
++            onContextMenu={stopContextMenuPropagation}
++            onCopy={stopClipboardPropagation}
++          >
++            {props.leadingContent}
++          </div>
++        ) : null}
+         <div style={contentStyle} onMouseDown={preventDocumentMouseSelection}>
+           <canvas ref={canvasRef} data-testid="git-diff-canvas" style={canvasStyle} />
+           <StickyHeaderCanvasSlotView slotsRef={stickyHeaderSlotsRef} slotIndex={0} />
+@@ -1066,6 +1115,20 @@ function stopContextMenuPropagation(event: React.MouseEvent): void {
+   event.stopPropagation();
+ }
+ 
++// Copying selected `leadingContent` text must not copy the diff selection.
++function stopClipboardPropagation(event: React.ClipboardEvent): void {
++  event.stopPropagation();
++}
++
++// Scroll container offset in document coords; negative while `leadingContent`
++// is in view.
++function scrollOffsetToDocument(
++  scrollRef: React.RefObject<HTMLDivElement | null>,
++  leadingHeightRef: React.RefObject<number>,
++): number {
++  return (scrollRef.current?.scrollTop ?? 0) - leadingHeightRef.current;
++}
++
+ const ROOT_STYLE: React.CSSProperties = {
+   position: "relative",
+   flex: 1,
+@@ -1089,6 +1152,13 @@ const CONTENT_STYLE: React.CSSProperties = {
+   width: "100%",
+   userSelect: "none",
+ };
++// Plain text selection + cursor, unlike the canvas-backed diff content.
++const LEADING_STYLE: React.CSSProperties = {
++  position: "relative",
++  zIndex: 3,
++  userSelect: "text",
++  cursor: "auto",
++};
+ const FILE_SECTION_STYLE: React.CSSProperties = {
+   position: "absolute",
+   left: 0,
+diff --git a/packages/app/src/git/diff-document/types.ts b/packages/app/src/git/diff-document/types.ts
+index 4ac812544..44e7bc064 100644
+--- a/packages/app/src/git/diff-document/types.ts
++++ b/packages/app/src/git/diff-document/types.ts
+@@ -1,3 +1,4 @@
++import type { ReactNode } from "react";
+ import type { ParsedDiffFile } from "@getpaseo/protocol/messages";
+ import type { InlineReviewActions } from "@/review";
+ import type { ReviewableDiffTarget } from "@/utils/diff-layout";
+@@ -6,6 +7,12 @@ interface DiffDocumentBaseProps {
+   files: ParsedDiffFile[];
+   /** Scrollable space kept below the last line so a floating control never traps content. */
+   contentInsetBottom?: number;
++  /**
++   * Content above the first file that scrolls away with the diff, e.g. a commit
++   * message. Document coordinates stay relative to the first file; the web
++   * surface offsets scroll positions by the measured height of this content.
++   */
++  leadingContent?: ReactNode;
+   displayPreferences: {
+     layout: "unified" | "split";
+     wrapLines: boolean;
 diff --git a/packages/app/src/git/use-diff-files.ts b/packages/app/src/git/use-diff-files.ts
 index 9623a3117..da2cc06e9 100644
 --- a/packages/app/src/git/use-diff-files.ts
@@ -160,18 +404,18 @@ index 9623a3117..da2cc06e9 100644
 +  }, [capabilityMissing, commit, commitFiles, commitsError, commitsLoading, fileDiffResults]);
  }
 diff --git a/packages/app/src/panels/diff-panel.tsx b/packages/app/src/panels/diff-panel.tsx
-index 1297b278b..dddd072e5 100644
+index 1297b278b..1cc1a3d53 100644
 --- a/packages/app/src/panels/diff-panel.tsx
 +++ b/packages/app/src/panels/diff-panel.tsx
 @@ -8,6 +8,7 @@ import { useRetainedPanelActive } from "@/components/retained-panel";
  import { useIsCompactFormFactor } from "@/constants/layout";
  import { PaneContentToolbar } from "@/components/ui/pane-content-toolbar";
  import { isWeb } from "@/constants/platform";
-+import { CommitMessageHeader } from "@/git/commit-message-header";
++import { CommitMessageDetails, CommitSubjectBar } from "@/git/commit-message-header";
  import { DiffDocument } from "@/git/diff-document";
  import { ChangesSurface, DiffLayoutToggle, resolveDiffLayout } from "@/git/diff-pane";
  import { useCommitDiffFiles } from "@/git/use-diff-files";
-@@ -155,7 +156,7 @@ function CommitDiffPanel() {
+@@ -155,13 +156,18 @@ function CommitDiffPanel() {
    const cwd = useWorkspaceDirectory(serverId, workspaceId);
    const panelPreferences = useDiffPanelPreferences();
    invariant(target.kind === "commit_diff", "CommitDiffPanel requires commit_diff target");
@@ -180,11 +424,43 @@ index 1297b278b..dddd072e5 100644
      serverId,
      cwd: cwd ?? "",
      sha: target.sha,
-@@ -205,6 +206,7 @@ function CommitDiffPanel() {
+     enabled: Boolean(cwd),
+   });
+   const mode = useMemo(() => ({ kind: "commit" as const }), []);
++  // Message details scroll w/ the diff; only the subject stays pinned.
++  const commitDetails = useMemo(
++    () => (commit ? <CommitMessageDetails commit={commit} /> : null),
++    [commit],
++  );
+ 
+   let body: ReactNode;
+   if (!cwd) {
+@@ -180,13 +186,19 @@ function CommitDiffPanel() {
+   } else if (isLoading && files.length === 0) {
+     body = <PanelState message={t("workspace.tabs.loading")} testID="commit-diff-loading" />;
+   } else if (files.length === 0) {
+-    body = <PanelState message={t("panels.diff.empty")} testID="commit-diff-empty" />;
++    body = (
++      <>
++        {commitDetails}
++        <PanelState message={t("panels.diff.empty")} testID="commit-diff-empty" />
++      </>
++    );
+   } else {
+     body = (
+       <DiffDocument
+         files={files}
+         displayPreferences={panelPreferences.displayPreferences}
+         mode={mode}
++        leadingContent={commitDetails}
+       />
+     );
+   }
+@@ -205,6 +217,7 @@ function CommitDiffPanel() {
            </View>
          </PaneContentToolbar>
        ) : null}
-+      {cwd && commit ? <CommitMessageHeader commit={commit} /> : null}
++      {cwd && commit ? <CommitSubjectBar commit={commit} /> : null}
        <View style={styles.body}>{body}</View>
      </View>
    );
