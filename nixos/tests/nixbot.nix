@@ -147,6 +147,10 @@ in
       # (~4s) on every cache check and build, so don't configure any.
       nix.settings.substituters = lib.mkForce [ ];
 
+      # Postgres, RustFS, niks3, nixbot, and VictoriaMetrics all start at
+      # boot. A 2nd vCPU lets them overlap; more doesn't help.
+      virtualisation.cores = 2;
+
       services.phlip9-o11y = {
         enable = true;
         retentionPeriod = "1d";
