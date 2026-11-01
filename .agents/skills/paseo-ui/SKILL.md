@@ -134,18 +134,38 @@ $P fixup paseo-<feature>    # fold further edits into it (autosquash)
 ```bash
 $P check            # scope: changes since setup/last export
 $P check --all      # whole patch stack (before export, after upgrades)
+$P test <pkg> <file> [-t name]   # one test file, same env as check
 ```
 
-`check` = oxfmt (writes) + oxlint on changed files, rebuilds workspace deps
-if protocol/client changed, typechecks protocol/server/app, runs `vitest
-related` per package (e2e excluded, git config isolated, memory-capped).
+`check` = upstream's `format:files` (writes) + `lint` npm scripts on changed
+files, rebuilds workspace deps if protocol/client changed, typechecks
+protocol/server/app, runs `vitest related` per package (e2e excluded,
+memory-capped).
 
-A failing test isn't necessarily yours. Run `$P baseline <pkg> <file>
-[-t name]`, which runs it at the release tag and at HEAD. Fails at both:
-upstream, note it and move on. Fails only at HEAD: ours. Bisect w/
-`git -C tmp/paseo switch --detach <patch commit>`, then switch back to
-`wt/<name>`. Also run the whole file, not just `-t`: fake-timer suites
-can fail only in file order.
+Tests run in a CI-like env: PATH is pinned node + gh + ripgrep + the NixOS
+system profile (no user profile: a host-installed `codex` breaks upstream
+tests), and no user git config (commit signing breaks test repos).
+
+`check --all` is green on the current stack, so any failure is new. Run
+`$P baseline <pkg> <file> [-t name]`, which runs it at the release tag and
+at HEAD. Fails at both: upstream or env, note it and move on. Fails only at
+HEAD: ours. Bisect w/ `git -C tmp/paseo switch --detach <patch commit>`,
+then switch back to `wt/<name>`. Also run the whole file, not just `-t`:
+fake-timer suites can fail only in file order.
+
+An upstream test that our patch breaks is fixed in the test, never by
+weakening the patch. The test changes fold into the patch's commit and
+export to `pkgs/paseo/tests/<name>.patch`:
+
+- Behavior we change on purpose (security hardening, diff context):
+  rewrite the assertion to expect our behavior, w/ a `// paseo-<name>:`
+  comment. These become regression tests for the patch.
+- Tests of a feature we disable (`paseo-disable-hub`,
+  `paseo-disable-plugin-installs`): `it.skip` w/ a comment, or for a suite
+  that's all disabled-feature tests, an `exclude` entry in the package's
+  `vitest.config.ts`. Add one positive test that the feature stays off.
+- Mutation-check security tests: revert the patch's code, the test must
+  fail, restore.
 
 Add unit tests for non-trivial logic (parsers, hooks) next to upstream's
 (`*.test.ts`); they export to `pkgs/paseo/tests/`. Upstream: TDD, real deps

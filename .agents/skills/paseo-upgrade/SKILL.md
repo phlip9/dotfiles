@@ -162,7 +162,8 @@ $P check --all       # fmt/lint/typecheck + related tests for every patch
 ```
 
 - Failing test: `$P baseline <pkg> <file>` to split upstream failures
-  from ours; fix ours on the patch branch.
+  from ours; fix ours in the test per `paseo-ui` "5. Check" (never weaken
+  a patch to satisfy an upstream test).
 - UI patches (`paseo-commit-message`, ...): for each one with a rebase
   conflict or touching changed upstream UI, run a `paseo-ui` visual check
   (`$P visual <slug>`, `$P e2e ...`) on desktop + phone.

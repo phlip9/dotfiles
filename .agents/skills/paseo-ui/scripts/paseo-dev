@@ -19,6 +19,8 @@ usage: paseo-dev <cmd> [args]
   run <cmd...>       run cmd w/ node in tmp/paseo (cwd: repo root)
   check [--all]      fmt + lint + typecheck + related unit tests, scoped to
                      changes since setup/export (--all: whole patch stack)
+  test <pkg> [vitest args...]
+                     vitest run in packages/<pkg> w/ the CI-like test env
   baseline <pkg> <test-file> [vitest args...]
                      run a test file at the release tag vs HEAD, to tell
                      our regressions from upstream failures
@@ -45,6 +47,11 @@ shots=$dot/tmp/paseo-shots
 scripts=$dot/.agents/skills/paseo-upgrade/scripts
 # Upstream's own nix package builds w/ nodejs_22.
 node_attr=pkgs.nodejs_22
+# Tools tests expect on upstream's CI runners. Tests get only these + the
+# NixOS system profile on PATH, not the user profile: e.g. a host-installed
+# `codex` breaks tests that assume no agent CLIs are installed.
+test_tool_attrs=(pkgs.gh pkgs.ripgrep)
+system_bin=/run/current-system/sw/bin
 # Memory cap for heavy jobs. This may run on sauna (prod + CI host).
 mem_max=${PASEO_DEV_MEM_MAX:-16G}
 
@@ -86,6 +93,25 @@ node_at() {
 # Run a command w/ node from the paseo repo root.
 in_node() {
   node_at "$wt" "$@"
+}
+
+# Run a test command in <dir> w/ a CI-like env: pinned node + test tools +
+# system profile on PATH, and no user git config (e.g. commit signing).
+# Off NixOS (no system profile), keep the full PATH.
+test_path=
+test_at() {
+  local dir=$1
+  shift
+  if [[ -z $test_path ]]; then
+    test_path=$(nix build -f "$dot" "$node_attr" "${test_tool_attrs[@]}" \
+      --no-link --print-out-paths | sed 's|$|/bin|' | paste -sd:)
+    if [[ -d $system_bin ]]; then
+      test_path=$test_path:$system_bin
+    else
+      test_path=$test_path:$PATH
+    fi
+  fi
+  (cd "$dir" && PATH=$test_path GIT_CONFIG_GLOBAL=/dev/null capped "$@")
 }
 
 require_wt() {
@@ -240,11 +266,12 @@ cmd_check() {
   log "format + lint"
   local before
   before=$(git -C "$wt" diff | sha256sum)
-  in_node npx oxfmt "${files[@]}"
+  # Upstream: lint/format only through its npm scripts.
+  in_node npm run --silent format:files -- "${files[@]}" > /dev/null
   if [[ $(git -C "$wt" diff | sha256sum) != "$before" ]]; then
-    log "oxfmt reformatted files; review: git -C $wt diff"
+    log "formatter changed files; review: git -C $wt diff"
   fi
-  in_node npx oxlint "${files[@]}" || status=1
+  in_node npm run --silent lint -- "${files[@]}" || status=1
 
   if printf '%s\n' "${files[@]}" \
     | grep -qE '^packages/(protocol|client|highlight|relay)/src/'; then
@@ -267,14 +294,20 @@ cmd_check() {
       | sed "s|^packages/$package/||")
     ((${#related[@]})) || continue
     log "vitest related: $package (${#related[@]} files)"
-    # Isolate tests from the user's git config (e.g. commit signing).
-    GIT_CONFIG_GLOBAL=/dev/null node_at "$wt/packages/$package" \
+    test_at "$wt/packages/$package" \
       npx vitest related --run --bail=1 --exclude '**/*.e2e.test.ts' \
       "${related[@]}" || status=1
   done
 
   ((status == 0)) || die "check failed"
   log "check ok"
+}
+
+cmd_test() {
+  require_wt
+  local package=${1:?usage: paseo-dev test <pkg> [vitest args...]}
+  shift
+  test_at "$wt/packages/$package" npx vitest run "$@"
 }
 
 cmd_baseline() {
@@ -291,8 +324,8 @@ cmd_baseline() {
   for rev in "$tag" "$head"; do
     git -C "$wt" switch -q --detach "$rev"
     echo "== $rev"
-    GIT_CONFIG_GLOBAL=/dev/null node_at "$wt/packages/$package" \
-      npx vitest run "$@" 2>&1 | grep -E '^ +(×|✓)|Tests ' || true
+    test_at "$wt/packages/$package" npx vitest run "$@" 2>&1 \
+      | grep -E '^ +(×|✓)|Tests ' || true
   done
 }
 
@@ -354,8 +387,8 @@ cmd_e2e() {
   write_e2e_config "$chromium/bin/chromium"
   mkdir -p "$shots"
   log "playwright: $* (screenshots: $shots)"
-  E2E_WORKERS=1 SHOTS_DIR=$shots GIT_CONFIG_GLOBAL=/dev/null \
-    node_at "$wt/packages/app" timeout 1200 npx playwright test \
+  E2E_WORKERS=1 SHOTS_DIR=$shots \
+    test_at "$wt/packages/app" timeout 1200 npx playwright test \
     -c playwright.agent.config.ts --project=browser "$@"
 }
 
@@ -402,6 +435,7 @@ case $cmd in
   status) cmd_status ;;
   run) cmd_run "$@" ;;
   check) cmd_check "$@" ;;
+  test) cmd_test "$@" ;;
   baseline) cmd_baseline "$@" ;;
   new) cmd_new "$@" ;;
   fixup) cmd_fixup "$@" ;;
