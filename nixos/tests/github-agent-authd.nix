@@ -1,6 +1,6 @@
-# End-to-end NixOS VM test for github-agent-authd socket integration.
+# End-to-end NixOS container test for github-agent-authd socket integration.
 #
-# This test creates a VM with:
+# This test creates a container with:
 # - github-agent-authd socket + service units
 # - a fake local GitHub API server
 # - local UDS auth checks and token mint/cache verification
@@ -9,7 +9,7 @@
 
   globalTimeout = 300;
 
-  nodes.machine =
+  containers.machine =
     {
       config,
       lib,
