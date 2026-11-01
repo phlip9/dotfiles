@@ -641,6 +641,11 @@ in
 
         # just take a screenshot lol
         snapshots.enable = false;
+
+        # Deprecated migration of Azure/SigV4-auth Prometheus datasources,
+        # which we don't use. It needs the core `prometheus` plugin and logs
+        # an error on every start w/o it.
+        feature_toggles.prometheusTypeMigration = false;
       };
 
       # Provision VictoriaMetrics as a datasource using their Grafana plugin.
