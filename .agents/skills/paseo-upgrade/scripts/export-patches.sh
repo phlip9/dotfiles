@@ -3,14 +3,49 @@
 # pkgs/paseo/<commit subject>.patch, then list patch files to add to or
 # remove from pkgs/paseo/default.nix.
 #
-# usage: export-patches.sh <paseo-repo> <base-tag> [<rev>]
+# Test files (*.test.ts(x), *.spec.ts(x), e2e/) go to a separate
+# pkgs/paseo/tests/<name>.patch: upstream's nix src filter strips test files,
+# so the package build can't apply them. import-patches.sh re-applies both.
+#
+# Patches that differ only in `index <blob>..<blob>` lines are left alone, so
+# re-exporting an unchanged stack is a no-op.
+#
+# --check: write nothing; exit 1 if pkgs/paseo differs from the branch.
+#
+# usage: export-patches.sh [--check] <paseo-repo> <base-tag> [<rev>]
 set -euo pipefail
 
+check=0
+if [[ ${1:-} == --check ]]; then
+  check=1
+  shift
+fi
 repo=$1
 base=$2
 rev=${3:-HEAD}
 pkg_dir="$(git rev-parse --show-toplevel)/pkgs/paseo"
 
+out=$(mktemp -d)
+trap 'rm -rf "$out"' EXIT
+mkdir -p "$out/tests"
+
+test_paths=(
+  ':(glob)**/*.test.ts'
+  ':(glob)**/*.test.tsx'
+  ':(glob)**/*.spec.ts'
+  ':(glob)**/*.spec.tsx'
+  ':(glob)**/e2e/**'
+)
+non_test_paths=(.)
+for path in "${test_paths[@]}"; do
+  non_test_paths+=(":(exclude,${path#:(}")
+done
+
+diff_commit() {
+  git -C "$repo" diff --no-color --no-ext-diff "$1^" "$1" -- "${@:2}"
+}
+
+# Render every commit into $out.
 mapfile -t commits < <(git -C "$repo" rev-list --reverse "$base..$rev")
 exported=()
 for commit in "${commits[@]}"; do
@@ -19,18 +54,55 @@ for commit in "${commits[@]}"; do
     echo "error: commit $commit subject must be a patch name: $name" >&2
     exit 1
   fi
-  git -C "$repo" diff --no-color --no-ext-diff "$commit^" "$commit" \
-    > "$pkg_dir/$name.patch"
+  diff_commit "$commit" "${non_test_paths[@]}" > "$out/$name.patch"
+  if [[ ! -s "$out/$name.patch" ]]; then
+    echo "error: $name has no non-test changes" >&2
+    exit 1
+  fi
+  diff_commit "$commit" "${test_paths[@]}" > "$out/tests/$name.patch"
+  [[ -s "$out/tests/$name.patch" ]] || rm "$out/tests/$name.patch"
   exported+=("$name.patch")
 done
 
-# Patch list drift: new patches need a default.nix entry, dropped patches
-# need their file and entry removed.
+# Same patch modulo `index` lines (blob hashes shift w/ unrelated history).
+same_patch() {
+  diff -q <(grep -v '^index ' "$1") <(grep -v '^index ' "$2") > /dev/null
+}
+
+# Sync $out -> pkgs/paseo, reporting every difference.
+shopt -s nullglob
+changed=0
+for path in "$out"/*.patch "$out"/tests/*.patch; do
+  rel=${path#"$out"/}
+  dest="$pkg_dir/$rel"
+  if [[ -f $dest ]] && same_patch "$path" "$dest"; then
+    continue
+  fi
+  changed=1
+  if ((check)); then
+    echo "differs: $rel"
+  else
+    mkdir -p "$(dirname "$dest")"
+    cp "$path" "$dest"
+    echo "wrote: $rel"
+  fi
+done
+for dest in "$pkg_dir"/*.patch "$pkg_dir"/tests/*.patch; do
+  rel=${dest#"$pkg_dir"/}
+  if [[ ! -f "$out/$rel" ]]; then
+    changed=1
+    echo "not on branch, remove: $rel"
+  fi
+done
+
+# Patch list drift: new patches need a default.nix entry.
 for patch in "${exported[@]}"; do
-  grep -q "\./$patch" "$pkg_dir/default.nix" \
-    || echo "add to default.nix: $patch"
+  if ! grep -q "\./$patch" "$pkg_dir/default.nix"; then
+    changed=1
+    echo "add to default.nix: $patch"
+  fi
 done
-for path in "$pkg_dir"/*.patch; do
-  patch=$(basename "$path")
-  [[ " ${exported[*]} " == *" $patch "* ]] || echo "dropped, remove: $patch"
-done
+
+if ((check && changed)); then
+  exit 1
+fi
