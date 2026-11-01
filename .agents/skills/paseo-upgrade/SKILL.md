@@ -123,8 +123,10 @@ git -C "$pa" rebase --onto <NEW> <OLD>     # resolve conflicts per commit
 .agents/skills/paseo-upgrade/scripts/export-patches.sh "$pa" <NEW>
 ```
 
-`export-patches.sh` rewrites `pkgs/paseo/*.patch` (+ `tests/`) and prints default.nix
-entries to add/remove. Keep patches minimal and fail-closed.
+`export-patches.sh` rewrites `pkgs/paseo/*.patch` (+ `tests/`) and reports
+where the shipped `patches` list (evaluated by `patch-list.sh` via nix, as
+import uses) differs from the branch: entries to add/remove, or order.
+Keep patches minimal and fail-closed.
 
 npmDepsHash (differs from upstream `nix/npm-deps.hash`, different nixpkgs):
 set `npmDepsHash = "";` then `nix build -f . paseo.npmDeps` and copy `got:`.
@@ -162,8 +164,10 @@ $P check --all       # fmt/lint/typecheck + related tests for every patch
 ```
 
 - Failing test: `$P baseline <pkg> <file>` to split upstream failures
-  from ours; fix ours in the test per `paseo-ui` "5. Check" (never weaken
-  a patch to satisfy an upstream test).
+  from ours. An upstream test that conflicts w/ a patch goes in
+  `pkgs/paseo/tests/ignored.json` per `paseo-ui` "5. Check"; never weaken
+  a patch or edit upstream tests. Stale `ignored.json` entries fail the
+  run: drop or retitle them.
 - UI patches (`paseo-commit-message`, ...): for each one with a rebase
   conflict or touching changed upstream UI, run a `paseo-ui` visual check
   (`$P visual <slug>`, `$P e2e ...`) on desktop + phone.

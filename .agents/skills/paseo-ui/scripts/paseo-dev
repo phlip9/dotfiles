@@ -44,6 +44,8 @@ branch=wt/$(basename "$dot")
 # Patch stack as of the last setup/export; `check` scopes to changes since.
 exported_ref=refs/paseo-dev/$branch
 shots=$dot/tmp/paseo-shots
+# Upstream tests that conflict w/ our patches; skipped in every test run.
+ignored_json=$dot/pkgs/paseo/tests/ignored.json
 scripts=$dot/.agents/skills/paseo-upgrade/scripts
 # Upstream's own nix package builds w/ nodejs_22.
 node_attr=pkgs.nodejs_22
@@ -122,8 +124,26 @@ is_dirty() {
   [[ -n $(git -C "$wt" status --porcelain) ]]
 }
 
+# Whether <rev> (default: the patch branch) matches pkgs/paseo. Checks the
+# branch, not HEAD: a detached HEAD may hide newer commits on the branch.
 in_sync() {
-  (cd "$dot" && "$scripts/export-patches.sh" --check "$wt" "$tag") > /dev/null
+  local rev=${1:-$branch}
+  (cd "$dot" \
+    && "$scripts/export-patches.sh" --check "$upstream" "$tag" "$rev") \
+    > /dev/null
+}
+
+has_branch() {
+  git -C "$upstream" rev-parse -q --verify "refs/heads/$branch" > /dev/null
+}
+
+# Commands that read or rewrite the patch stack must run on the branch.
+require_on_branch() {
+  local current
+  current=$(git -C "$wt" branch --show-current)
+  [[ $current == "$branch" ]] \
+    || die "tmp/paseo is on '${current:-detached HEAD}', not $branch;" \
+      "run: git -C $wt switch $branch"
 }
 
 # Commit (sha) on the patch branch whose subject is the patch name.
@@ -153,10 +173,21 @@ ensure_deps() {
 
 # Packages resolve siblings through their compiled dist/, so rebuild after
 # changes to protocol/client/etc. (see upstream docs/development.md).
+# Builds what <package>'s tests resolve through dist/: the workspace deps,
+# plus the server for cli. <mode> `clean` deletes outputs first: a plain
+# build keeps the stale .js/.d.ts of deleted sources, which still resolve.
 build_deps() {
-  log "building workspace deps"
-  in_node npm run --silent build:server-deps > /dev/null
-  in_node npm run --silent build:app-deps > /dev/null
+  local package=${1:-} mode=${2:-} suffix=
+  [[ $mode == clean ]] && suffix=:clean
+  log "building workspace deps${suffix:+ (clean)}"
+  if [[ $package == cli ]]; then
+    # build:server includes build:server-deps.
+    log "building server (cli imports its dist)"
+    in_node npm run --silent "build:server$suffix" > /dev/null
+  else
+    in_node npm run --silent "build:server-deps$suffix" > /dev/null
+  fi
+  in_node npm run --silent "build:app-deps$suffix" > /dev/null
 }
 
 # Ignore our local-only files in every paseo worktree.
@@ -167,7 +198,8 @@ ensure_excludes() {
   mkdir -p "$(dirname "$exclude")"
   for pattern in \
     'packages/app/e2e/browser/agent-*.spec.ts' \
-    'packages/app/playwright.agent.config.ts'; do
+    'packages/app/playwright.agent.config.ts' \
+    'packages/*/vitest.paseo.*'; do
     if ! grep -qxF "$pattern" "$exclude" 2> /dev/null; then
       echo "$pattern" >> "$exclude"
     fi
@@ -175,6 +207,7 @@ ensure_excludes() {
 }
 
 cmd_setup() {
+  local force=${1:-}
   if [[ -d $wt ]]; then
     cmd_status
     ensure_deps
@@ -188,9 +221,17 @@ cmd_setup() {
     git -C "$upstream" fetch --quiet --tags origin
   fi
   ensure_excludes
-  # A stale branch from a previous worktree w/ the same name.
+  # A leftover branch from a previous worktree w/ the same name (e.g. tmp/
+  # was deleted by hand). Only replace it if it holds nothing unexported.
   git -C "$upstream" worktree prune
-  git -C "$upstream" branch -q -D "$branch" 2> /dev/null || true
+  if has_branch; then
+    if [[ $force != --force ]] && ! in_sync; then
+      die "$branch in $upstream has unexported commits. Recover:" \
+        "git -C $upstream worktree add $wt $branch, then export." \
+        "Or discard: paseo-dev reset --force"
+    fi
+    git -C "$upstream" branch -q -D "$branch"
+  fi
   git -C "$upstream" worktree add --quiet --detach "$wt" "$tag"
   (cd "$dot" && "$scripts/import-patches.sh" "$wt" "$tag" "$branch")
   git -C "$wt" update-ref "$exported_ref" HEAD
@@ -207,19 +248,23 @@ cmd_status() {
     echo "dirty:"
     git -C "$wt" status --short
   fi
+  if [[ $(git -C "$wt" branch --show-current) != "$branch" ]]; then
+    echo "WARNING:  not on $branch (detached?); switch back before export"
+  fi
   if in_sync; then
-    echo "sync:     matches pkgs/paseo"
+    echo "sync:     $branch matches pkgs/paseo"
   else
-    echo "sync:     DIFFERS from pkgs/paseo (export, or reset to discard)"
+    echo "sync:     $branch DIFFERS from pkgs/paseo (export, or reset)"
   fi
 }
 
 # Refuse to drop work that isn't exported to pkgs/paseo yet.
 guard_unexported() {
   [[ ${1:-} == --force ]] && return
-  if is_dirty || ! in_sync; then
-    die "tmp/paseo has unexported changes; export first or pass --force"
-  fi
+  is_dirty && die "tmp/paseo has uncommitted changes; commit + export first" \
+    "or pass --force"
+  require_on_branch
+  in_sync || die "$branch has unexported commits; export first or pass --force"
 }
 
 cmd_clean() {
@@ -233,7 +278,7 @@ cmd_clean() {
 
 cmd_reset() {
   cmd_clean "${1:-}"
-  cmd_setup
+  cmd_setup "${1:-}"
 }
 
 cmd_run() {
@@ -241,96 +286,204 @@ cmd_run() {
   in_node "$@"
 }
 
-# Source files changed vs <rev>, incl. uncommitted + untracked.
+# Source files changed vs <rev>, incl. uncommitted, untracked, and deleted.
 changed_files() {
   {
-    git -C "$wt" diff --name-only --diff-filter=d "$1"
+    git -C "$wt" diff --name-only "$1"
     git -C "$wt" ls-files --others --exclude-standard
   } | grep -E '\.(ts|tsx|mjs|js)$' | sort -u
+}
+
+# Packages (dir names) containing any of the given repo-relative paths.
+packages_of() {
+  printf '%s\n' "$@" | sed -n 's|^packages/\([^/]*\)/.*|\1|p' | sort -u
 }
 
 cmd_check() {
   require_wt
   ensure_deps
-  local base=$exported_ref files=() status=0
+  local base=$exported_ref changed=() existing=() status=0 file
   if [[ ${1:-} == --all ]] \
     || ! git -C "$wt" rev-parse -q --verify "$base" > /dev/null; then
     base=$tag
   fi
-  mapfile -t files < <(changed_files "$base")
-  if ((${#files[@]} == 0)); then
+  mapfile -t changed < <(changed_files "$base")
+  if ((${#changed[@]} == 0)); then
     log "no changes since last export; nothing to check (try: check --all)"
     return
   fi
+  # Deleted files still count as changes (e.g. a removed module breaks its
+  # importers), but only existing files can be formatted, linted, or traced.
+  for file in "${changed[@]}"; do
+    [[ -e $wt/$file ]] && existing+=("$file")
+  done
 
-  log "format + lint"
-  local before
-  before=$(git -C "$wt" diff | sha256sum)
-  # Upstream: lint/format only through its npm scripts.
-  in_node npm run --silent format:files -- "${files[@]}" > /dev/null
-  if [[ $(git -C "$wt" diff | sha256sum) != "$before" ]]; then
-    log "formatter changed files; review: git -C $wt diff"
+  if ((${#existing[@]})); then
+    log "format + lint"
+    local before
+    before=$(git -C "$wt" diff | sha256sum)
+    # Upstream: lint/format only through its npm scripts.
+    in_node npm run --silent format:files -- "${existing[@]}" > /dev/null
+    if [[ $(git -C "$wt" diff | sha256sum) != "$before" ]]; then
+      log "formatter changed files; review: git -C $wt diff"
+    fi
+    in_node npm run --silent lint -- "${existing[@]}" || status=1
   fi
-  in_node npm run --silent lint -- "${files[@]}" || status=1
 
-  if printf '%s\n' "${files[@]}" \
-    | grep -qE '^packages/(protocol|client|highlight|relay)/src/'; then
-    build_deps
+
+  # Typecheck protocol and its main consumers, plus every touched package
+  # w/ a typecheck script.
+  local touched=() packages=(protocol server app) package
+  mapfile -t touched < <(packages_of "${changed[@]}")
+  for package in "${touched[@]}"; do
+    if [[ " ${packages[*]} " != *" $package "* ]] \
+      && jq -e '.scripts.typecheck' "$wt/packages/$package/package.json" \
+        > /dev/null 2>&1; then
+      packages+=("$package")
+    fi
+  done
+  # Rebuild dist/ outputs that typecheck + tests resolve: workspace deps
+  # if any changed, and the server too if cli changed (cli imports it).
+  # Clean build if a source was deleted from a dist-producing package.
+  local dist_re='^packages/(protocol|client|highlight|relay|plugin|server)/src/'
+  local build_mode=
+  for file in "${changed[@]}"; do
+    if [[ $file =~ $dist_re && ! -e $wt/$file ]]; then
+      build_mode=clean
+    fi
+  done
+  if [[ " ${touched[*]} " == *" cli "* ]]; then
+    build_deps cli "$build_mode"
+  elif printf '%s\n' "${changed[@]}" | grep -qE "$dist_re"; then
+    build_deps "" "$build_mode"
   fi
 
-  # Typecheck every package we touch, plus protocol consumers.
-  local packages=(protocol server app)
   log "typecheck: ${packages[*]}"
   for package in "${packages[@]}"; do
-    in_node npm run --silent typecheck --workspace="@getpaseo/$package" \
+    in_node npm run --silent typecheck --prefix "packages/$package" \
       || status=1
   done
 
-  # Unit tests related to changed files, per package (vitest configs differ).
-  for package in app server; do
+  # Unit tests related to changed files, in every touched package that uses
+  # vitest (each package has its own vitest config).
+  for package in "${touched[@]}"; do
+    grep -q '"vitest' "$wt/packages/$package/package.json" || continue
+    # cli's tests/ dir is a tsx-run suite; its vitest unit tests live in src.
+    local scope=()
+    [[ $package == cli ]] && scope=(--dir src)
     local related=()
-    mapfile -t related < <(printf '%s\n' "${files[@]}" \
+    mapfile -t related < <(printf '%s\n' "${existing[@]}" \
       | grep "^packages/$package/" | grep -v '/e2e/' \
       | sed "s|^packages/$package/||")
     ((${#related[@]})) || continue
     log "vitest related: $package (${#related[@]} files)"
+    local config
+    config=$(vitest_config_arg "$package")
     test_at "$wt/packages/$package" \
       npx vitest related --run --bail=1 --exclude '**/*.e2e.test.ts' \
-      "${related[@]}" || status=1
+      "${scope[@]}" ${config:+"$config"} "${related[@]}" || status=1
   done
 
   ((status == 0)) || die "check failed"
   log "check ok"
 }
 
+# Prepare packages/<pkg> to run vitest w/ our ignore list and print the
+# extra vitest arg (nothing if the package has no entries). Whole-file
+# entries become config excludes; test entries are skipped by the setup
+# template, which also fails on entries that match no test.
+vitest_config_arg() {
+  local package=$1 dir=$wt/packages/$1 prefix=packages/$1/ entries
+  [[ -f $ignored_json ]] || return 0
+  entries=$(jq --arg prefix "$prefix" '[.[]
+    | select(.file | startswith($prefix)) | .file |= ltrimstr($prefix)]' \
+    "$ignored_json")
+  [[ $(jq length <<< "$entries") -gt 0 ]] || return 0
+
+  # Fail loudly on entries for dropped patches or deleted test files.
+  [[ -f $dir/vitest.config.ts ]] \
+    || die "ignored.json: packages/$package has no vitest.config.ts to wrap"
+  local patch file active
+  active=$(cd "$dot" && "$scripts/patch-list.sh")
+  while read -r patch; do
+    grep -qxF "$patch.patch" <<< "$active" \
+      || die "ignored.json: $patch is not an active patch in default.nix"
+  done < <(jq -r '.[].patch' <<< "$entries" | sort -u)
+  while read -r file; do
+    [[ -f $dir/$file ]] || die "ignored.json: stale entry, no $prefix$file"
+  done < <(jq -r '.[].file' <<< "$entries" | sort -u)
+
+  ensure_excludes
+  jq '[.[] | select(.test)]' <<< "$entries" > "$dir/vitest.paseo.ignored.json"
+  cp "$dot/.agents/skills/paseo-ui/templates/vitest.paseo.setup.ts" "$dir/"
+  cat > "$dir/vitest.paseo.config.ts" << EOF
+// Generated by paseo-dev; git-excluded. Upstream config + our test ignores
+// (dotfiles pkgs/paseo/tests/ignored.json).
+import { defineConfig, mergeConfig } from "vitest/config";
+import base from "./vitest.config";
+
+export default mergeConfig(
+  base,
+  defineConfig({
+    test: {
+      exclude: $(jq -c '[.[] | select(.test | not) | .file]' <<< "$entries"),
+      setupFiles: ["./vitest.paseo.setup.ts"],
+    },
+  }),
+);
+EOF
+  echo "--config=vitest.paseo.config.ts"
+}
+
 cmd_test() {
   require_wt
-  local package=${1:?usage: paseo-dev test <pkg> [vitest args...]}
+  local package=${1:?usage: paseo-dev test <pkg> [vitest args...]} config
   shift
-  test_at "$wt/packages/$package" npx vitest run "$@"
+  config=$(vitest_config_arg "$package")
+  test_at "$wt/packages/$package" npx vitest run ${config:+"$config"} "$@"
+}
+
+# Return tmp/paseo to the patch branch w/ its own deps + dist builds.
+baseline_package=
+baseline_restore() {
+  git -C "$wt" switch -q "$branch"
+  ensure_deps
+  build_deps "$baseline_package" clean
 }
 
 cmd_baseline() {
   require_wt
   (($# >= 2)) || die "usage: paseo-dev baseline <pkg> <test-file> [args...]"
-  local package=$1 head
+  local package=$1 rev log code
   shift
+  baseline_package=$package
   is_dirty && die "commit first; baseline checks out the release tag"
-  head=$(git -C "$wt" branch --show-current)
-  # Always return to the patch branch, even on failure. Expand now: locals
-  # are gone by the time the EXIT trap runs.
-  # shellcheck disable=SC2064
-  trap "git -C '$wt' switch -q '$head'" EXIT
-  for rev in "$tag" "$head"; do
+  require_on_branch
+  # Always return to the patch branch and its builds, even on failure.
+  trap baseline_restore EXIT
+  for rev in "$tag" "$branch"; do
     git -C "$wt" switch -q --detach "$rev"
-    echo "== $rev"
-    test_at "$wt/packages/$package" npx vitest run "$@" 2>&1 \
-      | grep -E '^ +(×|✓)|Tests ' || true
+    # Sibling packages resolve through dist/, so build them from this rev:
+    # else a regression in our protocol/client (or, for cli, server) code
+    # shows up at both revs. Clean: revs differ in which sources exist.
+    ensure_deps
+    build_deps "$package" clean
+    log=$dot/tmp/paseo-baseline-${rev//\//-}.log
+    local config
+    config=$(vitest_config_arg "$package")
+    code=0
+    test_at "$wt/packages/$package" npx vitest run ${config:+"$config"} "$@" \
+      > "$log" 2>&1 || code=$?
+    echo "== $rev: exit $code (full log: $log)"
+    # Summary, or the tail if vitest died before summarizing (config or
+    # import errors).
+    grep -E '^ +(×|✓)|FAIL |Test Files|Tests ' "$log" || tail -n 20 "$log"
   done
 }
 
 cmd_new() {
   require_wt
+  require_on_branch
   local name=${1:?usage: paseo-dev new <name>}
   [[ $name =~ ^paseo-[a-z0-9-]+$ ]] || die "name must match paseo-[a-z0-9-]+"
   git -C "$wt" log --format=%s "$tag..HEAD" | grep -qxF "$name" \
@@ -342,6 +495,7 @@ cmd_new() {
 
 cmd_fixup() {
   require_wt
+  require_on_branch
   local name=${1:?usage: paseo-dev fixup <name>} sha
   sha=$(patch_commit "$name")
   is_dirty || die "nothing to fold into $name"
@@ -353,6 +507,7 @@ cmd_fixup() {
 
 cmd_export() {
   require_wt
+  require_on_branch
   is_dirty && die "commit first (paseo-dev new/fixup); export reads commits"
   (cd "$dot" && "$scripts/export-patches.sh" "$wt" "$tag")
   git -C "$wt" update-ref "$exported_ref" HEAD

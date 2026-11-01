@@ -22,7 +22,8 @@ worktree, aliased as `P=.agents/skills/paseo-ui/scripts/paseo-dev`.
 - `pkgs/paseo/*.patch` is the source of truth, listed in order in
   `pkgs/paseo/default.nix` w/ one comment each. Tests for a patch live in
   `pkgs/paseo/tests/<name>.patch`. Upstream's nix src filter strips test
-  files, so the package build applies only the main patch.
+  files, so the package build applies only the main patch. Upstream tests
+  that conflict w/ a patch are listed in `pkgs/paseo/tests/ignored.json`.
 - `paseo-dev setup` creates `tmp/paseo`, a git worktree of `~/dev/paseo` at
   the pinned tag (`npins/sources.json`) on branch `wt/<dotfiles-worktree>`,
   w/ one commit per patch (subject == patch stem). It has its own
@@ -138,8 +139,11 @@ $P test <pkg> <file> [-t name]   # one test file, same env as check
 ```
 
 `check` = upstream's `format:files` (writes) + `lint` npm scripts on changed
-files, rebuilds workspace deps if protocol/client changed, typechecks
-protocol/server/app, runs `vitest related` per package (e2e excluded,
+files (incl. deleted ones, for scope), rebuilds workspace deps if
+protocol/client changed (and the server if cli changed: cli imports its
+dist; clean builds if a source was deleted, else stale dist/ outputs still
+resolve), typechecks protocol/server/app + every touched package, runs
+`vitest related` in every touched vitest package (e2e excluded,
 memory-capped).
 
 Tests run in a CI-like env: PATH is pinned node + gh + ripgrep + the NixOS
@@ -148,29 +152,36 @@ tests), and no user git config (commit signing breaks test repos).
 
 `check --all` is green on the current stack, so any failure is new. Run
 `$P baseline <pkg> <file> [-t name]`, which runs it at the release tag and
-at HEAD. Fails at both: upstream or env, note it and move on. Fails only at
-HEAD: ours. Bisect w/ `git -C tmp/paseo switch --detach <patch commit>`,
-then switch back to `wt/<name>`. Also run the whole file, not just `-t`:
-fake-timer suites can fail only in file order.
+at the patch branch, each w/ its own clean workspace builds (~3-5 min),
+and prints each exit code + full log path. Fails at both: upstream or
+env, note it and move on. Fails only at the branch: ours. Bisect w/
+`git -C tmp/paseo switch --detach <patch commit>`, then switch back to
+`wt/<name>`: `new`, `fixup`, `export`, and `clean` refuse to run off the
+branch. Also run the whole file, not just `-t`: fake-timer suites can fail
+only in file order.
 
-An upstream test that our patch breaks is fixed in the test, never by
-weakening the patch. The test changes fold into the patch's commit and
-export to `pkgs/paseo/tests/<name>.patch`:
+Never edit upstream test files: every edit is a rebase conflict on the
+next upgrade.
 
-- Behavior we change on purpose (security hardening, diff context):
-  rewrite the assertion to expect our behavior, w/ a `// paseo-<name>:`
-  comment. These become regression tests for the patch.
-- Tests of a feature we disable (`paseo-disable-hub`,
-  `paseo-disable-plugin-installs`): `it.skip` w/ a comment, or for a suite
-  that's all disabled-feature tests, an `exclude` entry in the package's
-  `vitest.config.ts`. Add one positive test that the feature stays off.
-- Mutation-check security tests: revert the patch's code, the test must
-  fail, restore.
+- Upstream test conflicts w/ our patch: add it to
+  `pkgs/paseo/tests/ignored.json` (`{patch, file, test, reason}`; omit
+  `test` to drop a whole file whose suite is all disabled-feature tests).
+  `paseo-dev` runs vitest through a generated, git-excluded wrapper config
+  that excludes/skips these. `test` is the full name: describe titles +
+  test title joined w/ ` > ` (it.each: each expanded title). A run fails
+  if an entry matches no test or several, its file is gone, or its patch
+  isn't active in `default.nix`, so stale entries surface on upgrades.
+- Our behavior: test it only where it adds value, in a new file owned by
+  the patch (`<area>.<feature>.test.ts`, top comment
+  `// paseo-<name>: ...`). It folds into the patch's commit and exports to
+  `pkgs/paseo/tests/<name>.patch`. Skip it when `nixosTests.paseo` already
+  covers the behavior end to end (relay password, plugin installs,
+  password file, env scrub) or the patch is a constant tweak.
+- Mutation-check new tests: revert the patch's code, the test must fail,
+  restore.
 
-Add unit tests for non-trivial logic (parsers, hooks) next to upstream's
-(`*.test.ts`); they export to `pkgs/paseo/tests/`. Upstream: TDD, real deps
-over mocks (`docs/testing.md`). Never run whole suites (`npm run test`,
-full Playwright); they freeze the host.
+Upstream: TDD, real deps over mocks (`docs/testing.md`). Never run whole
+suites (`npm run test`, full Playwright); they freeze the host.
 
 ## 6. Visual verify (mandatory for UI)
 
