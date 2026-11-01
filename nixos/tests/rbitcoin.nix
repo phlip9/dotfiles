@@ -2,9 +2,8 @@
 #
 # node1 mines blocks over RPC. node2 dials node1 over P2P, catches up via IBD,
 # then follows new tips. Also covers unix socket + TCP Bearer RPC, health
-# probes, and chain state persistence across restarts.
-#
-# Nodes are systemd-nspawn containers, not QEMU VMs, so they boot fast.
+# probes, VictoriaMetrics scraping `/metrics` via o11y, and chain state
+# persistence across restarts.
 {
   name = "rbitcoin";
 
@@ -33,7 +32,12 @@
   };
 
   containers.node2 =
-    { containers, ... }:
+    {
+      containers,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       node1Ip = containers.node1.networking.primaryIPAddress;
       node1Port = toString containers.node1.services.rbitcoin.p2p.port;
@@ -45,9 +49,26 @@
         "--connect"
         "${node1Ip}:${node1Port}"
       ];
+
+      # Scrape node2's metrics into VictoriaMetrics, like on sauna.
+      services.phlip9-o11y = {
+        enable = true;
+        retentionPeriod = "1d";
+        grafana = {
+          adminPasswordFile = pkgs.writeText "gf-admin-pwd" "test-password";
+          secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
+          secretsManagerKeyFile = pkgs.writeText "gf-sm-key" "test-sm-key";
+        };
+      };
+      # Only VictoriaMetrics is under test.
+      services.grafana.enable = lib.mkForce false;
+      services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
+      # Queries hide samples younger than `-search.latencyOffset` (30s).
+      services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
     };
 
   testScript = ''
+    import shlex
     from datetime import timedelta
 
     datadir = "/var/lib/rbitcoin"
@@ -160,6 +181,41 @@
         tip = mine(5)
         wait_for_tip(node2, tip)
         assert rpc(node2, "getblockcount") == str(ibd_blocks + 5)
+
+    with subtest("VictoriaMetrics scrapes node2's metrics"):
+        # o11y turns on `/metrics`. node1 has no o11y, so it 404s there.
+        node1.fail(f"curl -sf {health_url}/metrics")
+        node2.succeed(
+            f"curl -sf {health_url}/metrics "
+            f"| grep -Fx 'rbitcoin_blocks {ibd_blocks + 5}'"
+        )
+        vm_url = "http://127.0.0.1:8428"
+        node2.wait_for_unit("victoriametrics.service")
+        try:
+            node2.wait_until_succeeds(
+                f"curl -sf {vm_url}/api/v1/targets "
+                "| jq -e '.data.activeTargets[] "
+                "| select(.labels.job == \"rbitcoin\") | .health == \"up\"'",
+                timeout=timedelta(seconds=60),
+            )
+        except Exception:
+            node2.log(node2.succeed(f"curl -s {vm_url}/api/v1/targets"))
+            raise
+        # New series only become searchable on VM's ~10s index refresh.
+        # `force_flush` runs it now.
+        for query in (
+            'up{job="rbitcoin"} == 1',
+            'rbitcoin_build_info{job="rbitcoin",network="regtest"} == 1',
+            f'rbitcoin_blocks{{job="rbitcoin"}} == {ibd_blocks + 5}',
+            'rbitcoin_connections{job="rbitcoin",direction="out"} >= 1',
+        ):
+            node2.wait_until_succeeds(
+                f"curl -sf {vm_url}/internal/force_flush && "
+                f"curl -sfG {vm_url}/api/v1/query "
+                f"--data-urlencode {shlex.quote('query=' + query)} "
+                "| jq -e '.data.result | length > 0'",
+                timeout=timedelta(seconds=60),
+            )
 
     with subtest("chain state persists across restarts"):
         # Restart each node while the other is down, so it can't re-sync

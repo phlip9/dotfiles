@@ -37,6 +37,7 @@ victoriametrics (127.0.0.1:8428)
     +-- postgres-exporter localhost:9187/metrics
     +-- nixbot            https://127.0.0.1:443/metrics
     +-- niks3             [::1]:5751/metrics
+    +-- rbitcoin          localhost:9332/metrics
 ```
 
 Target machine: `sauna` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0)
@@ -92,38 +93,6 @@ Config:
 - Admin password: sops secret via `$__file{path}` provider
 - Secret key: sops secret via `$__file{path}` provider
 - Disable sign-up, disable gravatar, disable analytics
-
-### prometheus-node-exporter (system metrics)
-
-CPU, memory, disk, network, filesystem metrics.
-
-NixOS module: `services.prometheus.exporters.node`
-Listen: `127.0.0.1:9100`
-
-### prometheus-nginx-exporter (nginx metrics)
-
-Scrapes nginx `stub_status` for connection/request metrics.
-
-NixOS module: `services.prometheus.exporters.nginx`
-Listen: `127.0.0.1:9113`
-
-Requires `services.nginx.statusPage = true` to expose
-`/nginx_status` on localhost.
-
-### nixbot and niks3
-
-Scraping is enabled automatically when each service is enabled.
-
-Useful queries in Grafana Explore:
-
-- `up{job=~"nixbot|niks3"}`: scrape health
-- `nixbot_queue_depth`: pending/running builds
-- `nixbot_upload_queue_depth`: paths awaiting cache upload
-- `niks3_cache_objects`: objects tracked by the cache
-- `niks3_cache_logical_bytes`: logical cache size
-
-`nixosTests.nixbot` checks that both services' metrics reach VictoriaMetrics
-after a successful build and cache upload.
 
 ### nginx (TLS termination + reverse proxy)
 

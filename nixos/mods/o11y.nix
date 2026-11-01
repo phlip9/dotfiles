@@ -32,6 +32,15 @@ let
 
   cfgNixbot = config.services.nixbot;
 
+  # rbitcoin serves `/metrics` on its loopback health listener.
+  cfgRbitcoin = config.services.rbitcoin;
+  rbitcoinHealthAddr =
+    let
+      inherit (cfgRbitcoin.health) address port;
+      host = if lib.hasInfix ":" address then "[${address}]" else address;
+    in
+    "${host}:${toString port}";
+
   exporterAddr = exporter: "${exporter.listenAddress}:${toString exporter.port}";
   exporterTargets = exporter: [
     { targets = [ (exporterAddr exporter) ]; }
@@ -525,6 +534,12 @@ in
           static_configs = [
             { targets = [ config.services.niks3.httpAddr ]; }
           ];
+        })
+        ++ lib.optional (cfgRbitcoin.enable && cfgRbitcoin.metrics) ({
+          job_name = "rbitcoin";
+          static_configs = [
+            { targets = [ rbitcoinHealthAddr ]; }
+          ];
         });
       };
     };
@@ -564,6 +579,15 @@ in
           port = 9187;
           runAsLocalSuperUser = true;
         };
+
+    # ===================================================================
+    # rbitcoin - node metrics
+    # ===================================================================
+    # `/metrics` needs the loopback health listener.
+    services.rbitcoin = lib.mkIf cfgRbitcoin.enable {
+      health.enable = lib.mkDefault true;
+      metrics = lib.mkDefault true;
+    };
 
     # ===================================================================
     # Grafana - visualization + dashboards
