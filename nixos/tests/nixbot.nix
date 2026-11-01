@@ -154,6 +154,9 @@ in
         grafana.secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
         grafana.secretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key";
       };
+      # Only VictoriaMetrics is under test. Grafana's first-boot migrations
+      # would compete w/ nixbot's startup for the VM's CPU.
+      services.grafana.enable = lib.mkForce false;
       services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
       # Queries hide samples younger than `-search.latencyOffset` (30s).
       services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
