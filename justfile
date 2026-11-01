@@ -86,7 +86,7 @@ python-ci: python-lint
 
 # Typecheck all *.py w/ ty. ty finds third-party libs via `python3` on PATH.
 python-lint:
-    nix shell -f . pkgsUnstable.ty pythonDev --command \
+    nix shell -f . pkgs.ty pythonDev --command \
         ty check --error-on-warning
 
 # --- neovim --- #

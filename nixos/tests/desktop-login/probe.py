@@ -43,7 +43,7 @@ def login_secret():
     )
     properties = dbus.Interface(collection, "org.freedesktop.DBus.Properties")
     locked = bool(properties.Get("org.freedesktop.Secret.Collection", "Locked"))
-    result = {"unlocked": not locked}
+    result: dict[str, bool | str] = {"unlocked": not locked}
     if not locked:
         service = dbus.Interface(
             bus.get_object(
