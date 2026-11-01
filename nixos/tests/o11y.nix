@@ -1,6 +1,6 @@
-# NixOS VM test for the phlip9-o11y module.
+# NixOS container test for the phlip9-o11y module.
 #
-# Single VM with VictoriaMetrics + node-exporter + Grafana.
+# Single container with VictoriaMetrics + node-exporter + Grafana.
 # Verifies scraping, querying, Grafana datasource provisioning, that
 # Grafana's secrets manager encrypts with our key, a Git Sync round trip
 # (file -> dashboard -> API save -> file) w/ a `local` repository, and the
@@ -13,7 +13,7 @@
 
   globalTimeout = 600;
 
-  nodes.machine =
+  containers.machine =
     { lib, pkgs, ... }:
     let
       grafanaAdminPassword = "gf-admin-testpwd";
@@ -21,9 +21,7 @@
       grafanaSecretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key-0123456789abcdef";
       grafanaSecretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key-0123456789";
 
-      # The just/grafana-*.sh scripts as VM commands, unmodified: installed
-      # side by side (they source grafana-lib.sh + include grafana.jq from
-      # their own dir), w/ bin/ wrappers that add curl + jq to PATH.
+      # just/grafana-*.sh scripts
       grafanaScripts =
         pkgs.runCommand "grafana-scripts"
           {
@@ -89,7 +87,7 @@
       # Override admin user for test assertions.
       services.grafana.settings.security.admin_user = "testadmin";
 
-      # The VM has no DNS. Let the throwaway github Repository below pass
+      # The guest has no DNS. Let the throwaway github Repository below pass
       # Git Sync's URL validator, which otherwise resolves the host.
       services.grafana.settings.provisioning.allowed_git_urls = "github.com";
     };
