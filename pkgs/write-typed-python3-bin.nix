@@ -31,9 +31,9 @@ let
   # when given its path.
   check = writeShellScript "python-check.sh" ''
     set -euo pipefail
-    ${python3Packages.flake8}/bin/flake8 --show-source --max-line-length 80 \
+    ${lib.getExe python3Packages.flake8} --show-source --max-line-length 80 \
       ${ignoreArg} "$1"
-    ${ty}/bin/ty check --python ${python} --error-on-warning \
+    ${lib.getExe ty} check --python ${python} --error-on-warning \
       --no-progress --color never "$1"
   '';
 in

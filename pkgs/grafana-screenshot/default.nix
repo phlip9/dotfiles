@@ -9,6 +9,7 @@
 # ex: grafana-screenshot scratch-nginx --from now-7d -o tmp/nginx.png
 {
   dejavu_fonts,
+  lib,
   makeFontsConf,
   makeBinaryWrapper,
   playwright-driver,
@@ -45,7 +46,7 @@ runCommand "grafana-screenshot"
     # playwright's python + driver + browsers come from the same nixpkgs, so
     # their versions match.
     for command in screenshot resave; do
-      makeWrapper ${unwrapped}/bin/grafana-browser \
+      makeWrapper ${lib.getExe unwrapped} \
         $out/bin/grafana-$command \
         --add-flags $command \
         --set PLAYWRIGHT_BROWSERS_PATH ${browsers} \

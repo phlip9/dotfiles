@@ -225,7 +225,7 @@ in
         before = [ "nixbot.service" ];
         requiredBy = [ "nixbot.service" ];
         serviceConfig = {
-          ExecStart = "${fakeGithub}/bin/fake-github";
+          ExecStart = lib.getExe fakeGithub;
           StateDirectory = "fake-github";
         };
       };
