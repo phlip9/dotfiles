@@ -167,6 +167,9 @@ in
     # =========================================================================
     services.niks3 = {
       enable = true;
+      # Patched w/ a configurable inventory metrics refresh interval.
+      # See: nixos/pkgs/niks3-server/default.nix
+      serverPackage = phlipPkgsNixos.niks3-server;
       httpAddr = "[::1]:5751";
       cacheUrl = cfg.cache.url;
 

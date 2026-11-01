@@ -1,0 +1,79 @@
+diff --git a/server/main.go b/server/main.go
+index a56a875..299986a 100644
+--- a/server/main.go
++++ b/server/main.go
+@@ -228,6 +228,9 @@ func parseArgs() (*options, error) {
+ 		getEnvOrDefaultDuration("NIKS3_READ_REDIRECT_TTL", 0),
+ 		"Answer NAR reads with a redirect to a presigned S3 URL valid for this long (e.g. 15m) instead of "+
+ 			"streaming them. Requires --enable-read-proxy. 0 disables")
++	flag.DurationVar(&opts.InventoryRefreshInterval, "inventory-refresh-interval",
++		getEnvOrDefaultDuration("NIKS3_INVENTORY_REFRESH_INTERVAL", defaultInventoryRefreshInterval),
++		"How often to refresh the cache inventory metrics (objects, bytes, pending closures)")
+ 	flag.BoolVar(&opts.Debug, "debug", getEnvOrDefaultBool("NIKS3_DEBUG", false),
+ 		"Enable debug logging (may leak sensitive information)")
+ 
+diff --git a/server/metrics.go b/server/metrics.go
+index 24502b7..338cb65 100644
+--- a/server/metrics.go
++++ b/server/metrics.go
+@@ -16,9 +16,9 @@ import (
+ 	"github.com/prometheus/client_golang/prometheus/promhttp"
+ )
+ 
+-// inventoryRefreshInterval bounds how stale the inventory gauges can be; no
+-// point refreshing faster than the scrape interval.
+-const inventoryRefreshInterval = time.Minute
++// defaultInventoryRefreshInterval bounds how stale the inventory gauges can
++// be; no point refreshing faster than the scrape interval.
++const defaultInventoryRefreshInterval = time.Minute
+ 
+ // Metrics holds the Prometheus registry and instruments exposed at /metrics.
+ type Metrics struct {
+@@ -211,7 +211,12 @@ func (s *Service) StartInventoryRefresh(ctx context.Context) {
+ 	refresh()
+ 
+ 	go func() {
+-		ticker := time.NewTicker(inventoryRefreshInterval)
++		interval := s.InventoryRefreshInterval
++		if interval <= 0 {
++			interval = defaultInventoryRefreshInterval
++		}
++
++		ticker := time.NewTicker(interval)
+ 		defer ticker.Stop()
+ 
+ 		for {
+diff --git a/server/server.go b/server/server.go
+index a061a84..823e8b2 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -56,6 +56,11 @@ type options struct {
+ 	// lifetime instead of streaming them. Requires EnableReadProxy.
+ 	ReadRedirectTTL time.Duration
+ 
++	// InventoryRefreshInterval is how often the inventory gauges (cache
++	// objects + bytes, pending closures) refresh. <= 0 means
++	// defaultInventoryRefreshInterval.
++	InventoryRefreshInterval time.Duration
++
+ 	// MaxNarSize is the maximum uncompressed NAR size in bytes accepted for
+ 	// upload. 0 means unlimited.
+ 	MaxNarSize uint64
+@@ -121,6 +126,9 @@ type Service struct {
+ 	// See options.ReadRedirectTTL.
+ 	ReadRedirectTTL time.Duration
+ 
++	// See options.InventoryRefreshInterval.
++	InventoryRefreshInterval time.Duration
++
+ 	// MaxNarSize is advertised via /api/cache-config and enforced on
+ 	// pending-closure creation. 0 means unlimited.
+ 	MaxNarSize uint64
+@@ -296,6 +304,7 @@ func runServer(opts *options) error {
+ 
+ 	metricsCtx, stopMetrics := context.WithCancel(context.Background())
+ 	defer stopMetrics()
++	service.InventoryRefreshInterval = opts.InventoryRefreshInterval
+ 	service.StartInventoryRefresh(metricsCtx)
+ 
+ 	streams, stopStreams := context.WithCancel(context.Background())
