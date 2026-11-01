@@ -40,16 +40,16 @@
 
 - high signal, low noise. high density, compact info.
 - assume a high context reader.
-- avoid superfluous prose, politeness, emoji, etc. filler wastes my time.
-- drop: filler (just/really/basically/actually/simply), pleasantries
+- avoid superfluous prose, politeness, emoji. filler wastes my time.
+- drop filler (just/really/basically/actually/simply), pleasantries
   (sure/certainly/of course/happy to), hedging, em-dashes, en-dashes. fragments
-  ok.
-- abbreviate: db, auth, config, param, req, resp, fn, impl, w/, b/c, ...
+  are ok.
+- abbreviate. ex: db, auth, config, param, req, resp, fn, impl, w/, b/c, ...
 - one word when one word enough.
-- short synonyms: big > extensive, fix > "implement a solution for".
+- use short synonyms. big > extensive, fix > "implement a solution for".
 - use precise technical terms.
 - use only ASCII characters unless absolutely necessary.
-- plan: clarify requirements ruthlessly. if fuzzy, vague, or ambiguous, then
+- plan and clarify requirements ruthlessly. if fuzzy, vague, or ambiguous, then
   you MUST ask before go-ahead.
 - less abstract and verbose, more concrete and succinct.
 - lead changes with intent. justify with precision.
@@ -97,6 +97,8 @@
   after the commit that they modify. don't rebase or autosquash your changes
   unless asked.
 - aim for maintainability, clarity, and elegance first.
+- when I ask you to restack, I mean to rebuild the current messy commit stack
+  as if we had built it in its correct and final form from the beginning.
 
 ## workflow
 
@@ -120,9 +122,9 @@
 (ex: `just nvim-test`)
 
 - `ci`: `just-ci`, `bash-ci`, ...
-- `just-ci`: `just-fmt` format justfile
 - `bash-ci`: `bash-lint` shellcheck all *.sh files
 - `go-ci`: `go-fmt`, `go-test` gofmt / go test all go packages
+- `just-ci`: `just-fmt` format justfile
 - `nix-ci`: `nix-fmt`, `nix-lint`
 - `nvim-ci`: `nvim-fmt`, `nvim-lint`, `nvim-test` format/lint/test neovim
   config and modules
@@ -130,7 +132,7 @@
 - `nvim-print-base-runtime-path` print base nvim installation's runtime path
 - `nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
 - `tf`: convert config.nix -> config.tf.json, run terraform `tofu` with sops
-   secrets injected in env
+  secrets injected in env
 - `grafana-*`: dashboard tools. writes only touch Scratch dir, see skill.
 
 before presenting changes, run the relevant lint/format/test commands and fix
@@ -198,7 +200,7 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - if module not needed at startup, only `require` when actually used. make
   keymaps lazy. reduce startup time.
 - when wrapping a fn, preserve return contract. lua multi-return silently
-  truncates: `local x = f()` drops second value.
+  truncates, ex: `local x = f()` drops second value.
 - never use bare `pcall(fn)`. always capture and log: `local ok, err =
   pcall(fn); if not ok then vim.notify(...) end`.
 - error handling is not optional.
@@ -215,7 +217,7 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - `just nvim-test` runs full `nvim/lua/test` in nix sandbox.
 - `just nvim-test <path>` runs specific file/dir relative to `nvim/` (ex: `just
   nvim-test lua/test/my_mod_spec.lua`).
-- make tests deterministic: use fixed dates, explicit buffer contents, temp
+- make tests deterministic. use fixed dates, explicit buffer contents, temp
   dirs/repos, never depend on user's local env or editor state.
 - clean up nvim and filesystem state created by test: temp buffers, windows,
   autocmds, files, dirs, any mutated globals/options.
@@ -223,7 +225,7 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - ensure e2e integration test coverage for top-level features.
 - target test coverage at integration layer, not just helpers. bugs live in
   glue code.
-- mirror existing spec style: top-level file comment, short helper comments,
+- mirror existing spec style. top-level file comment, short helper comments,
   `local eq = assert.are.same`, and `describe()` / `it()` structure.
 
 
