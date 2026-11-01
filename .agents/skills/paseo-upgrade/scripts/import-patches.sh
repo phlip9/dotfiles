@@ -12,9 +12,9 @@ base=$2
 branch=$3
 pkg_dir="$(git rev-parse --show-toplevel)/pkgs/paseo"
 
-mapfile -t patches < <(
-  grep -oP '^\s*\./\K[\w.-]+\.patch' "$pkg_dir/default.nix"
-)
+# Capture first: a failed parse must abort, not yield an empty list.
+patches_list=$("$(dirname "$0")/patch-list.sh")
+mapfile -t patches <<< "$patches_list"
 
 git -C "$repo" switch --quiet --create "$branch" "$base"
 for patch in "${patches[@]}"; do

@@ -3,9 +3,10 @@
 # pkgs/paseo/<commit subject>.patch, then list patch files to add to or
 # remove from pkgs/paseo/default.nix.
 #
-# Test files (*.test.ts(x), *.spec.ts(x), e2e/) go to a separate
-# pkgs/paseo/tests/<name>.patch: upstream's nix src filter strips test files,
-# so the package build can't apply them. import-patches.sh re-applies both.
+# Test files (*.test.ts(x), *.spec.ts(x), e2e/, vitest.config.*) go to a
+# separate pkgs/paseo/tests/<name>.patch: upstream's nix src filter strips
+# test files, so the package build can't apply them. import-patches.sh
+# re-applies both.
 #
 # Patches that differ only in `index <blob>..<blob>` lines are left alone, so
 # re-exporting an unchanged stack is a no-op.
@@ -35,6 +36,7 @@ test_paths=(
   ':(glob)**/*.spec.ts'
   ':(glob)**/*.spec.tsx'
   ':(glob)**/e2e/**'
+  ':(glob)**/vitest.config.*'
 )
 non_test_paths=(.)
 for path in "${test_paths[@]}"; do
@@ -95,13 +97,29 @@ for dest in "$pkg_dir"/*.patch "$pkg_dir"/tests/*.patch; do
   fi
 done
 
-# Patch list drift: new patches need a default.nix entry.
+# Patch list drift: the active default.nix `patches` list must name exactly
+# the branch's patches, in branch order (import applies them in that order).
+# Capture first: a failed parse must abort, not yield an empty list.
+active_list=$("$(dirname "$0")/patch-list.sh")
+mapfile -t active <<< "$active_list"
 for patch in "${exported[@]}"; do
-  if ! grep -q "\./$patch" "$pkg_dir/default.nix"; then
+  if [[ " ${active[*]} " != *" $patch "* ]]; then
     changed=1
     echo "add to default.nix: $patch"
   fi
 done
+for patch in "${active[@]}"; do
+  if [[ " ${exported[*]} " != *" $patch "* ]]; then
+    changed=1
+    echo "not on branch, remove from default.nix: $patch"
+  fi
+done
+if [[ "${active[*]}" != "${exported[*]}" ]]; then
+  changed=1
+  echo "default.nix patch order differs from branch:"
+  echo "  default.nix: ${active[*]}"
+  echo "  branch:      ${exported[*]}"
+fi
 
 if ((check && changed)); then
   exit 1
