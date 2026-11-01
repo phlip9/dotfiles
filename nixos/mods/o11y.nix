@@ -165,12 +165,12 @@ let
       # load) or not have registered its k8s-style APIs yet.
       wait_for_200() {
         local status=000
-        for _ in $(seq 30); do
+        for _ in $(seq 60); do
           status=$(api GET "$1" 2>/dev/null)
           if [[ $status == 200 ]]; then
             return 0
           fi
-          sleep 2
+          sleep 1
         done
         die_http "timed out waiting for GET $1" "$status"
       }
@@ -220,7 +220,7 @@ let
       # controller observes the new generation and re-runs its health check.
       wait_for_repo_ready() {
         local status=000
-        for _ in $(seq 30); do
+        for _ in $(seq 60); do
           status=$(api GET "$repos_url/$name")
           if [[ $status == 200 ]] && jq -e '
             .metadata.generation == .status.observedGeneration
@@ -228,7 +228,7 @@ let
           ' "$tmp/resp" > /dev/null; then
             return 0
           fi
-          sleep 2
+          sleep 1
         done
         if [[ $status != 200 ]]; then
           die_http "get repository $name" "$status"
