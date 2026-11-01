@@ -126,6 +126,7 @@
 - `nix-ci`: `nix-fmt`, `nix-lint`
 - `nvim-ci`: `nvim-fmt`, `nvim-lint`, `nvim-test` format/lint/test neovim
   config and modules
+- `python-ci`: `python-lint` typecheck all *.py w/ `ty`
 - `nvim-print-base-runtime-path` print base nvim installation's runtime path
 - `nvim-print-my-plugins-dir` print my installed non-default nvim plugins dir
 - `tf`: convert config.nix -> config.tf.json, run terraform `tofu` with sops

@@ -4,11 +4,11 @@ default:
 
 # --- top-level --- #
 
-ci: just-ci bash-ci nix-ci go-ci nvim-ci grafana-ci
+ci: just-ci bash-ci nix-ci go-ci nvim-ci python-ci grafana-ci
 
 fmt: just-fmt nix-fmt go-fmt nvim-fmt
 
-lint: bash-lint nix-lint nvim-lint
+lint: bash-lint nix-lint nvim-lint python-lint
 
 test: go-test nvim-test
 
@@ -79,6 +79,15 @@ go-test-inner:
         CGO_ENABLED=0 GOCACHE=/tmp/go-cache GO111MODULE=off go test
     cd nixos/pkgs/github-agent-authd && \
         CGO_ENABLED=0 GOCACHE=/tmp/go-cache GO111MODULE=off go test
+
+# --- python --- #
+
+python-ci: python-lint
+
+# Typecheck all *.py w/ ty. ty finds third-party libs via `python3` on PATH.
+python-lint:
+    nix shell -f . pkgsUnstable.ty pythonDev --command \
+        ty check --error-on-warning
 
 # --- neovim --- #
 
