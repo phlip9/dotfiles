@@ -160,6 +160,8 @@ in
       services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
       # Queries hide samples younger than `-search.latencyOffset` (30s).
       services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
+      # Serve fresh `nixbot_builds` counts, not ones cached for up to 15s.
+      systemd.services.nixbot.environment.NIXBOT_METRICS_CACHE_TTL = "0";
 
       environment.systemPackages = [
         phlipPkgsNixos.nixbot-cli
