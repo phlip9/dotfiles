@@ -37,6 +37,7 @@ edits.
 """
 
 import json
+from typing import Any
 
 GROUP = "victoriametrics-metrics-datasource"
 DS_VAR = "DS_PROMETHEUS"
@@ -163,8 +164,10 @@ class Dashboard:
                  refresh="1m"):
         # Git Sync manifest wrapper ({apiVersion, kind, metadata}), if loaded
         # from one.
-        self.manifest = None
-        self.data = {
+        self.manifest: dict[str, Any] | None = None
+        # The v2 dashboard spec. Typed so ty doesn't narrow it to this
+        # literal's shape, which `load` replaces w/ arbitrary JSON.
+        self.data: dict[str, Any] = {
             "title": title,
             "description": description,
             "tags": list(tags),
@@ -527,11 +530,12 @@ class Dashboard:
         the bare spec. Formatted by `go_json`."""
         out = self.spec()
         if self.manifest is not None or uid is not None:
-            out = dict(self.manifest or {
+            manifest: dict[str, Any] = self.manifest or {
                 "apiVersion": "dashboard.grafana.app/v2",
                 "kind": "Dashboard",
                 "metadata": {},
-            })
+            }
+            out = dict(manifest)
             out["metadata"] = dict(out["metadata"])
             if uid is not None:
                 out["metadata"]["name"] = uid

@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import dbus
+import dbus.bus
 
 
 def keyring_state():
