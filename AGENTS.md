@@ -178,6 +178,27 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - use `lib.getExe pkg`, `lib.getExe' pkg "bin"`, `lib.getLib`, `lib.getDev`,
   `lib.getBin`, ..., not `${pkg}/bin/name`, `${pkg.lib}`, ...
 
+### nixos tests
+
+- prefer NixOS container tests over VM tests (faster)
+- faster tests expose real bugs, tighten iteration loops, and improve
+  productivity.
+- make tests hermetic and event-driven, fast and deterministic.
+  - trigger work directly instead of waiting for polling.
+  - disable services the test doesn't exercise.
+  - `sleep` is an anti-pattern. wait on the exact condition, not a timer.
+    prefer test knobs over sleeps. patch upstream if needed.
+  - prove an event happened before asserting that it did not.
+  - fix ordering in units, not in test retries.
+- when optimizing, measure first. then change one thing at a time. check
+  average system load before and after; throw away test runs taken under load.
+- every wait needs a timeout. on failure, dump evidence (journal, API
+  response).
+- look for hidden fixed waits; most test time is spent in retry backoffs,
+  timers, and caches.
+- keep logs readable. fix services at the source to silence chatty and
+  low-value logs.
+
 
 ## python
 
