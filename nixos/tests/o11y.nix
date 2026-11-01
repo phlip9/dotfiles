@@ -365,8 +365,10 @@
         },
     }
 
-    # A dashboard manifest dropped into the repo dir gets synced in, inside
-    # the root folder Git Sync creates w/ uid = repo name, title = repo title.
+    # A dashboard manifest dropped into the repo dir gets synced in by a
+    # pull, inside the root folder Git Sync creates w/ uid = repo name,
+    # title = repo title. Pull directly, not on the poll interval, which is
+    # >= 10s and only checked every `resync_interval` (60s).
     # See: pkg/registry/apis/provisioning/resources/id.go RootFolder
     with subtest("Git Sync pulls dashboard into its root folder"):
         machine.succeed(
@@ -374,10 +376,10 @@
             "install -o grafana -g grafana -m 0640 "
             f"/tmp/test-sync.json {gs_dash_file}",
         )
-        machine.wait_until_succeeds(
+        git_sync_pull()
+        machine.succeed(
             f"{gf_curl} {dash_url} "
-            "| jq -e '.spec.title == \"Git Sync Test\"'",
-            timeout=150,
+            "| jq -e '.spec.title == \"Git Sync Test\"'"
         )
         annos = json.loads(
             machine.succeed(f"{gf_curl} {dash_url} | jq .metadata.annotations")
