@@ -152,6 +152,8 @@ in
         grafana.secretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key";
       };
       services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
+      # Queries hide samples younger than `-search.latencyOffset` (30s).
+      services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
 
       environment.systemPackages = [
         phlipPkgsNixos.nixbot-cli
