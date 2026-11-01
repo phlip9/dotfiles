@@ -1,0 +1,22 @@
+--- a/nixbot/web/metrics.py
++++ b/nixbot/web/metrics.py
+@@ -7,6 +7,7 @@ metrics are aggregated by status/state only, never labeled by project.
+ from __future__ import annotations
+ 
+ import asyncio
++import os
+ import time
+ from typing import TYPE_CHECKING
+ 
+@@ -165,8 +166,9 @@ async def render_metrics(pool: asyncpg.Pool) -> str:
+ 
+ 
+ # /metrics is unauthenticated: without a cache anyone could run the
+-# full-table aggregations in a loop.
+-CACHE_TTL = 15.0
++# full-table aggregations in a loop. NIXBOT_METRICS_CACHE_TTL overrides it,
++# ex: so tests see fresh counts.
++CACHE_TTL = float(os.environ.get("NIXBOT_METRICS_CACHE_TTL", "15"))
+ 
+ 
+ def create_metrics_router(pool: asyncpg.Pool) -> APIRouter:

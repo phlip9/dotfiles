@@ -57,7 +57,8 @@ fix (phlipPkgsNixos: {
   # niks3-server, patched w/ a configurable inventory metrics refresh interval
   niks3-server = callPackage ./niks3-server { inherit sources; };
 
-  # nixbot - CI service, patched to upload already-local outputs
+  # nixbot - CI service, patched to upload already-local outputs + w/ a
+  # configurable metrics cache TTL
   nixbot = pkgs.python3Packages.callPackage ./nixbot {
     inherit sources;
     inherit (phlipPkgsNixos) nixbot-eval-jobs;
