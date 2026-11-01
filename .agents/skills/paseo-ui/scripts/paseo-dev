@@ -1,0 +1,419 @@
+#!/usr/bin/env bash
+# paseo-dev: develop our downstream paseo patches (pkgs/paseo/*.patch).
+#
+# Each dotfiles worktree gets its own paseo git worktree at tmp/paseo,
+# branched from the pinned release tag w/ our patch stack rebuilt from
+# pkgs/paseo (the source of truth). One commit per patch, subject == patch
+# file stem. Concurrent agents never share a checkout or node_modules.
+#
+# Run from anywhere inside the dotfiles worktree. See SKILL.md for the flow.
+set -euo pipefail
+
+usage() {
+  cat << 'EOF'
+usage: paseo-dev <cmd> [args]
+
+  setup              create tmp/paseo (patch stack + deps), or report status
+  reset [--force]    delete tmp/paseo and set up again from pkgs/paseo
+  status             branch, commits, dirty files, sync vs pkgs/paseo
+  run <cmd...>       run cmd w/ node in tmp/paseo (cwd: repo root)
+  check [--all]      fmt + lint + typecheck + related unit tests, scoped to
+                     changes since setup/export (--all: whole patch stack)
+  baseline <pkg> <test-file> [vitest args...]
+                     run a test file at the release tag vs HEAD, to tell
+                     our regressions from upstream failures
+  new <name>         commit all changes as new patch commit <name>
+  fixup <name>       fold all changes into patch commit <name>
+  export             write the patch stack to pkgs/paseo
+  visual <slug>      scaffold a git-excluded visual-check spec
+                     (packages/app/e2e/browser/agent-<slug>.spec.ts)
+  e2e <spec...>      run Playwright specs (paths relative to packages/app)
+  build              nix build the patched package (tmp/paseo-build)
+  vmtest             run nixosTests.paseo
+  clean [--force]    remove tmp/paseo and its branch
+EOF
+}
+
+dot=$(git rev-parse --show-toplevel)
+upstream=${PASEO_REPO:-$HOME/dev/paseo}
+wt=$dot/tmp/paseo
+tag=$(jq -r '.pins.paseo.version' "$dot/npins/sources.json")
+branch=wt/$(basename "$dot")
+# Patch stack as of the last setup/export; `check` scopes to changes since.
+exported_ref=refs/paseo-dev/$branch
+shots=$dot/tmp/paseo-shots
+scripts=$dot/.agents/skills/paseo-upgrade/scripts
+# Upstream's own nix package builds w/ nodejs_22.
+node_attr=pkgs.nodejs_22
+# Memory cap for heavy jobs. This may run on sauna (prod + CI host).
+mem_max=${PASEO_DEV_MEM_MAX:-16G}
+
+log() { echo "paseo-dev: $*" >&2; }
+die() {
+  log "error: $*"
+  exit 1
+}
+
+# Run in a memory-capped transient scope, falling back to running directly
+# when there's no user systemd manager (e.g. macOS).
+has_user_systemd=
+capped() {
+  if [[ -z $has_user_systemd ]]; then
+    has_user_systemd=no
+    if systemd-run --user --scope --quiet true 2> /dev/null; then
+      has_user_systemd=yes
+    fi
+  fi
+  if [[ $has_user_systemd == yes ]]; then
+    systemd-run --user --scope --quiet \
+      -p MemoryMax="$mem_max" -p MemorySwapMax=2G -- "$@"
+  else
+    "$@"
+  fi
+}
+
+# Run a command in <dir> w/ the pinned node on PATH.
+node_bin=
+node_at() {
+  local dir=$1
+  shift
+  if [[ -z $node_bin ]]; then
+    node_bin=$(nix build -f "$dot" "$node_attr" --no-link --print-out-paths)/bin
+  fi
+  (cd "$dir" && PATH="$node_bin:$PATH" capped "$@")
+}
+
+# Run a command w/ node from the paseo repo root.
+in_node() {
+  node_at "$wt" "$@"
+}
+
+require_wt() {
+  [[ -d $wt ]] || die "no $wt, run: paseo-dev setup"
+}
+
+is_dirty() {
+  [[ -n $(git -C "$wt" status --porcelain) ]]
+}
+
+in_sync() {
+  (cd "$dot" && "$scripts/export-patches.sh" --check "$wt" "$tag") > /dev/null
+}
+
+# Commit (sha) on the patch branch whose subject is the patch name.
+patch_commit() {
+  local name=$1 sha
+  sha=$(git -C "$wt" log --format='%H %s' "$tag..HEAD" \
+    | awk -v name="$name" '$2 == name { print $1 }')
+  [[ -n $sha ]] || die "no patch commit '$name' in $tag..HEAD"
+  echo "$sha"
+}
+
+# Install deps when package-lock.json changed since the last install. Skips
+# install scripts (electron/onnx downloads), then applies upstream's
+# node_modules patches, which nix builds also need (getpaseo/paseo#7673).
+ensure_deps() {
+  local stamp=$wt/node_modules/.paseo-dev-lock lock
+  lock=$(sha256sum "$wt/package-lock.json" | cut -d' ' -f1)
+  if [[ -f $stamp && $(< "$stamp") == "$lock" ]]; then
+    return
+  fi
+  log "installing deps (~1-2 min)"
+  in_node npm ci --ignore-scripts --no-audit --no-fund --loglevel=error
+  in_node npm run --silent postinstall > /dev/null
+  build_deps
+  echo "$lock" > "$stamp"
+}
+
+# Packages resolve siblings through their compiled dist/, so rebuild after
+# changes to protocol/client/etc. (see upstream docs/development.md).
+build_deps() {
+  log "building workspace deps"
+  in_node npm run --silent build:server-deps > /dev/null
+  in_node npm run --silent build:app-deps > /dev/null
+}
+
+# Ignore our local-only files in every paseo worktree.
+ensure_excludes() {
+  local exclude
+  exclude=$(git -C "$upstream" rev-parse --path-format=absolute \
+    --git-common-dir)/info/exclude
+  mkdir -p "$(dirname "$exclude")"
+  for pattern in \
+    'packages/app/e2e/browser/agent-*.spec.ts' \
+    'packages/app/playwright.agent.config.ts'; do
+    if ! grep -qxF "$pattern" "$exclude" 2> /dev/null; then
+      echo "$pattern" >> "$exclude"
+    fi
+  done
+}
+
+cmd_setup() {
+  if [[ -d $wt ]]; then
+    cmd_status
+    ensure_deps
+    return
+  fi
+  if [[ ! -d $upstream ]]; then
+    git clone --quiet https://github.com/getpaseo/paseo "$upstream"
+  fi
+  if ! git -C "$upstream" rev-parse -q --verify "refs/tags/$tag" \
+    > /dev/null; then
+    git -C "$upstream" fetch --quiet --tags origin
+  fi
+  ensure_excludes
+  # A stale branch from a previous worktree w/ the same name.
+  git -C "$upstream" worktree prune
+  git -C "$upstream" branch -q -D "$branch" 2> /dev/null || true
+  git -C "$upstream" worktree add --quiet --detach "$wt" "$tag"
+  (cd "$dot" && "$scripts/import-patches.sh" "$wt" "$tag" "$branch")
+  git -C "$wt" update-ref "$exported_ref" HEAD
+  ensure_deps
+  log "ready: $wt ($branch)"
+}
+
+cmd_status() {
+  require_wt
+  echo "worktree: $wt"
+  echo "branch:   $(git -C "$wt" branch --show-current) (base $tag)"
+  git -C "$wt" log --oneline "$tag..HEAD"
+  if is_dirty; then
+    echo "dirty:"
+    git -C "$wt" status --short
+  fi
+  if in_sync; then
+    echo "sync:     matches pkgs/paseo"
+  else
+    echo "sync:     DIFFERS from pkgs/paseo (export, or reset to discard)"
+  fi
+}
+
+# Refuse to drop work that isn't exported to pkgs/paseo yet.
+guard_unexported() {
+  [[ ${1:-} == --force ]] && return
+  if is_dirty || ! in_sync; then
+    die "tmp/paseo has unexported changes; export first or pass --force"
+  fi
+}
+
+cmd_clean() {
+  [[ -d $wt ]] || return 0
+  guard_unexported "${1:-}"
+  git -C "$upstream" worktree remove --force "$wt"
+  git -C "$upstream" branch -q -D "$branch" 2> /dev/null || true
+  git -C "$upstream" update-ref -d "$exported_ref" 2> /dev/null || true
+  log "removed $wt"
+}
+
+cmd_reset() {
+  cmd_clean "${1:-}"
+  cmd_setup
+}
+
+cmd_run() {
+  require_wt
+  in_node "$@"
+}
+
+# Source files changed vs <rev>, incl. uncommitted + untracked.
+changed_files() {
+  {
+    git -C "$wt" diff --name-only --diff-filter=d "$1"
+    git -C "$wt" ls-files --others --exclude-standard
+  } | grep -E '\.(ts|tsx|mjs|js)$' | sort -u
+}
+
+cmd_check() {
+  require_wt
+  ensure_deps
+  local base=$exported_ref files=() status=0
+  if [[ ${1:-} == --all ]] \
+    || ! git -C "$wt" rev-parse -q --verify "$base" > /dev/null; then
+    base=$tag
+  fi
+  mapfile -t files < <(changed_files "$base")
+  if ((${#files[@]} == 0)); then
+    log "no changes since last export; nothing to check (try: check --all)"
+    return
+  fi
+
+  log "format + lint"
+  local before
+  before=$(git -C "$wt" diff | sha256sum)
+  in_node npx oxfmt "${files[@]}"
+  if [[ $(git -C "$wt" diff | sha256sum) != "$before" ]]; then
+    log "oxfmt reformatted files; review: git -C $wt diff"
+  fi
+  in_node npx oxlint "${files[@]}" || status=1
+
+  if printf '%s\n' "${files[@]}" \
+    | grep -qE '^packages/(protocol|client|highlight|relay)/src/'; then
+    build_deps
+  fi
+
+  # Typecheck every package we touch, plus protocol consumers.
+  local packages=(protocol server app)
+  log "typecheck: ${packages[*]}"
+  for package in "${packages[@]}"; do
+    in_node npm run --silent typecheck --workspace="@getpaseo/$package" \
+      || status=1
+  done
+
+  # Unit tests related to changed files, per package (vitest configs differ).
+  for package in app server; do
+    local related=()
+    mapfile -t related < <(printf '%s\n' "${files[@]}" \
+      | grep "^packages/$package/" | grep -v '/e2e/' \
+      | sed "s|^packages/$package/||")
+    ((${#related[@]})) || continue
+    log "vitest related: $package (${#related[@]} files)"
+    # Isolate tests from the user's git config (e.g. commit signing).
+    GIT_CONFIG_GLOBAL=/dev/null node_at "$wt/packages/$package" \
+      npx vitest related --run --bail=1 --exclude '**/*.e2e.test.ts' \
+      "${related[@]}" || status=1
+  done
+
+  ((status == 0)) || die "check failed"
+  log "check ok"
+}
+
+cmd_baseline() {
+  require_wt
+  (($# >= 2)) || die "usage: paseo-dev baseline <pkg> <test-file> [args...]"
+  local package=$1 head
+  shift
+  is_dirty && die "commit first; baseline checks out the release tag"
+  head=$(git -C "$wt" branch --show-current)
+  # Always return to the patch branch, even on failure. Expand now: locals
+  # are gone by the time the EXIT trap runs.
+  # shellcheck disable=SC2064
+  trap "git -C '$wt' switch -q '$head'" EXIT
+  for rev in "$tag" "$head"; do
+    git -C "$wt" switch -q --detach "$rev"
+    echo "== $rev"
+    GIT_CONFIG_GLOBAL=/dev/null node_at "$wt/packages/$package" \
+      npx vitest run "$@" 2>&1 | grep -E '^ +(×|✓)|Tests ' || true
+  done
+}
+
+cmd_new() {
+  require_wt
+  local name=${1:?usage: paseo-dev new <name>}
+  [[ $name =~ ^paseo-[a-z0-9-]+$ ]] || die "name must match paseo-[a-z0-9-]+"
+  git -C "$wt" log --format=%s "$tag..HEAD" | grep -qxF "$name" \
+    && die "patch $name exists; use: paseo-dev fixup $name"
+  git -C "$wt" add -A
+  git -C "$wt" commit --quiet -m "$name"
+  git -C "$wt" log --oneline -1
+}
+
+cmd_fixup() {
+  require_wt
+  local name=${1:?usage: paseo-dev fixup <name>} sha
+  sha=$(patch_commit "$name")
+  is_dirty || die "nothing to fold into $name"
+  git -C "$wt" add -A
+  git -C "$wt" commit --quiet --fixup="$sha"
+  GIT_SEQUENCE_EDITOR=: git -C "$wt" rebase --quiet -i --autosquash "$tag"
+  git -C "$wt" log --oneline "$tag..HEAD"
+}
+
+cmd_export() {
+  require_wt
+  is_dirty && die "commit first (paseo-dev new/fixup); export reads commits"
+  (cd "$dot" && "$scripts/export-patches.sh" "$wt" "$tag")
+  git -C "$wt" update-ref "$exported_ref" HEAD
+  git -C "$dot" status --short -- pkgs/paseo
+}
+
+# Write a Playwright config that reuses upstream's but points at nixpkgs
+# chromium (Playwright's downloaded browsers don't run on NixOS) and skips
+# video/trace (they need Playwright's ffmpeg build).
+write_e2e_config() {
+  cat > "$wt/packages/app/playwright.agent.config.ts" << EOF
+// Generated by paseo-dev; git-excluded.
+import base from "./playwright.config";
+export default {
+  ...base,
+  use: {
+    ...base.use,
+    video: "off",
+    trace: "off",
+    launchOptions: { executablePath: "$1" },
+  },
+};
+EOF
+}
+
+cmd_e2e() {
+  require_wt
+  (($#)) || die "usage: paseo-dev e2e <spec...>"
+  ensure_deps
+  local chromium
+  chromium=$(nix build -f "$dot" pkgs.chromium --no-link --print-out-paths)
+  write_e2e_config "$chromium/bin/chromium"
+  mkdir -p "$shots"
+  log "playwright: $* (screenshots: $shots)"
+  E2E_WORKERS=1 SHOTS_DIR=$shots GIT_CONFIG_GLOBAL=/dev/null \
+    node_at "$wt/packages/app" timeout 1200 npx playwright test \
+    -c playwright.agent.config.ts --project=browser "$@"
+}
+
+cmd_visual() {
+  require_wt
+  local slug=${1:?usage: paseo-dev visual <slug>}
+  [[ $slug =~ ^[a-z0-9-]+$ ]] || die "slug must match [a-z0-9-]+"
+  local spec=e2e/browser/agent-$slug.spec.ts
+  local dest=$wt/packages/app/$spec
+  if [[ ! -f $dest ]]; then
+    cp "$dot/.agents/skills/paseo-ui/templates/agent-visual.spec.ts" "$dest"
+  fi
+  echo "edit: $dest"
+  echo "run:  paseo-dev e2e $spec"
+}
+
+cmd_build() {
+  local out=$dot/tmp/paseo-build
+  mkdir -p "$out"
+  log "nix build -f . paseo (5-10 min), log: $out/build.log"
+  if ! capped timeout 1800 nix build -f "$dot" paseo -o "$out/result" -L \
+    > "$out/build.log" 2>&1; then
+    grep -E 'error TS|^error|FAILED|ignored|can.t find file' "$out/build.log" \
+      | head -20 >&2
+    die "build failed, see $out/build.log"
+  fi
+  log "built: $(readlink -f "$out/result")"
+}
+
+cmd_vmtest() {
+  local out=$dot/tmp/paseo-build
+  mkdir -p "$out"
+  log "nixosTests.paseo, log: $out/vmtest.log"
+  timeout 1800 nix build -f "$dot" nixosTests.paseo -L --no-link \
+    > "$out/vmtest.log" 2>&1 || die "vm test failed, see $out/vmtest.log"
+  log "vm test ok"
+}
+
+cmd=${1:-}
+shift || true
+case $cmd in
+  setup) cmd_setup ;;
+  reset) cmd_reset "$@" ;;
+  status) cmd_status ;;
+  run) cmd_run "$@" ;;
+  check) cmd_check "$@" ;;
+  baseline) cmd_baseline "$@" ;;
+  new) cmd_new "$@" ;;
+  fixup) cmd_fixup "$@" ;;
+  export) cmd_export ;;
+  visual) cmd_visual "$@" ;;
+  e2e) cmd_e2e "$@" ;;
+  build) cmd_build ;;
+  vmtest) cmd_vmtest ;;
+  clean) cmd_clean "$@" ;;
+  -h | --help | help | '') usage ;;
+  *)
+    usage >&2
+    exit 1
+    ;;
+esac
