@@ -1,0 +1,64 @@
+diff --git a/packages/server/src/utils/checkout-git.commit-message.test.ts b/packages/server/src/utils/checkout-git.commit-message.test.ts
+new file mode 100644
+index 000000000..353477381
+--- /dev/null
++++ b/packages/server/src/utils/checkout-git.commit-message.test.ts
+@@ -0,0 +1,58 @@
++// paseo-commit-message: commit records carry the message body. The body is
++// multi-line free text inside the `git log --raw --numstat` stream, so it must
++// not disturb parsing of the file stats that follow it.
++import { execFileSync } from "node:child_process";
++import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import path from "node:path";
++import { afterEach, expect, it } from "vitest";
++import { listCheckoutCommits } from "./checkout-git.js";
++
++const tempDirs: string[] = [];
++
++afterEach(() => {
++  for (const dir of tempDirs.splice(0)) {
++    rmSync(dir, { recursive: true, force: true });
++  }
++});
++
++function git(repo: string, args: string[]): void {
++  execFileSync("git", args, { cwd: repo, stdio: "ignore" });
++}
++
++function commitFile(repo: string, file: string, content: string, message: string): void {
++  writeFileSync(path.join(repo, file), content);
++  git(repo, ["add", file]);
++  git(repo, ["commit", "-m", message]);
++}
++
++it("includes the multi-line message body without disturbing file stats", async () => {
++  const repo = realpathSync(mkdtempSync(path.join(tmpdir(), "paseo-commit-message-")));
++  tempDirs.push(repo);
++  git(repo, ["init", "-b", "main"]);
++  git(repo, ["config", "user.name", "Test User"]);
++  git(repo, ["config", "user.email", "test@test.com"]);
++  commitFile(repo, "base.txt", "base\n", "initial");
++  git(repo, ["checkout", "-b", "feature"]);
++  commitFile(
++    repo,
++    "foo.txt",
++    "a\nb\n",
++    "Add foo\n\nFirst paragraph.\n\n- item one\n  indented: 1\t2\n",
++  );
++  commitFile(repo, "bar.txt", "x\n", "Add bar");
++
++  const { commits } = await listCheckoutCommits({ cwd: repo });
++
++  expect(commits.map((commit) => [commit.subject, commit.body])).toEqual([
++    ["Add bar", ""],
++    ["Add foo", "First paragraph.\n\n- item one\n  indented: 1\t2"],
++    ["initial", ""],
++  ]);
++  expect(commits[0]?.files).toEqual([
++    { path: "bar.txt", additions: 1, deletions: 0, status: "added" },
++  ]);
++  expect(commits[1]?.files).toEqual([
++    { path: "foo.txt", additions: 2, deletions: 0, status: "added" },
++  ]);
++});
