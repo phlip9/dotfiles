@@ -26,11 +26,13 @@ let
     "--ignore " + lib.concatMapStringsSep "," lib.escapeShellArg flakeIgnore
   );
 
-  # Same flake8 check as nixpkgs' writers, then ty. ty checks a file w/o a
-  # .py extension fine when given its path.
+  # Same flake8 check as nixpkgs' writers, but w/ the repo's 80-column limit
+  # (flake8 default: 79), then ty. ty checks a file w/o a .py extension fine
+  # when given its path.
   check = writeShellScript "python-check.sh" ''
     set -euo pipefail
-    ${python3Packages.flake8}/bin/flake8 --show-source ${ignoreArg} "$1"
+    ${python3Packages.flake8}/bin/flake8 --show-source --max-line-length 80 \
+      ${ignoreArg} "$1"
     ${ty}/bin/ty check --python ${python} --error-on-warning \
       --no-progress --color never "$1"
   '';
