@@ -37,13 +37,27 @@ edits.
 """
 
 import json
-from typing import Any
+import os
+from collections.abc import Sequence
+from typing import Any, ClassVar, Literal, Self
 
 GROUP = "victoriametrics-metrics-datasource"
 DS_VAR = "DS_PROMETHEUS"
 
+# A JSON object, ex: a spec or panel. Grafana's v2 schema is too big to type
+# here, so its values are `Any`.
+JsonObj = dict[str, Any]
+# Any JSON value.
+Json = JsonObj | list[Any] | str | float | bool | None
+# A query: (expr, legendFormat).
+Query = tuple[str, str]
+# A layout line: (height, [(element key, width), ...]).
+Line = tuple[int, Sequence[tuple[str, int]]]
+# A threshold step: (color, value); the first value is None (-inf).
+Step = tuple[str, float | None]
 
-def pos_delta(selector, window="$__interval"):
+
+def pos_delta(selector: str, window: str = "$__interval") -> str:
     """Sum of positive 1m steps of a gauge over `window`.
 
     For "counters" exported as gauges that also shrink (ex: DB row counts w/
@@ -53,7 +67,7 @@ def pos_delta(selector, window="$__interval"):
     return f"sum_over_time(clamp_min(delta({selector}[1m]), 0)[{window}:1m])"
 
 
-def thresholds(*steps):
+def thresholds(*steps: Step) -> JsonObj:
     """Absolute thresholds from (color, value) pairs; first value None."""
     return {
         "mode": "absolute",
@@ -61,7 +75,7 @@ def thresholds(*steps):
     }
 
 
-def color(name, fixed):
+def color(name: str, fixed: str) -> JsonObj:
     """Override: series `name` gets a fixed color."""
     return {
         "matcher": {"id": "byName", "options": name},
@@ -71,7 +85,7 @@ def color(name, fixed):
     }
 
 
-def hidden(name):
+def hidden(name: str) -> JsonObj:
     """Override: hide series `name` from the plot until its legend is
     clicked."""
     return {
@@ -87,7 +101,7 @@ def hidden(name):
 
 # Final-status colors. Status colors mean state; never reuse them for
 # unrelated series.
-STATUS_COLORS = [
+STATUS_COLORS: list[JsonObj] = [
     color("succeeded", "green"),
     color("ok", "green"),
     color("done", "green"),
@@ -98,10 +112,10 @@ STATUS_COLORS = [
 ]
 
 # Event-count bar charts: >= 1h buckets keep sparse events readable.
-BARS = {"interval": "1h", "maxDataPoints": 200}
+BARS: JsonObj = {"interval": "1h", "maxDataPoints": 200}
 
 
-def go_json(obj):
+def go_json(obj: Json) -> str:
     """JSON text formatted like Grafana Git Sync writes it (Go
     encoding/json): sorted keys, 2-space indent, raw UTF-8 but `<>&` and
     U+2028/2029 escaped. Re-emitting an unchanged manifest is byte-identical
@@ -114,7 +128,7 @@ def go_json(obj):
     return text + "\n"
 
 
-def element_refs(layout):
+def element_refs(layout: Json) -> list[str]:
     """All element names referenced anywhere in a v2 layout tree."""
     if isinstance(layout, dict):
         if layout.get("kind") == "ElementReference":
@@ -125,7 +139,7 @@ def element_refs(layout):
     return []
 
 
-def drop_refs(layout, key):
+def drop_refs(layout: Json, key: str) -> None:
     """Remove every layout item that references element `key`, in place."""
     if isinstance(layout, dict):
         items = layout.get("items")
@@ -150,7 +164,7 @@ class Dashboard:
     `spec()` / `write()` validate + emit it.
     """
 
-    UP_MAP = [
+    UP_MAP: ClassVar[list[JsonObj]] = [
         {
             "type": "value",
             "options": {
@@ -160,14 +174,14 @@ class Dashboard:
         }
     ]
 
-    def __init__(self, title, description="", tags=(), time_from="now-24h",
-                 refresh="1m"):
+    def __init__(self, title: str, description: str = "",
+                 tags: Sequence[str] = (), time_from: str = "now-24h",
+                 refresh: str = "1m") -> None:
         # Git Sync manifest wrapper ({apiVersion, kind, metadata}), if loaded
         # from one.
-        self.manifest: dict[str, Any] | None = None
-        # The v2 dashboard spec. Typed so ty doesn't narrow it to this
-        # literal's shape, which `load` replaces w/ arbitrary JSON.
-        self.data: dict[str, Any] = {
+        self.manifest: JsonObj | None = None
+        # The v2 dashboard spec.
+        self.data: JsonObj = {
             "title": title,
             "description": description,
             "tags": list(tags),
@@ -226,11 +240,13 @@ class Dashboard:
         }
 
     @classmethod
-    def load(cls, path):
+    def load(cls, path: str | os.PathLike[str]) -> Self:
         """Open a Git Sync manifest (or bare v2 spec) file for editing.
         Edits mutate the loaded JSON; everything else is kept as is."""
         with open(path, encoding="utf-8") as f:
             obj = json.load(f)
+        if not isinstance(obj, dict):
+            raise ValueError(f"{path}: not a JSON object")
         self = cls.__new__(cls)
         if "apiVersion" in obj and "spec" in obj:
             self.manifest, self.data = obj, obj["spec"]
@@ -242,17 +258,17 @@ class Dashboard:
         return self
 
     @property
-    def elements(self):
+    def elements(self) -> dict[str, JsonObj]:
         """{key: element} of the spec (live)."""
         return self.data["elements"]
 
     @property
-    def variables(self):
+    def variables(self) -> list[JsonObj]:
         """Variable list of the spec (live)."""
         return self.data.setdefault("variables", [])
 
     @property
-    def rows(self):
+    def rows(self) -> list[JsonObj]:
         """RowsLayout row list of the spec (live)."""
         layout = self.data["layout"]
         if layout["kind"] != "RowsLayout":
@@ -261,7 +277,7 @@ class Dashboard:
 
     # --- lookup --- #
 
-    def key(self, ref):
+    def key(self, ref: str) -> str:
         """Element key of `ref`: an element key, or a unique panel title."""
         if ref in self.elements:
             return ref
@@ -271,12 +287,12 @@ class Dashboard:
             raise KeyError(f"{ref!r}: {len(keys)} elements w/ that title")
         return keys[0]
 
-    def find(self, ref):
+    def find(self, ref: str) -> JsonObj:
         """Panel spec (title, description, data, vizConfig, ...) of `ref`,
         for in-place edits."""
         return self.elements[self.key(ref)]["spec"]
 
-    def query(self, ref, ref_id="A"):
+    def query(self, ref: str, ref_id: str = "A") -> JsonObj:
         """Query spec ({expr, legendFormat, ...}) of panel `ref`'s query
         `ref_id`, for in-place edits."""
         for query in self.find(ref)["data"]["spec"]["queries"]:
@@ -284,7 +300,7 @@ class Dashboard:
                 return query["spec"]["query"]["spec"]
         raise KeyError(f"{ref!r}: no query {ref_id}")
 
-    def remove(self, ref):
+    def remove(self, ref: str) -> None:
         """Delete panel `ref` and every layout item placing it."""
         key = self.key(ref)
         del self.elements[key]
@@ -293,9 +309,9 @@ class Dashboard:
     # --- queries --- #
 
     @staticmethod
-    def queries(items, instant=False):
+    def queries(items: Sequence[Query], instant: bool = False) -> list[JsonObj]:
         """[(expr, legend), ...] -> v2 PanelQuery list (refIds A, B, ...)."""
-        out = []
+        out: list[JsonObj] = []
         for i, (expr, legend) in enumerate(items):
             out.append({
                 "kind": "PanelQuery",
@@ -320,8 +336,10 @@ class Dashboard:
 
     # --- panels --- #
 
-    def panel(self, key, title, desc, viz, queries, defaults, options,
-              overrides=(), qopts=None):
+    def panel(self, key: str, title: str, desc: str, viz: str,
+              queries: list[JsonObj], defaults: JsonObj, options: JsonObj,
+              overrides: Sequence[JsonObj] = (),
+              qopts: JsonObj | None = None) -> str:
         """Add a raw v2 panel element; returns `key` for layouts."""
         if key in self.elements:
             raise ValueError(f"duplicate element {key}")
@@ -360,9 +378,14 @@ class Dashboard:
         }
         return key
 
-    def stat(self, key, title, desc, expr, unit="short", thr=None,
-             mappings=None, calc="lastNotNull", decimals=None, no_value=None,
-             color_mode="value", graph=True):
+    def stat(self, key: str, title: str, desc: str, expr: str,
+             unit: str = "short", thr: JsonObj | None = None,
+             mappings: list[JsonObj] | None = None,
+             calc: str = "lastNotNull", decimals: int | None = None,
+             no_value: str | None = None,
+             color_mode: Literal["value", "background", "background_solid",
+                                 "none"] = "value",
+             graph: bool = True) -> str:
         """Stat tile w/ a background sparkline (range query).
 
         `calc` reduces the series to the tile value:
@@ -371,7 +394,7 @@ class Dashboard:
           `pos_delta(x)`) -> total over the dashboard range
         Steps are >= 1m so `pos_delta` subqueries tile the range.
         """
-        defaults = {
+        defaults: JsonObj = {
             "unit": unit,
             "color": {"mode": "thresholds"},
             "thresholds": thr or thresholds(("text", None)),
@@ -397,10 +420,17 @@ class Dashboard:
                           self.queries([(expr, "")]), defaults, options,
                           qopts={"interval": "1m", "maxDataPoints": 100})
 
-    def timeseries(self, key, title, desc, items, unit="short", bars=False,
-                   stack=False, overrides=(), qopts=None, decimals=None,
-                   min0=True, points="never", log=False,
-                   legend_calcs=("max", "mean"), no_value=None, max=None):
+    def timeseries(self, key: str, title: str, desc: str,
+                   items: Sequence[Query], unit: str = "short",
+                   bars: bool = False, stack: bool = False,
+                   overrides: Sequence[JsonObj] = (),
+                   qopts: JsonObj | None = None, decimals: int | None = None,
+                   min0: bool = True,
+                   points: Literal["auto", "always", "never"] = "never",
+                   log: bool = False,
+                   legend_calcs: Sequence[str] = ("max", "mean"),
+                   no_value: str | None = None,
+                   max: float | None = None) -> str:
         """Time series panel. `items`: [(expr, legend), ...].
 
         bars=True: event counts per interval; pass qopts=BARS and use
@@ -425,7 +455,7 @@ class Dashboard:
             ),
             "thresholdsStyle": {"mode": "off"},
         }
-        defaults = {
+        defaults: JsonObj = {
             "unit": unit,
             "color": {"mode": "palette-classic"},
             "custom": custom,
@@ -456,10 +486,10 @@ class Dashboard:
 
     # --- layout --- #
 
-    def grid_items(self, lines, y=0):
+    def grid_items(self, lines: Sequence[Line], y: int = 0) -> list[JsonObj]:
         """GridLayout items for `lines`: [(height, [(key, width), ...])],
         stacked from row offset `y`. Widths per line should sum to 24."""
-        items = []
+        items: list[JsonObj] = []
         for height, line in lines:
             x = 0
             for key, width in line:
@@ -478,7 +508,8 @@ class Dashboard:
             y += height
         return items
 
-    def row(self, title, lines, collapse=False):
+    def row(self, title: str, lines: Sequence[Line],
+            collapse: bool = False) -> None:
         """Add a RowsLayout row w/ a GridLayout of `lines` (see
         `grid_items`)."""
         self.rows.append({
@@ -493,7 +524,7 @@ class Dashboard:
             },
         })
 
-    def extend_row(self, title, lines):
+    def extend_row(self, title: str, lines: Sequence[Line]) -> None:
         """Append `lines` (see `grid_items`) below the existing panels of
         row `title`."""
         rows = [row["spec"] for row in self.rows
@@ -512,7 +543,7 @@ class Dashboard:
 
     # --- output --- #
 
-    def spec(self):
+    def spec(self) -> JsonObj:
         """The validated v2 spec: every element placed, every layout ref
         resolves."""
         refs = element_refs(self.data["layout"])
@@ -524,13 +555,14 @@ class Dashboard:
             raise ValueError(f"elements not in the layout: {sorted(unplaced)}")
         return self.data
 
-    def write(self, path, uid=None):
+    def write(self, path: str | os.PathLike[str],
+              uid: str | None = None) -> None:
         """Write a Git Sync manifest (needed by `just grafana-check`) if
         loaded from one or `uid` is given (overrides the loaded uid), else
         the bare spec. Formatted by `go_json`."""
         out = self.spec()
         if self.manifest is not None or uid is not None:
-            manifest: dict[str, Any] = self.manifest or {
+            manifest: JsonObj = self.manifest or {
                 "apiVersion": "dashboard.grafana.app/v2",
                 "kind": "Dashboard",
                 "metadata": {},
