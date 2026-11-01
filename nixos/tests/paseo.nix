@@ -1,11 +1,16 @@
-# End-to-end NixOS VM test for the Paseo daemon, relay, and nginx wiring.
+# End-to-end NixOS container test for the Paseo daemon, relay, and nginx wiring.
 {
   name = "paseo";
 
   globalTimeout = 300;
 
-  nodes.machine =
-    { config, pkgs, ... }:
+  containers.machine =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     let
       # Stand-in for Home Manager's ~/.profile -> hm-session-vars.sh, w/ its
       # one-time guard and sessionPath prepend. Exercises derived session
@@ -74,6 +79,12 @@
         linger = true;
         shell = pkgs.bashInteractive;
       };
+
+      # pam_unix checks shadowed accounts via the setuid unix_chkpwd wrapper,
+      # which can't exist in the Nix build sandbox. Skip the account check so
+      # testuser's lingering user@.service can start in the container.
+      security.pam.services.systemd-user.rules.account.unix.modulePath =
+        lib.mkForce "${lib.getLib pkgs.linux-pam}/lib/security/pam_permit.so";
 
       systemd.tmpfiles.rules = [
         "L+ /home/testuser/.profile - - - - ${hmProfile}"
@@ -395,9 +406,10 @@
             timeout=30,
         )
         machine.succeed(f"systemctl is-active user@{user_uid}.service")
-        # Simulate UI edits while stopped: one unrelated, one undoing a pin.
+        # Simulate UI edits while stopped
+        # runuser not su since su needs a setuid wrapper + PAM account check.
         machine.succeed(
-            "su testuser -c \"jq '.daemon.autoArchiveAfterMerge = true "
+            "runuser testuser -c \"jq '.daemon.autoArchiveAfterMerge = true "
             "| .pluginsEnabled = true' "
             f"{config_file} > {config_file}.edit && "
             f"mv {config_file}.edit {config_file}\""
