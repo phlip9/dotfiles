@@ -12,6 +12,8 @@ in
   name = "desktop-login";
   globalTimeout = 300;
 
+  # why VM: needs initrd, LUKS drive, kernel keyring, console/tty, and PAM w/
+  # setuid helpers
   nodes.machine =
     {
       config,

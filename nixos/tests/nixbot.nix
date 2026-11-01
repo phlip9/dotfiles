@@ -19,6 +19,10 @@ let
 in
 {
   name = "nixbot";
+
+  # why VM: guest nix builds need a writable /nix/store (qemu-vm's
+  # writableStore + regInfo). nspawn only gets the sandbox's per-path ro store
+  # binds
   nodes.machine =
     {
       lib,
