@@ -31,7 +31,7 @@
         }
 
 
-        def write_counters():
+        def write_counters() -> None:
             Path("/tmp/fake-gh-install-repo").write_text(
                 str(COUNTERS["install_repo"]),
                 encoding="utf-8",
@@ -46,7 +46,7 @@
             )
 
 
-        def token_response(token):
+        def token_response(token: str) -> dict[str, str]:
             expires_at = (
                 datetime.now(timezone.utc) + timedelta(hours=1)
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -54,14 +54,14 @@
 
 
         class Handler(BaseHTTPRequestHandler):
-            def log_message(self, format, *args):
+            def log_message(self, format: str, *args: object) -> None:
                 return
 
-            def _auth_ok(self):
+            def _auth_ok(self) -> bool:
                 auth = self.headers.get("Authorization", "")
                 return auth.startswith("Bearer ")
 
-            def _send_json(self, status, payload):
+            def _send_json(self, status: int, payload: object) -> None:
                 body = json.dumps(payload).encode("utf-8")
                 self.send_response(status)
                 self.send_header("Content-Type", "application/json")
@@ -69,7 +69,7 @@
                 self.end_headers()
                 self.wfile.write(body)
 
-            def do_GET(self):
+            def do_GET(self) -> None:
                 if not self._auth_ok():
                     self.send_error(401, "missing bearer token")
                     return
@@ -88,7 +88,7 @@
 
                 self.send_error(404, "not found")
 
-            def do_POST(self):
+            def do_POST(self) -> None:
                 if not self._auth_ok():
                     self.send_error(401, "missing bearer token")
                     return
@@ -99,9 +99,11 @@
 
                 content_length = int(self.headers.get("Content-Length", "0"))
                 raw_body = self.rfile.read(content_length)
-                body = json.loads(raw_body.decode("utf-8"))
-                repositories = body.get("repositories", [])
-                if repositories != ["repo"]:
+                body: object = json.loads(raw_body.decode("utf-8"))
+                if (
+                    not isinstance(body, dict)
+                    or body.get("repositories") != ["repo"]
+                ):
                     self.send_error(400, "missing repo downscope")
                     return
 
@@ -111,7 +113,7 @@
                 self._send_json(201, token_response(token))
 
 
-        def main():
+        def main() -> None:
             write_counters()
             server = ThreadingHTTPServer(("127.0.0.1", 18080), Handler)
             server.serve_forever()

@@ -6,12 +6,26 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
+from typing import NotRequired, TypedDict
 
 import dbus
 import dbus.bus
 
 
-def keyring_state():
+class Probe(TypedDict):
+    """A probe's JSON result, read by the test script."""
+
+    uid: int
+    pid: int
+    read_denied: bool
+    search_denied: bool
+    password_absent_from_env: bool
+    # Login keyring state, session probes only. `secret` only if unlocked.
+    unlocked: NotRequired[bool]
+    secret: NotRequired[str]
+
+
+def keyring_state() -> Probe:
     """Even knowing root's key serial must not grant access after PAM."""
     serial = Path("/run/login-test/cache-id").read_text().strip()
     read = subprocess.run(
@@ -34,8 +48,9 @@ def keyring_state():
     }
 
 
-def login_secret():
-    """Inspect the collection without unlocking it or showing a prompt."""
+def login_secret(result: Probe) -> None:
+    """Inspect the collection without unlocking it or showing a prompt.
+    Adds its state to `result`."""
     address = f"unix:path={os.environ['XDG_RUNTIME_DIR']}/bus"
     bus = dbus.bus.BusConnection(address)
     collection = bus.get_object(
@@ -43,7 +58,7 @@ def login_secret():
     )
     properties = dbus.Interface(collection, "org.freedesktop.DBus.Properties")
     locked = bool(properties.Get("org.freedesktop.Secret.Collection", "Locked"))
-    result: dict[str, bool | str] = {"unlocked": not locked}
+    result["unlocked"] = not locked
     if not locked:
         service = dbus.Interface(
             bus.get_object(
@@ -59,10 +74,9 @@ def login_secret():
             "org.freedesktop.Secret.Item",
         )
         result["secret"] = bytes(item.GetSecret(session_path)[2]).decode()
-    return result
 
 
-def main():
+def main() -> None:
     """Publish results atomically, then keep the fake desktop session alive."""
     mode = sys.argv[1]
     result = keyring_state()
@@ -71,7 +85,7 @@ def main():
     else:
         path = Path.home() / f"{mode}.json"
     if mode == "session":
-        result.update(login_secret())
+        login_secret(result)
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(result))
     temporary.replace(path)

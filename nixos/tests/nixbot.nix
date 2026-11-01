@@ -48,7 +48,7 @@ in
 
 
         class Handler(BaseHTTPRequestHandler):
-            def _json(self, payload, code=200):
+            def _json(self, payload: object, code: int = 200) -> None:
                 body = json.dumps(payload).encode()
                 self.send_response(code)
                 self.send_header("Content-Type", "application/json")
@@ -56,7 +56,7 @@ in
                 self.end_headers()
                 self.wfile.write(body)
 
-            def do_GET(self):
+            def do_GET(self) -> None:
                 path = self.path.split("?")[0]
                 if path == "/app/installations":
                     self._json([{"id": 1}])
@@ -68,19 +68,19 @@ in
                 else:
                     self._json({"message": "not found"}, 404)
 
-            def do_PATCH(self):
+            def do_PATCH(self) -> None:
                 length = int(self.headers.get("Content-Length") or 0)
                 body = self.rfile.read(length)
                 path = self.path.split("?")[0]
                 if re.fullmatch(r"/repos/acme/test-flake/check-runs/[0-9]+", path):
-                    entry = json.loads(body)
+                    entry: object = json.loads(body)
                     with open(CHECK_RUNS_LOG, "a") as f:
                         f.write(json.dumps(entry) + "\n")
                     self._json({"id": int(path.rsplit("/", 1)[1])}, 200)
                 else:
                     self._json({"message": "not found"}, 404)
 
-            def do_POST(self):
+            def do_POST(self) -> None:
                 length = int(self.headers.get("Content-Length") or 0)
                 body = self.rfile.read(length)
                 path = self.path.split("?")[0]
@@ -88,6 +88,7 @@ in
                     self._json({"token": "fake-token"}, 201)
                 elif path == "/repos/acme/test-flake/check-runs":
                     entry = json.loads(body)
+                    assert isinstance(entry, dict), entry
                     # The poster stores this id to PATCH the run on
                     # completion; key it by name so each check keeps a
                     # distinct id like the real API.
@@ -98,7 +99,7 @@ in
                 else:
                     self._json({"message": "not found"}, 404)
 
-            def log_message(self, format, *args):
+            def log_message(self, format: str, *args: object) -> None:
                 pass
 
 
