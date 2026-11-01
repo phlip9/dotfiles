@@ -143,6 +143,9 @@ in
         "flakes"
       ];
       nix.settings.trusted-public-keys = [ signingPublicKey ];
+      # The VM is offline. Nix retries an unreachable substituter w/ backoff
+      # (~4s) on every cache check and build, so don't configure any.
+      nix.settings.substituters = lib.mkForce [ ];
 
       services.phlip9-o11y = {
         enable = true;
