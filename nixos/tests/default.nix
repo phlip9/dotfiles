@@ -35,6 +35,11 @@ let
           ];
         };
 
+        # Test networks are static. In VMs, dhcpcd only delays
+        # `network-online.target` by ~6s waiting on a lease for qemu's
+        # user-mode NIC. Containers already default to this.
+        networking.useDHCP = pkgs.lib.mkDefault false;
+
         # Provide a deterministic host key for the guest. `environment.etc`
         # is set up before sops `setupSecrets` runs, so sops can use this key
         # on first boot.
