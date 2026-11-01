@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/utils/run-git-command.ts b/packages/server/src/utils/run-git-command.ts
-index bdf7bc1f3..4d053a3be 100644
+index bdf7bc1f3..0026f5787 100644
 --- a/packages/server/src/utils/run-git-command.ts
 +++ b/packages/server/src/utils/run-git-command.ts
 @@ -19,6 +19,7 @@ import {
@@ -10,7 +10,7 @@ index bdf7bc1f3..4d053a3be 100644
  
  const DEFAULT_TIMEOUT_MS = 30_000;
  const DEFAULT_MAX_OUTPUT_BYTES = 20 * 1024 * 1024; // 20MB
-@@ -422,11 +423,13 @@ function executeGitCommand<Output>(
+@@ -422,11 +423,14 @@ function executeGitCommand<Output>(
  
        timer = setTimeout(() => {
          timeoutError = new Error(`Git command timed out after ${timeout}ms: ${command}`);
@@ -25,6 +25,7 @@ index bdf7bc1f3..4d053a3be 100644
 +          if (processExit) {
 +            settleTimeoutTrace(processExit.exitCode, processExit.signal);
 +          }
++          return undefined;
 +        });
        }, timeout);
  
