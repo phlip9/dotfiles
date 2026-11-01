@@ -1,0 +1,77 @@
+diff --git a/packages/server/src/utils/run-git-command.tree-kill.posix.test.ts b/packages/server/src/utils/run-git-command.tree-kill.posix.test.ts
+new file mode 100644
+index 000000000..e67c3a8c0
+--- /dev/null
++++ b/packages/server/src/utils/run-git-command.tree-kill.posix.test.ts
+@@ -0,0 +1,71 @@
++// paseo-kill-git-process-tree: a git timeout kills git's whole process tree,
++// so ssh/askpass descendants can't outlive the command and pile up.
++import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import path from "node:path";
++import { afterEach, expect, it, vi } from "vitest";
++import { runGitCommand } from "./run-git-command.js";
++
++const PID_FILE = "descendant.pid";
++const tempDirs: string[] = [];
++
++// Kill any descendant an attempt recorded, however far the test got (failed
++// assertion, or a vitest timeout while the alias still blocks), so a stray
++// `sleep` never outlives the test.
++afterEach(() => {
++  for (const dir of tempDirs.splice(0)) {
++    const pid = readPid(path.join(dir, PID_FILE));
++    if (pid !== null && isAlive(pid)) {
++      process.kill(pid, "SIGKILL");
++    }
++    rmSync(dir, { recursive: true, force: true });
++  }
++});
++
++// The descendant's pid, or null if it never started. Only a safe integer
++// > 1 counts: `process.kill(0, ...)` would signal our own process group,
++// and pid 1 is init.
++function readPid(pidFile: string): number | null {
++  if (!existsSync(pidFile)) {
++    return null;
++  }
++  const text = readFileSync(pidFile, "utf8").trim();
++  const pid = /^\d+$/.test(text) ? Number(text) : Number.NaN;
++  return Number.isSafeInteger(pid) && pid > 1 ? pid : null;
++}
++
++function isAlive(pid: number): boolean {
++  try {
++    process.kill(pid, 0);
++    return true;
++  } catch {
++    return false;
++  }
++}
++
++it("kills git's descendants when a command times out", async () => {
++  // The timeout clock starts at spawn, before the alias starts its
++  // descendant, so on a loaded host the timeout can win that race. Retry w/
++  // longer timeouts until an attempt times out w/ the descendant running.
++  for (const timeout of [1000, 4000, 15000]) {
++    const dir = mkdtempSync(path.join(tmpdir(), "paseo-git-tree-kill-"));
++    tempDirs.push(dir);
++    const pidFile = path.join(dir, PID_FILE);
++    // A shell alias stands in for git's ssh/askpass children: it starts a
++    // grandchild of git and blocks on it. The pid file appears atomically
++    // (write + rename), so a kill mid-write never leaves a partial file.
++    const hang = `!sh -c 'sleep 60 & echo $! > "${pidFile}.tmp" && mv "${pidFile}.tmp" "${pidFile}"; wait'`;
++
++    await expect(
++      runGitCommand(["-c", `alias.hang=${hang}`, "hang"], { cwd: dir, timeout }),
++    ).rejects.toThrow("timed out");
++    const descendant = readPid(pidFile);
++    if (descendant === null) {
++      continue;
++    }
++
++    await vi.waitFor(() => expect(isAlive(descendant)).toBe(false), { timeout: 5000 });
++    return;
++  }
++  throw new Error("the descendant never started before the git timeout");
++});
