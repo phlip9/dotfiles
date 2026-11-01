@@ -161,8 +161,17 @@
         "@wheel"
       ];
 
-      # Enable `nix` command and flakes support
+      # needed for NixOS container tests
+      auto-allocate-uids = true;
+      use-cgroups = true; # optional for CppNix
+      extra-system-features = [ "uid-range" ];
+
       experimental-features = [
+        # needed for NixOS container tests
+        "auto-allocate-uids"
+        "cgroups"
+
+        # enable `nix` command and flakes support
         "nix-command"
         "flakes"
       ];

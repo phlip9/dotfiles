@@ -9,7 +9,7 @@
 
   globalTimeout = 120;
 
-  nodes.machine =
+  containers.machine =
     {
       config,
       lib,

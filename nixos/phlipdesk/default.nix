@@ -140,10 +140,22 @@
   # Nix
   #
 
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  nix.settings = {
+    # needed for NixOS container tests
+    auto-allocate-uids = true;
+    use-cgroups = true;
+    extra-system-features = [ "uid-range" ];
+
+    experimental-features = [
+      # needed for NixOS container tests
+      "auto-allocate-uids"
+      "cgroups"
+
+      # enable flakes
+      "nix-command"
+      "flakes"
+    ];
+  };
 
   # trying out lix.systems
   nix.package = pkgs.lixPackageSets.stable.lix;
