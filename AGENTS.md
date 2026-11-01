@@ -177,6 +177,15 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
   `lib.getBin`, ..., not `${pkg}/bin/name`, `${pkg.lib}`, ...
 
 
+## python
+
+- all python is typechecked w/ `ty`: `just python-lint` (*.py files),
+  `writeTypedPython3Bin` (nix-built scripts).
+- write typed python. annotate all fn params + returns and class attrs. use
+  precise types (`TypedDict`/`dataclass`, `Literal`, `X | None`). use `Any`
+  only at untyped boundaries (JSON, untyped libs).
+
+
 ## nvim
 
 ### lua
