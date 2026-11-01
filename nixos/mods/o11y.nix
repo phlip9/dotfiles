@@ -419,6 +419,8 @@ in
             the webhook handles real-time updates and this is the fallback
             poll. The setup unit also triggers one pull on every start.
             Grafana's floor is `[provisioning] min_sync_interval` (10s).
+            Grafana only checks this every `[provisioning] resync_interval`
+            (60s), so shorter intervals also need a shorter resync.
           '';
         };
 
