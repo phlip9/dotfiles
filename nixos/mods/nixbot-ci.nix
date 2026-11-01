@@ -190,9 +190,17 @@ in
     # The upstream niks3 module orders only on `network.target`, so it starts
     # before DNS is up and crashes on boot ("dial tcp: lookup ...r2... no such
     # host") before `Restart=always` recovers it. Wait for `network-online`.
+    #
+    # It also orders only on `postgresql.service`, so it can start before
+    # `postgresql-setup` creates its role ("role "niks3" does not exist") and
+    # crash until its 10s restart. `postgresql.target` includes the setup.
     systemd.services.niks3 = {
-      after = [ "network-online.target" ];
+      after = [
+        "network-online.target"
+        "postgresql.target"
+      ];
       wants = [ "network-online.target" ];
+      requires = [ "postgresql.target" ];
     };
 
     # =========================================================================
