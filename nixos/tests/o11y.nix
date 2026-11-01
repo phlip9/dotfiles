@@ -83,6 +83,9 @@
 
       # Use a fast scrape interval for tests.
       services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
+      # Queries hide samples younger than `-search.latencyOffset` (30s), which
+      # would delay every "is it scraped yet" check by 30s.
+      services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
 
       # Override admin user for test assertions.
       services.grafana.settings.security.admin_user = "testadmin";
