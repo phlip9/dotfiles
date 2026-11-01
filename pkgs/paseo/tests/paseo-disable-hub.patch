@@ -1,0 +1,114 @@
+diff --git a/packages/server/src/server/hub/hub-disabled.test.ts b/packages/server/src/server/hub/hub-disabled.test.ts
+new file mode 100644
+index 000000000..b75a77580
+--- /dev/null
++++ b/packages/server/src/server/hub/hub-disabled.test.ts
+@@ -0,0 +1,108 @@
++// paseo-disable-hub: the daemon never talks to a hosted Hub. A stale pending
++// relationship doesn't enroll or dial out at startup, and clients can't
++// create a new one.
++import os from "node:os";
++import path from "node:path";
++import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
++import pino from "pino";
++import { expect, test } from "vitest";
++import { createPaseoDaemon, type PaseoDaemonConfig } from "../bootstrap.js";
++import { createTestAgentClients } from "../test-utils/fake-agent-client.js";
++import { DaemonClient } from "../test-utils/daemon-client.js";
++import type { HubRelationshipRemote } from "./relationship-remote.js";
++
++// A pending enrollment, as left behind by an interrupted `paseo hub connect`.
++const PENDING_RELATIONSHIP = {
++  version: 1,
++  state: "pending",
++  relationship: {
++    daemonId: "daemon-disabled-hub",
++    idempotencyKey: "enrollment-disabled-hub",
++    hubOrigin: "https://hub.test",
++    createdAt: "2026-07-31T00:00:00.000Z",
++    scopes: ["hub.execution.*"],
++  },
++  credential: { secret: "credential" },
++  enrollment: { token: "enrollment-token" },
++  identity: { serverId: "server-disabled-hub", daemonPublicKey: "public-key" },
++};
++
++// Records every call; the Hub must never be contacted.
++function createRecordingRemote(calls: string[]): HubRelationshipRemote {
++  return {
++    async enroll(input) {
++      calls.push("enroll");
++      return {
++        daemonId: input.daemonId,
++        permissions: input.permissions,
++        webSocketUrl: "wss://hub.test/daemon",
++      };
++    },
++    async updatePermissions(input) {
++      calls.push("updatePermissions");
++      return { permissions: input.permissions };
++    },
++    async revoke() {
++      calls.push("revoke");
++    },
++    openSocket() {
++      calls.push("openSocket");
++      return { close: () => undefined };
++    },
++  };
++}
++
++test("a stale Hub relationship never dials out and Hub management is unavailable", async () => {
++  const root = await mkdtemp(path.join(os.tmpdir(), "paseo-hub-disabled-"));
++  const paseoHome = path.join(root, ".paseo");
++  const staticDir = path.join(root, "static");
++  await mkdir(paseoHome, { recursive: true });
++  await mkdir(staticDir, { recursive: true });
++  await writeFile(
++    path.join(paseoHome, "hub-relationship.json"),
++    `${JSON.stringify(PENDING_RELATIONSHIP)}\n`,
++  );
++
++  const remoteCalls: string[] = [];
++  const config: PaseoDaemonConfig = {
++    listen: "127.0.0.1:0",
++    paseoHome,
++    corsAllowedOrigins: [],
++    hostnames: true,
++    mcpEnabled: false,
++    staticDir,
++    mcpDebug: false,
++    agentClients: createTestAgentClients(),
++    agentStoragePath: path.join(paseoHome, "agents"),
++    relayEnabled: false,
++    appBaseUrl: "https://app.paseo.sh",
++    openai: undefined,
++    speech: undefined,
++  };
++  const daemon = await createPaseoDaemon(config, pino({ level: "silent" }), {
++    hubRelationshipRemote: createRecordingRemote(remoteCalls),
++  });
++  let client: DaemonClient | null = null;
++
++  try {
++    await daemon.start();
++    const listenTarget = daemon.getListenTarget();
++    if (!listenTarget || listenTarget.type !== "tcp") {
++      throw new Error("Expected daemon TCP listener");
++    }
++    client = new DaemonClient({
++      url: `ws://127.0.0.1:${listenTarget.port}/ws`,
++      appVersion: "0.1.82",
++    });
++    await client.connect();
++
++    await expect(
++      client.connectHub("https://hub.test", "enrollment-token", ["hub.execute"]),
++    ).rejects.toThrow("Hub relationship management is unavailable");
++    expect(remoteCalls).toEqual([]);
++  } finally {
++    await client?.close().catch(() => undefined);
++    await daemon.stop().catch(() => undefined);
++    await rm(root, { recursive: true, force: true });
++  }
++});
