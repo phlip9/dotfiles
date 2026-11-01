@@ -90,6 +90,28 @@
       # Override admin user for test assertions.
       services.grafana.settings.security.admin_user = "testadmin";
 
+      # Grafana's startup chatter is most of this test's log. Keep only
+      # warnings + errors from its noisiest loggers.
+      services.grafana.settings.log.filters = lib.concatStringsSep " " [
+        # db + unified storage migrations. ~800 on a fresh db, each logged
+        # twice, and a no-op re-check on every start.
+        "migrator:warn"
+        "resource-migrator:warn"
+        "secret-migrator:warn"
+        "unifiedstorage-migrator:warn"
+        "storage.unified.migrations:warn"
+        "storage.unified.migration_runner.folders-dashboards:warn"
+        "storage.unified.migration_runner.playlists:warn"
+        "storage.unified.migration_runner.shorturls:warn"
+        "storage.unified.migrator:warn"
+        # One line per background module on every start and stop.
+        "backgroundsvcs.managerAdapter:warn"
+        # One line per API group registered on every start.
+        "grafana-apiserver:warn"
+        # Search index build progress.
+        "bleve-backend:warn"
+      ];
+
       # The guest has no DNS. Let the throwaway github Repository below pass
       # Git Sync's URL validator, which otherwise resolves the host.
       services.grafana.settings.provisioning.allowed_git_urls = "github.com";
