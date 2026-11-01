@@ -230,6 +230,8 @@ in
       systemd.services.niks3 = {
         after = [ "rustfs-setup.service" ];
         requires = [ "rustfs-setup.service" ];
+        # Count uploads in `niks3_cache_objects` within ~1s, not ~1 min.
+        environment.NIKS3_INVENTORY_REFRESH_INTERVAL = "1s";
       };
 
       systemd.services.fake-github = {
