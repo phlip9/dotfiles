@@ -1,0 +1,153 @@
+diff --git a/packages/server/src/server/plugins/builtin/index.test.ts b/packages/server/src/server/plugins/builtin/index.test.ts
+index 6160c8f85..60445e02e 100644
+--- a/packages/server/src/server/plugins/builtin/index.test.ts
++++ b/packages/server/src/server/plugins/builtin/index.test.ts
+@@ -78,7 +78,8 @@ test("listed client bundle is published while plugins are disabled; unlisted dir
+   }
+ }, 60_000);
+ 
+-test("directory, Git, and npm installs reject a built-in ID", async () => {
++// paseo-disable-plugin-installs: managed installs are disabled.
++test.skip("directory, Git, and npm installs reject a built-in ID", async () => {
+   const root = await mkdtemp(path.join(os.tmpdir(), "paseo-builtin-install-"));
+   roots.push(root);
+   const directory = await fixture(root, "reserved");
+diff --git a/packages/server/src/server/plugins/index.posix.test.ts b/packages/server/src/server/plugins/index.posix.test.ts
+index 71fe2b96e..3c4a56ec3 100644
+--- a/packages/server/src/server/plugins/index.posix.test.ts
++++ b/packages/server/src/server/plugins/index.posix.test.ts
+@@ -470,7 +470,8 @@ describe("PluginService", () => {
+     await service.stopAllPlugins();
+   });
+ 
+-  it("resolves a bare registry id even when a matching directory exists in the daemon cwd", async () => {
++  // paseo-disable-plugin-installs: managed installs are disabled.
++  it.skip("resolves a bare registry id even when a matching directory exists in the daemon cwd", async () => {
+     const home = await mkdtemp(path.join(tmpdir(), "paseo-plugin-home-"));
+     const owner = path.join(process.cwd(), `registry-shadow-${randomUUID()}`);
+     await mkdir(owner);
+@@ -589,7 +590,8 @@ describe("PluginService", () => {
+     await service.stopAllPlugins();
+   }, 20_000);
+ 
+-  it.each([true, false])(
++  // paseo-disable-plugin-installs: managed installs are disabled.
++  it.skip.each([true, false])(
+     "updates the shipped legacy Git layout with enabled=%s",
+     async (enabled) => {
+       const home = await mkdtemp(path.join(tmpdir(), "paseo-legacy-layout-"));
+@@ -733,7 +735,8 @@ export default function contribute(server: PluginServerContext) {
+     30_000,
+   );
+ 
+-  it("keeps the running commit when a Git update build command fails", async () => {
++  // paseo-disable-plugin-installs: managed installs are disabled.
++  it.skip("keeps the running commit when a Git update build command fails", async () => {
+     const home = await mkdtemp(path.join(tmpdir(), "paseo-plugin-home-"));
+     roots.push(home);
+     const repository = await mkdtemp(path.join(tmpdir(), "paseo-plugin-repository-"));
+@@ -797,7 +800,8 @@ export default function contribute(server: PluginServerContext) {
+     await service.stopAllPlugins();
+   }, 30_000);
+ 
+-  it("runs Git build commands in staging before validation and activation on install and update", async () => {
++  // paseo-disable-plugin-installs: managed installs are disabled.
++  it.skip("runs Git build commands in staging before validation and activation on install and update", async () => {
+     const home = await mkdtemp(path.join(tmpdir(), "paseo-plugin-home-"));
+     roots.push(home);
+     const repository = await mkdtemp(path.join(tmpdir(), "paseo-plugin-repository-"));
+@@ -883,7 +887,8 @@ export default function contribute(server: PluginServerContext) {
+     await service.stopAllPlugins();
+   }, 30_000);
+ 
+-  it("activates an update when the enabled plugin previously failed to start", async () => {
++  // paseo-disable-plugin-installs: managed installs are disabled.
++  it.skip("activates an update when the enabled plugin previously failed to start", async () => {
+     const home = await mkdtemp(path.join(tmpdir(), "paseo-plugin-home-"));
+     roots.push(home);
+     const repository = await mkdtemp(path.join(tmpdir(), "paseo-plugin-repository-"));
+@@ -959,7 +964,8 @@ export default function contribute(server: PluginServerContext) {
+     await service.stopAllPlugins();
+   }, 30_000);
+ 
+-  it.each([false, true])(
++  // paseo-disable-plugin-installs: managed installs are disabled.
++  it.skip.each([false, true])(
+     "cleans a failed update when restoration also fails=%s",
+     async (failRestore) => {
+       const home = await mkdtemp(path.join(tmpdir(), "paseo-plugin-recovery-"));
+@@ -1280,7 +1286,8 @@ export default function contribute(plugin: unknown) {
+ });
+ 
+ describe("npm plugin installation", () => {
+-  it("preserves dependencies and metadata, and reloads without npm", async () => {
++  // paseo-disable-plugin-installs: managed installs are disabled.
++  it.skip("preserves dependencies and metadata, and reloads without npm", async () => {
+     const packages = npmPluginPackages();
+     const fixture = packages[1];
+     packages.push({ ...fixture, version: "2.0.0", tags: ["future"] });
+diff --git a/packages/server/src/server/plugins/managed-source.disabled.test.ts b/packages/server/src/server/plugins/managed-source.disabled.test.ts
+new file mode 100644
+index 000000000..76a3dee05
+--- /dev/null
++++ b/packages/server/src/server/plugins/managed-source.disabled.test.ts
+@@ -0,0 +1,31 @@
++// paseo-disable-plugin-installs: managed installs never fetch plugin code from
++// a registry, npm, or Git, whatever the source.
++import { existsSync } from "node:fs";
++import { mkdtemp, rm } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import path from "node:path";
++import { describe, expect, it } from "vitest";
++import { ManagedPluginSources } from "./managed-source.js";
++
++describe("disabled managed plugin installs", () => {
++  it("rejects every managed source before resolving or fetching it", async () => {
++    const home = await mkdtemp(path.join(tmpdir(), "paseo-managed-disabled-"));
++    try {
++      const sources = new ManagedPluginSources(home, { defaultUrl: "http://127.0.0.1:1/" });
++      for (const source of [
++        "fixture/example",
++        "npm:paseo-fixture-plugin@^1.0.0",
++        "github:fixture/repository",
++        "git:https://127.0.0.1:1/missing.git",
++        "file:///nonexistent/plugin-repository",
++      ]) {
++        await expect(sources.prepareInstall({ source })).rejects.toThrow(
++          `Managed plugin installs are disabled: ${source}`,
++        );
++      }
++      expect(existsSync(path.join(home, "plugins"))).toBe(false);
++    } finally {
++      await rm(home, { recursive: true, force: true });
++    }
++  });
++});
+diff --git a/packages/server/src/server/plugins/requirements.posix.test.ts b/packages/server/src/server/plugins/requirements.posix.test.ts
+index 65462336a..2100fc7ab 100644
+--- a/packages/server/src/server/plugins/requirements.posix.test.ts
++++ b/packages/server/src/server/plugins/requirements.posix.test.ts
+@@ -101,7 +101,8 @@ it("still requires entry migration when an old plugin adds a compatible requirem
+   );
+ });
+ 
+-it("rejects Git install and update before build commands, preserving the running revision", async () => {
++// paseo-disable-plugin-installs: managed installs are disabled.
++it.skip("rejects Git install and update before build commands, preserving the running revision", async () => {
+   const repository = await directory();
+   await runGitCommand(["init", "-b", "main"], { cwd: repository });
+   await runGitCommand(["config", "user.name", "Paseo Tests"], { cwd: repository });
+diff --git a/packages/server/vitest.config.ts b/packages/server/vitest.config.ts
+index 68e6fc017..eba802229 100644
+--- a/packages/server/vitest.config.ts
++++ b/packages/server/vitest.config.ts
+@@ -31,6 +31,9 @@ export default defineConfig({
+       "src/server/hub/execution-session.websocket.test.ts",
+       "src/server/hub/hub-cli-contract.test.ts",
+       "src/server/hub/relationship-controller.test.ts",
++      // paseo-disable-plugin-installs: every test here installs a managed
++      // plugin. Covered by managed-source.disabled.test.ts.
++      "src/server/plugins/managed-source.posix.test.ts",
+     ],
+   },
+ });
