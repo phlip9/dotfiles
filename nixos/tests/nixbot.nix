@@ -208,8 +208,10 @@ in
           set -euo pipefail
 
           # Wait for the object store API before creating the cache bucket.
+          # No s5cmd retries: its backoff can outlast RustFS's startup by
+          # ~20s. This loop retries instead.
           for attempt in $(seq 60); do
-            if s5cmd ls >/dev/null 2>&1; then
+            if s5cmd --retry-count 0 ls >/dev/null 2>&1; then
               s5cmd mb s3://${s3Bucket} || true
               exit 0
             fi
