@@ -39,10 +39,10 @@ index a2b89bed3..bb9dbbb5d 100644
              err: error,
              cwd: target.cwd,
 diff --git a/packages/server/src/services/forge-cli-command.ts b/packages/server/src/services/forge-cli-command.ts
-index 798f79c65..c8b657f4d 100644
+index 798f79c65..99170b286 100644
 --- a/packages/server/src/services/forge-cli-command.ts
 +++ b/packages/server/src/services/forge-cli-command.ts
-@@ -159,22 +159,39 @@ export interface ForgeCommandFailureParams {
+@@ -159,22 +159,37 @@ export interface ForgeCommandFailureParams {
    stdout?: string;
  }
  
@@ -74,9 +74,7 @@ index 798f79c65..c8b657f4d 100644
    constructor(label: { brand: string; binary: string }, params: ForgeCommandFailureParams) {
 -    super(`${label.brand} CLI command failed: ${label.binary} ${params.args.join(" ")}`);
 -    this.args = [...params.args];
-+    super(
-+      `${label.brand} CLI command failed: ${summarizeForgeCommand(label.binary, params.args)}`,
-+    );
++    super(`${label.brand} CLI command failed: ${summarizeForgeCommand(label.binary, params.args)}`);
 +    Object.defineProperty(this, "args", { value: [...params.args] });
      this.cwd = params.cwd;
      this.exitCode = params.exitCode;
