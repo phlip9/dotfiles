@@ -44,7 +44,9 @@ fix (phlipPkgs: {
 
   # grafana-screenshot - screenshot/resave Grafana dashboards w/ headless
   # Firefox
-  grafana-screenshot = callPackage ./grafana-screenshot { };
+  grafana-screenshot = callPackage ./grafana-screenshot {
+    inherit (phlipPkgs) writeTypedPython3Bin;
+  };
 
   # restore fs mtimes from git
   git-restore-mtime = callPackage ./git-restore-mtime.nix { };

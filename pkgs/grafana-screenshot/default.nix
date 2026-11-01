@@ -14,11 +14,11 @@
   playwright-driver,
   python3Packages,
   runCommand,
-  writers,
+  writeTypedPython3Bin,
 }:
 let
   # One script, w/ the command as its first arg.
-  unwrapped = writers.writePython3Bin "grafana-browser" {
+  unwrapped = writeTypedPython3Bin "grafana-browser" {
     libraries = [ python3Packages.playwright ];
     # We use the repo's 80-column limit.
     flakeIgnore = [ "E501" ];
