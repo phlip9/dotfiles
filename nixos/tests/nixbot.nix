@@ -22,13 +22,14 @@ in
   nodes.machine =
     {
       lib,
+      phlipPkgs,
       phlipPkgsNixos,
       pkgs,
       ...
     }:
     let
       fakeGithubPort = 8970;
-      fakeGithub = pkgs.writers.writePython3Bin "fake-github" { } ''
+      fakeGithub = phlipPkgs.writeTypedPython3Bin "fake-github" { } ''
         import json
         import re
         from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -97,7 +98,7 @@ in
                 else:
                     self._json({"message": "not found"}, 404)
 
-            def log_message(self, fmt, *args):
+            def log_message(self, format, *args):
                 pass
 
 

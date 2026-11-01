@@ -16,19 +16,17 @@ in
     {
       config,
       lib,
+      phlipPkgs,
       pkgs,
       ...
     }:
     let
       luksUUID = "55555555-5555-5555-5555-555555555555";
-      probe =
-        let
-          python = pkgs.python3.withPackages (deps: [ deps.dbus-python ]);
-        in
-        pkgs.writeScript "desktop-login-probe" ''
-          #!${python}/bin/python3
-          ${builtins.readFile ./desktop-login/probe.py}
-        '';
+      probe = lib.getExe (
+        phlipPkgs.writeTypedPython3Bin "desktop-login-probe" {
+          libraries = ps: [ ps.dbus-python ];
+        } ./desktop-login/probe.py
+      );
     in
     {
       imports = [ ../profiles/desktop-login.nix ];

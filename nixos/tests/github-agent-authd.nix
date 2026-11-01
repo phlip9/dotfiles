@@ -12,12 +12,13 @@
   nodes.machine =
     {
       config,
+      lib,
+      phlipPkgs,
       pkgs,
       ...
     }:
     let
-      fakeGitHubAPI = pkgs.writeText "fake-github-api.py" ''
-        #!/usr/bin/env python3
+      fakeGitHubAPI = phlipPkgs.writeTypedPython3Bin "fake-github-api" { } ''
         import json
         from datetime import datetime, timedelta, timezone
         from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -28,6 +29,7 @@
             "install_missing": 0,
             "token_mints": 0,
         }
+
 
         def write_counters():
             Path("/tmp/fake-gh-install-repo").write_text(
@@ -43,14 +45,16 @@
                 encoding="utf-8",
             )
 
+
         def token_response(token):
             expires_at = (
                 datetime.now(timezone.utc) + timedelta(hours=1)
             ).strftime("%Y-%m-%dT%H:%M:%SZ")
             return {"token": token, "expires_at": expires_at}
 
+
         class Handler(BaseHTTPRequestHandler):
-            def log_message(self, _fmt, *_args):
+            def log_message(self, format, *args):
                 return
 
             def _auth_ok(self):
@@ -106,10 +110,12 @@
                 token = f"repo-token-{COUNTERS['token_mints']}"
                 self._send_json(201, token_response(token))
 
+
         def main():
             write_counters()
             server = ThreadingHTTPServer(("127.0.0.1", 18080), Handler)
             server.serve_forever()
+
 
         if __name__ == "__main__":
             main()
@@ -139,7 +145,7 @@
         after = [ "network.target" ];
 
         serviceConfig = {
-          ExecStart = "${pkgs.python3}/bin/python3 ${fakeGitHubAPI}";
+          ExecStart = lib.getExe fakeGitHubAPI;
           Restart = "on-failure";
           RestartSec = 1;
         };
