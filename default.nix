@@ -111,6 +111,12 @@ rec {
         ;
     };
   };
+
+  # Python w/ the libs our *.py files import for `just python-lint`
+  pythonDev = pkgs.python3.withPackages (ps: [
+    ps.dbus-python # nixos/tests/desktop-login/probe.py
+    ps.playwright # pkgs/grafana-screenshot
+  ]);
 }
 // phlipPkgsNixos
 // phlipPkgs
