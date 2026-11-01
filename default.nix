@@ -97,7 +97,7 @@ rec {
   nixos-iso-headless =
     nixosConfigs.nixos-iso-headless.config.system.build.isoImage;
 
-  # NixOS VM tests
+  # NixOS VM + container tests
   nixosTests = import ./nixos/tests {
     inherit sources;
     pkgs = pkgsUnstable;

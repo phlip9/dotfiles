@@ -1,4 +1,4 @@
-# NixOS VM tests
+# NixOS VM + container tests
 {
   pkgs,
   sources,
@@ -35,7 +35,7 @@ let
           ];
         };
 
-        # Provide a deterministic host key for the test VM. `environment.etc`
+        # Provide a deterministic host key for the guest. `environment.etc`
         # is set up before sops `setupSecrets` runs, so sops can use this key
         # on first boot.
         environment.etc."ssh/ssh_host_ed25519_key" = {

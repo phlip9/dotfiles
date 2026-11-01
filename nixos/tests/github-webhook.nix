@@ -1,6 +1,6 @@
-# End-to-end NixOS VM test for github-webhook service.
+# End-to-end NixOS container test for github-webhook service.
 #
-# This test creates a VM with:
+# This test creates a container with:
 # - The github-webhook service configured to watch multiple repos
 # - Simulated GitHub webhook POST requests
 # - Verification that commands execute on push events
