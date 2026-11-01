@@ -240,6 +240,42 @@
     )
     dash_url = f"{dashes_url}/test-sync"
 
+    # Queue a full Git Sync pull, wait for it to finish, and check it
+    # succeeded. Every pull job is named `<repo>-sync`, so queueing fails w/
+    # 409 AlreadyExists while another sync (periodic, or the setup unit's) is
+    # queued or running. Retry only that, like the setup script.
+    # See: pkg/registry/apis/provisioning/jobs/persistentstore.go
+    def git_sync_pull() -> None:
+        pull = shlex.quote(
+            json.dumps({"action": "pull", "pull": {"incremental": False}})
+        )
+        post_pull = (
+            "curl -sS -u testadmin:gf-admin-testpwd -o /tmp/pull-job.json "
+            "-w '%{http_code}' -H 'Content-Type: application/json' "
+            f"-d {pull} {gs_repo_url}/jobs"
+        )
+
+        def queue_pull(_last_try: bool) -> bool:
+            status = machine.succeed(post_pull)
+            resp = json.loads(machine.succeed("cat /tmp/pull-job.json"))
+            if status == "409" and resp.get("reason") == "AlreadyExists":
+                return False
+            assert status.startswith("2"), (status, resp)
+            return True
+
+        retry(queue_pull, timeout=dt.timedelta(seconds=60))
+
+        # GET .../jobs/<uid> only finds a job once it's finished + archived.
+        job_uid = machine.succeed(
+            "jq -er .metadata.uid /tmp/pull-job.json"
+        ).strip()
+        job = json.loads(
+            machine.wait_until_succeeds(
+                f"{gf_curl} {gs_repo_url}/jobs/{job_uid}", timeout=60
+            )
+        )
+        assert job["status"]["state"] == "success", job["status"]
+
     # The setup unit creates our declared Repository, which turns healthy.
     with subtest("Git Sync repository provisioned"):
         machine.wait_for_unit("grafana-git-sync-setup.service")
@@ -490,38 +526,7 @@
     # A full Git Sync pull must leave the Scratch folder + copy alone: Git
     # Sync only manages what it provisioned.
     with subtest("Git Sync pull keeps unmanaged Scratch dashboards"):
-        pull = shlex.quote(
-            json.dumps({"action": "pull", "pull": {"incremental": False}})
-        )
-        post_pull = (
-            "curl -sS -u testadmin:gf-admin-testpwd -o /tmp/pull-job.json "
-            f"-w '%{{http_code}}' {json_hdr} -d {pull} {gs_repo_url}/jobs"
-        )
-
-        # Queue our pull. Every pull job is named `<repo>-sync`, so this
-        # fails w/ 409 AlreadyExists while a periodic sync (every 10s here)
-        # is queued or running. Retry only that, like the setup script.
-        # See: pkg/registry/apis/provisioning/jobs/persistentstore.go
-        def queue_pull(_last_try):
-            status = machine.succeed(post_pull)
-            resp = json.loads(machine.succeed("cat /tmp/pull-job.json"))
-            if status == "409" and resp.get("reason") == "AlreadyExists":
-                return False
-            assert status.startswith("2"), (status, resp)
-            return True
-
-        retry(queue_pull, timeout=dt.timedelta(seconds=60))
-
-        # GET .../jobs/<uid> only finds a job once it's finished + archived.
-        job_uid = machine.succeed(
-            "jq -er .metadata.uid /tmp/pull-job.json"
-        ).strip()
-        job = json.loads(
-            machine.wait_until_succeeds(
-                f"{gf_curl} {gs_repo_url}/jobs/{job_uid}", timeout=60
-            )
-        )
-        assert job["status"]["state"] == "success", job["status"]
+        git_sync_pull()
         machine.succeed(
             f"{gf_curl} {dashes_url}/scratch-promote "
             "| jq -e '.metadata.annotations "
