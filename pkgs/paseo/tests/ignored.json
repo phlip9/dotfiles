@@ -1,0 +1,135 @@
+[
+  {
+    "patch": "paseo-kill-git-process-tree",
+    "file": "packages/server/src/server/session.workspaces.test.ts",
+    "test": "workspace auto-name uses the backing root for a nested worktree",
+    "reason": "fake timers fire a git timeout, which now rejects only after a real process-tree kill"
+  },
+  {
+    "patch": "paseo-require-relay-password",
+    "file": "packages/server/src/server/auth.test.ts",
+    "test": "hello admission > accepts a password and current local credential, but rejects old and wrong credentials",
+    "reason": "asserts a relay hello w/o credentials is admitted as owner"
+  },
+  {
+    "patch": "paseo-require-relay-password",
+    "file": "packages/server/src/server/websocket-server.relay-reconnect.test.ts",
+    "test": "relay external socket reconnect behavior > admits a hello password and an old relay hello, but rejects a wrong password",
+    "reason": "asserts a relay hello w/o credentials is admitted as owner"
+  },
+  {
+    "patch": "paseo-disable-hub",
+    "file": "packages/server/src/server/hub/daemon-executions.test.ts",
+    "reason": "Hub is disabled"
+  },
+  {
+    "patch": "paseo-disable-hub",
+    "file": "packages/server/src/server/hub/execution-session.websocket.test.ts",
+    "reason": "Hub is disabled"
+  },
+  {
+    "patch": "paseo-disable-hub",
+    "file": "packages/server/src/server/hub/hub-cli-contract.test.ts",
+    "reason": "Hub is disabled"
+  },
+  {
+    "patch": "paseo-disable-hub",
+    "file": "packages/server/src/server/hub/relationship-controller.test.ts",
+    "reason": "Hub is disabled"
+  },
+  {
+    "patch": "paseo-disable-hub",
+    "file": "packages/server/src/server/bootstrap.smoke.test.ts",
+    "test": "paseo daemon bootstrap > relay config changes during Hub enrollment reach the live runtime",
+    "reason": "Hub is disabled; startup never enrolls"
+  },
+  {
+    "patch": "paseo-disable-hub",
+    "file": "packages/server/src/server/websocket-server.relay-reconnect.test.ts",
+    "test": "relay external socket reconnect behavior > closes only a hello socket when post-admission setup throws",
+    "reason": "external sockets w/ a pre-delivered hello are rejected"
+  },
+  {
+    "patch": "paseo-disable-hub",
+    "file": "packages/server/src/server/websocket-server.relay-reconnect.test.ts",
+    "test": "relay external socket reconnect behavior > isolates resumable sessions by principal while sharing hello bootstrap",
+    "reason": "hub sockets are rejected"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/managed-source.posix.test.ts",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/builtin/index.test.ts",
+    "test": "directory, Git, and npm installs reject a built-in ID",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/requirements.posix.test.ts",
+    "test": "rejects Git install and update before build commands, preserving the running revision",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > activates an update when the enabled plugin previously failed to start",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > cleans a failed update when restoration also fails=false",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > cleans a failed update when restoration also fails=true",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > keeps the running commit when a Git update build command fails",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "npm plugin installation > preserves dependencies and metadata, and reloads without npm",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > resolves a bare registry id even when a matching directory exists in the daemon cwd",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > runs Git build commands in staging before validation and activation on install and update",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > updates the shipped legacy Git layout with enabled=false",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-disable-plugin-installs",
+    "file": "packages/server/src/server/plugins/index.posix.test.ts",
+    "test": "PluginService > updates the shipped legacy Git layout with enabled=true",
+    "reason": "managed plugin installs are disabled"
+  },
+  {
+    "patch": "paseo-diff-context",
+    "file": "packages/server/src/utils/checkout-git.test.ts",
+    "test": "checkout git utilities > keeps small tracked files displayable when another tracked file has a massive diff",
+    "reason": "asserts the exact diff args, which now include --unified=15"
+  }
+]
