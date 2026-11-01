@@ -106,4 +106,7 @@ fix (phlipPkgs: {
 
   # timep - bash profiler
   timep = callPackage ./timep { };
+
+  # writeTypedPython3Bin - writePython3Bin + build-time ty typecheck
+  writeTypedPython3Bin = callPackage ./write-typed-python3-bin.nix { };
 })
