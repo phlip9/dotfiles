@@ -1,5 +1,5 @@
 // Copied into packages/<pkg>/ by paseo-dev (git-excluded); see
-// .agents/skills/paseo-ui/templates/. Skips upstream tests that conflict w/
+// .agents/skills/paseo-dev/templates/. Skips upstream tests that conflict w/
 // our patches, listed in dotfiles pkgs/paseo/tests/ignored.json. Fails any
 // test file w/ an entry that matches no test (stale after an upgrade) or
 // more than one (ambiguous), so an entry never silently skips the wrong test.

@@ -31,7 +31,7 @@ Ours (read before starting; the docs for each piece live in these files):
 - `pkgs/paseo/*.patch`: downstream patches
 - `pkgs/paseo/tests/*.patch`: tests for the same-named patch (nix build
   skips them; import/export scripts handle them)
-- `.agents/skills/paseo-ui/`: UI patch workflow + `scripts/paseo-dev`
+- `.agents/skills/paseo-dev/`: UI patch workflow + `scripts/paseo-dev`
   (isolated worktree, check, browser e2e), reused in Phase 3
 - `nixos/mods/paseo.nix`: extends upstream `nix/module.nix` (imported in
   `nixos/mods/default.nix`); `enforcedSettings` hardening pins, relay
@@ -156,7 +156,7 @@ grep -E 'Failed to start built-in plugin|"level":(50|60)' "$art/test.log"
 The VM test itself runs ~1 min; package rebuilds dominate.
 
 Patch-level checks once `npins` points at NEW and patches are exported
-(`P=.agents/skills/paseo-ui/scripts/paseo-dev`):
+(`P=.agents/skills/paseo-dev/scripts/paseo-dev`):
 
 ```bash
 $P reset --force     # fresh tmp/paseo at NEW from pkgs/paseo
@@ -165,11 +165,11 @@ $P check --all       # fmt/lint/typecheck + related tests for every patch
 
 - Failing test: `$P baseline <pkg> <file>` to split upstream failures
   from ours. An upstream test that conflicts w/ a patch goes in
-  `pkgs/paseo/tests/ignored.json` per `paseo-ui` "5. Check"; never weaken
+  `pkgs/paseo/tests/ignored.json` per `paseo-dev` "5. Check"; never weaken
   a patch or edit upstream tests. Stale `ignored.json` entries fail the
   run: drop or retitle them.
 - UI patches (`paseo-commit-message`, ...): for each one with a rebase
-  conflict or touching changed upstream UI, run a `paseo-ui` visual check
+  conflict or touching changed upstream UI, run a `paseo-dev` visual check
   (`$P visual <slug>`, `$P e2e ...`) on desktop + phone.
 
 - New default-on features/providers/insecure defaults: pin them off in

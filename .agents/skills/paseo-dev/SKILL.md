@@ -1,5 +1,5 @@
 ---
-name: paseo-ui
+name: paseo-dev
 description: Use to implement or fix phlip9's paseo UI feature requests (web app + any daemon/protocol support) as downstream patches in pkgs/paseo, verified in a real browser on desktop and phone
 ---
 
@@ -15,7 +15,7 @@ Flow:
 6. visual verify -> 7. export + build -> 8. commit + report
 
 All tooling lives in `scripts/paseo-dev`. Run it from inside the dotfiles
-worktree, aliased as `P=.agents/skills/paseo-ui/scripts/paseo-dev`.
+worktree, aliased as `P=.agents/skills/paseo-dev/scripts/paseo-dev`.
 
 ## Model
 
@@ -53,7 +53,7 @@ of the post-review feedback was about those, plus alignment.
 ## 2. Setup
 
 ```bash
-P=.agents/skills/paseo-ui/scripts/paseo-dev
+P=.agents/skills/paseo-dev/scripts/paseo-dev
 $P setup     # or: status (already set up), reset (rebuild from pkgs/paseo)
 ```
 
@@ -242,7 +242,7 @@ Dotfiles commits (repo conventions, no `Co-Authored-By`):
 - change to an existing patch: `paseo: <feature>: <what changed>`
 - unrelated fix found along the way (e.g. formatting drift in another
   patch): separate commit.
-- tooling/skill improvements: `ai: paseo-ui: <what>`, separate commit.
+- tooling/skill improvements: `ai: paseo-dev: <what>`, separate commit.
 
 Report: what changed (user-visible), design decisions you made beyond the
 agreed spec (call them out so phlip9 can veto), verification (commands,
@@ -255,11 +255,11 @@ it refuses to drop unexported work).
 ## Improve this skill
 
 After each run, fix friction in `SKILL.md` / `scripts/paseo-dev` in a
-separate `ai: paseo-ui: ...` commit. Shellcheck manually (`just bash-lint`
+separate `ai: paseo-dev: ...` commit. Shellcheck manually (`just bash-lint`
 skips hidden dirs):
 
 ```bash
 nix shell -f . pkgs.shellcheck --command shellcheck \
-  .agents/skills/paseo-ui/scripts/paseo-dev \
+  .agents/skills/paseo-dev/scripts/paseo-dev \
   .agents/skills/paseo-upgrade/scripts/*.sh
 ```
