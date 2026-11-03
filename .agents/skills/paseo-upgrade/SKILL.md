@@ -31,8 +31,9 @@ Ours (read before starting; the docs for each piece live in these files):
 - `pkgs/paseo/*.patch`: downstream patches
 - `pkgs/paseo/tests/*.patch`: tests for the same-named patch (nix build
   skips them; import/export scripts handle them)
-- `.agents/skills/paseo-dev/`: UI patch workflow + `scripts/paseo-dev`
-  (isolated worktree, check, browser e2e), reused in Phase 3
+- `.agents/skills/paseo-dev/`: patch development workflow +
+  `scripts/paseo-dev` (isolated worktree, check, baseline, browser e2e),
+  reused in Phases 2-3. New or reworked patches follow that skill.
 - `nixos/mods/paseo.nix`: extends upstream `nix/module.nix` (imported in
   `nixos/mods/default.nix`); `enforcedSettings` hardening pins, relay
   server, nginx
@@ -169,8 +170,8 @@ $P check --all       # fmt/lint/typecheck + related tests for every patch
   a patch or edit upstream tests. Stale `ignored.json` entries fail the
   run: drop or retitle them.
 - UI patches (`paseo-commit-message`, ...): for each one with a rebase
-  conflict or touching changed upstream UI, run a `paseo-dev` visual check
-  (`$P visual <slug>`, `$P e2e ...`) on desktop + phone.
+  conflict or touching changed upstream UI, run a `paseo-dev` "UI visual
+  verify" check (`$P visual <slug>`, `$P e2e ...`) on desktop + phone.
 
 - New default-on features/providers/insecure defaults: pin them off in
   `enforcedSettings` (`nixos/mods/paseo.nix`) if a config knob exists,

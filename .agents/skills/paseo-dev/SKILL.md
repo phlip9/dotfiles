@@ -1,18 +1,21 @@
 ---
 name: paseo-dev
-description: Use to implement or fix phlip9's paseo UI feature requests (web app + any daemon/protocol support) as downstream patches in pkgs/paseo, verified in a real browser on desktop and phone
+description: Use to implement, fix, or maintain phlip9's downstream paseo patches in pkgs/paseo (UI features, daemon/CLI/protocol behavior, security hardening) and their tests
 ---
 
-# paseo UI
+# paseo patch development
 
-Implement a UI change in paseo as a downstream patch (`pkgs/paseo/*.patch`),
-prove it works in a real browser on desktop and phone, then ship it as a
-dotfiles commit. phlip9 deploys; you never push or deploy.
+Change paseo through a downstream patch (`pkgs/paseo/*.patch`), prove it
+works (tests, plus a VM test or a real browser depending on the change),
+then ship it as a dotfiles commit. phlip9 deploys; you never push or
+deploy.
 
 Flow:
 
 1. clarify -> 2. setup -> 3. research -> 4. implement -> 5. check ->
-6. visual verify -> 7. export + build -> 8. commit + report
+6. verify -> 7. export + build -> 8. commit + report
+
+UI work adds UI-specific steps; see [UI work](#ui-work).
 
 All tooling lives in `scripts/paseo-dev`. Run it from inside the dotfiles
 worktree, aliased as `P=.agents/skills/paseo-dev/scripts/paseo-dev`.
@@ -30,25 +33,26 @@ worktree, aliased as `P=.agents/skills/paseo-dev/scripts/paseo-dev`.
   `node_modules`, so concurrent agents don't collide (~1.5 min).
 - Edit in `tmp/paseo`, fold edits into patch commits (`new` / `fixup`), then
   `export` regenerates `pkgs/paseo`. Never hand-edit `.patch` files.
-- The web UI ships inside the daemon (`paseo.phlip9.com`). phlip9 mostly
-  uses it in a **phone browser**. Native iOS/Android builds are not shipped:
-  native code must typecheck, and the simplest fallback is fine.
+- The daemon runs on sauna (`services.paseo`, `nixos/mods/paseo.nix`) and
+  on other hosts via home-manager (`home/mods/paseo.nix`). Daemon access ==
+  full control of the host as phlip9, so security patches fail closed.
+- Upgrades rebase every patch onto a new release (`paseo-upgrade` skill),
+  so each patch's size and spread is an ongoing cost.
 
 ## 1. Clarify
 
-Requests are usually one-liners w/ a screenshot. Before coding, ask w/
-`AskUserQuestion` (2-4 questions, concrete options, recommended first):
+Requests are often one-liners. Before coding, ask w/ `AskUserQuestion`
+(2-4 questions, concrete options, recommended first) about whatever is
+fuzzy:
 
-- placement: where on screen; which panel/surface; pinned vs scrolls w/
-  content
-- content: exactly which fields; truncation vs full; empty states
-- format: font (mono vs UI), wrapping, relative vs absolute dates
-- phone behavior: compact layout often differs (sheets, hidden sidebars)
+- behavior: exact inputs/outputs, edge and empty cases, error handling
+- scope: which surfaces (daemon, CLI, app, relay), which hosts
+- security changes: fail-closed behavior, what may break for clients,
+  whether a config knob exists upstream (prefer it over a patch)
 - delivery: downstream patch only (default) vs also prep an upstream PR
   (prep only, never open one unasked)
 
-Ask about behavior on scroll and on narrow screens up front. Last time, all
-of the post-review feedback was about those, plus alignment.
+UI requests have their own question list in [UI work](#ui-work).
 
 ## 2. Setup
 
@@ -62,66 +66,43 @@ If `status` says DIFFERS for a worktree you didn't touch, master moved:
 
 ## 3. Research
 
-Read upstream docs first (`tmp/paseo/AGENTS.md` lists them); they encode
-conventions the code won't tell you. Always skim `docs/design.md`
-(tokens, hierarchy, density, alignment, forbidden patterns),
-`docs/coding-standards.md`, `docs/unistyles.md` (`useUnistyles()` is
-forbidden), and as relevant `docs/i18n.md`, `docs/hover.md`,
-`docs/mobile-panels.md`, `docs/protocol-compatibility.md`,
-`docs/testing.md`.
+Read upstream's agent docs first: `tmp/paseo/CLAUDE.md` (rules + docs
+index), `packages/server/CLAUDE.md` for daemon work. They encode
+conventions the code won't tell you. As relevant: `docs/architecture.md`,
+`docs/coding-standards.md`, `docs/protocol-compatibility.md`,
+`docs/rpc-namespacing.md`, `docs/permissions.md` + `SECURITY.md` (auth,
+relay), `docs/testing.md`.
 
-Use an Explore subagent for wide code searches. Code map
-(`packages/app/src` unless noted):
+Use an Explore subagent for wide code searches. Code map:
 
-- `panels/`: workspace tab panels. `definePanel(kind, {component,
-  useDescriptor})`; tab label/icon via descriptor. `diff-panel.tsx` holds
-  the working diff + commit diff panels.
-- `git/`: changes/diff/commits UI, react-query hooks (`use-*-query.ts`,
-  `use-diff-files.ts`). `git/diff-document/` is a canvas-rendered,
-  virtualized diff (`surface.web.tsx`, `surface.native.tsx`, `model.ts`):
-  don't put DOM content inside it; use its `leadingContent` slot (ours,
-  from `paseo-commit-message`) or render around it.
-- `components/ui/`: primitives (toolbar, buttons, menus, sheets).
-- `styles/theme.ts`: tokens: `theme.spacing[n]`, `theme.fontSize.{sm,base,
-  code,...}`, `theme.fontWeight.*`, `theme.colors.{foreground,
-  foregroundMuted,border,...}`, `theme.fontFamily.{ui,mono}`. Styles via
-  `StyleSheet.create((theme) => ...)` from `react-native-unistyles`.
-- `styles/code-surface.ts`: put `dataSet={CODE_SURFACE_DATASET}` on mono
-  text, else web's root UI-font rule overrides it.
-- `i18n/resources/*.ts`: user-visible strings go in `en.ts` and every
-  locale (parity test: `src/i18n/resources.test.ts`).
-- `constants/layout.ts`: `useIsCompactFormFactor()` (phone layout).
-- `*.web.tsx` / `*.native.tsx`: platform splits; edit both or neither.
-- `packages/protocol/src/messages.ts`: zod wire schemas. New fields are
-  `.optional()` w/ a comment (old daemons omit them).
-- `packages/server/src/`: daemon. Git data: `utils/checkout-git.ts`;
-  session RPC handlers: `server/session/`.
-- `packages/app/e2e/`: Playwright specs, `support/fixtures.ts`
-  (`withWorkspace`), `support/helpers/*` (navigation flows).
+- `packages/server/src/`: daemon. `server/bootstrap.ts` (wiring),
+  `server/websocket-server.ts` (sockets, hello admission),
+  `server/session-admission-auth.ts`, `server/config*.ts` (env + config),
+  `server/session/` (RPC handlers), `utils/checkout-git.ts` (git data),
+  `utils/run-git-command.ts`.
+- `packages/protocol/src/messages.ts`: zod wire schemas.
+- `packages/client/src/daemon-client.ts`: client RPC methods.
+- `packages/cli/src/`: CLI (`utils/client.ts` connects to daemons).
+- `packages/app/src/`: Expo app (web UI); see [UI work](#ui-work).
+- Our patches: `git -C tmp/paseo log --stat v<tag>..` shows what each one
+  touches; read the neighbors of the code you change.
 
 ## 4. Implement
 
-Patch hygiene (patches get rebased on every paseo upgrade):
+Patch hygiene:
 
 - One patch per feature, named `paseo-<feature>`. A follow-up change to a
   feature folds into its patch (`fixup`), not a new patch.
-- Minimize churn in upstream files: new logic goes in new files (e.g.
-  `git/commit-message-header.tsx`); upstream files get a small hook-in.
-- Match upstream style; the formatter is `oxfmt`, not prettier.
+- Minimize churn in upstream files: new logic goes in new files; upstream
+  files get a small hook-in.
+- Match upstream style and rules (`CLAUDE.md`): the formatter is `oxfmt`,
+  not prettier; server imports use relative `.js` paths.
 - Generic extension points over feature hacks (e.g. `leadingContent` on
   the diff document instead of commit-specific code in the canvas).
-- New wire fields: optional + backward-compatible both ways.
-
-UI gotchas we've hit:
-
-- Mixed fonts on one row (UI + mono): `alignItems: "baseline"`, or text
-  baselines visibly drift.
-- Selectable text: `selectable` on `Text`. Inside the canvas diff, stop
-  pointer/contextmenu/copy propagation so the diff's handlers don't eat it.
-- Long content must not starve the main view on phone: decide pinned vs
-  scrolling explicitly (it's a clarify question).
-- `Text` on web is `white-space: pre-wrap`: preformatted text keeps
-  spacing and soft-wraps.
+- New wire fields: `.optional()` w/ a comment, backward-compatible both
+  ways (old daemons and clients omit them).
+- Security patches: smallest change that closes the hole, fail closed,
+  comment why at the change site.
 
 Commit work into the patch stack:
 
@@ -183,10 +164,125 @@ next upgrade.
 Upstream: TDD, real deps over mocks (`docs/testing.md`). Never run whole
 suites (`npm run test`, full Playwright); they freeze the host.
 
-## 6. Visual verify (mandatory for UI)
+## 6. Verify
 
-Typecheck + unit tests don't catch layout bugs. Last time, misalignment and
-scroll behavior shipped because the UI wasn't viewed before handoff.
+Unit tests prove the logic; verify the change in its real environment too.
+Pick by what the patch changes:
+
+- Daemon behavior seen through its config, env, auth, or processes
+  (hardening, credentials, child envs, relay): `nixosTests.paseo`
+  (`nixos/tests/paseo.nix`) runs the packaged daemon, relay, CLI, and nginx
+  in a VM. For a security-relevant patch, add a subtest that drives it
+  from outside (CLI/curl) and mutation-check it: comment out the patch in
+  `default.nix`, the subtest must fail, restore. Run via `$P build` +
+  `$P vmtest` (step 7).
+- UI: browser visual check, mandatory; see
+  [UI work: visual verify](#ui-visual-verify).
+- Pure logic (parsers, git data): unit tests from step 5 are enough.
+
+## 7. Export + build
+
+```bash
+$P export            # writes pkgs/paseo/*.patch + tests/, reports drift
+# new patch: add `./paseo-<feature>.patch` + a 1-2 line comment at the end
+# of `patches` in pkgs/paseo/default.nix
+$P build             # nix build -f . paseo (5-10 min; run in background)
+$P vmtest            # nixosTests.paseo (~2 min after build)
+just nix-ci
+```
+
+- `export` skips patches that differ only in `index` lines, so an
+  unchanged stack exports as a no-op.
+- `build` failure: grep `tmp/paseo-build/build.log` for `error TS`; the
+  nix build compiles the server, CLI, and full web bundle.
+- Run `vmtest` for every patch change: it's the end-to-end guard for the
+  security patches, whatever you changed.
+
+## 8. Commit + report
+
+Dotfiles commits (repo conventions, no `Co-Authored-By`):
+
+- new feature: `paseo: <what it does>` (patch + default.nix entry)
+- change to an existing patch: `paseo: <feature>: <what changed>`
+- VM test changes go w/ the patch they test.
+- unrelated fix found along the way (e.g. formatting drift in another
+  patch): separate commit.
+- tooling/skill improvements: `ai: paseo-dev: <what>`, separate commit.
+
+Report: what changed (user-visible), design decisions you made beyond the
+agreed spec (call them out so phlip9 can veto), verification (commands,
+tests, VM subtests, screenshots viewed), anything unverified, pre-existing
+failures found. Don't push, PR, or deploy unless asked.
+
+Leave `tmp/paseo` in place for review follow-ups (`$P clean` when done;
+it refuses to drop unexported work).
+
+## UI work
+
+The web UI ships inside the daemon (`paseo.phlip9.com`). phlip9 mostly uses
+it in a **phone browser**. Native iOS/Android builds are not shipped: native
+code must typecheck, and the simplest fallback is fine.
+
+### UI clarify
+
+Requests are usually a one-liner w/ a screenshot. Ask about:
+
+- placement: where on screen; which panel/surface; pinned vs scrolls w/
+  content
+- content: exactly which fields; truncation vs full; empty states
+- format: font (mono vs UI), wrapping, relative vs absolute dates
+- phone behavior: compact layout often differs (sheets, hidden sidebars)
+
+Ask about behavior on scroll and on narrow screens up front. On the first
+UI patch, all of the post-review feedback was about those, plus alignment.
+
+### UI research
+
+Also skim upstream `docs/design.md` (tokens, hierarchy, density,
+alignment, forbidden patterns), `docs/unistyles.md` (`useUnistyles()` is
+forbidden), and as relevant `docs/i18n.md`, `docs/hover.md`,
+`docs/mobile-panels.md`.
+
+App code map (`packages/app/src`):
+
+- `panels/`: workspace tab panels. `definePanel(kind, {component,
+  useDescriptor})`; tab label/icon via descriptor. `diff-panel.tsx` holds
+  the working diff + commit diff panels.
+- `git/`: changes/diff/commits UI, react-query hooks (`use-*-query.ts`,
+  `use-diff-files.ts`). `git/diff-document/` is a canvas-rendered,
+  virtualized diff (`surface.web.tsx`, `surface.native.tsx`, `model.ts`):
+  don't put DOM content inside it; use its `leadingContent` slot (ours,
+  from `paseo-commit-message`) or render around it.
+- `components/ui/`: primitives (toolbar, buttons, menus, sheets).
+- `styles/theme.ts`: tokens: `theme.spacing[n]`, `theme.fontSize.{sm,base,
+  code,...}`, `theme.fontWeight.*`, `theme.colors.{foreground,
+  foregroundMuted,border,...}`, `theme.fontFamily.{ui,mono}`. Styles via
+  `StyleSheet.create((theme) => ...)` from `react-native-unistyles`.
+- `styles/code-surface.ts`: put `dataSet={CODE_SURFACE_DATASET}` on mono
+  text, else web's root UI-font rule overrides it.
+- `i18n/resources/*.ts`: user-visible strings go in `en.ts` and every
+  locale (parity test: `src/i18n/resources.test.ts`).
+- `constants/layout.ts`: `useIsCompactFormFactor()` (phone layout).
+- `*.web.tsx` / `*.native.tsx`: platform splits; edit both or neither.
+- `packages/app/e2e/`: Playwright specs, `support/fixtures.ts`
+  (`withWorkspace`), `support/helpers/*` (navigation flows).
+
+### UI gotchas
+
+- Mixed fonts on one row (UI + mono): `alignItems: "baseline"`, or text
+  baselines visibly drift.
+- Selectable text: `selectable` on `Text`. Inside the canvas diff, stop
+  pointer/contextmenu/copy propagation so the diff's handlers don't eat it.
+- Long content must not starve the main view on phone: decide pinned vs
+  scrolling explicitly (it's a clarify question).
+- `Text` on web is `white-space: pre-wrap`: preformatted text keeps
+  spacing and soft-wraps.
+
+### UI visual verify
+
+Typecheck + unit tests don't catch layout bugs. On the first UI patch,
+misalignment and scroll behavior shipped because the UI wasn't viewed
+before handoff.
 
 ```bash
 $P visual <slug>     # scaffolds packages/app/e2e/browser/agent-<slug>.spec.ts
@@ -211,46 +307,13 @@ $P e2e e2e/browser/agent-<slug>.spec.ts
   exports to `pkgs/paseo/tests/`.
 - Iterate: edit -> `fixup` -> `e2e` until the screenshots match the agreed
   design. Metro serves source, so no package build in the loop.
-
-## 7. Export + build
-
-```bash
-$P export            # writes pkgs/paseo/*.patch + tests/, reports drift
-# new patch: add `./paseo-<feature>.patch` + a 1-2 line comment at the end
-# of `patches` in pkgs/paseo/default.nix
-$P build             # nix build -f . paseo (5-10 min; run in background)
-$P vmtest            # nixosTests.paseo (~2 min after build)
-just nix-ci
-```
-
-- `export` skips patches that differ only in `index` lines, so an
-  unchanged stack exports as a no-op.
-- `build` failure: grep `tmp/paseo-build/build.log` for `error TS`; the
-  nix build compiles the full web bundle and server.
-- Confirm a distinctive identifier of the change is in the bundle:
+- After `$P build`, confirm a distinctive identifier of the change is in
+  the shipped bundle:
 
   ```bash
   web=tmp/paseo-build/result/lib/paseo/packages/server/dist/server/web-ui
   grep -l <testID> $web/_expo/static/js/web/index-*.js
   ```
-
-## 8. Commit + report
-
-Dotfiles commits (repo conventions, no `Co-Authored-By`):
-
-- new feature: `paseo: <what it does>` (patch + default.nix entry)
-- change to an existing patch: `paseo: <feature>: <what changed>`
-- unrelated fix found along the way (e.g. formatting drift in another
-  patch): separate commit.
-- tooling/skill improvements: `ai: paseo-dev: <what>`, separate commit.
-
-Report: what changed (user-visible), design decisions you made beyond the
-agreed spec (call them out so phlip9 can veto), verification (commands,
-screenshots viewed, desktop + phone), anything unverified, pre-existing
-failures found. Don't push, PR, or deploy unless asked.
-
-Leave `tmp/paseo` in place for review follow-ups (`$P clean` when done;
-it refuses to drop unexported work).
 
 ## Improve this skill
 
