@@ -1,0 +1,16 @@
+--- a/apps/provisioning/pkg/repository/git/repository.go
++++ b/apps/provisioning/pkg/repository/git/repository.go
+@@ -114,7 +114,12 @@
+ 	config *provisioning.Repository,
+ 	gitConfig RepositoryConfig,
+ ) (GitRepository, error) {
+-	opts := []options.Option{options.WithCapabilityNegotiation()}
++	// GitHub 403s git smart-HTTP requests w/ nanogit's default
++	// `User-Agent: nanogit/0`, so identify as Grafana instead.
++	opts := []options.Option{
++		options.WithCapabilityNegotiation(),
++		options.WithUserAgent("grafana-git-sync"),
++	}
+ 	if gitConfig.SkipGitSuffix {
+ 		opts = append(opts, options.WithoutGitSuffix())
+ 	}

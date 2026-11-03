@@ -16,6 +16,7 @@
 {
   config,
   lib,
+  phlipPkgsNixos,
   pkgs,
   ...
 }:
@@ -597,6 +598,8 @@ in
     # Grafana's $__file{path} provider.
     services.grafana = {
       enable = true;
+      # patched so Git Sync isn't blocked by GitHub
+      package = phlipPkgsNixos.grafana;
       provision.enable = true;
 
       settings = {
