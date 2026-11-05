@@ -8,6 +8,7 @@
 # - prometheus-blackbox-exporter (HTTPS probes of `probes`, if any)
 # - nginx virtualHost for Grafana (if grafana.domain is set)
 # - Grafana Git Sync: dashboard sync w/ git repo
+# - Alerting (vmalert + Alertmanager): see ./alerting.nix
 #
 # All services listen on localhost only. Only nginx is public-facing.
 # Grafana secrets are injected via systemd LoadCredential and read
@@ -33,6 +34,12 @@ let
   gfAddr = "${cfgGfSrv.http_addr}:${toString cfgGfSrv.http_port}";
 
   cfgNixbot = config.services.nixbot;
+
+  # vmalert + Alertmanager, see ./alerting.nix
+  cfgAlerting = cfg.alerting;
+  vmalertAddr = config.services.vmalert.instances."".settings.httpListenAddr;
+  cfgAm = config.services.prometheus.alertmanager;
+  amAddr = "${cfgAm.listenAddress}:${toString cfgAm.port}";
 
   # rbitcoin serves `/metrics` on its loopback health listener.
   cfgRbitcoin = config.services.rbitcoin;
@@ -295,6 +302,8 @@ let
   };
 in
 {
+  imports = [ ./alerting.nix ];
+
   options.services.phlip9-o11y = {
     enable = lib.mkEnableOption "phlip9 metrics observability stack";
 
@@ -586,7 +595,21 @@ in
               replacement = exporterAddr cfgBlackbox;
             }
           ];
-        };
+        }
+        ++ lib.optionals cfgAlerting.enable [
+          {
+            job_name = "vmalert";
+            static_configs = [
+              { targets = [ vmalertAddr ]; }
+            ];
+          }
+          {
+            job_name = "alertmanager";
+            static_configs = [
+              { targets = [ amAddr ]; }
+            ];
+          }
+        ];
       };
     };
 
@@ -699,7 +722,8 @@ in
           # explicitly add datasources via `provision.datasources`
           data_source_proxy_whitelist = [
             cfgVm.listenAddress
-          ];
+          ]
+          ++ lib.optional cfgAlerting.enable amAddr;
         };
 
         # The secrets manager encrypts secure values (ex: Git Sync tokens)
@@ -759,7 +783,22 @@ in
             #   isDefault = false;
             #   editable = false;
             # }
-          ];
+          ]
+          # Browse active alerts + manage silences in Grafana's alerting
+          # UI. Alertmanager's own config and routes show up read-only.
+          ++ lib.optional cfgAlerting.enable {
+            name = "Alertmanager";
+            type = "alertmanager";
+            access = "proxy";
+            uid = "alertmanager";
+            url = "http://${amAddr}";
+            editable = false;
+            jsonData = {
+              implementation = "prometheus";
+              # Grafana-managed alert rules: none, keep them in Grafana.
+              handleGrafanaManagedAlerts = false;
+            };
+          };
         };
       };
 

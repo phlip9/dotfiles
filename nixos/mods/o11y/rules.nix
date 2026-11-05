@@ -621,11 +621,10 @@ in
   ++ lib.optional config.services.nixbot.enable nixbotGroup
   ++ lib.optional (cfgRbitcoin.enable && cfgRbitcoin.metrics) rbitcoinGroup;
 
-  # Alertmanager `inhibit_rules`: while a source alert fires, matching
-  # target alerts are not sent. No `equal` labels: one host, and `instance`
-  # names each scrape target, not the host.
+  # Alertmanager `inhibit_rules`. While a source alert fires, matching target
+  # alerts are not sent.
   inhibitRules = [
-    # A full or wedged box breaks everything else: only page the cause.
+    # If the box is fucked only alert the cause
     {
       source_matchers = [
         (alertnameIn [
@@ -636,7 +635,7 @@ in
       ];
       target_matchers = [ ''severity="warn"'' ];
     }
-    # Fresh boot (15m): services still starting, scrapes catching up.
+    # After boot (15m) let things settle out a bit
     {
       source_matchers = [ ''alertname="HostRebooted"'' ];
       target_matchers = [
@@ -647,7 +646,7 @@ in
         ])
       ];
     }
-    # nixbot keeps its state in postgres.
+    # nixbot keeps its state in Postgres
     {
       source_matchers = [ ''alertname="PgDown"'' ];
       target_matchers = [ ''alertname=~"Nixbot.+"'' ];

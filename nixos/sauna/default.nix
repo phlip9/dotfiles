@@ -475,12 +475,30 @@
         tokenFile = config.sops.secrets.grafana-git-sync-token.path;
       };
     };
+
+    # vmalert + Alertmanager -> Discord, healthchecks.io dead man's switch
+    # see: doc/o11y/README.md > "Alerting setup"
+    # see: nixos/mods/o11y/alerting.nix
+    alerting = {
+      enable = true;
+      discordWebhookUrlFile =
+        config.sops.secrets.alertmanager-discord-webhook-url.path;
+      environmentFile = config.sops.secrets.alertmanager-env.path;
+      healthchecksWatchdogPingUrlFile =
+        config.sops.secrets.healthchecks-watchdog-ping-url.path;
+    };
   };
   sops.secrets.grafana-admin-password = { };
   sops.secrets.grafana-secret-key = { };
   sops.secrets.grafana-secrets-manager-key.restartUnits = [ "grafana.service" ];
   sops.secrets.grafana-git-sync-token.restartUnits = [
-    # Re-run setup on rotation as it re-sends the PAT to Grafana.
     "grafana-git-sync-setup.service"
+  ];
+  sops.secrets.alertmanager-discord-webhook-url.restartUnits = [
+    "alertmanager.service"
+  ];
+  sops.secrets.alertmanager-env.restartUnits = [ "alertmanager.service" ];
+  sops.secrets.healthchecks-watchdog-ping-url.restartUnits = [
+    "alertmanager.service"
   ];
 }

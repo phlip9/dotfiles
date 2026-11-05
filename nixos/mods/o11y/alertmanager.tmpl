@@ -1,0 +1,35 @@
+{{/*
+  Discord notification templates for the `discord-*` receivers in
+  ./alerting.nix. Unlike the main config, this file is not envsubst'ed, so
+  templates here may use `$`. `grafana.url` comes from ./alerting.nix.
+*/}}
+
+{{/* ex: "FIRING:2 warn TargetDown", "RESOLVED page MemLow" */}}
+{{ define "discord.phlip9.title" -}}
+{{ .Status | toUpper }}
+{{- if eq .Status "firing" }}:{{ len .Alerts.Firing }}{{ end }}
+{{- printf " %s %s" .GroupLabels.severity .GroupLabels.alertname }}
+{{- end }}
+
+{{/* Short @mention message for daytime pages: what fires. */}}
+{{ define "discord.phlip9.mention" -}}
+{{ range .Alerts.Firing }}- {{ or .Annotations.summary .Labels.alertname }}
+{{ end }}
+{{- end }}
+
+{{/* Every alert in the group: firing and just resolved. */}}
+{{ define "discord.phlip9.message" -}}
+{{ range .Alerts }}{{ template "discord.phlip9.alert" . }}{{ end }}
+{{- end }}
+
+{{/* One alert: summary, instance, description, Grafana silence link. */}}
+{{ define "discord.phlip9.alert" -}}
+- **{{ or .Annotations.summary .Labels.alertname }}**
+{{- with .Labels.instance }} `{{ . }}`{{ end }}
+{{- if eq .Status "resolved" }} (resolved){{ end }}
+{{ with .Annotations.description }}{{ . }}
+{{ end -}}
+[silence]({{ template "grafana.url" }}
+{{- "/alerting/silence/new?alertmanager=Alertmanager&matcher=" }}
+{{- print "alertname=" .Labels.alertname | urlquery }})
+{{ end }}
