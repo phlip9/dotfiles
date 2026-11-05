@@ -14,7 +14,6 @@
 
 - High availability, clustering, or replication
 - Log aggregation (Loki, etc.) - separate concern
-- Alerting (vmalert, alertmanager) - future work
 
 ## Architecture
 
@@ -28,8 +27,8 @@ nginx (443, TLS/ACME)
 grafana (127.0.0.1:3000)
     | MetricsQL queries
     v
-victoriametrics (127.0.0.1:8428)
-    | promscrape (15s interval)
+victoriametrics (127.0.0.1:8428)  <-- vmalert rules, see Alerting
+    | promscrape (1m interval)
     +-- victoriametrics   localhost:8428/metrics
     +-- grafana           localhost:3000/metrics
     +-- node-exporter     localhost:9100/metrics
@@ -38,6 +37,9 @@ victoriametrics (127.0.0.1:8428)
     +-- nixbot            https://127.0.0.1:443/metrics
     +-- niks3             [::1]:5751/metrics
     +-- rbitcoin          localhost:9332/metrics
+    +-- vmalert           localhost:8880/metrics
+    +-- alertmanager      localhost:9093/metrics
+    +-- blackbox          localhost:9115/probe?target=<https url>
 ```
 
 Target machine: `sauna` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0)
@@ -48,7 +50,13 @@ DNS: `grafana.phlip9.com`
 | File | Purpose |
 |------|---------|
 | `nixos/mods/o11y/default.nix` | NixOS module: VM + Grafana + exporters |
-| `nixos/tests/o11y.nix` | NixOS VM test |
+| `nixos/mods/o11y/alerting.nix` | Alerting: vmalert, Alertmanager, host ping |
+| `nixos/mods/o11y/rules.nix` | Alert rules + inhibitions |
+| `nixos/mods/o11y/alertmanager.tmpl` | Discord message templates |
+| `nixos/mods/o11y/tests/rules.yml` | Rule unit tests (vmalert-tool) |
+| `nixos/tests/o11y.nix` | NixOS container test |
+| `nixos/tests/o11y-alerting.nix` | NixOS container test: alert delivery |
+| `nixos/tests/o11y-alerting-unit.nix` | Offline check: rules + routing |
 | `nixos/sauna/default.nix` | NixOS machine config |
 | `nixos/sauna/grafana/` | Dashboards (Git Sync manifests) |
 | `.mcp.json` | `mcp-grafana` config for agents (points them at the skill) |
@@ -103,12 +111,21 @@ for `grafana.phlip9.com` with:
 
 ## Secrets
 
-| Secret | Owner | Purpose |
-|--------|-------|---------|
+| Secret | Used by | Purpose |
+|--------|---------|---------|
 | `grafana-admin-password` | `grafana` | Grafana admin login |
 | `grafana-secret-key` | `grafana` | Grafana cookie/token signing |
 | `grafana-secrets-manager-key` | `grafana` | Encrypts the stored Git Sync PAT |
 | `grafana-git-sync-token` | `grafana` | GitHub PAT for Git Sync |
+| `alertmanager-discord-webhook-url` | `alertmanager` | Discord webhook |
+| `alertmanager-env` | `alertmanager` | `DISCORD_USER_ID` for mentions |
+| `healthchecks-watchdog-ping-url` | `alertmanager` | hc-ping, Watchdog alert |
+| `healthchecks-host-ping-url` | `healthchecks-host-ping` | hc-ping, host timer |
+
+All stay root-owned sops files. Units read them through systemd
+`LoadCredential` (`/run/credentials/<unit>/...`), except
+`alertmanager-env`, an `EnvironmentFile` that Alertmanager's config gets
+envsubst'ed with.
 
 Loaded into Grafana via the `$__file{path}` provider pattern,
 which reads the secret from disk at runtime without leaking into
@@ -188,11 +205,76 @@ renders the real UI w/ playwright instead.
 | `postgres-overview.json` | [postgres_exporter mixin](https://github.com/prometheus-community/postgres_exporter/blob/master/postgres_mixin/dashboards/postgres-overview.json) |
 | `victoriametrics-single-node.json` | [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/dashboards/vm/victoriametrics.json) |
 
+## Alerting
+
+vmalert evaluates rules against VictoriaMetrics, Alertmanager groups, runs
+inhibitions, and then routes alerts. Discord is the only alert channel.
+A watchdog on sauna pings healthchecks.io.
+
+```
+victoriametrics <--query-- vmalert (:8880) --> alertmanager (:9093)
+   ^                         |                   |
+   +---- ALERTS series ------+                   +-- Watchdog --> hc
+                                                 +-- page ------> #alerts
+                                                 +-- warn/info -> #alerts
+healthchecks-host-ping.timer (5m) --> hc, if VM/vmalert/AM are healthy
+hc (healthchecks.io), on missed pings --> #watchdog
+```
+
+- Severity labels:
+  - `page` (disk full, memory, broken fs or RAID, cert expiry)
+  - `warn` (look today)
+  - `info` (context)
+- Discord message per (severity, alertname) group, pages repeat x1h else x12h.
+- `page`s get not @mention at Night (23:00-09:00 America/Los_Angeles)
+- Alerts for root causes hide symptom alerts via inhibitions.
+- See alert history with `ALERTS{alertstate="firing"}` in Grafana. Active
+  alerts + silences: Grafana > Alerting, `Alertmanager` datasource.
+
+### Add a rule
+
+1. Write the expr, run it live, and back-test it:
+
+   ```bash
+   $ curl -s --data-urlencode 'query=<expr>' http://127.0.0.1:8428/api/v1/query
+   $ curl -s --data-urlencode 'query=count_over_time((<expr>)[90d:5m])' \
+       http://127.0.0.1:8428/api/v1/query
+   ```
+
+2. Add it to a group in `nixos/mods/o11y/rules.nix`: `alert`, `expr`,
+   `for`, `labels.severity`, and `annotations` w/ `summary` (what) and
+   `description` (where to look). Other modules can append groups to
+   `services.vmalert.instances."".rules.groups`.
+
+3. `just alerting-test`: `vmalert -dryRun`, the unit tests, and `amtool`
+   config + routing checks against sauna's rendered config. Non-obvious
+   expr: add a case to `nixos/mods/o11y/tests/rules.yml` (annotations must
+   match exactly). Routing or template changes: also
+   `nix build -f . nixosTests.o11y-alerting -L`.
+
+### Silence
+
+- Discord: each alert's `silence` link opens a prefilled Grafana form.
+- Grafana > Alerting > Silences, Alertmanager `Alertmanager`.
+- On sauna:
+
+  ```bash
+  $ amtool() {
+      nix shell -f ~/dev/dotfiles pkgsUnstable.prometheus-alertmanager -c \
+        amtool --alertmanager.url=http://127.0.0.1:9093 "$@"
+    }
+  $ amtool alert query
+  $ amtool silence add alertname=TargetDown job=nixbot -d 2h -c "nixbot upgrade"
+  $ amtool silence query
+  ```
+
+- Downtime that stops the pipeline (vmalert/Alertmanager/VM/host): pause
+  both checks in healthchecks.io too.
+
 ## Future Work
 
-- **Alerting**: vmalert + alertmanager for on-call notifications.
-- **Additional exporters**: systemd-exporter, blackbox-exporter for endpoint
-  probing.
+- **Additional exporters**: SMART/NVMe wear (`exporters.smartctl`), nginx
+  per-vhost status codes + latency (access log or VTS module).
 - **Log aggregation**: Loki + promtail, separate from metrics.
 
 ## Runbooks
@@ -279,15 +361,49 @@ renders the real UI w/ playwright instead.
    `git pull` shows the commit. Push a manifest edit; Grafana shows it
    within seconds.
 
-### Rotate Git Sync secrets
+### Alerting setup (Discord + healthchecks.io)
 
-- PAT: new token (step 1 above), `sops nixos/sauna/secrets.yaml`, `just
-  deploy sauna`. The secret change restarts the setup unit, which re-sends
-  the token.
-- Secrets-manager key: in `nixos/mods/o11y/default.nix` add a
-  `secret_key.v3` provider, switch `encryption_provider` to it, keep `v2` so
-  old data keys stay readable. Deploy; the PAT is re-stored under the new
-  key.
+Setup secrets used by alerting.
+
+1. Discord: create a server (or reuse one) with two text channels:
+   `#alerts` and `#watchdog`.
+
+2. Webhook for `#alerts`: channel settings > Integrations > Webhooks > New
+   Webhook, name `alertmanager`, Copy Webhook URL
+   (`https://discord.com/api/webhooks/<id>/<token>`)
+
+3. Your user id: User Settings > Advanced > Developer Mode on, then
+   right-click your name > Copy User ID (a number).
+
+4. Notifications, on every device: `#alerts` > Notification Settings >
+   Only @mentions. `#watchdog` > All Messages. Phone: Do Not Disturb
+   23:00-09:00 (Discord has no schedule; this is the night gate for
+   `#watchdog`).
+
+5. healthchecks.io: sign up (free plan), project `sauna`.
+   - Integrations > Add Integration > Discord > Add to Discord, pick the
+     server and `#watchdog`.
+   - Add Check `sauna-watchdog`: Period 5 min, Grace 5 min.
+   - Add Check `sauna-host`: Period 5 min, Grace 5 min.
+   - Both checks: Integrations > enable Discord. Copy each Ping URL
+     (`https://hc-ping.com/<uuid>`).
+
+6. Secrets: `sops nixos/sauna/secrets.yaml`
+
+   ```yaml
+   alertmanager-discord-webhook-url: https://discord.com/api/webhooks/<id>/<token>
+   alertmanager-env: |
+       DISCORD_USER_ID=<number>
+   healthchecks-watchdog-ping-url: https://hc-ping.com/<uuid>
+   healthchecks-host-ping-url: https://hc-ping.com/<uuid>
+   ```
+
+7. Deploy, then try exercising alerts
+   - `systemctl stop prometheus-nginx-exporter` for ~5 min
+   - `systemctl stop victoriametrics` for ~15 min
+   - `systemctl stop alertmanager` for ~10 min
+   - `systemctl stop healthchecks-host-ping.timer` for ~10 min
+
 
 ### Agent access (mcp-grafana)
 

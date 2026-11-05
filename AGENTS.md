@@ -53,6 +53,8 @@
   you MUST ask before go-ahead.
 - less abstract and verbose, more concrete and succinct.
 - lead changes with intent. justify with precision.
+- runbooks are purely procedural. they do not explain why, they only list
+  precise steps.
 
 
 ## style
