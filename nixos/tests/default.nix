@@ -65,6 +65,7 @@ in
   github-webhook = runNixOSTest ./github-webhook.nix;
   nixbot = runNixOSTest ./nixbot.nix;
   o11y = runNixOSTest ./o11y.nix;
+  o11y-alerting = runNixOSTest ./o11y-alerting.nix;
   # Offline check of sauna's alert rules + routing, not a NixOS test
   o11y-alerting-unit = import ./o11y-alerting-unit.nix {
     inherit nixosConfigs pkgs;
