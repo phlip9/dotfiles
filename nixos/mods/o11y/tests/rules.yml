@@ -1,0 +1,98 @@
+# vmalert-tool unit tests for the non-obvious exprs in ../rules.nix.
+#
+# `../rules.yml` is sauna's rendered rules file, placed there by
+# nixos/tests/o11y-alerting-unit.nix. Time starts at 2000-01-01T00:00:00Z.
+# Annotations must match exactly.
+rule_files: [../rules.yml]
+evaluation_interval: 1m
+
+tests:
+  # Grafana creates the health check counter on its first check, so a Git
+  # Sync controller stuck since startup leaves no series at all.
+  - name: GrafanaSyncStalled fires w/o any health check series
+    interval: 1m
+    input_series:
+      - series: 'grafana_stat_totals_repositories{job="grafana"}'
+        values: 1x40
+    alert_rule_test:
+      - eval_time: 29m
+        groupname: grafana
+        alertname: GrafanaSyncStalled
+        exp_alerts: []
+      - eval_time: 30m
+        groupname: grafana
+        alertname: GrafanaSyncStalled
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: Grafana Git Sync stopped checking its repository
+              description: systemctl restart grafana-git-sync-setup
+
+  # `nixbot_builds` is a gauge: retention cleanup drops 50 succeeded rows
+  # at 30m, while 4 builds fail. Unclamped, `done` would go negative.
+  - name: NixbotBuildFailures counts new failures across a cleanup
+    interval: 1m
+    input_series:
+      - series: 'nixbot_builds{status="succeeded"}'
+        values: 100x29 50x31
+      - series: 'nixbot_builds{status="failed"}'
+        values: 10x9 11x10 12x10 13x10 14x20
+    alert_rule_test:
+      # 2 new failures: not enough
+      - eval_time: 20m
+        groupname: nixbot
+        alertname: NixbotBuildFailures
+        exp_alerts: []
+      - eval_time: 60m
+        groupname: nixbot
+        alertname: NixbotBuildFailures
+        exp_alerts:
+          - exp_labels:
+              severity: info
+            exp_annotations:
+              summary: Most nixbot builds failed in the last hour
+              description: https://ci.phlip9.com
+
+  # Timers that never ran report 0. Don't call them 30 years stale.
+  - name: TimerStale skips never-run timers
+    interval: 1m
+    input_series:
+      - series: 'node_systemd_timer_last_trigger_seconds{name="nix-gc.timer"}'
+        values: 0x5
+      # last ran 40h before the test starts
+      - series: >-
+          node_systemd_timer_last_trigger_seconds{name="niks3-gc.timer"}
+        values: 946540800x5
+    alert_rule_test:
+      - eval_time: 5m
+        groupname: systemd
+        alertname: TimerStale
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              name: niks3-gc.timer
+            exp_annotations:
+              summary: niks3-gc.timer last ran 1d 16h 5m 0s ago
+              description: systemctl list-timers; journalctl -u <its service>
+
+  # 500 GB free: `a` loses 30 GB/h (full in ~17h), `b` 12 GB/h (~42h).
+  - name: RootDiskFill24h fires only when / fills within 24h
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", instance="a"}'
+        values: 500000000000-500000000x40
+      - series: 'node_filesystem_avail_bytes{mountpoint="/", instance="b"}'
+        values: 500000000000-200000000x40
+    alert_rule_test:
+      - eval_time: 35m
+        groupname: storage
+        alertname: RootDiskFill24h
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              mountpoint: /
+              instance: a
+            exp_annotations:
+              summary: / fills up within 24h at the 6h trend
+              description: Who's writing? du -xsh /var/lib/*

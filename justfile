@@ -4,7 +4,7 @@ default:
 
 # --- top-level --- #
 
-ci: just-ci bash-ci nix-ci go-ci nvim-ci python-ci grafana-ci
+ci: just-ci bash-ci nix-ci go-ci nvim-ci python-ci grafana-ci alerting-ci
 
 fmt: just-fmt nix-fmt go-fmt nvim-fmt
 
@@ -236,6 +236,15 @@ grafana-resave *args:
 [positional-arguments]
 grafana-screenshot *args:
     nix shell -f . grafana-screenshot --command grafana-screenshot "$@"
+
+# --- alerting --- #
+
+alerting-ci: alerting-test
+
+# Unit test sauna's alert rules + Alertmanager routing, offline, in the nix
+# sandbox (vmalert-tool, amtool). See nixos/tests/o11y-alerting-unit.nix.
+alerting-test:
+    nix build -f . nixosTests.o11y-alerting-unit --no-link --print-build-logs
 
 # --- github-agent --- #
 

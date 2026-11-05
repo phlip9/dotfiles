@@ -99,7 +99,7 @@ rec {
 
   # NixOS VM + container tests
   nixosTests = import ./nixos/tests {
-    inherit sources;
+    inherit nixosConfigs sources;
     pkgs = pkgsUnstable;
   };
 

@@ -1,5 +1,7 @@
 # NixOS VM + container tests
 {
+  # NixOS machine configs, for checks of what they deploy
+  nixosConfigs,
   pkgs,
   sources,
 }:
@@ -63,6 +65,10 @@ in
   github-webhook = runNixOSTest ./github-webhook.nix;
   nixbot = runNixOSTest ./nixbot.nix;
   o11y = runNixOSTest ./o11y.nix;
+  # Offline check of sauna's alert rules + routing, not a NixOS test
+  o11y-alerting-unit = import ./o11y-alerting-unit.nix {
+    inherit nixosConfigs pkgs;
+  };
   paseo = runNixOSTest ./paseo.nix;
   rbitcoin = runNixOSTest ./rbitcoin.nix;
 }
