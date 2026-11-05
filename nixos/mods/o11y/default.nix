@@ -5,6 +5,7 @@
 # - Grafana (visualization + dashboards)
 # - prometheus-node-exporter (system metrics)
 # - prometheus-nginx-exporter (nginx metrics, if nginx is enabled)
+# - prometheus-blackbox-exporter (HTTPS probes of `probes`, if any)
 # - nginx virtualHost for Grafana (if grafana.domain is set)
 # - Grafana Git Sync: dashboard sync w/ git repo
 #
@@ -43,6 +44,19 @@ let
     "${host}:${toString port}";
 
   exporterAddr = exporter: "${exporter.listenAddress}:${toString exporter.port}";
+  cfgBlackbox = config.services.prometheus.exporters.blackbox;
+
+  # blackbox_exporter: ping https:// URLs and report `probe_success` and
+  # `probe_ssl_earliest_cert_expiry` metrics.
+  # See: <blackbox_exporter>/CONFIGURATION.md
+  blackboxConfig = (pkgs.formats.yaml { }).generate "blackbox.yml" {
+    modules.https_2xx = {
+      prober = "http";
+      # < VM's default 10s scrape timeout
+      timeout = "5s";
+      http.fail_if_not_ssl = true;
+    };
+  };
   exporterTargets = exporter: [
     { targets = [ (exporterAddr exporter) ]; }
   ];
@@ -290,6 +304,15 @@ in
       description = ''
         VictoriaMetrics data retention period.
         Default "3" = 3 months. Supports suffixes: h, d, w, y.
+      '';
+    };
+
+    probes = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      example = [ "https://grafana.phlip9.com/api/health" ];
+      description = ''
+        HTTPS URLs that blackbox_exporter probes on every scrape.
       '';
     };
 
@@ -541,7 +564,29 @@ in
           static_configs = [
             { targets = [ rbitcoinHealthAddr ]; }
           ];
-        });
+        })
+        # Probe each URL through blackbox_exporter's `/probe?target=<url>`,
+        # labeled `instance=<url>`.
+        ++ lib.optional (cfg.probes != [ ]) {
+          job_name = "blackbox";
+          metrics_path = "/probe";
+          params.module = [ "https_2xx" ];
+          static_configs = [ { targets = cfg.probes; } ];
+          relabel_configs = [
+            {
+              source_labels = [ "__address__" ];
+              target_label = "__param_target";
+            }
+            {
+              source_labels = [ "__param_target" ];
+              target_label = "instance";
+            }
+            {
+              target_label = "__address__";
+              replacement = exporterAddr cfgBlackbox;
+            }
+          ];
+        };
       };
     };
 
@@ -568,6 +613,16 @@ in
     };
     # nginx-exporter needs stub_status exposed on localhost.
     services.nginx.statusPage = lib.mkIf config.services.nginx.enable true;
+
+    # ===================================================================
+    # prometheus-blackbox-exporter - HTTPS probes + cert expiry
+    # ===================================================================
+    services.prometheus.exporters.blackbox = lib.mkIf (cfg.probes != [ ]) {
+      enable = true;
+      listenAddress = "127.0.0.1";
+      port = 9115;
+      configFile = blackboxConfig;
+    };
 
     # ===================================================================
     # prometheus-postgres-exporter - postgres metrics

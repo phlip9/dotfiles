@@ -445,6 +445,16 @@
   services.phlip9-o11y = {
     enable = true;
     retentionPeriod = "3"; # months
+
+    # HTTPS probes + cert expiry of the public vhosts + R2 cache
+    probes = [
+      "https://cache.phlip9.com/nix-cache-info"
+      "https://ci.phlip9.com/"
+      "https://grafana.phlip9.com/api/health"
+      "https://paseo.phlip9.com/"
+      "https://relay.paseo.phlip9.com/"
+      "https://sauna.phlip9.com/healthz"
+    ];
     grafana = {
       domain = "grafana.phlip9.com";
       adminPasswordFile = config.sops.secrets.grafana-admin-password.path;
