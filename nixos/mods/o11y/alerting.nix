@@ -14,6 +14,8 @@
 #     missed ping means some part of the pipeline (or the host) is dead.
 #   - `severity=page` -> Discord, plus a short @mention message by day.
 #   - everything else -> Discord, no mention.
+# - healthchecks-host-ping.timer pings a second healthchecks.io check every
+#   5 min, if the local health checks pass.
 # - Grafana gets an Alertmanager datasource (see ./default.nix) to browse
 #   alerts and manage silences.
 #
@@ -68,6 +70,77 @@ let
         location = "America/Los_Angeles";
       }
     ];
+  };
+
+  # Local health checks for healthchecks-host-ping: each unit must be
+  # active and its health endpoint must return 2xx.
+  hostChecks = [
+    {
+      name = "victoriametrics";
+      unit = "victoriametrics.service";
+      url = "http://${cfgVm.listenAddress}/health";
+    }
+    {
+      name = "vmalert";
+      unit = "vmalert.service";
+      url = "http://${vmalertAddr}/health";
+    }
+    {
+      name = "alertmanager";
+      unit = "alertmanager.service";
+      url = "http://${amAddr}/-/healthy";
+    }
+  ];
+
+  # Ping healthchecks.io (check `sauna-host`) if all local checks pass.
+  # Else log the failures and exit 0 w/o a ping: healthchecks.io alerts once
+  # its grace period runs out. Not a unit failure, else a check that catches
+  # a deploy restart leaves the unit failed (`UnitFailed`) until the next
+  # run. A failed ping (curl) still fails the unit.
+  hostPing = pkgs.writeShellApplication {
+    name = "healthchecks-host-ping";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.curl
+      config.systemd.package
+    ];
+    text = ''
+      failed=()
+
+      # check NAME UNIT URL
+      #
+      # Append a failure to $failed unless UNIT is active and URL is 2xx.
+      check() {
+        local name=$1 unit=$2 url=$3
+        if ! systemctl is-active --quiet "$unit"; then
+          failed+=("$name: $unit is not active")
+        elif ! curl -fsS -m 5 -o /dev/null "$url" 2> /dev/null; then
+          failed+=("$name: GET $url failed")
+        fi
+      }
+
+      ${lib.concatMapStringsSep "\n" (
+        c: "check ${c.name} ${c.unit} ${c.url}"
+      ) hostChecks}
+
+      if ((''${#failed[@]} > 0)); then
+        printf '%s\n' "''${failed[@]}" >&2
+        echo "unhealthy, skipped the ping" >&2
+        exit 0
+      fi
+
+      # Anyone who knows the ping URL can fake pings, so it reaches curl
+      # through a private config file, never argv (world-readable in
+      # /proc). A ping URL is `https://hc-ping.com/<uuid>`: nothing to
+      # escape in the config's quoted string.
+      umask 077
+      conf=$(mktemp)
+      trap 'rm -f "$conf"' EXIT
+      ping_url=$(tr -d '[:space:]' < "$CREDENTIALS_DIRECTORY/ping-url")
+      printf 'url = "%s"\n' "$ping_url" > "$conf"
+      curl --config "$conf" -fsS -m 10 -o /dev/null
+      echo "healthy, pinged"
+    '';
   };
 
   amConfig = {
@@ -194,6 +267,15 @@ in
       '';
     };
 
+    healthchecksHostPingUrlFile = lib.mkOption {
+      type = lib.types.path;
+      description = ''
+        Path to a file containing the healthchecks.io ping URL that
+        healthchecks-host-ping.timer pings every 5 min.
+        In production, use config.sops.secrets.*.path.
+      '';
+    };
+
     groupWait = lib.mkOption {
       type = lib.types.str;
       default = "30s";
@@ -298,6 +380,66 @@ in
       "discord-webhook-url:${cfgA.discordWebhookUrlFile}"
       "healthchecks-watchdog-ping-url:${cfgA.healthchecksWatchdogPingUrlFile}"
     ];
+
+    # ===================================================================
+    # healthchecks-host-ping - off-box host + alerting health
+    # ===================================================================
+    systemd.services.healthchecks-host-ping = {
+      description = "Ping healthchecks.io if the alerting stack is healthy";
+      wants = [ "network-online.target" ];
+      after = [ "network-online.target" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = lib.getExe hostPing;
+        # Every curl has a timeout; this catches a hung systemctl.
+        TimeoutStartSec = "1min";
+        LoadCredential = [ "ping-url:${cfgA.healthchecksHostPingUrlFile}" ];
+        DynamicUser = true;
+
+        # Hardening. Talks to loopback services, systemd over D-Bus, and
+        # healthchecks.io over HTTPS.
+        CapabilityBoundingSet = [ "" ];
+        DevicePolicy = "closed";
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        NoNewPrivileges = true;
+        PrivateDevices = true;
+        PrivateTmp = true;
+        ProtectClock = true;
+        ProtectControlGroups = true;
+        ProtectHome = true;
+        ProtectHostname = true;
+        ProtectKernelLogs = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        ProtectProc = "invisible";
+        ProtectSystem = "strict";
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+          "AF_UNIX"
+        ];
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        SystemCallArchitectures = "native";
+        SystemCallFilter = [
+          "@system-service"
+          "~@privileged"
+        ];
+        UMask = "0077";
+      };
+    };
+
+    systemd.timers.healthchecks-host-ping = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "*:0/5";
+        # default 1min of slack is a big chunk of a 5 min period
+        AccuracySec = "10s";
+      };
+    };
 
     assertions = [
       {

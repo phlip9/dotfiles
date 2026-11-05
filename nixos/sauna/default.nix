@@ -486,6 +486,8 @@
       environmentFile = config.sops.secrets.alertmanager-env.path;
       healthchecksWatchdogPingUrlFile =
         config.sops.secrets.healthchecks-watchdog-ping-url.path;
+      healthchecksHostPingUrlFile =
+        config.sops.secrets.healthchecks-host-ping-url.path;
     };
   };
   sops.secrets.grafana-admin-password = { };
@@ -500,5 +502,8 @@
   sops.secrets.alertmanager-env.restartUnits = [ "alertmanager.service" ];
   sops.secrets.healthchecks-watchdog-ping-url.restartUnits = [
     "alertmanager.service"
+  ];
+  sops.secrets.healthchecks-host-ping-url.restartUnits = [
+    "healthchecks-host-ping.service"
   ];
 }
