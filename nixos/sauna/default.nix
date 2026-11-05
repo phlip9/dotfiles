@@ -440,7 +440,7 @@
   # =========================================================================
   # Grafana + VictoriaMetrics + prometheus-*-exporter(s)
   # see: doc/o11y/README.md
-  # see: nixos/mods/o11y.nix
+  # see: nixos/mods/o11y/default.nix
   # see: nixos/tests/o11y.nix
   services.phlip9-o11y = {
     enable = true;

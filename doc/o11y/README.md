@@ -47,7 +47,7 @@ DNS: `grafana.phlip9.com`
 
 | File | Purpose |
 |------|---------|
-| `nixos/mods/o11y.nix` | NixOS module: VM + Grafana + exporters |
+| `nixos/mods/o11y/default.nix` | NixOS module: VM + Grafana + exporters |
 | `nixos/tests/o11y.nix` | NixOS VM test |
 | `nixos/sauna/default.nix` | NixOS machine config |
 | `nixos/sauna/grafana/` | Dashboards (Git Sync manifests) |
@@ -284,9 +284,10 @@ renders the real UI w/ playwright instead.
 - PAT: new token (step 1 above), `sops nixos/sauna/secrets.yaml`, `just
   deploy sauna`. The secret change restarts the setup unit, which re-sends
   the token.
-- Secrets-manager key: in `o11y.nix` add a `secret_key.v3` provider,
-  switch `encryption_provider` to it, keep `v2` so old data keys stay
-  readable. Deploy; the PAT is re-stored under the new key.
+- Secrets-manager key: in `nixos/mods/o11y/default.nix` add a
+  `secret_key.v3` provider, switch `encryption_provider` to it, keep `v2` so
+  old data keys stay readable. Deploy; the PAT is re-stored under the new
+  key.
 
 ### Agent access (mcp-grafana)
 

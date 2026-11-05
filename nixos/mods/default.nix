@@ -22,7 +22,7 @@
   ./github-agent-authd.nix
   ./github-webhook.nix
   ./nix-cache.nix
-  ./o11y.nix
+  ./o11y
   (sources.paseo + "/nix/module.nix")
   ./paseo.nix
   ./phlippkgs.nix
