@@ -30,6 +30,7 @@ let
     PermitTTY no
     PermitUserRC no
     PidFile none
+    MaxSessions 32
     ForceCommand ${nixDaemon} --stdio
     ${lib.optionalString stdenv.hostPlatform.isLinux "UsePAM no"}
   '';
@@ -109,7 +110,7 @@ writeShellApplication {
       ${caffeinatedAutossh} -M 0 -NT \
         -S none -oControlMaster=no -oControlPersist=no \
         -oExitOnForwardFailure=yes -oConnectTimeout=5 \
-        -oServerAliveInterval=5 -oServerAliveCountMax=2 \
+        -oServerAliveInterval=15 -oServerAliveCountMax=4 \
         -R 127.0.0.1:22023:127.0.0.1:22024 sauna &
     children+=("$!")
     wait -n "''${children[@]}"

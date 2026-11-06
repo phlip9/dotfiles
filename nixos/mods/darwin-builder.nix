@@ -52,7 +52,15 @@ in
 
     programs.ssh.knownHosts.${hostAlias}.publicKey = hostPublicKey;
 
-    # fail fast when the tunnel is down or frozen.
+    # phliptop-mbp (home WiFi) <-> sauna connection: ~1 MiB/s, ~190ms RTT
+    # TODO(phlip9): measure work <-> sauna
+    #
+    # - under load, handshakes and keepalives queue behind output uploads.
+    # - ControlMaster: reuse one connection. nix's build hook otherwise opens
+    #   a new connection per drv.
+    # - Compression: many outputs compress 2-16x.
+    # - ConnectTimeout, ServerAlive: one failed connect at any point disables
+    #   the builder for the entire `nix build`, so make it less aggressive.
     programs.ssh.extraConfig = ''
       Host ${hostAlias}
         HostName 127.0.0.1
@@ -65,19 +73,20 @@ in
         UserKnownHostsFile /dev/null
         StrictHostKeyChecking yes
         BatchMode yes
-        ControlPath none
-        ControlMaster no
-        ControlPersist no
-        ConnectTimeout 3
-        ServerAliveInterval 5
-        ServerAliveCountMax 2
+        ControlMaster auto
+        ControlPath %d/.ssh/cm-%C
+        ControlPersist 10m
+        Compression yes
+        ConnectTimeout 30
+        ServerAliveInterval 15
+        ServerAliveCountMax 4
     '';
 
-    # drop the reverse forward listener ~15s after `phliptop-mbp` connection
+    # drop the reverse forward listener ~60s after `phliptop-mbp` connection
     # drops. applies to all SSH sessions.
     services.openssh.settings = {
-      ClientAliveInterval = 5;
-      ClientAliveCountMax = 2;
+      ClientAliveInterval = 15;
+      ClientAliveCountMax = 4;
     };
   };
 }
