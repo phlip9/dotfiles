@@ -19,9 +19,14 @@ let
   # `darwin-builder-serve` on first run.
   hostPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAsnrrEChMI9jxAJWvqYF/x2/oNn9cecuS2tbpHMqHG9 phliptop-mbp-builder-host";
 
-  # root-owned client private key for connection to `phliptop-mbp`. Keep pubkey
-  # in sync with <../../pkgs/darwin-builder-serve.nix>.
-  sshKey = "/root/.ssh/phliptop-mbp-builder";
+  # per-user client private key for connections to `phliptop-mbp`. `%d` is the
+  # user's home dir:
+  #
+  # - root: nix-daemon's build hook
+  # - phlip9: `nix build --store ssh-ng://phliptop-mbp-builder` builds
+  #
+  # keep pubkeys in sync with <../../pkgs/darwin-builder-serve.nix>.
+  sshKey = "%d/.ssh/phliptop-mbp-builder";
 in
 {
   options.phlip9.darwin-builder = {
@@ -38,7 +43,7 @@ in
         protocol = "ssh-ng";
         systems = [ "aarch64-darwin" ];
         sshUser = "phlip9";
-        inherit sshKey;
+        # key comes from the ssh alias
         # match the `phliptop-mbp`'s `max-jobs` and `system-features`.
         maxJobs = 8;
         supportedFeatures = [

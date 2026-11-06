@@ -12,9 +12,12 @@
   nixDaemon ? "/nix/var/nix/profiles/default/bin/nix-daemon",
 }:
 let
-  # sauna's client pubkey that phliptop-mbp trusts
+  # sauna client pubkeys that phliptop-mbp trusts:
+  # - root: nix-daemon's build hook
+  # - phlip9: `nix build --store ssh-ng://phliptop-mbp-builder` builds
   authorizedKeys = writeText "darwin-builder-authorized-keys" ''
     restrict,from="127.0.0.1" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINjK6VIf7EQXQ030LeuL+9i06KsMidyl66WEF0QotYId sauna-to-phliptop-mbp-builder
+    restrict,from="127.0.0.1" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAnPwv8T+p25kyq4vLwTprRPoFnM5dfyMhgWlRCKTXH8 sauna-phlip9-to-phliptop-mbp-builder
   '';
 
   # use a purpose built sshd config

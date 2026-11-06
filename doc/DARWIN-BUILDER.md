@@ -12,6 +12,9 @@ sauna then has phliptop-mbp configured as a nix remote builder at
 `127.0.0.1:22023`, so aarch64-darwin derivations are automatically built on
 phliptop-mbp.
 
+For big darwin builds, agents can instead build directly in phliptop-mbp's
+store and copy back only the final result. See "Heavy builds" below.
+
 The `darwin-builder-serve` command bundles the sshd config, creates a
 persistent host key, and cleans up on Ctrl+C. Inside, `autossh` reconnects the
 tunnel after sauna restarts or network drops. `caffeinate -s` prevents sleep
@@ -51,21 +54,53 @@ Agents and build inputs are trusted.
 3. **phliptop-mbp:** Ctrl+C to stop
 
 
+### Heavy builds
+
+Auto-routed remote builds copy every output back to sauna over the tunnel and
+require several RTTs per drv. For big closures (ex: Android NDK), build in
+phliptop-mbp's store instead.
+
+1. **sauna:** build in phliptop-mbp's store. note that `--out-link` doesn't
+   work with a remote `--store`.
+
+   ```bash
+   $ nix build -f . --argstr localSystem aarch64-darwin pkgs.hello \
+       --store ssh-ng://phliptop-mbp-builder --eval-store auto \
+       --no-link --print-out-paths
+   /nix/store/...-hello-2.12.3
+   ```
+
+2. **sauna:** copy the result back. phlip9 is a trusted user on sauna, so it
+   can import the unsigned paths.
+
+   ```bash
+   $ nix copy --no-check-sigs --from ssh-ng://phliptop-mbp-builder \
+       /nix/store/...-hello-2.12.3
+   $ nix build --out-link result /nix/store/...-hello-2.12.3
+   ```
+
+
 ### Setup
 
-1. **sauna:** create the client key if absent
+1. **sauna:** create the client keys if absent: root (nix-daemon build hook)
+   and phlip9 (heavy builds)
 
    ```bash
    $ sudo install -d -m 700 /root/.ssh
-   $ if ! sudo test -f /root/.ssh/phliptop-mbp-builder; then \
-       sudo ssh-keygen -q -t ed25519 -N '' \
-         -f /root/.ssh/phliptop-mbp-builder \
-     fi
-   $ sudo chmod 600 /root/.ssh/phliptop-mbp-builder
+   $ sudo test -f /root/.ssh/phliptop-mbp-builder \
+       || sudo ssh-keygen -q -t ed25519 -N '' \
+         -C sauna-to-phliptop-mbp-builder \
+         -f /root/.ssh/phliptop-mbp-builder
+   $ test -f ~/.ssh/phliptop-mbp-builder \
+       || ssh-keygen -q -t ed25519 -N '' \
+         -C sauna-phlip9-to-phliptop-mbp-builder \
+         -f ~/.ssh/phliptop-mbp-builder
    $ sudo ssh-keygen -y -f /root/.ssh/phliptop-mbp-builder
+   $ ssh-keygen -y -f ~/.ssh/phliptop-mbp-builder
    ```
 
-   - <../pkgs/darwin-builder-serve.nix>: update the pubkey in `authorizedKeys`
+   - <../pkgs/darwin-builder-serve.nix>: update both pubkeys in
+     `authorizedKeys`
 
 2. **phliptop-mbp:**
 
@@ -96,18 +131,18 @@ Agents and build inputs are trusted.
 
    ```bash
    $ nors
-   $ sudo nix store info --json --store ssh-ng://phlip9@phliptop-mbp-builder
+   $ sudo nix store info --json --store ssh-ng://phliptop-mbp-builder
+   $ nix store info --json --store ssh-ng://phliptop-mbp-builder
    ```
 
 
 ### Verify a new setup
 
-1. **Sauna repo:** create and build the smoke derivation. Require a remote
-   build log and output `Darwin arm64` followed by `Hello, world!`.
+1. **sauna:** create and build a test derivation:
 
-   ```sh
-   mkdir -p tmp
-   cat > tmp/darwin-builder-smoke.nix <<'EOF'
+   ```bash
+   $ mkdir -p tmp
+   $ cat > tmp/darwin-builder-smoke.nix <<'EOF'
    { nonce }:
    let
      pkgs = (import ../. { localSystem = "aarch64-darwin"; }).pkgs;
@@ -120,16 +155,13 @@ Agents and build inputs are trusted.
      ''
    EOF
 
-   nix build -f tmp/darwin-builder-smoke.nix \
-     --argstr nonce "$(date +%s%N)" --max-jobs 0 -L \
-     --out-link tmp/darwin-builder-smoke
-   cat tmp/darwin-builder-smoke
+   $ nix build -f tmp/darwin-builder-smoke.nix \
+       --argstr nonce "$(date +%s%N)" --max-jobs 0 -L \
+       --out-link tmp/darwin-builder-smoke
+   $ cat tmp/darwin-builder-smoke
    ```
 
-2. **Mac:** connect AC, display, and input devices; lock and close the lid;
-   put the display to sleep. After one minute, repeat the build; require
-   success.
+2. **phliptop-mbp:** connect power and close the lid. after one minute, repeat
+   the build.
 
-3. **Mac:** stop with Ctrl+C. Require connection refused from
-   `/usr/bin/nc -vz -w 3 127.0.0.1 22024`. **Sauna:** repeat the build;
-   require prompt failure and no listener in `ss -ltn 'sport = :22023'`.
+3. **phliptop-mbp:** stop with Ctrl+C.
