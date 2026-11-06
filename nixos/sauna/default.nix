@@ -229,6 +229,15 @@
     ];
   };
 
+  environment.systemPackages = [
+    # mcp-grafana - Grafana MCP server for claude code (see .mcp.json)
+    pkgs.mcp-grafana
+  ];
+
+  # build aarch64-darwin derivations on phliptop-mbp when available
+  # See: <../mods/darwin-builder.nix>
+  phlip9.darwin-builder.enable = true;
+
   # repo updates -> receive webhook -> fetch+reset
   #
   # ## New repo setup runbook
@@ -463,10 +472,5 @@
   sops.secrets.grafana-git-sync-token.restartUnits = [
     # Re-run setup on rotation as it re-sends the PAT to Grafana.
     "grafana-git-sync-setup.service"
-  ];
-
-  environment.systemPackages = [
-    # mcp-grafana - Grafana MCP server for claude code (see .mcp.json)
-    pkgs.mcp-grafana
   ];
 }
