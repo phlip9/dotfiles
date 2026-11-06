@@ -17,6 +17,7 @@
   )
 
   (sources.sops-nix + "/modules/sops/default.nix")
+  ./darwin-builder.nix
   ./etc-hosts.nix
   ./github-agent-authd.nix
   ./github-webhook.nix
