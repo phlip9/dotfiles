@@ -73,6 +73,9 @@
     # codex - AI cli
     phlipPkgs.codex
 
+    # temporarily serve e.g. phliptop-mbp as a darwin builder for sauna
+    phlipPkgs.darwin-builder-serve
+
     # # goose - AI cli
     # phlipPkgs.goose-cli
 

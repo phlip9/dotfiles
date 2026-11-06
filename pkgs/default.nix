@@ -36,6 +36,9 @@ fix (phlipPkgs: {
   # codex - OpenAI codex CLI
   codex = callPackage ./codex { };
 
+  # temporarily serve e.g. phliptop-mbp as a darwin builder for sauna
+  darwin-builder-serve = callPackage ./darwin-builder-serve.nix { };
+
   # dist - build and distribute binary releases
   dist = pkgs.cargo-dist;
 
