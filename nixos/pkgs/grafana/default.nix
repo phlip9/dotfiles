@@ -7,4 +7,8 @@
 { grafana }:
 grafana.overrideAttrs (old: {
   patches = (old.patches or [ ]) ++ [ ./nanogit-user-agent.patch ];
+
+  # Silence this annoying eval warning in the upstream NixOS tests:
+  # `Grafana passwords will be stored as plaintext in the Nix store!`
+  passthru = builtins.removeAttrs old.passthru [ "tests" ];
 })
