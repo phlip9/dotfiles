@@ -27,6 +27,8 @@ let
   hotFn = "hot_loop_spin";
   # Blocks in nanosleep(2): off-CPU
   coldFn = "cold_block_wait";
+  # Alloy's pprof flush period, see `collector.collectInterval`
+  collectIntervalS = 5;
 in
 {
   name = "o11y-profiling-ebpf";
@@ -81,7 +83,7 @@ in
         profiling = {
           enable = true;
           # Faster first profile. Everything else: prod defaults.
-          collector.collectInterval = "5s";
+          collector.collectInterval = "${toString collectIntervalS}s";
         };
       };
 
@@ -130,6 +132,7 @@ in
 
     CPU_TYPE = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
     OFFCPU_TYPE = "offcpu:offcpu:nanoseconds::"
+    COLLECT_INTERVAL_MS = ${toString collectIntervalS} * 1000
     UNIT = "${unit}"
     TARGET_SEL = f'{{service_name="{UNIT}"}}'
     HOT_FN = "${hotFn}"
@@ -354,17 +357,21 @@ in
             links0 = bpf_links("alloy")
             print(f"alloy BPF links before GC: {links0}")
             assert links0 > 0, links0
-            gc_ms = vm_now_ms()
             # net/http/pprof runs runtime.GC() first w/ `gc=1`
             machine.succeed(
                 f"{CURL} -f -o /dev/null '{ALLOY_URL}/debug/pprof/heap?gc=1'",
                 timeout=CMD_TIMEOUT,
             )
+            # Alloy stamps each profile at batch flush, not at sample
+            # capture, so the batch in flight during the GC still holds
+            # pre-GC samples. Only count batches flushed >= 1 collect
+            # interval after the GC returned: all their samples are post-GC.
+            fresh_ms = vm_now_ms() + COLLECT_INTERVAL_MS
             wait_for_profile(
                 OFFCPU_TYPE, TARGET_SEL,
                 lambda names: COLD_FN in names,
                 "offcpu after GC",
-                start_ms=gc_ms,
+                start_ms=fresh_ms,
             )
             # GC cleanups ran long before the fresh profile: ~1 collect
             # interval later
