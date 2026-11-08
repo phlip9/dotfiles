@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=diff-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/diff-lib.sh"
+
 # initrd-diff.sh: show initrd content changes between two built NixOS
 # systems, e.g. before and after a nixpkgs bump.
 #
@@ -31,6 +35,7 @@ mask_sed=(
   -E
   -e 's|/nix/store/[a-z0-9]{32}-|<store>/|g'
   -e 's|(<store>/[A-Za-z_+.][A-Za-z0-9_+.]*(-[A-Za-z_+.][A-Za-z0-9_+.]*)*)-[0-9][A-Za-z0-9_+.-]*|\1|g'
+  -e 's|(/lib/modules/)[0-9][A-Za-z0-9_+.-]*|\1<kernel>|g'
 )
 
 tmp=$(mktemp -d)
@@ -71,6 +76,8 @@ extract() {
 #   $2/files.list, $2/text/<masked-path>
 dump() {
   local root="$1" out="$2" rel key
+  local parts="$tmp/parts-${out##*/}"
+  local -A text_keys=()
 
   mkdir -p "$out/text"
   (cd "$root" && find . \( -type f -o -type l \) -printf '/%P\n') |
@@ -78,10 +85,15 @@ dump() {
 
   while IFS= read -r -d '' rel; do
     key=$(sed "${mask_sed[@]}" <<<"/$rel")
-    mkdir -p "$out/text/$(dirname "$key")"
-    sed "${mask_sed[@]}" "$root/$rel" >"$out/text/$key"
+    add_masked_fragment "$root/$rel" "$parts/$key" "${mask_sed[@]}"
+    text_keys[$key]=1
   done < <(cd "$root" && find . -type f -size -"$max_file_kib"k \
     -not -name '*.ko*' -printf '%P\0' | xargs -0r grep -IlZ '' --)
+
+  # Different store files can have the same masked basename; retain each.
+  for key in "${!text_keys[@]}"; do
+    join_masked_fragments "$parts/$key" "$out/text/$key"
+  done
 }
 
 for side in old:"$1" new:"$2"; do

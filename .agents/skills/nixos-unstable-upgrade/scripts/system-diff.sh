@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# shellcheck source-path=SCRIPTDIR
+# shellcheck source=diff-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/diff-lib.sh"
+
 # system-diff.sh: show generated-config changes between two built NixOS
 # systems, e.g. before and after a nixpkgs bump.
 #
@@ -86,7 +90,8 @@ dump_system() {
   local system="$1" out="$2"
   local etc="$system/etc"
   local all="$tmp/all" text="$tmp/text"
-  local -A seen=() is_text=()
+  local parts="$tmp/refs-${out##*/}"
+  local -A seen=() is_text=() ref_keys=()
   local dumped=() next=()
   local file rel size ref key dir digest _level
 
@@ -146,12 +151,20 @@ dump_system() {
       seen[$ref]=1
       is_generated_text "$ref" || continue
       key=$(sed "${mask_sed[@]}" -e 's|^<store>/||' <<<"$ref")
-      cp -L --no-preserve=mode "$ref" "$out/refs/${key//\//__}"
+      key=${key//\//__}
+      add_masked_fragment "$ref" "$parts/$key" "${mask_sed[@]}"
+      ref_keys[$key]=1
       next+=("$ref")
     done < <(printf '%s\0' "${dumped[@]}" |
       xargs -0r grep -ohE "$store_re" -- 2>/dev/null | sort -u)
     [[ ${#next[@]} -gt 0 ]] || break
     dumped=("${next[@]}")
+  done
+
+  # Several generated paths can share a name, e.g. per-cert acme-postrun.
+  # Keep all distinct contents instead of overwriting the previous file.
+  for key in "${!ref_keys[@]}"; do
+    join_masked_fragments "$parts/$key" "$out/refs/$key"
   done
 
   # mask everything we copied, in one batch

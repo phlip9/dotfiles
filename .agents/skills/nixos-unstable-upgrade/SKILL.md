@@ -34,12 +34,14 @@ package + release notes scanning and summarization.
 - `config.phlipPkgs` inside NixOS (`nixos/mods/phlippkgs.nix`) rebuilds
   `pkgs/` against unstable, e.g. `phlipPkgs.paseo` on sauna
 - external NixOS modules pinned separately in npins, imported in
-  `nixos/mods/default.nix`: sops-nix, disko, nixbot, niks3, paseo. They can
-  break against new nixpkgs (removed options, removed toolchain builders
-  like `buildGo1XXModule`). So can packages built from them, e.g.
+  `nixos/mods/default.nix`: sops-nix, disko, nixbot, niks3, paseo, rbitcoin.
+  They can break against new nixpkgs (removed options, removed toolchain
+  builders like `buildGo1XXModule`). So can packages built from them, e.g.
   `phlipPkgsNixos.nixbot-cli` and `nixbot-eval-jobs` (patched nix).
 
-Not affected: `homeConfigs` and top-level `phlipPkgs` (stable `nixpkgs` pin).
+Package evaluation is unaffected for `homeConfigs` and top-level
+`phlipPkgs` (stable `nixpkgs` pin). Their runtime configs can still need
+migration when consumed by NixOS packages, including out-of-store symlinks.
 
 ## Temporary pins
 
@@ -66,8 +68,9 @@ np=~/dev/nixpkgs   # local nixpkgs checkout, `nixos-unstable` branch
 #   e.g. .../nixos-26.11pre1057119.ec2d622de077/nixexprs.tar.xz
 jq -r '.pins["nixos-unstable"].url' npins/sources.json
 
-art=/tmp/nixos-upgrade-<old-rev12>   # logs, out-links, diffs
+art="$PWD/tmp/nixos-upgrade-<old-rev12>"   # logs, out-links, diffs
 mkdir -p "$art"
+export TMPDIR="$art"
 
 # baseline builds (OLD pin), before bumping. skip `nixos-iso`. Usually
 # cached by CI. Out-links keep GC roots.
@@ -106,6 +109,10 @@ pins (e.g. `postgresql_18`), assertions (e.g. phlipdesk's nvidia driver
 version check). Include implicit modules from profiles (`minimal.nix`,
 `headless.nix`, niri, greetd, pipewire, xdg portal).
 
+Trace user config files consumed by those packages (`config/`, `home/`),
+not just NixOS options. Use the NEW package's config validator when available;
+Nix eval does not catch application schema or palette-token changes.
+
 ### 1b. Release notes
 
 ```bash
@@ -134,6 +141,11 @@ files, runtime migrations.
 When a module stops setting a value explicitly, check the upstream default
 actually in use (e.g. compile-time defaults in the package's man pages).
 
+Review relevant builder changes under `pkgs/build-support/` and
+`pkgs/stdenv/` too. If Rust hooks start forcing system libraries, inspect
+affected Cargo.lock files for all matching native `*-sys` crates before
+rebuilding; fixing only the first missing library wastes a full rebuild.
+
 ### 1d. Eval probe (NEW pin)
 
 Eval every machine and every test; tests set options machines don't.
@@ -146,12 +158,19 @@ attrs=$(
   nix eval --raw -f . nixosTests \
     --apply 'ts: toString (map (t: "nixosTests.${t}") (builtins.attrNames ts))'
 )
-# errors + warnings/deprecations, per attr
-for a in $attrs; do
-  echo "== $a"
-  nix eval --raw -f . "$a.drvPath" 2>&1 >/dev/null \
-    | grep -iE 'error|warn|trace|deprec'
+# Preserve exit status and complete diagnostics independently for each attr.
+failed=0
+for attr in $attrs; do
+  if nix eval --raw -f . "$attr.drvPath" \
+    >/dev/null 2>"$art/$attr.eval.log"; then
+    echo "$attr exit=0"
+  else
+    echo "$attr exit=$?"
+    failed=1
+  fi
+  cat "$art/$attr.eval.log"
 done
+test "$failed" -eq 0
 ```
 
 - `mkRemovedOptionModule` assertions stop eval early and hide later errors.
@@ -184,13 +203,14 @@ nix shell -f . pkgs.cpio pkgs.zstd pkgs.xz pkgs.gzip --command \
   effect of module changes: dropped/changed config lines, unit ordering and
   hardening, script flags. tzdata and CA bundle dirs show as one digest
   line each. ~30s per machine; run it in the background.
-  Known issue: `refs/` keys collide when several generated files share a
-  name (e.g. per-cert `acme-postrun`), producing false diffs; confirm those
-  against the real store files.
+  Colliding masked names (e.g. per-cert `acme-postrun`) retain every
+  distinct masked file, sorted by content.
 - `initrd-diff.sh`: initrd file list (added/removed) and small text file
   contents (initrd units, udev rules, generated config), masked. Run it
   whenever `diff-closures` shows `initrd-linux` changed. Kernel module
-  sizes are ignored; they churn on every kernel rebuild. ~10s per machine.
+  sizes and version-only module directory changes are ignored; they churn
+  on every kernel rebuild. Colliding masked names retain every distinct
+  text file. ~10s per machine.
 - External pin build failures (builder default changes like
   structuredAttrs, nix bumps breaking carried patches): check upstream HEAD
   for a fix before patching locally, e.g.
@@ -198,13 +218,15 @@ nix shell -f . pkgs.cpio pkgs.zstd pkgs.xz pkgs.gzip --command \
   Then bump and review the range as in 1d.
 - systemd major bump: parse the generated tmpfiles with the new
   `systemd-tmpfiles`; new versions tighten parsing. Diff old vs new output:
-  `"$art/<v>-<m>/sw/bin/systemd-tmpfiles" --dry-run --create --remove
+  `"$art/<v>-<m>/systemd/bin/systemd-tmpfiles" --dry-run --create --remove
   "$art/<v>-<m>"/etc/tmpfiles.d/*.conf 2>&1 | grep -v '^Would'`.
 - Once machines build, start the Phase 3 NixOS test build in the
   background; failures are research findings.
 - Upstream changelogs for bumps of stateful or public-facing services (DBs,
   web/metrics services), boot-critical packages (kernel, grub, limine,
-  nvidia), and anything security-relevant. Source changelogs:
+  nvidia), and anything security-relevant. Cover the entire version range,
+  including intervening patch releases; fixes already in OLD are not new
+  upgrade benefits. Source changelogs:
   `nix build -f "$np" <pkg>.src`, or GitHub releases.
 
 ### 1f. Classify
@@ -262,8 +284,8 @@ nix build --no-link --print-out-paths --keep-going -L -f . \
   nixosTests.<each test> > "$art/build.log" 2>&1
 echo "exit=$?" >> "$art/build.log"
 
-# CI job set built from unstable: phlipPkgsNixos (+ passthru tests), all
-# nixosConfigs incl. nixos-iso
+# Actual unstable CI jobs: phlipPkgsNixos (+ passthru tests), machine and
+# headless installer toplevels. Graphical installer and ISO images excluded.
 nix-build nix/ci/default.nix -A phlipPkgsNixos -A nixosConfigs \
   --no-out-link --keep-going > "$art/ci.log" 2>&1
 echo "exit=$?" >> "$art/ci.log"
