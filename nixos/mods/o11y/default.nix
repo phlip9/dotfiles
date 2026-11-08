@@ -9,6 +9,7 @@
 # - nginx virtualHost for Grafana (if grafana.domain is set)
 # - Grafana Git Sync: dashboard sync w/ git repo
 # - Alerting (vmalert + Alertmanager): see ./alerting.nix
+# - Profiling (Pyroscope): see ./profiling.nix
 #
 # All services listen on localhost only. Only nginx is public-facing.
 # Grafana secrets are injected via systemd LoadCredential and read
@@ -40,6 +41,12 @@ let
   vmalertAddr = config.services.vmalert.instances."".settings.httpListenAddr;
   cfgAm = config.services.prometheus.alertmanager;
   amAddr = "${cfgAm.listenAddress}:${toString cfgAm.port}";
+
+  # Pyroscope, see ./profiling.nix
+  cfgProfiling = cfg.profiling;
+  cfgPyroSrv = config.services.pyroscope.settings.server;
+  pyroscopeAddr =
+    "${cfgPyroSrv.http_listen_address}:" + toString cfgPyroSrv.http_listen_port;
 
   # rbitcoin serves `/metrics` on its loopback health listener.
   cfgRbitcoin = config.services.rbitcoin;
@@ -302,7 +309,10 @@ let
   };
 in
 {
-  imports = [ ./alerting.nix ];
+  imports = [
+    ./alerting.nix
+    ./profiling.nix
+  ];
 
   options.services.phlip9-o11y = {
     enable = lib.mkEnableOption "phlip9 metrics observability stack";
@@ -609,7 +619,13 @@ in
               { targets = [ amAddr ]; }
             ];
           }
-        ];
+        ]
+        ++ lib.optional cfgProfiling.enable {
+          job_name = "pyroscope";
+          static_configs = [
+            { targets = [ pyroscopeAddr ]; }
+          ];
+        };
       };
     };
 
@@ -723,7 +739,11 @@ in
           data_source_proxy_whitelist = [
             cfgVm.listenAddress
           ]
-          ++ lib.optional cfgAlerting.enable amAddr;
+          ++ lib.optional cfgAlerting.enable amAddr
+          # Profiles Drilldown, mcp-grafana, and profilecli query Pyroscope
+          # through `/api/datasources/proxy/uid/pyroscope/...`, not
+          # `/api/ds/query`, so they need this.
+          ++ lib.optional cfgProfiling.enable pyroscopeAddr;
         };
 
         # The secrets manager encrypts secure values (ex: Git Sync tokens)
@@ -798,18 +818,38 @@ in
               # Grafana-managed alert rules: none, keep them in Grafana.
               handleGrafanaManagedAlerts = false;
             };
+          }
+          # Flame graphs in panels + Explore, and the Profiles Drilldown app.
+          ++ lib.optional cfgProfiling.enable {
+            name = "Pyroscope";
+            type = "grafana-pyroscope-datasource";
+            access = "proxy";
+            uid = "pyroscope";
+            url = "http://${pyroscopeAddr}";
+            # VM stays the default datasource.
+            isDefault = false;
+            editable = false;
+            # Floor for the step of profile-derived time series queries
+            jsonData.minStep = "15s";
           };
         };
       };
 
       # Only allow installing grafana plugins via nix
-      declarativePlugins = with pkgs.grafanaPlugins; [
-        grafana-exploretraces-app
-        grafana-lokiexplore-app
-        grafana-metricsdrilldown-app
-        grafana-pyroscope-app
-        victoriametrics-metrics-datasource
-      ];
+      declarativePlugins =
+        with pkgs.grafanaPlugins;
+        [
+          grafana-exploretraces-app
+          grafana-lokiexplore-app
+          grafana-metricsdrilldown-app
+          grafana-pyroscope-app
+          victoriametrics-metrics-datasource
+        ]
+        # Grafana 13.2 dropped it from core. Grafana would preinstall it from
+        # grafana.com, but not w/ `declarativePlugins` set.
+        ++ lib.optionals cfgProfiling.enable [
+          phlipPkgsNixos.grafana-pyroscope-datasource
+        ];
     };
 
     # Inject Grafana secrets via systemd LoadCredential. The
