@@ -9,7 +9,7 @@
 # - nginx virtualHost for Grafana (if grafana.domain is set)
 # - Grafana Git Sync: dashboard sync w/ git repo
 # - Alerting (vmalert + Alertmanager): see ./alerting.nix
-# - Profiling (Pyroscope): see ./profiling.nix
+# - Profiling (Pyroscope + Alloy eBPF collector): see ./profiling.nix
 #
 # All services listen on localhost only. Only nginx is public-facing.
 # Grafana secrets are injected via systemd LoadCredential and read
@@ -42,7 +42,7 @@ let
   cfgAm = config.services.prometheus.alertmanager;
   amAddr = "${cfgAm.listenAddress}:${toString cfgAm.port}";
 
-  # Pyroscope, see ./profiling.nix
+  # Pyroscope + Alloy, see ./profiling.nix
   cfgProfiling = cfg.profiling;
   cfgPyroSrv = config.services.pyroscope.settings.server;
   pyroscopeAddr =
@@ -626,6 +626,12 @@ in
           job_name = "pyroscope";
           static_configs = [
             { targets = [ pyroscopeAddr ]; }
+          ];
+        }
+        ++ lib.optional (cfgProfiling.enable && cfgProfiling.collector.enable) {
+          job_name = "alloy";
+          static_configs = [
+            { targets = [ cfgProfiling.collector.listenAddress ]; }
           ];
         };
       };

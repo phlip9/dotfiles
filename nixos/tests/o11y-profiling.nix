@@ -50,7 +50,11 @@ in
           secretKeyFile = secret "gf-secret-key" "test-secret-key-0123456789";
           secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
         };
-        profiling.enable = true;
+        profiling = {
+          enable = true;
+          # eBPF needs a VM, see ./o11y-profiling-ebpf.nix
+          collector.enable = false;
+        };
       };
 
       # Unused here: node metrics, ssh
