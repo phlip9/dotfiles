@@ -121,7 +121,7 @@ tests:
           - exp_labels:
               severity: warn
             exp_annotations:
-              summary: Alloy dropped 15 profiles in 15m
+              summary: Alloy dropped 5 profiles in 5m
               description: journalctl -u alloy -u pyroscope
 
   # eBPF drops alone, w/o any write drop series
@@ -138,5 +138,25 @@ tests:
           - exp_labels:
               severity: warn
             exp_annotations:
-              summary: Alloy dropped 30 profiles in 15m
+              summary: Alloy dropped 10 profiles in 5m
               description: journalctl -u alloy -u pyroscope
+
+  # A 3-min burst, then quiet: shorter than the `for`, must not fire.
+  - name: ProfilesDropped ignores a short completed burst
+    interval: 1m
+    input_series:
+      - series: 'pyroscope_ebpf_pprofs_dropped_total{job="alloy"}'
+        values: 0x9 1 2 3x30
+    alert_rule_test:
+      - eval_time: 12m
+        groupname: profiling
+        alertname: ProfilesDropped
+        exp_alerts: []
+      - eval_time: 25m
+        groupname: profiling
+        alertname: ProfilesDropped
+        exp_alerts: []
+      - eval_time: 30m
+        groupname: profiling
+        alertname: ProfilesDropped
+        exp_alerts: []

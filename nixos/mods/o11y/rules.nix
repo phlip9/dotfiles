@@ -569,19 +569,20 @@ let
     rules = [
       # Profiles lost: pushes that failed after all retries (Pyroscope down
       # or rejecting), or profiles that missed their push deadline (one
-      # collect interval). The `for` skips one-off bursts, ex: a big nix
-      # build. The write counter only exists after its first drop.
+      # collect interval). Drops must keep happening for 15m (short window
+      # + `for`), so one-off bursts don't fire, ex: a big nix build. The
+      # write counter only exists after its first drop.
       {
         alert = "ProfilesDropped";
         expr = lib.concatStrings [
           "sum(increase({__name__=~"
           ''"pyroscope_write_dropped_profiles_total''
-          ''|pyroscope_ebpf_pprofs_dropped_total"}[15m])) > 0''
+          ''|pyroscope_ebpf_pprofs_dropped_total"}[5m])) > 0''
         ];
         for = "15m";
         labels.severity = "warn";
         annotations = {
-          summary = "Alloy dropped {{ $value | humanize }} profiles in 15m";
+          summary = "Alloy dropped {{ $value | humanize }} profiles in 5m";
           description = "journalctl -u alloy -u pyroscope";
         };
       }
