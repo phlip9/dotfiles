@@ -54,8 +54,12 @@ in
       description = ''
         Pyroscope profile retention period. Pyroscope's v2 storage only
         supports time-based retention, no size cap, so pick this from the
-        measured bytes/day. Disk usage trails it by up to ~12h: the metastore
-        drops whole 6h partitions, after a 6h grace period. "0" = forever.
+        measured bytes/day. "0" = forever.
+
+        Deletion lags behind: nominally a 6h index partition + 6h grace + the
+        15min cleanup cadence, after which compaction workers physically
+        delete the data. A cleanup or compaction backlog keeps data longer.
+        Not a disk-usage bound.
       '';
     };
   };

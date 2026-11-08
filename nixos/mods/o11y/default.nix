@@ -539,10 +539,12 @@ in
               { targets = [ cfgVm.listenAddress ]; }
             ];
           }
-          {
-            job_name = "node-exporter";
-            static_configs = exporterTargets config.services.prometheus.exporters.node;
-          }
+        ]
+        ++ lib.optional config.services.prometheus.exporters.node.enable {
+          job_name = "node-exporter";
+          static_configs = exporterTargets config.services.prometheus.exporters.node;
+        }
+        ++ [
           {
             job_name = "grafana";
             static_configs = [

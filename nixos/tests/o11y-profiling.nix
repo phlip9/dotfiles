@@ -53,6 +53,10 @@ in
         profiling.enable = true;
       };
 
+      # Unused here: node metrics, ssh
+      services.prometheus.exporters.node.enable = lib.mkForce false;
+      services.openssh.enable = lib.mkForce false;
+
       services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
       # Queries hide samples younger than `-search.latencyOffset` (30s).
       services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
@@ -83,42 +87,77 @@ in
     PYRO_URL = "http://127.0.0.1:4040"
     VM_URL = "http://127.0.0.1:8428"
     GF_URL = "http://127.0.0.1:3000"
-    GF_CURL = "curl -sS --fail-with-body -u admin:gf-admin-testpwd"
+    # Bound every request, so a hung server fails its step, not the test's
+    # globalTimeout, and `dump_evidence` still runs.
+    CURL = "curl -sS --connect-timeout 2 --max-time 10"
+    GF_CURL = f"{CURL} --fail-with-body -u admin:gf-admin-testpwd"
+    # Upper bound for one command, incl. its curl
+    CMD_TIMEOUT = dt.timedelta(seconds=15)
 
     SERVICE = "${service}"
     PROFILE_TYPE = "${profileType}"
     HOT_FN = "${hotFn}"
     SELECTOR = f'{{service_name="{SERVICE}"}}'
 
+    # Pyroscope's ports: http, grpc, metastore raft, memberlist
+    PYRO_PORTS = {4040, 9095, 9099, 7946}
+
     # POST a JSON body through Grafana, return the parsed response.
     def gf_post(path: str, body: dict) -> dict:
         data = shlex.quote(json.dumps(body))
         out = machine.succeed(
             f"{GF_CURL} -H 'Content-Type: application/json' "
-            f"--data-binary {data} {GF_URL}{path}"
+            f"--data-binary {data} {GF_URL}{path}",
+            timeout=CMD_TIMEOUT,
         )
         return json.loads(out)
 
     def dump_evidence() -> None:
+        up_query = shlex.quote('up{job="pyroscope"}')
         for cmd in [
             "journalctl --no-pager -o cat -u pyroscope | tail -n 100",
+            "journalctl --no-pager -o cat -u victoriametrics | tail -n 30",
             "journalctl --no-pager -o cat -u grafana | tail -n 50",
-            f"curl -sS {PYRO_URL}/ready",
-            f"curl -sS {PYRO_URL}/api/v1/status/config/diff",
+            f"{CURL} {PYRO_URL}/ready",
+            f"{CURL} {PYRO_URL}/api/v1/status/config/diff",
+            f"{CURL} {VM_URL}/api/v1/query --data-urlencode query={up_query}",
+            "ss -Hltunp",
         ]:
-            print(f"$ {cmd}\n{machine.execute(cmd)[1]}")
+            _, out = machine.execute(cmd, timeout=CMD_TIMEOUT)
+            print(f"$ {cmd}\n{out}")
 
     machine.start()
     try:
         with subtest("Pyroscope starts + turns ready"):
-            machine.wait_for_unit("pyroscope.service")
+            machine.wait_for_unit(
+                "pyroscope.service", timeout=dt.timedelta(seconds=60)
+            )
             machine.wait_until_succeeds(
-                f"curl -sSf {PYRO_URL}/ready",
+                f"{CURL} -f {PYRO_URL}/ready",
                 timeout=dt.timedelta(seconds=60),
             )
 
+        # Regression guard: Pyroscope has no authn, and several of its
+        # listeners default to all interfaces (grpc, memberlist).
+        with subtest("Pyroscope only listens on loopback"):
+            out = machine.succeed("ss -Hltun", timeout=CMD_TIMEOUT)
+            # `ss` local address column: `127.0.0.1:4040`, `[::1]:9099`, ...
+            listeners = [line.split()[4] for line in out.splitlines()]
+            seen = set()
+            for local in listeners:
+                addr, _, port = local.rpartition(":")
+                if int(port) not in PYRO_PORTS:
+                    continue
+                seen.add(int(port))
+                assert addr in {"127.0.0.1", "[::1]"}, (local, out)
+            # Prove each listener exists before trusting the check above.
+            assert seen == PYRO_PORTS, (seen, out)
+
         with subtest("Pyroscope config: v2 storage, default retention"):
-            conf = machine.succeed(f"curl -sSf {PYRO_URL}/api/v1/status/config")
+            conf = machine.succeed(
+                f"{CURL} -f {PYRO_URL}/api/v1/status/config",
+                timeout=CMD_TIMEOUT,
+            )
             lines = {line.strip() for line in conf.splitlines()}
             assert "architecture_storage: v2" in lines, conf
             assert "retention_period: 30d" in lines, conf
@@ -126,23 +165,27 @@ in
         with subtest("VictoriaMetrics scrapes Pyroscope"):
             query = shlex.quote('up{job="pyroscope"}')
             machine.wait_until_succeeds(
-                f"curl -sSf {VM_URL}/api/v1/query --data-urlencode query={query} "
+                f"{CURL} -f {VM_URL}/api/v1/query --data-urlencode query={query} "
                 "| jq -e '.data.result[0].value[1] == \"1\"'",
                 timeout=dt.timedelta(seconds=30),
             )
 
         with subtest("Grafana Pyroscope datasource + plugin backend"):
-            machine.wait_for_unit("grafana.service")
-            machine.wait_for_open_port(3000)
+            machine.wait_for_unit(
+                "grafana.service", timeout=dt.timedelta(seconds=60)
+            )
+            machine.wait_for_open_port(3000, timeout=dt.timedelta(seconds=30))
             ds = json.loads(machine.succeed(
-                f"{GF_CURL} {GF_URL}/api/datasources/uid/pyroscope"
+                f"{GF_CURL} {GF_URL}/api/datasources/uid/pyroscope",
+                timeout=CMD_TIMEOUT,
             ))
             assert ds["type"] == "grafana-pyroscope-datasource", ds
             assert ds["url"] == PYRO_URL, ds
             assert ds["isDefault"] is False, ds
             # Runs the plugin's Go backend, which queries Pyroscope.
             health = json.loads(machine.succeed(
-                f"{GF_CURL} {GF_URL}/api/datasources/uid/pyroscope/health"
+                f"{GF_CURL} {GF_URL}/api/datasources/uid/pyroscope/health",
+                timeout=CMD_TIMEOUT,
             ))
             assert health["status"] == "OK", health
 
@@ -152,7 +195,8 @@ in
             push_ms = int(time.time() * 1000)
             machine.succeed(
                 f"profilecli upload --url {PYRO_URL} --override-timestamp "
-                f"--extra-labels service_name={SERVICE} /etc/o11y-test/cpu.pb.gz"
+                f"--extra-labels service_name={SERVICE} /etc/o11y-test/cpu.pb.gz",
+                timeout=CMD_TIMEOUT,
             )
             start_ms = push_ms - 60_000
             end_ms = push_ms + 600_000
@@ -201,7 +245,8 @@ in
             "systemctl show pyroscope -p CPUUsageNSec; "
             "grep -E '^Vm(RSS|HWM)' "
             "/proc/$(systemctl show pyroscope -p MainPID --value)/status; "
-            "du -sh /var/lib/pyroscope/"
+            "du -sh /var/lib/pyroscope/",
+            timeout=CMD_TIMEOUT,
         ))
     except Exception:
         dump_evidence()
