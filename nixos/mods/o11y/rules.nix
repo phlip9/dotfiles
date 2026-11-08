@@ -608,6 +608,8 @@ let
       # timer (./profiling.nix).
       {
         alert = "PyroscopeDiskHigh";
+        # TODO(phlip9): provisional. Pick in M3 from measured bytes/day x
+        # 30d retention + ~12h+ deletion lag, w/ headroom on `/`.
         expr = "pyroscope_data_bytes > 50e9";
         for = "1h";
         labels.severity = "warn";

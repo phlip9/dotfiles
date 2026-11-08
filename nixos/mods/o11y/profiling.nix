@@ -59,6 +59,17 @@ let
     lib.attrValues config.users.users
   );
 
+  # `0::/system.slice/[<parent>.slice/]<unit>.service[/<sub-cgroup>]`,
+  # captures `<unit>`, or `<template>@` for templated units. RE2, anchored.
+  systemUnitRegex = lib.concatStrings [
+    "0::/system\\.slice/"
+    # parent slices, ex: `system-getty.slice/`
+    "(?:[^/]+\\.slice/)*"
+    # unit name, or template prefix w/ `@`; then the instance
+    "([^/@]+@?)[^/]*"
+    "\\.service(?:/.*)?"
+  ];
+
   # The collector's config, see `collector` options. `//` comments end up in
   # /etc/alloy/config.alloy, for whoever reads it there.
   alloyConfig = ''
@@ -95,7 +106,7 @@ let
       // don't create a series each.
       rule {
         source_labels = ["__meta_process_cgroup_path"]
-        regex         = `0::/system\.slice/(?:[^/]+\.slice/)*([^/@]+@?)[^/]*\.service(?:/.*)?`
+        regex         = ${alloyLit systemUnitRegex}
         target_label  = "service_name"
       }
 
@@ -507,8 +518,8 @@ in
       source = alloyConfigFile;
     };
 
-    # Static user: ambient caps need a fixed uid (the module uses
-    # DynamicUser).
+    # Static user instead of the module's DynamicUser: stable owner for the
+    # symbol cache across restarts, and an explicit identity to audit.
     users.users.alloy = lib.mkIf cfgC.enable {
       isSystemUser = true;
       group = "alloy";
