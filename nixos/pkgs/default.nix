@@ -34,6 +34,11 @@ fix (phlipPkgsNixos: {
   # grafana, patched so Git Sync isn't blocked by GitHub
   grafana = callPackage ./grafana { };
 
+  # Grafana Pyroscope datasource plugin, no longer in Grafana core
+  grafana-pyroscope-datasource =
+    callPackage ./grafana-pyroscope-datasource.nix
+      { };
+
   # greetd with PAM auth for the initial autologin session
   greetd = callPackage ./greetd { };
 
