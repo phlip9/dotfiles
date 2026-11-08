@@ -34,6 +34,9 @@ fix (phlipPkgsNixos: {
   # grafana, patched so Git Sync isn't blocked by GitHub
   grafana = callPackage ./grafana { };
 
+  # Grafana Alloy 1.22 pre-release: Go 1.27 symbolization in pyroscope.ebpf
+  grafana-alloy = callPackage ./grafana-alloy.nix { };
+
   # Grafana Pyroscope datasource plugin, no longer in Grafana core
   grafana-pyroscope-datasource =
     callPackage ./grafana-pyroscope-datasource.nix
