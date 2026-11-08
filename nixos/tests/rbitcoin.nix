@@ -10,7 +10,7 @@
   globalTimeout = 600;
 
   defaults =
-    { pkgs, ... }:
+    { config, pkgs, ... }:
     {
       environment.systemPackages = [
         pkgs.curl
@@ -25,6 +25,11 @@
         # /healthz, /readyz on 127.0.0.1:9332.
         health.enable = true;
       };
+
+      # nspawn test nodes share cgroupfs. Separate the service cgroups so
+      # stopping one node cannot race the other node's cgroup cleanup.
+      systemd.services.rbitcoin.serviceConfig.Slice =
+        "${config.networking.hostName}.slice";
     };
 
   containers.node1 = {
