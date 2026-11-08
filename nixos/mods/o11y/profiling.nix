@@ -110,6 +110,16 @@ in
         metastore.min_ready_duration = "0s";
         segment_writer.lifecycler.min_ready_duration = "0s";
 
+        # Compaction runs up to #CPUs jobs at once by default. sauna's 12
+        # threads are shared w/ CI, and a single node's few blocks/min don't
+        # need more.
+        # = `-compaction-worker.job-concurrency`
+        compaction_worker.job_capacity = 2;
+
+        # `info` logs 4 lines per query (query start/finish, params, weight)
+        # + compaction polls every few seconds.
+        server.log_level = "warn";
+
         # The monolith otherwise pushes profiles of itself to itself.
         self_profiling.disable_push = true;
         # No anonymous usage stats to grafana.com
