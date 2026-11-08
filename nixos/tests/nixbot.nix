@@ -32,6 +32,16 @@ in
       ...
     }:
     let
+      # Backport nixpkgs 1243b7622aeb: cargoSetupHook now requires system
+      # AWS-LC and zstd. Drop once the pinned RustFS declares these deps.
+      rustfs = pkgs.rustfs.overrideAttrs (old: {
+        nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.pkg-config ];
+        buildInputs = (old.buildInputs or [ ]) ++ [
+          pkgs.aws-lc
+          pkgs.zstd
+        ];
+      });
+
       fakeGithubPort = 8970;
       fakeGithub = phlipPkgs.writeTypedPython3Bin "fake-github" { } ''
         import json
@@ -185,7 +195,7 @@ in
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
           ExecStart = lib.escapeShellArgs [
-            "${pkgs.rustfs}/bin/rustfs"
+            (lib.getExe rustfs)
             "--address"
             "127.0.0.1:9000"
             "--access-key"

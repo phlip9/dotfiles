@@ -64,14 +64,13 @@
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
   # use a better Linux scheduler for interactive desktop usage
-  services.scx = {
+  services.scx-loader = {
     enable = true;
-    package = pkgs.scx.rustscheds;
+    schedsPackages = [ pkgs.scx.rustscheds ];
     # - scx_bpfland: good for responsive desktop under heavy background load
     # - scx_lavd: built for the Steam Deck to eliminate gaming micro-stutter
     # - scx_cosmos. good desktop and server default. less battle-tested.
-    scheduler = "scx_bpfland";
-    extraArgs = [ ];
+    config.default_sched = "scx_bpfland";
   };
 
   # compressed RAM swap. absorbs memory pressure in-RAM instead of thrashing to
@@ -393,7 +392,7 @@
     pkgs.wl-clipboard
 
     # path of exile 1+2 build planner
-    pkgs.rusty-path-of-building
+    phlipPkgsNixos.rusty-path-of-building
 
     # path of exile (game) price checker
     phlipPkgsNixos.awakened-poe-trade

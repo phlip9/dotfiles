@@ -81,6 +81,9 @@ fix (phlipPkgsNixos: {
   # rbitcoin - Bitcoin full node + Electrum + Esplora server (dynamic glibc)
   rbitcoin = callPackage ./rbitcoin.nix { inherit sources; };
 
+  # rusty-path-of-building with its missing system library dependencies
+  rusty-path-of-building = callPackage ./rusty-path-of-building.nix { };
+
   # seahorse-ssh-askpass - tiny package that links to seahorse's ssh-askpass
   seahorse-ssh-askpass = callPackage ./seahorse-ssh-askpass.nix { };
 
