@@ -96,3 +96,47 @@ tests:
             exp_annotations:
               summary: / fills up within 24h at the 6h trend
               description: Who's writing? du -xsh /var/lib/*
+
+  # The write drop counter only exists after its first drop: the regex
+  # matcher must still count it, w/o an `or vector(0)` dance.
+  - name: ProfilesDropped counts a drop counter that appears late
+    interval: 1m
+    input_series:
+      - series: 'pyroscope_ebpf_pprofs_dropped_total{job="alloy"}'
+        values: 0x40
+      - series: >-
+          pyroscope_write_dropped_profiles_total{job="alloy",
+          endpoint="local"}
+        values: _x9 1+1x30
+    alert_rule_test:
+      # Still pending
+      - eval_time: 20m
+        groupname: profiling
+        alertname: ProfilesDropped
+        exp_alerts: []
+      - eval_time: 30m
+        groupname: profiling
+        alertname: ProfilesDropped
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: Alloy dropped 15 profiles in 15m
+              description: journalctl -u alloy -u pyroscope
+
+  # eBPF drops alone, w/o any write drop series
+  - name: ProfilesDropped fires on eBPF drops alone
+    interval: 1m
+    input_series:
+      - series: 'pyroscope_ebpf_pprofs_dropped_total{job="alloy"}'
+        values: 0+2x40
+    alert_rule_test:
+      - eval_time: 30m
+        groupname: profiling
+        alertname: ProfilesDropped
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: Alloy dropped 30 profiles in 15m
+              description: journalctl -u alloy -u pyroscope

@@ -562,6 +562,62 @@ let
     ];
   };
 
+  # Continuous profiling: Alloy eBPF collector -> Pyroscope. TargetDown
+  # covers either one down. Profiles are best-effort, so nothing pages.
+  profilingGroup = {
+    name = "profiling";
+    rules = [
+      # Profiles lost: pushes that failed after all retries (Pyroscope down
+      # or rejecting), or profiles that missed their push deadline (one
+      # collect interval). The `for` skips one-off bursts, ex: a big nix
+      # build. The write counter only exists after its first drop.
+      {
+        alert = "ProfilesDropped";
+        expr = lib.concatStrings [
+          "sum(increase({__name__=~"
+          ''"pyroscope_write_dropped_profiles_total''
+          ''|pyroscope_ebpf_pprofs_dropped_total"}[15m])) > 0''
+        ];
+        for = "15m";
+        labels.severity = "warn";
+        annotations = {
+          summary = "Alloy dropped {{ $value | humanize }} profiles in 15m";
+          description = "journalctl -u alloy -u pyroscope";
+        };
+      }
+      # Ex: the eBPF profiler failed to load (missing cap, kernel change).
+      # A silently broken profiler (`[unknown]` frames) doesn't show here.
+      {
+        alert = "AlloyUnhealthy";
+        expr = lib.concatStrings [
+          "sum(alloy_component_controller_running_components"
+          ''{health_type!="healthy"}) > 0''
+        ];
+        for = "10m";
+        labels.severity = "warn";
+        annotations = {
+          summary = "{{ $value }} Alloy components not healthy";
+          description = lib.concatStringsSep " " [
+            "journalctl -u alloy;"
+            "curl 127.0.0.1:12345/api/v0/web/components"
+          ];
+        };
+      }
+      # Retention is time-based only, no size cap. From the pyroscope-du
+      # timer (./profiling.nix).
+      {
+        alert = "PyroscopeDiskHigh";
+        expr = "pyroscope_data_bytes > 50e9";
+        for = "1h";
+        labels.severity = "warn";
+        annotations = {
+          summary = "Pyroscope uses {{ $value | humanize1024 }}B on disk";
+          description = "Lower profiling.retentionPeriod or sample rate.";
+        };
+      }
+    ];
+  };
+
   # rbitcoin node. Thresholds assume mainnet.
   rbitcoinGroup = {
     name = "rbitcoin";
@@ -619,6 +675,7 @@ in
   ++ lib.optional cfgExporters.postgres.enable postgresGroup
   ++ lib.optional cfgExporters.nginx.enable nginxGroup
   ++ lib.optional config.services.nixbot.enable nixbotGroup
+  ++ lib.optional cfg.profiling.enable profilingGroup
   ++ lib.optional (cfgRbitcoin.enable && cfgRbitcoin.metrics) rbitcoinGroup;
 
   # Alertmanager `inhibit_rules`. While a source alert fires, matching target

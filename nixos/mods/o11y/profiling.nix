@@ -193,6 +193,25 @@ let
         alloy validate $out
       '';
 
+  # Pyroscope's on-disk size, for node-exporter's textfile collector. All
+  # Pyroscope state is under its StateDirectory (DynamicUser: really
+  # /var/lib/private/pyroscope).
+  pyroscopeDu = pkgs.writeShellApplication {
+    name = "pyroscope-du";
+    runtimeInputs = [ pkgs.coreutils ];
+    text = ''
+      bytes=$(du -sB1 /var/lib/pyroscope/ | cut -f1)
+      # Write + rename: node-exporter never reads a partial file
+      cat > "$RUNTIME_DIRECTORY/pyroscope.prom.tmp" <<EOF
+      # HELP pyroscope_data_bytes Disk usage of Pyroscope's data dir.
+      # TYPE pyroscope_data_bytes gauge
+      pyroscope_data_bytes $bytes
+      EOF
+      mv "$RUNTIME_DIRECTORY/pyroscope.prom.tmp" \
+        "$RUNTIME_DIRECTORY/pyroscope.prom"
+    '';
+  };
+
   pyroscopeAddr =
     "${cfgPyroSrv.http_listen_address}:" + toString cfgPyroSrv.http_listen_port;
 
@@ -374,6 +393,55 @@ in
     };
 
     system.checks = [ pyroscopeConfigCheck ];
+
+    # Pyroscope has no metric for its on-disk size, so export `du` of its
+    # data dir via node-exporter's textfile collector. For the
+    # PyroscopeDiskHigh alert (./rules.nix).
+    systemd.services.pyroscope-du = {
+      description = "Export Pyroscope's disk usage to node-exporter";
+      after = [ "pyroscope.service" ];
+      wantedBy = [ "multi-user.target" ];
+      startAt = "*:0/15";
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = lib.getExe pyroscopeDu;
+        # root, but only to read Pyroscope's 0700 dirs. Not DynamicUser: it
+        # moves a preserved RuntimeDirectory to 0700 /run/private.
+        CapabilityBoundingSet = [ "CAP_DAC_READ_SEARCH" ];
+        # = node-exporter's `--collector.textfile.directory`
+        RuntimeDirectory = "pyroscope-du";
+        RuntimeDirectoryMode = "0755";
+        RuntimeDirectoryPreserve = true;
+        UMask = "0022";
+        IPAddressDeny = [ "any" ];
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        NoNewPrivileges = true;
+        PrivateDevices = true;
+        PrivateNetwork = true;
+        ProtectClock = true;
+        ProtectControlGroups = true;
+        ProtectHome = true;
+        ProtectHostname = true;
+        ProtectKernelLogs = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        ProtectProc = "invisible";
+        ProtectSystem = "strict";
+        RestrictAddressFamilies = [ "none" ];
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        SystemCallArchitectures = "native";
+        SystemCallFilter = [
+          "@system-service"
+          "~@privileged"
+        ];
+      };
+    };
+    services.prometheus.exporters.node.extraFlags = [
+      "--collector.textfile.directory=/run/pyroscope-du"
+    ];
 
     # TODO(phlip9): MemoryMax for pyroscope + alloy once measured on sauna.
     # VM test (2 vCPU, 1 busy unit): pyroscope ~100 MB RSS idle; alloy ~255

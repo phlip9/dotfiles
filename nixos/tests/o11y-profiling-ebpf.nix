@@ -16,6 +16,7 @@
 # - an `offcpu` profile w/ the blocking fn
 # - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
 #   VictoriaMetrics scrapes it
+# - `pyroscope_data_bytes` (pyroscope-du timer -> node-exporter)
 #
 # Mirrors sauna: latest kernel + its BPF/perf/ptrace sysctls.
 let
@@ -83,9 +84,8 @@ in
         };
       };
 
-      # Unused here: Grafana (covered by o11y-profiling), node metrics, ssh
+      # Unused here: Grafana (covered by o11y-profiling), ssh
       services.grafana.enable = lib.mkForce false;
-      services.prometheus.exporters.node.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
 
       services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
@@ -345,13 +345,25 @@ in
                     f'health_type="{health}"',
                 ) == 0, health
 
-        with subtest("VictoriaMetrics scrapes Alloy"):
-            query = shlex.quote('up{job="alloy"}')
-            machine.wait_until_succeeds(
-                f"{CURL} -f {VM_URL}/api/v1/query "
-                f"--data-urlencode query={query} "
-                "| jq -e '.data.result[0].value[1] == \"1\"'",
-                timeout=dt.timedelta(seconds=30),
+        # `up` + Pyroscope's disk usage via node-exporter's textfile
+        # collector, for the alert rules
+        with subtest("VictoriaMetrics: Alloy up, Pyroscope disk usage"):
+            def wait_for_query(promql: str, jq_check: str) -> None:
+                query = shlex.quote(promql)
+                machine.wait_until_succeeds(
+                    f"{CURL} -f {VM_URL}/api/v1/query "
+                    f"--data-urlencode query={query} | jq -e {jq_check}",
+                    timeout=dt.timedelta(seconds=30),
+                )
+
+            wait_for_query(
+                'up{job="alloy"}', "'.data.result[0].value[1] == \"1\"'"
+            )
+            # Fresh numbers now, not at the next timer tick
+            machine.succeed("systemctl start pyroscope-du", timeout=CMD_TIMEOUT)
+            wait_for_query(
+                "pyroscope_data_bytes",
+                "'.data.result[0].value[1] | tonumber > 0'",
             )
 
         # Not an assertion: resource numbers for tuning. CPU over the
