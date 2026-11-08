@@ -71,6 +71,7 @@ in
     inherit nixosConfigs pkgs;
   };
   o11y-profiling = runNixOSTest ./o11y-profiling.nix;
+  o11y-profiling-ebpf = runNixOSTest ./o11y-profiling-ebpf.nix;
   paseo = runNixOSTest ./paseo.nix;
   rbitcoin = runNixOSTest ./rbitcoin.nix;
 }
