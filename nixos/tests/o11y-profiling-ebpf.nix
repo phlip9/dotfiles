@@ -13,7 +13,8 @@
 #   frames) + a symbolized kernel frame
 # - Go frames for VictoriaMetrics, a go1.27 binary w/o `.symtab`
 # - series labels: `exe` + `host`, no pid or `__meta_*` leaks
-# - an `offcpu` profile w/ the blocking fn
+# - an `offcpu` profile w/ the blocking fn, also fresh after a forced GC in
+#   Alloy (regression: GC'd off-CPU probe)
 # - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
 #   VictoriaMetrics scrapes it
 # - `pyroscope_data_bytes` (pyroscope-du timer -> node-exporter)
@@ -128,6 +129,7 @@ in
     UP_TIMEOUT = dt.timedelta(seconds=60)
 
     CPU_TYPE = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
+    OFFCPU_TYPE = "offcpu:offcpu:nanoseconds::"
     UNIT = "${unit}"
     TARGET_SEL = f'{{service_name="{UNIT}"}}'
     HOT_FN = "${hotFn}"
@@ -174,14 +176,28 @@ in
             status[key] = val.strip()
         return status
 
+    # Open BPF link FDs of a unit's main process
+    def bpf_links(unit: str) -> int:
+        pid = machine.succeed(
+            f"systemctl show {unit} -p MainPID --value", timeout=CMD_TIMEOUT
+        ).strip()
+        return int(machine.succeed(
+            f"find /proc/{pid}/fd -lname 'anon_inode:bpf_link' | wc -l",
+            timeout=CMD_TIMEOUT,
+        ))
+
     # Query window: since boot, until well after now
+    def vm_now_ms() -> int:
+        return int(machine.succeed("date +%s%3N", timeout=CMD_TIMEOUT))
+
     def window() -> dict:
-        now_ms = int(machine.succeed("date +%s%3N", timeout=CMD_TIMEOUT))
+        now_ms = vm_now_ms()
         return {"start": now_ms - 3_600_000, "end": now_ms + 60_000}
 
-    # POST to Pyroscope's Connect query API. {} on error, so polls retry.
+    # POST to Pyroscope's Connect query API, by default over `window()`.
+    # {} on error, so polls retry.
     def pyro_post(method: str, body: dict) -> dict:
-        data = shlex.quote(json.dumps({**body, **window()}))
+        data = shlex.quote(json.dumps({**window(), **body}))
         status, out = machine.execute(
             f"{CURL} --fail-with-body -H 'Content-Type: application/json' "
             f"--data-binary {data} "
@@ -193,12 +209,15 @@ in
             return {}
         return json.loads(out)
 
-    # Function names in the merged flame graph of `ptype` for `selector`.
-    def fn_names(ptype: str, selector: str) -> set[str]:
-        resp = pyro_post("SelectMergeStacktraces", {
-            "profileTypeID": ptype,
-            "labelSelector": selector,
-        })
+    # Function names in the merged flame graph of `ptype` for `selector`,
+    # from profiles since `start_ms` (default: since boot).
+    def fn_names(
+        ptype: str, selector: str, start_ms: int | None = None
+    ) -> set[str]:
+        body = {"profileTypeID": ptype, "labelSelector": selector}
+        if start_ms is not None:
+            body["start"] = start_ms
+        resp = pyro_post("SelectMergeStacktraces", body)
         return set(resp.get("flamegraph", {}).get("names", []))
 
     def label_values(label: str, selector: str | None = None) -> list[str]:
@@ -208,12 +227,15 @@ in
 
     # Poll until `check(names)` holds for the profile. Pyroscope has no push
     # notification. Returns the last names seen.
-    def wait_for_profile(ptype: str, selector: str, check, what: str):
+    def wait_for_profile(
+        ptype: str, selector: str, check, what: str,
+        start_ms: int | None = None,
+    ):
         seen = set()
 
         def poll(last_try: bool) -> bool:
             nonlocal seen
-            seen = fn_names(ptype, selector)
+            seen = fn_names(ptype, selector, start_ms)
             if last_try:
                 print(f"{what}: last names seen: {sorted(seen)[:60]}")
             return check(seen)
@@ -319,10 +341,36 @@ in
 
         with subtest("off-CPU profile: blocking fn"):
             wait_for_profile(
-                "offcpu:offcpu:nanoseconds::", TARGET_SEL,
+                OFFCPU_TYPE, TARGET_SEL,
                 lambda names: COLD_FN in names,
                 "offcpu",
             )
+
+        # Regression: Alloy <= 1.22 dropped its only reference to the
+        # off-CPU probe, so a GC closed the probe's BPF links: a few startup
+        # off-CPU profiles, then silence, while Alloy stays healthy. Force a
+        # GC, then require a fresh off-CPU profile + the same BPF links.
+        with subtest("off-CPU profiling survives a GC in Alloy"):
+            links0 = bpf_links("alloy")
+            print(f"alloy BPF links before GC: {links0}")
+            assert links0 > 0, links0
+            gc_ms = vm_now_ms()
+            # net/http/pprof runs runtime.GC() first w/ `gc=1`
+            machine.succeed(
+                f"{CURL} -f -o /dev/null '{ALLOY_URL}/debug/pprof/heap?gc=1'",
+                timeout=CMD_TIMEOUT,
+            )
+            wait_for_profile(
+                OFFCPU_TYPE, TARGET_SEL,
+                lambda names: COLD_FN in names,
+                "offcpu after GC",
+                start_ms=gc_ms,
+            )
+            # GC cleanups ran long before the fresh profile: ~1 collect
+            # interval later
+            links1 = bpf_links("alloy")
+            print(f"alloy BPF links after GC: {links1}")
+            assert links1 == links0, (links0, links1)
 
         with subtest("Alloy metrics: pushes sent, none dropped, healthy"):
             sent = alloy_metric("pyroscope_write_sent_profiles_total")
