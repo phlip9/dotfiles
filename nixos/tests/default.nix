@@ -70,6 +70,7 @@ in
   o11y-alerting-unit = import ./o11y-alerting-unit.nix {
     inherit nixosConfigs pkgs;
   };
+  o11y-profiling = runNixOSTest ./o11y-profiling.nix;
   paseo = runNixOSTest ./paseo.nix;
   rbitcoin = runNixOSTest ./rbitcoin.nix;
 }
