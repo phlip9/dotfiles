@@ -46,6 +46,9 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     # Show the full commit message when viewing a single commit: pinned
     # subject, then author, date, sha, and body scrolling w/ the diff.
     ./paseo-commit-message.patch
+    # Compile built-in plugins during the build. Runtime only reads artifacts
+    # and never needs esbuild or TypeScript in its dependency closure.
+    ./paseo-precompile-plugins.patch
   ];
 
   # Upstream builds w/ `--ignore-scripts`, so the root postinstall never
@@ -54,6 +57,23 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
   # https://github.com/getpaseo/paseo/issues/7673
   preBuild = (prevAttrs.preBuild or "") + ''
     npm run postinstall
+  '';
+
+  # Keep upstream's sources and build scripts intact. Specialize only the
+  # packaged compiler module after all build-time compilation has finished.
+  postBuild = (prevAttrs.postBuild or "") + ''
+    node packages/server/scripts/precompile-builtin-plugins.mjs
+    cp packages/server/scripts/plugin-compiler-runtime.mjs \
+      packages/server/dist/server/server/plugins/compiler.js
+  '';
+
+  # nft follows OpenCode's source-only compiler fallback, although packaged
+  # bridge.js requires a prebuilt artifact. No compiler belongs in the output.
+  postInstall = (prevAttrs.postInstall or "") + ''
+    find "$out/lib/paseo" \
+      \( -path '*/node_modules/esbuild' -o -path '*/node_modules/@esbuild' \
+        -o -path '*/node_modules/typescript' \) \
+      -prune -exec rm -rf {} +
   '';
 
   # Paseo uses ps to manage process trees and tar to extract speech models.

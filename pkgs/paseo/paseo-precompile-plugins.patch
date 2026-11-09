@@ -1,0 +1,61 @@
+diff --git a/packages/server/scripts/plugin-compiler-runtime.mjs b/packages/server/scripts/plugin-compiler-runtime.mjs
+new file mode 100644
+index 000000000..dff9a9d9d
+--- /dev/null
++++ b/packages/server/scripts/plugin-compiler-runtime.mjs
+@@ -0,0 +1,25 @@
++import { readFile } from "node:fs/promises";
++import path from "node:path";
++import { z } from "zod";
++
++export const PLUGIN_BUNDLES_FILENAME = "paseo-plugin.bundle.json";
++const PluginBundlesSchema = z
++  .object({
++    clientBundle: z.string().min(1).nullable(),
++    serverBundle: z.string().min(1).nullable(),
++  })
++  .strict()
++  .refine((bundles) => bundles.clientBundle !== null || bundles.serverBundle !== null);
++
++// Replace the packaged compiler at its existing API boundary. All callers,
++// including validation and reloads, read build artifacts without a fallback.
++export async function compilePlugin(entryPaths) {
++  const entry = entryPaths.server ?? entryPaths.client;
++  if (!entry) throw new Error("Plugin entry points are missing");
++  const artifact = path.join(path.dirname(entry), PLUGIN_BUNDLES_FILENAME);
++  try {
++    return PluginBundlesSchema.parse(JSON.parse(await readFile(artifact, "utf8")));
++  } catch (cause) {
++    throw new Error(`Precompiled plugin artifact missing or invalid: ${artifact}`, { cause });
++  }
++}
+diff --git a/packages/server/scripts/precompile-builtin-plugins.mjs b/packages/server/scripts/precompile-builtin-plugins.mjs
+new file mode 100644
+index 000000000..5adbbab0f
+--- /dev/null
++++ b/packages/server/scripts/precompile-builtin-plugins.mjs
+@@ -0,0 +1,24 @@
++import { readdir, writeFile } from "node:fs/promises";
++import path from "node:path";
++import {
++  builtinPlugins,
++  resolveBuiltinPluginsRoot,
++} from "../dist/server/server/plugins/builtin/index.js";
++import { compilePlugin } from "../dist/server/server/plugins/compiler.js";
++import { PLUGIN_BUNDLES_FILENAME } from "./plugin-compiler-runtime.mjs";
++
++// Run against the original compiler before Nix replaces it with the artifact
++// loader. Preserve upstream's dependency-boundary checks during compilation.
++const root = resolveBuiltinPluginsRoot();
++for (const id of builtinPlugins) {
++  const directory = path.join(root, id);
++  const files = new Set(await readdir(directory));
++  const entries = {};
++  for (const target of ["client", "server"]) {
++    const entry = [`index.${target}.ts`, `index.${target}.tsx`].find((name) => files.has(name));
++    entries[target] = entry ? path.join(directory, entry) : null;
++  }
++  const bundles = await compilePlugin(entries);
++  if (!bundles.serverBundle) throw new Error(`Built-in plugin ${id} needs a server entry`);
++  await writeFile(path.join(directory, PLUGIN_BUNDLES_FILENAME), JSON.stringify(bundles));
++}

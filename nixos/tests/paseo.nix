@@ -38,6 +38,34 @@
         mv "login-env.$$" login-env
       '';
 
+      # Check the catalog after startup: the daemon catches built-in load
+      # failures, so health alone also passes when every plugin failed.
+      precompiledProbe = pkgs.writeText "paseo-precompiled-probe.mjs" ''
+        import assert from "node:assert/strict";
+        import { globSync } from "node:fs";
+        import { DaemonClient } from "${config.services.paseo.package}/lib/paseo/packages/client/dist/daemon-client.js";
+        import { builtinPlugins } from "${config.services.paseo.package}/lib/paseo/packages/server/dist/server/server/plugins/builtin/index.js";
+
+        const root = "${config.services.paseo.package}/lib/paseo";
+        assert.deepEqual(globSync("**/node_modules/{esbuild,@esbuild,typescript}", {
+          cwd: root,
+        }), []);
+        const client = new DaemonClient({
+          url: "ws://[::1]:6767/ws",
+          clientId: "precompiled-test",
+          password: "correct-password",
+          reconnect: { enabled: false },
+        });
+        try {
+          await client.connect();
+          const catalog = await client.getPluginCatalog();
+          assert.deepEqual(catalog.map(({ id }) => id).sort(),
+            [...builtinPlugins].sort());
+        } finally {
+          await client.close();
+        }
+      '';
+
       # Pre-existing, UI-managed config.json, like sauna's. Includes stale
       # values that conflict w/ declarative policy: an enabled service proxy,
       # upstream's default app.paseo.sh CORS origin, and enabled plugins.
@@ -70,6 +98,9 @@
         pkgs.curl
         pkgs.git
         pkgs.jq
+        (pkgs.writeShellScriptBin "paseo-precompiled-probe" ''
+          exec ${lib.getExe pkgs.nodejs_22} ${precompiledProbe}
+        '')
       ];
 
       users.users.testuser = {
@@ -249,6 +280,9 @@
             "ss -H -ltnp | grep -F 'Paseo Daemon' | awk '{print $4}' "
             "| grep -Ev '^(127[.]0[.]0[.]1|\\[::1\\]):'"
         )
+
+    with subtest("all built-ins load without runtime compilers"):
+        machine.succeed("timeout 30 paseo-precompiled-probe")
 
     with subtest("enforced settings merge into mutable config"):
         machine.succeed(
