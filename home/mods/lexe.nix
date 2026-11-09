@@ -1,6 +1,5 @@
 {
   lib,
-  phlipPkgs,
   pkgs,
   pkgsUnfree,
   ...
@@ -71,7 +70,7 @@ in
 {
   home.packages = [
     flutter
-    phlipPkgs.lego
+    pkgs.lego
     pkgs.bundletool
     pkgs.cargo-expand
     pkgs.cargo-ndk

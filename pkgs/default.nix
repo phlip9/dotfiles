@@ -69,9 +69,6 @@ fix (phlipPkgs: {
   # GitHub App installation-token client for local authd socket API
   github-agent-token = callPackage ./github-agent-token { };
 
-  # lego - patched Let's Encrypt ACME client
-  lego = callPackage ./lego.nix { };
-
   # multios-usb - USB boot directly from .iso images
   multios-usb = callPackage ./multios-usb.nix { };
 

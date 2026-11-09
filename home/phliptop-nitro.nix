@@ -79,7 +79,7 @@
     phlipPkgs.codex
 
     # lexe tools
-    phlipPkgs.lego
+    pkgs.lego
     pkgs.josh
     pkgs.rage
     pkgs.toml-cli
