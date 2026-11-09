@@ -6,14 +6,15 @@
 # - niks3 streaming uploader uploads the output
 # - an output already in the local store (built outside nixbot) is skipped
 #   but still uploaded (see: nixos/pkgs/nixbot/default.nix)
-# - niks3 server writes signed cache objects to S3 (local RustFS S3 API in test)
+# - niks3 server writes signed cache objects to S3 (local versitygw in test)
 # - reads the output's narinfo directly from S3, verifies its signature, and
 #   copies the output into an empty Nix store
 # - VictoriaMetrics scrapes both services through their local endpoints
 let
   apiToken = "test-token-that-is-at-least-36-characters-long";
-  s3AccessKey = "rustfsadmin";
-  s3SecretKey = "rustfsadmin";
+  # Must match niks3-s3-{access,secret}-key in ./fixtures/secrets.yaml
+  s3AccessKey = "s3admin";
+  s3SecretKey = "s3admin";
   s3Bucket = "nixbot-test";
   signingPublicKey = "niks3-test-1:f/Mfq81CcfUlnchjlZdtSGyZUHplChuNKltk08qxPvs=";
 in
@@ -32,16 +33,6 @@ in
       ...
     }:
     let
-      # Backport nixpkgs 1243b7622aeb: cargoSetupHook now requires system
-      # AWS-LC and zstd. Drop once the pinned RustFS declares these deps.
-      rustfs = pkgs.rustfs.overrideAttrs (old: {
-        nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.pkg-config ];
-        buildInputs = (old.buildInputs or [ ]) ++ [
-          pkgs.aws-lc
-          pkgs.zstd
-        ];
-      });
-
       fakeGithubPort = 8970;
       fakeGithub = phlipPkgs.writeTypedPython3Bin "fake-github" { } ''
         import json
@@ -157,7 +148,7 @@ in
       # (~4s) on every cache check and build, so don't configure any.
       nix.settings.substituters = lib.mkForce [ ];
 
-      # Postgres, RustFS, niks3, nixbot, and VictoriaMetrics all start at
+      # Postgres, S3, niks3, nixbot, and VictoriaMetrics all start at
       # boot. A 2nd vCPU lets them overlap; more doesn't help.
       virtualisation.cores = 2;
 
@@ -187,34 +178,38 @@ in
         pkgs.zstd
       ];
 
-      # RustFS replaces Cloudflare R2 while retaining the real S3 protocol
+      # versitygw replaces Cloudflare R2 while retaining the real S3 protocol
       # boundary used by niks3 in production.
-      systemd.services.rustfs = {
-        description = "RustFS S3-compatible object storage";
+      systemd.services.s3 = {
+        description = "versitygw S3 gateway";
         after = [ "network.target" ];
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
           ExecStart = lib.escapeShellArgs [
-            (lib.getExe rustfs)
-            "--address"
+            (lib.getExe pkgs.versitygw)
+            "--port"
             "127.0.0.1:9000"
-            "--access-key"
+            "--access"
             s3AccessKey
-            "--secret-key"
+            "--secret"
             s3SecretKey
-            "/var/lib/rustfs"
+            # No per-request access log lines
+            "--quiet"
+            # Buckets are dirs, objects are files under them
+            "posix"
+            "/var/lib/s3"
           ];
-          StateDirectory = "rustfs";
+          StateDirectory = "s3";
           DynamicUser = true;
           Restart = "on-failure";
         };
       };
 
       # Create the bucket before niks3 opens its S3-backed store.
-      systemd.services.rustfs-setup = {
+      systemd.services.s3-setup = {
         description = "Create the nixbot test S3 bucket";
-        after = [ "rustfs.service" ];
-        requires = [ "rustfs.service" ];
+        after = [ "s3.service" ];
+        requires = [ "s3.service" ];
         before = [ "niks3.service" ];
         wantedBy = [ "multi-user.target" ];
         environment = {
@@ -227,8 +222,8 @@ in
           set -euo pipefail
 
           # Wait for the object store API before creating the cache bucket.
-          # No s5cmd retries: its backoff can outlast RustFS's startup by
-          # ~20s. This loop retries instead.
+          # No s5cmd retries: its backoff can outlast the S3 server's startup.
+          # This loop retries instead.
           for attempt in $(seq 60); do
             if s5cmd --retry-count 0 ls >/dev/null 2>&1; then
               s5cmd mb s3://${s3Bucket} || true
@@ -237,7 +232,7 @@ in
             sleep 1
           done
 
-          echo "RustFS did not become ready" >&2
+          echo "S3 server did not become ready" >&2
           exit 1
         '';
         serviceConfig = {
@@ -247,8 +242,8 @@ in
       };
 
       systemd.services.niks3 = {
-        after = [ "rustfs-setup.service" ];
-        requires = [ "rustfs-setup.service" ];
+        after = [ "s3-setup.service" ];
+        requires = [ "s3-setup.service" ];
         # Count uploads in `niks3_cache_objects` within ~1s, not ~1 min.
         environment.NIKS3_INVENTORY_REFRESH_INTERVAL = "1s";
       };
@@ -357,8 +352,8 @@ in
             "/run/secrets/nixbot-github-app-secret-key -noout"
         )
 
-    with subtest("cache: RustFS and niks3 become healthy"):
-        machine.wait_for_unit("rustfs-setup.service")
+    with subtest("cache: S3 and niks3 become healthy"):
+        machine.wait_for_unit("s3-setup.service")
         machine.wait_for_unit("niks3.service")
         machine.wait_until_succeeds(
             "curl --noproxy '*' --fail -g -s 'http://[::1]:5751/readyz'",
