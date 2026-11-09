@@ -5,6 +5,7 @@
 # upstream's static musl release build.
 {
   callPackage,
+  lib,
   pkgs,
   sources,
 }:
@@ -12,8 +13,37 @@
 let
   craneLib = import sources.crane { inherit pkgs; };
 
+  # Keep symbols + frame pointers for the eBPF profiler (Alloy
+  # `pyroscope.ebpf`): it unwinds user stacks by frame pointer and
+  # symbolizes from the on-disk `.symtab`. nixpkgs `buildRustPackage` gets
+  # FPs via `cargoSetupHook`; crane doesn't, and upstream strips all
+  # symbols (`-C strip=symbols`).
+  #
+  # Upstream's `commonRUSTFLAGS` is a `let` binding, so patch the RUSTFLAGS
+  # env vars on every crane builder call instead. This covers both the deps
+  # layer (`buildDepsOnly`) and the app layer (`buildPackage`), so the app
+  # build reuses a deps layer w/ matching flags. `strip=debuginfo` keeps
+  # `.symtab` but still drops DWARF.
+  patchRustflags =
+    flags:
+    assert lib.assertMsg (lib.hasInfix "-C strip=symbols" flags)
+      "rbitcoin: upstream RUSTFLAGS changed: ${flags}";
+    builtins.replaceStrings [ "-C strip=symbols" ] [ profilingFlags ] flags;
+  profilingFlags = "-C strip=debuginfo -C force-frame-pointers=yes";
+  isRustflagsVar =
+    name: builtins.match "(CARGO_TARGET_.*_)?RUSTFLAGS" name != null;
+  patchArgs = lib.mapAttrs (
+    name: value: if isRustflagsVar name then patchRustflags value else value
+  );
+  profilingCraneLib = craneLib.overrideScope (
+    final: prev: {
+      buildDepsOnly = args: prev.buildDepsOnly (patchArgs args);
+      buildPackage = args: prev.buildPackage (patchArgs args);
+    }
+  );
+
   rbitcoin = callPackage (sources.rbitcoin + "/nix/rbitcoin.nix") {
-    inherit craneLib;
+    craneLib = profilingCraneLib;
   };
 
   # Upstream's package skips tests. Run the product crates' tests in a
