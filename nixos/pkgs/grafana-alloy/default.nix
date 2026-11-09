@@ -47,8 +47,9 @@
     # probe's BPF links become unreachable and cilium/ebpf closes them on
     # the next GC: a few off-CPU profiles after startup, then silence, while
     # the component stays healthy. The patch keeps the probes alive until
-    # the component stops. Unfixed upstream as of main 5c7b2a1 (2026-11-05);
-    # drop once fixed. Regression test: nixos/tests/o11y-profiling-ebpf.nix
+    # the component stops. Drop once fixed upstream:
+    # <https://github.com/grafana/alloy/issues/7675>
+    # Regression test: nixos/tests/o11y-profiling-ebpf.nix
     # (nixpkgs' custom patchPhase ignores `patches`)
     patchPhase = ''
       patch -p1 < ${./ebpf-keep-probes-alive.patch}
