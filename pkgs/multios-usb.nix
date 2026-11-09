@@ -42,13 +42,13 @@ let
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "multios-usb";
-  version = "0.14.2";
+  version = "0.15.0";
 
   src = fetchFromGitHub {
     owner = "Mexit";
     repo = "MultiOS-USB";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-iUlb7mb98rDqgIVcUJGgxUIpAeSQ90pVhukIYUc0P0Q=";
+    hash = "sha256-jZ+bPQKc45fiIAbTUeNwpla6yQXBUyICeciWcIsauR4=";
   };
 
   strictDeps = true;
