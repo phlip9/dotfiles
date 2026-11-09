@@ -79,11 +79,20 @@
     # upstream as of main 5c7b2a1. Unit test in the patch; regression
     # test: nixos/tests/o11y-profiling-ebpf.nix
     #
+    # The pprof builder dedupes locations by mapping, address, fn name, and
+    # line, but not source file. Interpreter frames (Python, PHP, Ruby,
+    # JVM, ...) have no mapping and often no address, so ex: `main` at line
+    # 1 in a.py and b.py share one location, and the profile shows only one
+    # of the files. Rare w/in one pid, common once `per_pid_profile =
+    # false` merges pids. The patch adds the source file + frame kind to
+    # the key. Not upstream as of main 5c7b2a1. Unit test in the patch.
+    #
     # (nixpkgs' custom patchPhase ignores `patches`)
     patchPhase = ''
       patch -p1 < ${./ebpf-keep-probes-alive.patch}
       patch -p1 < ${./ebpf-keep-exited-targets.patch}
       patch -p1 < ${./ebpf-per-pid-profile.patch}
+      patch -p1 < ${./ebpf-location-source-file.patch}
     ''
     + prev.patchPhase;
   }

@@ -1,0 +1,104 @@
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/builder.go b/internal/component/pyroscope/ebpf/reporter/builder.go
+--- a/internal/component/pyroscope/ebpf/reporter/builder.go
++++ b/internal/component/pyroscope/ebpf/reporter/builder.go
+@@ -147,6 +147,12 @@
+ 	addr      libpf.AddressOrLineno
+ 	name      libpf.String
+ 	line      libpf.SourceLineno
++	// Interpreter frames (Python, PHP, Perl, Ruby, BEAM, JVM, ...) have no
++	// mapping and often no address: w/o file + kind, equal fn names +
++	// lines in different source files share one location, ex: `main` at
++	// line 1 in a.py + b.py.
++	file libpf.String
++	kind libpf.FrameType
+ }
+ type mappingKey struct {
+ 	Start libpf.Address
+@@ -172,7 +178,7 @@
+ 
+ func (p *ProfileBuilder) CommLocation(comm string) *profile.Location {
+ 	commInterned := libpf.Intern(comm)
+-	loc, fresh := p.Location(p.dummyMapping, 0, commInterned, 0)
++	loc, fresh := p.Location(p.dummyMapping, 0, commInterned, 0, libpf.NullString, libpf.UnknownFrame)
+ 	if fresh {
+ 		loc.Mapping = p.dummyMapping
+ 		loc.Line = []profile.Line{{
+@@ -252,12 +258,14 @@
+ 	sample.Value[0] += v * p.Profile.Period
+ }
+ 
+-func (p *ProfileBuilder) Location(m *profile.Mapping, addr libpf.AddressOrLineno, name libpf.String, line libpf.SourceLineno) (*profile.Location, bool) {
++func (p *ProfileBuilder) Location(m *profile.Mapping, addr libpf.AddressOrLineno, name libpf.String, line libpf.SourceLineno, file libpf.String, kind libpf.FrameType) (*profile.Location, bool) {
+ 	key := locationsKey{
+ 		mappingId: m.ID,
+ 		addr:      addr,
+ 		name:      name,
+ 		line:      line,
++		file:      file,
++		kind:      kind,
+ 	}
+ 	loc, ok := p.locations[key]
+ 	if ok {
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/pprof.go b/internal/component/pyroscope/ebpf/reporter/pprof.go
+--- a/internal/component/pyroscope/ebpf/reporter/pprof.go
++++ b/internal/component/pyroscope/ebpf/reporter/pprof.go
+@@ -311,7 +311,7 @@
+ 				mapping = fakeMapping
+ 			}
+ 
+-			location, fresh = b.Location(mapping, fr.AddressOrLineno, fr.FunctionName, fr.SourceLine)
++			location, fresh = b.Location(mapping, fr.AddressOrLineno, fr.FunctionName, fr.SourceLine, fr.SourceFile, fr.Type)
+ 			if fresh {
+ 				location.Mapping = mapping
+ 				location.Address = uint64(fr.AddressOrLineno)
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/pprof_test.go b/internal/component/pyroscope/ebpf/reporter/pprof_test.go
+--- a/internal/component/pyroscope/ebpf/reporter/pprof_test.go
++++ b/internal/component/pyroscope/ebpf/reporter/pprof_test.go
+@@ -688,3 +688,47 @@
+ 	require.Len(t, merged["offcpu/service_a"], 1)
+ 	assert.Equal(t, []string{"a1_off"}, funcNames(merged["offcpu/service_a"][0]))
+ }
++
++func TestPPROFReporter_LocationsKeepSourceFile(t *testing.T) {
++	// Interpreter frames w/o mapping or address: equal fn name + line,
++	// different files. One pid each, merged into one profile.
++	pyFrame := func(file string) samples.SampleToEvents {
++		return samples.SampleToEvents{
++			{}: &samples.TraceEvents{
++				Frames: singleFrameTrace(libpf.PythonFrame, libpf.FrameMappingFile{}, 0,
++					"main", file, 1),
++				Timestamps: []uint64{42},
++			},
++		}
++	}
++	tp := discovery.NewTargetProducer(discovery.TargetsOptions{
++		Targets: []discovery.DiscoveredTarget{
++			{"__process_pid__": "1", "service_name": "service_a"},
++			{"__process_pid__": "2", "service_name": "service_a"},
++		},
++	})
++	rep := NewPPROF(slog.New(slog.DiscardHandler),
++		&Config{SamplesPerSecond: 97, PerPIDProfile: false},
++		tp, nil, func(context.Context, []PPROF) {})
++	profiles := rep.createMergedProfiles(samples.TraceEventsTree{
++		{PID: 1}: {Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++			profileTypeSampling: pyFrame("a.py"),
++		}},
++		{PID: 2}: {Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++			profileTypeSampling: pyFrame("b.py"),
++		}},
++	})
++	require.Len(t, profiles, 1)
++
++	parsed, err := profile.Parse(bytes.NewReader(profiles[0].Raw))
++	require.NoError(t, err)
++	var files []string
++	for _, s := range parsed.Sample {
++		line := s.Location[0].Line[0]
++		assert.Equal(t, "main", line.Function.Name)
++		assert.Equal(t, int64(1), line.Line)
++		files = append(files, line.Function.Filename)
++	}
++	assert.ElementsMatch(t, []string{"a.py", "b.py"}, files)
++	assert.Len(t, parsed.Location, 2)
++}
