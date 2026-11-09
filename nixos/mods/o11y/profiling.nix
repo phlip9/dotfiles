@@ -211,6 +211,8 @@ let
       // A `pid` label per sample: high cardinality (nix builds), bigger
       // profiles. Labels stay per unit + exe.
       pid_label = false
+      // Our patch, see nixos/pkgs/grafana-alloy
+      per_pid_profile = ${lib.boolToString cfgC.perPidProfile}
       // C++/Rust names w/o params or template args: short flame graph
       // frames. Overloads merge.
       demangle = "simplified"
@@ -347,8 +349,26 @@ in
         type = lib.types.str;
         default = "15s";
         description = ''
-          How often Alloy builds + pushes one profile per (labels, pid).
-          Also the deadline for each round of pushes.
+          How often Alloy builds + pushes its profiles, see
+          `perPidProfile`. Also the deadline for each round of pushes.
+        '';
+      };
+
+      perPidProfile = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Per collect interval, push one profile per (labels, pid), like
+          upstream Alloy, instead of one per labels w/ all its pids'
+          samples. Pyroscope merges them per labels anyway (no `pid`
+          label).
+
+          Alloy pushes 32 profiles at once, ~0.45s each (Pyroscope acks
+          after its next 500ms segment flush), all w/in one collect
+          interval. Nix builds' short-lived pids fan out to ~600-850
+          per-pid profiles per 15s on sauna; under load the tail misses
+          the deadline and is dropped. Per labels: ~1 push per (unit, exe)
+          + profile type.
         '';
       };
 
