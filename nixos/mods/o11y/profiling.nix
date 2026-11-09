@@ -162,6 +162,8 @@ let
       // Undocumented. `true` (default) only profiles processes in `targets`.
       // `false` profiles every process; ones w/o a target (not yet
       // discovered, < 1 refresh old) get service_name="ebpf/unspecified".
+      // Exited processes keep their target for 2 collect intervals (our
+      // patch), so their last samples still get their unit.
       targets_only = false
 
       sample_rate       = ${toString cfgC.sampleRate}

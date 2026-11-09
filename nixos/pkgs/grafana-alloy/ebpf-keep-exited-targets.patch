@@ -1,0 +1,303 @@
+diff -ruN a/internal/component/pyroscope/ebpf/discovery/target_exited_test.go b/internal/component/pyroscope/ebpf/discovery/target_exited_test.go
+--- a/internal/component/pyroscope/ebpf/discovery/target_exited_test.go
++++ b/internal/component/pyroscope/ebpf/discovery/target_exited_test.go
+@@ -0,0 +1,98 @@
++package discovery
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++// fakeClock is a manually advanced clock for targetProducer.now.
++type fakeClock struct{ now time.Time }
++
++func (c *fakeClock) Now() time.Time { return c.now }
++
++// exitedTestProducer returns a producer w/ a fake clock and pids 10 + 11.
++func exitedTestProducer(
++	t *testing.T, opts func(pids ...string) TargetsOptions,
++) (*targetProducer, *fakeClock) {
++	clock := &fakeClock{now: time.Unix(1000, 0)}
++	tf := &targetProducer{now: clock.Now}
++	tf.setTargets(opts("10", "11"))
++	require.Equal(t, "a10", tf.FindTarget(10, "").ServiceName())
++	return tf, clock
++}
++
++// exitedTestOptions builds TargetsOptions w/ one target per pid, named
++// `a<pid>`.
++func exitedTestOptions(
++	retention time.Duration, targetsOnly bool,
++) func(pids ...string) TargetsOptions {
++	return func(pids ...string) TargetsOptions {
++		targets := make([]DiscoveredTarget, 0, len(pids))
++		for _, pid := range pids {
++			targets = append(targets, DiscoveredTarget{
++				"__process_pid__": pid,
++				"service_name":    "a" + pid,
++			})
++		}
++		return TargetsOptions{
++			Targets:         targets,
++			TargetsOnly:     targetsOnly,
++			DefaultTarget:   DiscoveredTarget{"service_name": "unspecified"},
++			ExitedRetention: retention,
++		}
++	}
++}
++
++func TestExitedTargetRetained(t *testing.T) {
++	opts := exitedTestOptions(30*time.Second, false)
++	tf, clock := exitedTestProducer(t, opts)
++
++	// pid 10 exits: kept, across Updates, until the retention ends
++	tf.Update(opts("11"))
++	clock.now = clock.now.Add(20 * time.Second)
++	tf.Update(opts("11"))
++	require.Equal(t, "a10", tf.FindTarget(10, "").ServiceName())
++	clock.now = clock.now.Add(10 * time.Second)
++	tf.Update(opts("11"))
++	require.Equal(t, "unspecified", tf.FindTarget(10, "").ServiceName())
++
++	// pid 11 exits, then a new process reuses pid 11: live target wins
++	tf.Update(opts())
++	reused := opts()
++	reused.Targets = append(reused.Targets, DiscoveredTarget{
++		"__process_pid__": "11",
++		"service_name":    "b11",
++	})
++	tf.Update(reused)
++	require.Equal(t, "b11", tf.FindTarget(11, "").ServiceName())
++}
++
++func TestExitedTargetExpiresWithoutUpdate(t *testing.T) {
++	opts := exitedTestOptions(30*time.Second, false)
++	tf, clock := exitedTestProducer(t, opts)
++
++	tf.Update(opts("11"))
++	clock.now = clock.now.Add(29 * time.Second)
++	require.Equal(t, "a10", tf.FindTarget(10, "").ServiceName())
++	clock.now = clock.now.Add(time.Second)
++	require.Equal(t, "unspecified", tf.FindTarget(10, "").ServiceName())
++}
++
++func TestExitedTargetTargetsOnly(t *testing.T) {
++	opts := exitedTestOptions(30*time.Second, true)
++	tf, _ := exitedTestProducer(t, opts)
++
++	// removed under TargetsOnly: no target, so the policy stops profiling
++	tf.Update(opts("11"))
++	require.Nil(t, tf.FindTarget(10, ""))
++}
++
++func TestExitedTargetRetentionDisabled(t *testing.T) {
++	opts := exitedTestOptions(0, false)
++	tf, _ := exitedTestProducer(t, opts)
++
++	tf.Update(opts("11"))
++	require.Equal(t, "unspecified", tf.FindTarget(10, "").ServiceName())
++}
+diff -ruN a/internal/component/pyroscope/ebpf/discovery/target.go b/internal/component/pyroscope/ebpf/discovery/target.go
+--- a/internal/component/pyroscope/ebpf/discovery/target.go
++++ b/internal/component/pyroscope/ebpf/discovery/target.go
+@@ -4,6 +4,7 @@
+ 	"strconv"
+ 	"strings"
+ 	"sync"
++	"time"
+ 
+ 	"github.com/prometheus/common/model"
+ 	"github.com/prometheus/prometheus/model/labels"
+@@ -110,20 +111,40 @@
+ 	Targets       []DiscoveredTarget
+ 	TargetsOnly   bool
+ 	DefaultTarget DiscoveredTarget
++	// How long to keep the target of a pid after it leaves Targets, ex:
++	// the process exited. Samples are looked up when the reporter flushes,
++	// up to one report interval after they were taken, so w/o this the
++	// last samples of every process that exits between a discovery
++	// refresh and the next flush fall back to DefaultTarget. 0 = drop at
++	// once. Ignored w/ TargetsOnly: there a target also means "profile
++	// this pid", and a pid removed from Targets must stop being profiled.
++	ExitedRetention time.Duration
+ }
+ 
+ type targetProducer struct {
+-	cid2target    map[containerID]*Target
+-	pid2target    map[uint32]*Target
++	cid2target map[containerID]*Target
++	pid2target map[uint32]*Target
++	// Targets of pids that left Targets, see ExitedRetention
++	exited map[uint32]exitedTarget
++	// ExitedRetention in effect, 0 w/ TargetsOnly
++	retention     time.Duration
+ 	defaultTarget *Target
+ 	sync          sync.Mutex
++	// Clock, for tests
++	now func() time.Time
++}
++
++// exitedTarget is the last target of a pid that left Targets at `since`.
++type exitedTarget struct {
++	target *Target
++	since  time.Time
+ }
+ 
+ func NewTargetProducer(
+ 	options TargetsOptions,
+ ) TargetProducer {
+ 
+-	res := &targetProducer{}
++	res := &targetProducer{now: time.Now}
+ 	res.setTargets(options)
+ 	return res
+ }
+@@ -164,6 +185,11 @@
+ 			containerID2Target[cid] = oco(tf.cid2target[cid], t)
+ 		}
+ 	}
++	tf.retention = opts.ExitedRetention
++	if opts.TargetsOnly {
++		tf.retention = 0
++	}
++	tf.exited = tf.retainExited(pid2Target, tf.now())
+ 	tf.cid2target = containerID2Target
+ 	tf.pid2target = pid2Target
+ 	if opts.TargetsOnly {
+@@ -174,10 +200,43 @@
+ 	}
+ }
+ 
++// retainExited returns the exited pids' targets to keep: pids that just
++// left (in the old pid2target, not in `live`), plus earlier ones still
++// younger than the retention. A pid that shows up again is live, not
++// exited.
++func (tf *targetProducer) retainExited(
++	live map[uint32]*Target,
++	now time.Time,
++) map[uint32]exitedTarget {
++	if tf.retention <= 0 {
++		return nil
++	}
++	exited := make(map[uint32]exitedTarget)
++	for pid, prev := range tf.exited {
++		if _, ok := live[pid]; !ok && now.Sub(prev.since) < tf.retention {
++			exited[pid] = prev
++		}
++	}
++	for pid, target := range tf.pid2target {
++		if _, ok := live[pid]; !ok {
++			exited[pid] = exitedTarget{target: target, since: now}
++		}
++	}
++	return exited
++}
++
+ func (tf *targetProducer) findTarget(pid uint32, cid string) *Target {
+ 	if target, ok := tf.pid2target[pid]; ok {
+ 		return target
+ 	}
++	// Expire here too, not just on Update: targets may not change for a
++	// long time.
++	if exited, ok := tf.exited[pid]; ok {
++		if tf.now().Sub(exited.since) < tf.retention {
++			return exited.target
++		}
++		delete(tf.exited, pid)
++	}
+ 
+ 	return tf.cid2target[containerID(cid)]
+ }
+diff -ruN a/internal/component/pyroscope/ebpf/ebpf_linux.go b/internal/component/pyroscope/ebpf/ebpf_linux.go
+--- a/internal/component/pyroscope/ebpf/ebpf_linux.go
++++ b/internal/component/pyroscope/ebpf/ebpf_linux.go
+@@ -86,7 +86,7 @@
+ 		return nil, err
+ 	}
+ 	dynamicProfilingPolicy := args.PyroscopeDynamicProfilingPolicy
+-	discovery := alloydiscovery.NewTargetProducer(args.targetsOptions(dynamicProfilingPolicy))
++	discovery := alloydiscovery.NewTargetProducer(args.targetsOptions(dynamicProfilingPolicy, cfg.ReporterInterval))
+ 
+ 	appendable := pyroscope.NewFanout(args.ForwardTo, id, reg)
+ 
+@@ -119,6 +119,7 @@
+ 		args:                   args,
+ 		targetFinder:           discovery,
+ 		dynamicProfilingPolicy: dynamicProfilingPolicy,
++		reportInterval:         cfg.ReporterInterval,
+ 		argsUpdate:             make(chan Arguments, 4),
+ 		symbols:                nfs,
+ 	}
+@@ -151,9 +152,12 @@
+ 	logger                 *slog.Logger
+ 	args                   Arguments
+ 	dynamicProfilingPolicy bool
+-	argsUpdate             chan Arguments
+-	appendable             *pyroscope.Fanout
+-	targetFinder           alloydiscovery.TargetProducer
++	// The reporter's flush period. Fixed at New: a reload w/ another
++	// collect_interval doesn't change the reporter's ticker.
++	reportInterval time.Duration
++	argsUpdate     chan Arguments
++	appendable     *pyroscope.Fanout
++	targetFinder   alloydiscovery.TargetProducer
+ 
+ 	metrics *metrics
+ 	cfg     *controller.Config
+@@ -230,7 +234,7 @@
+ 
+ func (c *Component) updateArgs(newArgs Arguments) {
+ 	c.args = newArgs
+-	c.targetFinder.Update(c.args.targetsOptions(c.dynamicProfilingPolicy))
++	c.targetFinder.Update(c.args.targetsOptions(c.dynamicProfilingPolicy, c.reportInterval))
+ 	c.appendable.UpdateChildren(newArgs.ForwardTo)
+ 	c.metrics.targetsActive.Set(float64(len(c.args.Targets)))
+ }
+@@ -398,7 +402,10 @@
+ 	return probeLinks
+ }
+ 
+-func (args *Arguments) targetsOptions(dynamicProfilingPolicy bool) alloydiscovery.TargetsOptions {
++// targetsOptions builds the target producer's options. `reportInterval` is
++// the reporter's flush period in use, not args.CollectInterval: they differ
++// after a reload.
++func (args *Arguments) targetsOptions(dynamicProfilingPolicy bool, reportInterval time.Duration) alloydiscovery.TargetsOptions {
+ 	targets := make([]alloydiscovery.DiscoveredTarget, 0, len(args.Targets))
+ 	for _, t := range args.Targets {
+ 		targets = append(targets, t.AsMap())
+@@ -409,5 +416,9 @@
+ 		DefaultTarget: alloydiscovery.DiscoveredTarget{
+ 			"service_name": "ebpf/unspecified",
+ 		},
++		// An exited pid's last samples are flushed <= 1 report interval
++		// after it leaves the targets. 2x for a late flush or a dropped
++		// args update.
++		ExitedRetention: 2 * reportInterval,
+ 	}
+ }
+diff -ruN a/internal/component/pyroscope/ebpf/targets_exited_test.go b/internal/component/pyroscope/ebpf/targets_exited_test.go
+--- a/internal/component/pyroscope/ebpf/targets_exited_test.go
++++ b/internal/component/pyroscope/ebpf/targets_exited_test.go
+@@ -0,0 +1,19 @@
++//go:build (linux && arm64) || (linux && amd64)
++
++package ebpf
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++// The reporter's ticker is fixed at New, so exited-pid retention must
++// follow it, not a reloaded collect_interval.
++func TestTargetsOptionsExitedRetentionFollowsReporter(t *testing.T) {
++	args := NewDefaultArguments()
++	args.CollectInterval = time.Second
++	opts := args.targetsOptions(false, 15*time.Second)
++	require.Equal(t, 30*time.Second, opts.ExitedRetention)
++}

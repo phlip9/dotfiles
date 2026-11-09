@@ -50,9 +50,25 @@
     # the component stops. Drop once fixed upstream:
     # <https://github.com/grafana/alloy/issues/7675>
     # Regression test: nixos/tests/o11y-profiling-ebpf.nix
+    #
+    # `pyroscope.ebpf` looks up each pid's labels when it flushes, up to one
+    # collect interval after the samples were taken, in a pid map that each
+    # discovery refresh replaces. So the last samples of every process that
+    # exits before the next flush, but after a refresh, lose their labels
+    # and land in `service_name="ebpf/unspecified"`, w/ processes younger
+    # than one refresh. Together ~25% of sauna's CPU samples (nix builds:
+    # rustc, node, cc1, ...). A shorter refresh only fixes the young ones,
+    # it loses more exited ones. The patch keeps an exited pid's labels for
+    # 2 report intervals (not w/ `targets_only = true`). Unfixed upstream
+    # as of main 5c7b2a1. Regression test:
+    # nixos/tests/o11y-profiling-ebpf.nix. The patch's Go unit tests don't
+    # run here (the build only tests the `collector` module); run them in
+    # a patched source tree: `go test ./internal/component/pyroscope/ebpf/...`
+    #
     # (nixpkgs' custom patchPhase ignores `patches`)
     patchPhase = ''
       patch -p1 < ${./ebpf-keep-probes-alive.patch}
+      patch -p1 < ${./ebpf-keep-exited-targets.patch}
     ''
     + prev.patchPhase;
   }
