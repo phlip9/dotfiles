@@ -16,6 +16,8 @@
 # - series labels: `exe` + `host`, no pid or `__meta_*` leaks
 # - an `offcpu` profile w/ the blocking fn, also fresh after a forced GC in
 #   Alloy (regression: GC'd off-CPU probe)
+# - a process that exits keeps its unit for its last samples, after
+#   discovery dropped it (regression: they went to `ebpf/unspecified`)
 # - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
 #   VictoriaMetrics scrapes it
 # - `pyroscope_data_bytes` (pyroscope-du timer -> node-exporter)
@@ -24,12 +26,17 @@
 let
   # Workload unit
   unit = "ebpf-target";
+  # Same workload, started + stopped by the test: a process that exits
+  exitedUnit = "ebpf-exited";
   # On-CPU fn, user frames only
   hotFn = "hot_loop_spin";
   # Blocks in nanosleep(2): off-CPU
   coldFn = "cold_block_wait";
   # Alloy's pprof flush period, see `collector.collectInterval`
   collectIntervalS = 5;
+  # /proc rescan period, see `collector.refreshInterval`. Well below
+  # `collectIntervalS`: discovery drops an exited pid before the next flush.
+  refreshIntervalS = 1;
 in
 {
   name = "o11y-profiling-ebpf";
@@ -54,6 +61,16 @@ in
           install -Dm755 ${unit} $out/bin/${unit}
         '';
         meta.mainProgram = unit;
+      };
+
+      workloadConfig = {
+        ExecStart = lib.getExe ebpfTarget;
+        # Like sauna: units outside `system.slice` still get their own
+        # `service_name`.
+        Slice = "workload.slice";
+        DynamicUser = true;
+        # Leave CPU for Alloy + Pyroscope on 2 vCPUs
+        Nice = 10;
       };
     in
     {
@@ -83,8 +100,10 @@ in
         };
         profiling = {
           enable = true;
-          # Faster first profile. Everything else: prod defaults.
+          # Faster first profile + the exited-pid timeline. Everything
+          # else: prod defaults.
           collector.collectInterval = "${toString collectIntervalS}s";
+          collector.refreshInterval = "${toString refreshIntervalS}s";
         };
       };
 
@@ -102,16 +121,11 @@ in
 
       systemd.services.${unit} = {
         wantedBy = [ "multi-user.target" ];
-        serviceConfig = {
-          ExecStart = lib.getExe ebpfTarget;
-          # Like sauna: units outside `system.slice` still get their own
-          # `service_name`.
-          Slice = "workload.slice";
-          DynamicUser = true;
-          # Leave CPU for Alloy + Pyroscope on 2 vCPUs
-          Nice = 10;
-        };
+        serviceConfig = workloadConfig;
       };
+
+      # Not started at boot, see the "exited process" subtest
+      systemd.services.${exitedUnit}.serviceConfig = workloadConfig;
     };
 
   testScript = ''
@@ -136,9 +150,13 @@ in
 
     CPU_TYPE = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
     OFFCPU_TYPE = "offcpu:offcpu:nanoseconds::"
-    COLLECT_INTERVAL_MS = ${toString collectIntervalS} * 1000
+    COLLECT_INTERVAL_S = ${toString collectIntervalS}
+    COLLECT_INTERVAL_MS = COLLECT_INTERVAL_S * 1000
+    REFRESH_INTERVAL_S = ${toString refreshIntervalS}
     UNIT = "${unit}"
     TARGET_SEL = f'{{service_name="{UNIT}"}}'
+    EXITED_UNIT = "${exitedUnit}"
+    EXITED_SEL = f'{{service_name="{EXITED_UNIT}"}}'
     HOT_FN = "${hotFn}"
     COLD_FN = "${coldFn}"
     # Any of these under `hot_syscall_spin` = symbolized kernel frames
@@ -262,6 +280,33 @@ in
                     total += float(line.rsplit(" ", 1)[1])
         return total
 
+    # Every `service_name` in Alloy's current discovery targets
+    def discovered_services() -> set[str]:
+        out = machine.succeed(
+            f"{CURL} -f {ALLOY_URL}/api/v0/web/components/"
+            "discovery.relabel.units | jq -r '.exports[] "
+            '| select(.name == "output") | .value.value[].value[] '
+            '| select(.key == "service_name") | .value.value'
+            "'",
+            timeout=CMD_TIMEOUT,
+        )
+        return set(out.split())
+
+    # Changes on every pprof flush: each flush has profiles for the
+    # always-busy workload unit.
+    def flush_counter() -> float:
+        return alloy_metric(
+            "pyroscope_ebpf_pprofs_total", f'service_name="{UNIT}"'
+        )
+
+    # Poll `check` back to back, w/o `retry`'s 1s sleeps: for ordering
+    # events w/in one collect interval.
+    def wait_fast(check, what: str, timeout_s: float) -> None:
+        deadline = time.monotonic() + timeout_s
+        while not check():
+            if time.monotonic() > deadline:
+                raise Exception(f"timed out after {timeout_s}s: {what}")
+
     def dump_evidence() -> None:
         for cmd in [
             "systemctl status alloy pyroscope ${unit} --no-pager | head -n 60",
@@ -382,6 +427,51 @@ in
             links1 = bpf_links("alloy")
             print(f"alloy BPF links after GC: {links1}")
             assert links1 == links0, (links0, links1)
+
+        # Regression: Alloy looks up a pid's labels at flush time, in the
+        # targets of the last discovery refresh. So the last samples of a
+        # process that exits, and that discovery drops before the next
+        # flush, went to `ebpf/unspecified`. Timeline: flush F0, workload
+        # runs 1s, stops, discovery drops it (~1 refresh), flush F1 (F0 +
+        # 1 collect interval) w/ its last samples.
+        with subtest("exited process: last samples keep its unit"):
+            machine.succeed(
+                f"systemctl start {EXITED_UNIT}", timeout=CMD_TIMEOUT
+            )
+            retry(
+                lambda _: EXITED_UNIT in discovered_services(),
+                timeout=UP_TIMEOUT,
+            )
+            flushes0 = flush_counter()
+            wait_fast(
+                lambda: flush_counter() > flushes0,
+                "flush F0",
+                2 * COLLECT_INTERVAL_S,
+            )
+            f0_t = time.monotonic()
+            # Not a wait: the workload's runtime, its samples for F1
+            time.sleep(1)
+            machine.succeed(
+                f"systemctl stop {EXITED_UNIT}", timeout=CMD_TIMEOUT
+            )
+            stop_ms = vm_now_ms()
+            wait_fast(
+                lambda: EXITED_UNIT not in discovered_services(),
+                "discovery drops the exited pid",
+                3 * REFRESH_INTERVAL_S,
+            )
+            # Else F1 still found the pid in the targets: proves nothing.
+            # Flushes run on a fixed ticker; 0.5s for poll latency.
+            dropped_s = time.monotonic() - f0_t
+            print(f"exited pid dropped {dropped_s:.2f}s after F0")
+            assert dropped_s < COLLECT_INTERVAL_S - 0.5, dropped_s
+            # Only F1 + later flushes are stamped after the stop
+            wait_for_profile(
+                CPU_TYPE, EXITED_SEL,
+                lambda names: HOT_FN in names,
+                "exited cpu",
+                start_ms=stop_ms,
+            )
 
         with subtest("Alloy metrics: pushes sent, none dropped, healthy"):
             sent = alloy_metric("pyroscope_write_sent_profiles_total")
