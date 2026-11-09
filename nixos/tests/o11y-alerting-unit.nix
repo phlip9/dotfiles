@@ -13,14 +13,7 @@
 }:
 
 let
-  # TODO(phlip9): use sauna as-is once it enables profiling. Until then,
-  # force it on to test the profiling rules too.
-  inherit
-    (nixosConfigs.sauna.extendModules {
-      modules = [ { services.phlip9-o11y.profiling.enable = true; } ];
-    })
-    config
-    ;
+  inherit (nixosConfigs.sauna) config;
   cfgAm = config.services.prometheus.alertmanager;
 
   rulesFile = config.environment.etc."vmalert/rules.yml".source;

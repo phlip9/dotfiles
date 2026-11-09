@@ -489,6 +489,12 @@
       healthchecksHostPingUrlFile =
         config.sops.secrets.healthchecks-host-ping-url.path;
     };
+
+    # Pyroscope + Alloy eBPF, whole host: on-CPU at 49 Hz, off-CPU at 0.02,
+    # 30d retention (module defaults). Measure first, then tune retention,
+    # MemoryMax, and the PyroscopeDiskHigh threshold.
+    # see: nixos/mods/o11y/profiling.nix
+    profiling.enable = true;
   };
   sops.secrets.grafana-admin-password = { };
   sops.secrets.grafana-secret-key = { };
