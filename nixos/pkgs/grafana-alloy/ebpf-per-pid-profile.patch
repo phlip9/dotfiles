@@ -1,0 +1,324 @@
+diff -ru a/internal/component/pyroscope/ebpf/args.go b/internal/component/pyroscope/ebpf/args.go
+--- a/internal/component/pyroscope/ebpf/args.go
++++ b/internal/component/pyroscope/ebpf/args.go
+@@ -40,6 +40,10 @@
+ 	PIDLabel                        bool   `alloy:"pid_label,attr,optional"`
+ 	Comm                            string `alloy:"comm,attr,optional"` // to address a Grafana Labs customer's escalation
+ 	KernelFrames                    bool   `alloy:"kernel_frames,attr,optional"`
++	// One profile per (labels, pid) per collect interval when true
++	// (default), else one per labels: one push per labels instead of one
++	// per pid, ex: w/ many short-lived pids.
++	PerPIDProfile bool `alloy:"per_pid_profile,attr,optional"`
+ }
+ 
+ type DeprecatedArguments struct {
+diff -ru a/internal/component/pyroscope/ebpf/discovery/target.go b/internal/component/pyroscope/ebpf/discovery/target.go
+--- a/internal/component/pyroscope/ebpf/discovery/target.go
++++ b/internal/component/pyroscope/ebpf/discovery/target.go
+@@ -91,6 +91,20 @@
+ 	return t.fingerprint, t.labels
+ }
+ 
++// WithoutPID returns t w/o its `__process_pid__` label, ex: to merge the
++// profiles of all pids w/ otherwise equal labels. t itself if it has none.
++func (t *Target) WithoutPID() *Target {
++	if !t.labels.Has(labelPID) {
++		return t
++	}
++	ls := labels.NewBuilder(t.labels).Del(labelPID).Labels()
++	return &Target{
++		labels:      ls,
++		fingerprint: ls.Hash(),
++		serviceName: t.serviceName,
++	}
++}
++
+ func (t *Target) String() string {
+ 	return t.labels.String()
+ }
+diff -ru a/internal/component/pyroscope/ebpf/ebpf_linux.go b/internal/component/pyroscope/ebpf/ebpf_linux.go
+--- a/internal/component/pyroscope/ebpf/ebpf_linux.go
++++ b/internal/component/pyroscope/ebpf/ebpf_linux.go
+@@ -131,6 +131,7 @@
+ 		PIDLabel:                  args.PIDLabel,
+ 		CommMode:                  rargs.CommMode(args.Comm),
+ 		KernelFrames:              args.KernelFrames,
++		PerPIDProfile:             args.PerPIDProfile,
+ 	}, discovery,
+ 		nfs,
+ 		func(ctx context.Context, ps []reporter.PPROF) {
+@@ -353,8 +354,9 @@
+ 		LazyMode:                 false,
+ 		NoKernelVersionCheck:     false,
+ 
+-		Comm:         string(rargs.CommModeNone),
+-		KernelFrames: true,
++		Comm:          string(rargs.CommModeNone),
++		KernelFrames:  true,
++		PerPIDProfile: true,
+ 
+ 		// Keep internal tuning defaults here; these options are intentionally undocumented.
+ 		PyroscopeDynamicProfilingPolicy: true,
+diff -ru a/internal/component/pyroscope/ebpf/reporter/builder.go b/internal/component/pyroscope/ebpf/reporter/builder.go
+--- a/internal/component/pyroscope/ebpf/reporter/builder.go
++++ b/internal/component/pyroscope/ebpf/reporter/builder.go
+@@ -43,6 +43,9 @@
+ type ProfileBuilders struct {
+ 	Builders map[builderHashKey]*ProfileBuilder
+ 	opt      BuildersOptions
++	// !PerPIDProfile: each pid's target -> its builder, so the pid-less
++	// labels are computed once per target, not once per sample.
++	byTarget map[*discovery.Target]*ProfileBuilder
+ 
+ 	samples   batch[profile.Sample]
+ 	functions batch[profile.Function]
+@@ -50,20 +53,42 @@
+ }
+ 
+ func NewProfileBuilders(options BuildersOptions) *ProfileBuilders {
+-	return &ProfileBuilders{Builders: make(map[builderHashKey]*ProfileBuilder), opt: options}
++	return &ProfileBuilders{
++		Builders: make(map[builderHashKey]*ProfileBuilder),
++		opt:      options,
++		byTarget: make(map[*discovery.Target]*ProfileBuilder),
++	}
+ }
+ 
+ func (b *ProfileBuilders) BuilderForSample(
+ 	target *discovery.Target,
+ 	pid uint32,
+ ) (*ProfileBuilder, error) {
++	if b.opt.PerPIDProfile {
++		return b.builderForTarget(target, pid)
++	}
++
++	// Merge pids: a pid's target has its pid as a label, drop it
++	if res := b.byTarget[target]; res != nil {
++		return res, nil
++	}
++	res, err := b.builderForTarget(target.WithoutPID(), 0)
++	if err != nil {
++		return nil, err
++	}
++	b.byTarget[target] = res
++	return res, nil
++}
++
++// builderForTarget returns the builder for (target, pid), new if needed.
++func (b *ProfileBuilders) builderForTarget(
++	target *discovery.Target,
++	pid uint32,
++) (*ProfileBuilder, error) {
+ 
+ 	labelsHash, _ := target.Labels()
+ 
+-	k := builderHashKey{labelsHash: labelsHash}
+-	if b.opt.PerPIDProfile {
+-		k.pid = pid
+-	}
++	k := builderHashKey{labelsHash: labelsHash, pid: pid}
+ 	res := b.Builders[k]
+ 	if res != nil {
+ 		return res, nil
+diff -ru a/internal/component/pyroscope/ebpf/reporter/pprof.go b/internal/component/pyroscope/ebpf/reporter/pprof.go
+--- a/internal/component/pyroscope/ebpf/reporter/pprof.go
++++ b/internal/component/pyroscope/ebpf/reporter/pprof.go
+@@ -43,6 +43,11 @@
+ 	PIDLabel                  bool
+ 	CommMode                  args.CommMode
+ 	KernelFrames              bool
++	// PerPIDProfile builds one profile per (labels, pid) when true, or one
++	// per labels when false: samples of all pids w/ the same labels, minus
++	// `__process_pid__`, share a profile. Per-sample labels (`pid`, `comm`)
++	// are unaffected.
++	PerPIDProfile bool
+ }
+ type PPROFReporter struct {
+ 	cfg *Config
+@@ -163,11 +168,15 @@
+ 	*traceEventsPtr = newEvents
+ 	p.traceEvents.WUnlock(&traceEventsPtr)
+ 	var profiles []PPROF
+-	for resourceKey, rtp := range reportedEvents {
+-		for profileType, events := range rtp.Events {
+-			pp := p.createProfile(resourceKey, profileType, events)
+-			profiles = append(profiles, pp...)
++	if p.cfg.PerPIDProfile {
++		for resourceKey, rtp := range reportedEvents {
++			for profileType, events := range rtp.Events {
++				pp := p.createProfile(resourceKey, profileType, events)
++				profiles = append(profiles, pp...)
++			}
+ 		}
++	} else {
++		profiles = p.createMergedProfiles(reportedEvents)
+ 	}
+ 
+ 	p.consumer(ctx, profiles)
+@@ -190,7 +199,53 @@
+ 		PerPIDProfile: true,
+ 		ProfileType:   profileType,
+ 	})
++	if err := p.addEvents(bs, resourceKey, events); err != nil {
++		p.log.Error("failed to create profile builder", "err", err)
++		return nil
++	}
++	return p.encodeProfiles(bs)
++}
++
++// createMergedProfiles builds one profile per (profile type, labels) from
++// the events of all pids, see Config.PerPIDProfile.
++func (p *PPROFReporter) createMergedProfiles(tree samples.TraceEventsTree) []PPROF {
++	defer func() {
++		if p.symbols != nil {
++			p.symbols.Cleanup()
++		}
++	}()
+ 
++	// Keyed by value: equal types from different pids share builders
++	builders := make(map[samples.TypeMetadata]*ProfileBuilders)
++	for resourceKey, rtp := range tree {
++		for profileType, events := range rtp.Events {
++			bs := builders[*profileType]
++			if bs == nil {
++				bs = NewProfileBuilders(BuildersOptions{
++					SampleRate:    p.cfg.SamplesPerSecond,
++					PerPIDProfile: false,
++					ProfileType:   profileType,
++				})
++				builders[*profileType] = bs
++			}
++			// Only fails for an unsupported profile type, before it adds
++			// any samples, so skipping this pid's events is enough.
++			if err := p.addEvents(bs, resourceKey, events); err != nil {
++				p.log.Error("failed to create profile builder", "err", err)
++			}
++		}
++	}
++
++	var res []PPROF
++	for _, bs := range builders {
++		res = append(res, p.encodeProfiles(bs)...)
++	}
++	return res
++}
++
++// addEvents adds one pid's samples of one profile type to bs.
++func (p *PPROFReporter) addEvents(bs *ProfileBuilders, resourceKey samples.ResourceKey, events map[samples.SampleKey]*samples.TraceEvents) error {
++	profileType := bs.opt.ProfileType
+ 	for sampleKey, traceInfo := range events {
+ 		target := p.sd.FindTarget(uint32(resourceKey.PID), resourceKey.ContainerID.String())
+ 		if target == nil {
+@@ -198,8 +253,7 @@
+ 		}
+ 		b, err := bs.BuilderForSample(target, uint32(resourceKey.PID))
+ 		if err != nil {
+-			p.log.Error("failed to create profile builder", "err", err)
+-			return nil
++			return err
+ 		}
+ 		fakeMapping := b.FakeMapping()
+ 
+@@ -311,6 +365,12 @@
+ 			s.Location = append(s.Location, b.CommLocation(comm))
+ 		}
+ 	}
++	return nil
++}
++
++// encodeProfiles encodes + labels bs' profiles.
++func (p *PPROFReporter) encodeProfiles(bs *ProfileBuilders) []PPROF {
++	profileType := bs.opt.ProfileType
+ 	res := make([]PPROF, 0, len(bs.Builders))
+ 	for _, b := range bs.Builders {
+ 		buf := bytes.NewBuffer(nil)
+diff -ru a/internal/component/pyroscope/ebpf/reporter/pprof_test.go b/internal/component/pyroscope/ebpf/reporter/pprof_test.go
+--- a/internal/component/pyroscope/ebpf/reporter/pprof_test.go
++++ b/internal/component/pyroscope/ebpf/reporter/pprof_test.go
+@@ -605,3 +605,86 @@
+ func (s symbolizer) Cleanup() {
+ 
+ }
++
++func TestPPROFReporter_PerPIDProfile(t *testing.T) {
++	// pids 1 + 2 share labels, pid 3 doesn't
++	targets := []discovery.DiscoveredTarget{
++		{"__process_pid__": "1", "service_name": "service_a"},
++		{"__process_pid__": "2", "service_name": "service_a"},
++		{"__process_pid__": "3", "service_name": "service_b"},
++	}
++	// Equal profile types of different pids can be different pointers
++	cpuType := *profileTypeSampling
++	trace := func(funcName string) samples.SampleToEvents {
++		return samples.SampleToEvents{
++			{}: &samples.TraceEvents{
++				Frames: singleFrameTrace(libpf.PythonFrame, libpf.FrameMappingFile{}, 0x30,
++					funcName, "/bin/bar", 1),
++				Timestamps: []uint64{42},
++			},
++		}
++	}
++	tree := func() samples.TraceEventsTree {
++		return samples.TraceEventsTree{
++			{PID: 1}: {Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++				profileTypeSampling: trace("a1"),
++				profileTypeOffCPU:   trace("a1_off"),
++			}},
++			{PID: 2}: {Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++				&cpuType: trace("a2"),
++			}},
++			{PID: 3}: {Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++				profileTypeSampling: trace("b3"),
++			}},
++		}
++	}
++	// One report of tree(), profiles by "<__name__>/<service_name>"
++	report := func(perPID bool) map[string][]PPROF {
++		var profiles []PPROF
++		tp := discovery.NewTargetProducer(discovery.TargetsOptions{Targets: targets})
++		rep := NewPPROF(slog.New(slog.DiscardHandler),
++			&Config{SamplesPerSecond: 97, PerPIDProfile: perPID},
++			tp, nil,
++			func(_ context.Context, ps []PPROF) { profiles = ps })
++		events := rep.traceEvents.WLock()
++		*events = tree()
++		rep.traceEvents.WUnlock(&events)
++		rep.reportProfile(context.Background())
++		res := make(map[string][]PPROF)
++		for _, p := range profiles {
++			k := p.Labels.Get("__name__") + "/" + p.Labels.Get("service_name")
++			res[k] = append(res[k], p)
++		}
++		return res
++	}
++	funcNames := func(p PPROF) []string {
++		parsed, err := profile.Parse(bytes.NewReader(p.Raw))
++		require.NoError(t, err)
++		var res []string
++		for _, s := range parsed.Sample {
++			res = append(res, s.Location[0].Line[0].Function.Name)
++		}
++		return res
++	}
++
++	// Default: one profile per (labels, pid)
++	perPID := report(true)
++	assert.Len(t, perPID["process_cpu/service_a"], 2)
++	assert.Len(t, perPID["process_cpu/service_b"], 1)
++	assert.Len(t, perPID["offcpu/service_a"], 1)
++	assert.NotEmpty(t, perPID["process_cpu/service_a"][0].Labels.Get("__process_pid__"))
++
++	// Merged: one profile per labels, w/ every pid's samples, w/o the pid
++	merged := report(false)
++	assert.Len(t, merged, 3)
++	require.Len(t, merged["process_cpu/service_a"], 1)
++	a := merged["process_cpu/service_a"][0]
++	assert.Equal(t, 2, a.Samples)
++	assert.ElementsMatch(t, []string{"a1", "a2"}, funcNames(a))
++	assert.Empty(t, a.Labels.Get("__process_pid__"))
++	assert.Equal(t, pyroscope.ScopeNameEBPF, a.Labels.Get(pyroscope.LabelOtelScopeName))
++	require.Len(t, merged["process_cpu/service_b"], 1)
++	assert.Equal(t, []string{"b3"}, funcNames(merged["process_cpu/service_b"][0]))
++	require.Len(t, merged["offcpu/service_a"], 1)
++	assert.Equal(t, []string{"a1_off"}, funcNames(merged["offcpu/service_a"][0]))
++}

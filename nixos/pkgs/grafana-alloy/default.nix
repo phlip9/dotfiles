@@ -65,10 +65,25 @@
     # run here (the build only tests the `collector` module); run them in
     # a patched source tree: `go test ./internal/component/pyroscope/ebpf/...`
     #
+    # `pyroscope.ebpf` builds + pushes one profile per (labels, pid) per
+    # collect interval, one push each, 32 at once, all within one collect
+    # interval. A push takes ~0.45s (Pyroscope acks after its next 500ms
+    # segment flush). Nix builds' short-lived pids fan out to ~600-850
+    # pushes per 15s window on sauna; under load the tail misses the
+    # deadline and is dropped. W/ `pid_label = false` the per-pid profiles
+    # carry nothing that Pyroscope keeps apart. The patch adds
+    # `per_pid_profile` (default true = upstream): false builds one profile
+    # per labels from all pids' samples, w/o `__process_pid__`. Upstream's
+    # builder already has a `PerPIDProfile` option, hardcoded to true and
+    # moot b/c the reporter builds each pid's profile separately. Not
+    # upstream as of main 5c7b2a1. Unit test in the patch; regression
+    # test: nixos/tests/o11y-profiling-ebpf.nix
+    #
     # (nixpkgs' custom patchPhase ignores `patches`)
     patchPhase = ''
       patch -p1 < ${./ebpf-keep-probes-alive.patch}
       patch -p1 < ${./ebpf-keep-exited-targets.patch}
+      patch -p1 < ${./ebpf-per-pid-profile.patch}
     ''
     + prev.patchPhase;
   }
