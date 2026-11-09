@@ -8,7 +8,8 @@
 #
 # Verifies:
 # - Alloy runs as uid `alloy` w/ exactly its ambient caps
-# - a CPU profile for `service_name="ebpf-target"` w/ the user hot fn name
+# - a CPU profile for `service_name="ebpf-target"` (in `workload.slice`)
+#   w/ the user hot fn name
 #   (NOT just any profile: missing caps fail silently as `[unknown]`
 #   frames) + a symbolized kernel frame
 # - Go frames for VictoriaMetrics, a go1.27 binary w/o `.symtab`
@@ -103,6 +104,9 @@ in
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
           ExecStart = lib.getExe ebpfTarget;
+          # Like sauna: units outside `system.slice` still get their own
+          # `service_name`.
+          Slice = "workload.slice";
           DynamicUser = true;
           # Leave CPU for Alloy + Pyroscope on 2 vCPUs
           Nice = 10;

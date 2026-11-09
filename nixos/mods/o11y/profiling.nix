@@ -59,12 +59,14 @@ let
     lib.attrValues config.users.users
   );
 
-  # `0::/system.slice/[<parent>.slice/]<unit>.service[/<sub-cgroup>]`,
+  # `0::/<slice>.slice/[<parent>.slice/]<unit>.service[/<sub-cgroup>]`,
   # captures `<unit>`, or `<template>@` for templated units. RE2, anchored.
+  # Any top-level slice, not just `system.slice`: ex: sauna runs nix-daemon
+  # + paseo in `workload.slice`.
   systemUnitRegex = lib.concatStrings [
-    "0::/system\\.slice/"
-    # parent slices, ex: `system-getty.slice/`
-    "(?:[^/]+\\.slice/)*"
+    "0::/"
+    # top-level + parent slices, ex: `system.slice/system-getty.slice/`
+    "(?:[^/]+\\.slice/)+"
     # unit name, or template prefix w/ `@`; then the instance
     "([^/@]+@?)[^/]*"
     "\\.service(?:/.*)?"
@@ -100,17 +102,17 @@ let
     discovery.relabel "units" {
       targets = discovery.process.all.targets
 
-      // `0::/system.slice/[<parent>.slice/]<unit>.service[/<sub-cgroup>]`
+      // `0::/<slice>.slice/[<parent>.slice/]<unit>.service[/<sub-cgroup>]`
       // -> `<unit>`. Templated units collapse into their template, ex:
       // `getty@tty1` -> `getty@`, so per-instance units (`sshd@<conn>`)
-      // don't create a series each.
+      // don't create a series each. `user@<uid>.service` is renamed below.
       rule {
         source_labels = ["__meta_process_cgroup_path"]
         regex         = ${alloyLit systemUnitRegex}
         target_label  = "service_name"
       }
 
-      // User sessions + user managers:
+      // User sessions + user managers (overrides `user@` above):
       // `0::/user.slice/user-<uid>.slice/...` -> `user-<uid>`
       rule {
         source_labels = ["__meta_process_cgroup_path"]
