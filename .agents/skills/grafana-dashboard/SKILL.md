@@ -5,9 +5,10 @@ description: Use before any Grafana work on grafana.phlip9.com, incl. every mcp-
 
 # grafana
 
-`grafana.phlip9.com`: Grafana 13 OSS, one VictoriaMetrics datasource,
-dashboards Git Sync'd from `master`. Basics apply to any Grafana work; the rest
-is for building and changing dashboards.
+`grafana.phlip9.com`: Grafana 13 OSS, VictoriaMetrics (metrics) + Pyroscope
+(profiles, see [Profiles](#profiles)) datasources, dashboards Git Sync'd from
+`master`. Basics apply to any Grafana work; the rest is for building and
+changing dashboards.
 
 ## Basics
 
@@ -15,7 +16,7 @@ is for building and changing dashboards.
   (UI, API, mcp `update_dashboard`) is a commit on `master`. Only write
   unmanaged `scratch-*` copies in the folder uid `scratch`. The `just
   grafana-*` tools enforce this; for mcp writes, you do.
-- Datasource: only `{"type": "victoriametrics-metrics-datasource", "uid":
+- Metrics datasource: `{"type": "victoriametrics-metrics-datasource", "uid":
   "victoriametrics"}` (PromQL + MetricsQL). `victoriametrics` is the
   `datasourceUid` for mcp `query_prometheus` / `list_prometheus_*`.
 - Schema: v2 only. Panels in `spec.elements.<key>` (kind `Panel`), placed by
@@ -243,6 +244,38 @@ Sync; old generator scripts are gone): edit it in place, never regenerate it.
 5. Commit the manifest: `grafana: <x>: <change>`. New panels: push,
    `just grafana-resave scratch-<x>`, and promote back into FILE first
    (Promote steps 1-2).
+
+## Profiles
+
+Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
+
+- Datasource: `{"type": "grafana-pyroscope-datasource", "uid":
+  "pyroscope"}`. `pyroscope` is the `data_source_uid` for the mcp tools.
+- Profile type ids:
+  - on-CPU (49 Hz): `process_cpu:cpu:nanoseconds:cpu:nanoseconds`
+  - off-CPU (blocked time, sampled): `offcpu:offcpu:nanoseconds::`
+- Labels: `service_name` = systemd unit (`nginx`, `nix-daemon`,
+  `getty@` for templates, `user-<name>` for sessions, `systemd` = PID 1,
+  `ebpf/unspecified` = kernel threads + procs younger than one discovery
+  scan), `exe` = exe basename (`.foo-wrapped` -> `foo`), `host`. No pid.
+- UI: Profiles Drilldown,
+  `https://grafana.phlip9.com/a/grafana-pyroscope-app/explore?var-dataSource=pyroscope&var-serviceName=<unit>&var-profileMetricId=<type id>`.
+- mcp tools (`pyroscope` group):
+  - `list_pyroscope_profile_types {data_source_uid}`
+  - `list_pyroscope_label_names` / `list_pyroscope_label_values {name}`,
+    `matchers` ex: `{service_name="nix-daemon"}`
+  - `query_pyroscope {data_source_uid, profile_type, matchers, query_type:
+    "profile"|"metrics"|"both", group_by, max_node_depth}`: `profile` =
+    top-N fns flat/cum table (`format: "dot"` = call graph), `metrics` =
+    time series (ex: `group_by: ["exe"]`).
+  - times: `start_rfc_3339`/`end_rfc_3339`, default last 1h.
+- Panel query (viz `flamegraph` w/ `queryType: "profile"`, or `timeseries`
+  w/ `"metrics"`): `{"kind": "DataQuery", "group":
+  "grafana-pyroscope-datasource", "version": "v0", "datasource": {"name":
+  "pyroscope"}, "spec": {"queryType": "profile", "profileTypeId": "...",
+  "labelSelector": "{service_name=\"nginx\"}", "groupBy": []}}`. Untested.
+- Health metrics (VictoriaMetrics): jobs `alloy` + `pyroscope`,
+  `pyroscope_write_*`, `pyroscope_ebpf_*`, `pyroscope_data_bytes`.
 
 ## Gotchas
 

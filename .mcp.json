@@ -4,7 +4,7 @@
       "command": "mcp-grafana",
       "args": [
         "--usage-stats=disabled",
-        "--enabled-tools=search,dashboard,folder,datasource,prometheus,navigation,user,provisioning",
+        "--enabled-tools=search,dashboard,folder,datasource,prometheus,pyroscope,navigation,user,provisioning",
         "--instructions-append=Before using these tools, load the grafana-dashboard skill (.agents/skills/grafana-dashboard/SKILL.md): datasource, schema, and workflow. NEVER write (update_dashboard, create, delete) any dashboard but unmanaged scratch-* copies in folder uid \"scratch\": every save of a synced dashboard is a commit on master."
       ],
       "env": {
