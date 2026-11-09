@@ -3,6 +3,7 @@
   lib,
   buildGoModule,
   fetchFromGitHub,
+  nix-update-script,
 }:
 
 buildGoModule rec {
@@ -23,6 +24,8 @@ buildGoModule rec {
     "-w"
     "-X main.version=v${version}"
   ];
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Zero-knowledge WebSocket relay server for Paseo";

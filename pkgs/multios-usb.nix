@@ -5,6 +5,7 @@
   stdenv,
   fetchFromGitHub,
   makeBinaryWrapper,
+  nix-update-script,
   bash,
   coreutils,
   gnugrep,
@@ -73,6 +74,8 @@ stdenv.mkDerivation (finalAttrs: {
 
     runHook postInstall
   '';
+
+  passthru.updateScript = nix-update-script { };
 
   meta = {
     description = "Boot operating systems directly from ISO/WIM images";

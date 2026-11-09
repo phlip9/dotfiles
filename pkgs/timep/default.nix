@@ -11,6 +11,7 @@
   gnugrep,
   gnused,
   lib,
+  nix-update-script,
   perl,
   runCommand,
   stdenv,
@@ -105,6 +106,8 @@ stdenv.mkDerivation (final: {
     install -D -m755 LIB/timep_flamegraph.pl $out/share/timep/timep_flamegraph.pl
     runHook postInstall
   '';
+
+  passthru.updateScript = nix-update-script { };
 
   passthru.tests.test =
     runCommand "${final.pname}-test"
