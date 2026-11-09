@@ -10,6 +10,7 @@
   fetchFromGitHub,
   fetchNpmDeps,
   grafana-alloy,
+  nix-update-script,
 }:
 
 # Beyla (`beyla.ebpf`) is a separate prebuilt binary, pinned per Alloy
@@ -32,6 +33,14 @@
     };
 
     vendorHash = "sha256-CBLfxNm85Ah6gXHBtgk5tgEozd0fAUjUClv9Ic2AvtM=";
+
+    # The inherited updater assumes a nixpkgs checkout and updates Beyla.
+    # Track release candidates here without the unused Beyla artifacts.
+    passthru = prev.passthru // {
+      updateScript = nix-update-script {
+        extraArgs = [ "--version=unstable" ];
+      };
+    };
 
     # `pyroscope.ebpf` only keeps its off-CPU probe in a local var, and the
     # engine's tracer doesn't keep it either (not a trace handler). So the
