@@ -7,8 +7,8 @@
 #
 # - Alloy (`collector`) samples on-CPU + off-CPU stacks of every process on
 #   the host w/ eBPF, symbolizes them on the host, labels them w/ their
-#   systemd unit, and pushes them to Pyroscope. Runs as the non-root `alloy`
-#   user w/ a few ambient caps.
+#   systemd unit (kernel threads: `kernel`), and pushes them to Pyroscope.
+#   Runs as the non-root `alloy` user w/ a few ambient caps.
 # - Pyroscope (127.0.0.1:4040) stores profiles on local disk and serves
 #   queries. Single-node monolith (`-target=all`) w/ v2 storage.
 # - Grafana gets a Pyroscope datasource, VictoriaMetrics scrapes Pyroscope's
@@ -82,6 +82,7 @@ let
     //   -> pyroscope.write -> Pyroscope
 
     // Every process w/ its exe + cgroup. Each refresh is a full /proc scan.
+    // Skips kernel threads: they have no exe.
     discovery.process "all" {
       refresh_interval = ${alloyLit cfgC.refreshInterval}
 
@@ -155,8 +156,45 @@ let
       }
     }
 
+    // Kernel threads (kworker, ksoftirqd, jbd2, ...), w/o an exe, so
+    // `discovery.process "all"` skips them. Only kernel threads live in
+    // the root cgroup. Another /proc scan, but only reads the cgroup.
+    discovery.process "kernel" {
+      refresh_interval = ${alloyLit cfgC.refreshInterval}
+
+      discover_config {
+        cgroup_path  = true
+        exe          = false
+        commandline  = false
+        container_id = false
+        cwd          = false
+        uid          = false
+        username     = false
+      }
+    }
+
+    // Kernel threads -> service_name="kernel", w/o `exe`
+    discovery.relabel "kernel" {
+      targets = discovery.process.kernel.targets
+
+      rule {
+        source_labels = ["__meta_process_cgroup_path"]
+        regex         = "0::/"
+        action        = "keep"
+      }
+
+      rule {
+        target_label = "service_name"
+        replacement  = "kernel"
+      }
+    }
+
     pyroscope.ebpf "host" {
-      targets    = discovery.relabel.units.output
+      // Last target per pid wins: "units" (w/ exe) over "kernel"
+      targets = array.concat(
+        discovery.relabel.kernel.output,
+        discovery.relabel.units.output,
+      )
       forward_to = [pyroscope.write.local.receiver]
 
       // Undocumented. `true` (default) only profiles processes in `targets`.

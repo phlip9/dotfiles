@@ -13,6 +13,7 @@
 #   (NOT just any profile: missing caps fail silently as `[unknown]`
 #   frames) + a symbolized kernel frame
 # - Go frames for VictoriaMetrics, a go1.27 binary w/o `.symtab`
+# - kernel threads (no exe) as `service_name="kernel"`
 # - series labels: `exe` + `host`, no pid or `__meta_*` leaks
 # - an `offcpu` profile w/ the blocking fn, also fresh after a forced GC in
 #   Alloy (regression: GC'd off-CPU probe)
@@ -157,6 +158,7 @@ in
     TARGET_SEL = f'{{service_name="{UNIT}"}}'
     EXITED_UNIT = "${exitedUnit}"
     EXITED_SEL = f'{{service_name="{EXITED_UNIT}"}}'
+    KERNEL_SEL = '{service_name="kernel"}'
     HOT_FN = "${hotFn}"
     COLD_FN = "${coldFn}"
     # Any of these under `hot_syscall_spin` = symbolized kernel frames
@@ -361,6 +363,23 @@ in
                 "systemctl show alloy -p CPUUsageNSec --value",
                 timeout=CMD_TIMEOUT,
             ))
+
+        # Kernel threads have no exe, so a separate discovery labels them.
+        # Trigger some: page cache writeback runs in kworkers.
+        with subtest("CPU profile: kernel threads as service_name=kernel"):
+            machine.succeed(
+                "dd if=/dev/zero of=/var/tmp/writeback bs=1M count=128 "
+                "status=none && sync && rm /var/tmp/writeback",
+                timeout=CMD_TIMEOUT,
+            )
+            # Every kernel thread stack: ret_from_fork > kthread > ...
+            wait_for_profile(
+                CPU_TYPE, KERNEL_SEL,
+                lambda names: "kthread" in names,
+                "kernel cpu",
+            )
+            exes = label_values("exe", KERNEL_SEL)
+            assert exes == [], exes
 
         # VictoriaMetrics is a go1.27 binary w/o `.symtab`, only
         # `.gopclntab`. Alloy 1.21 rejects go1.27 pclntabs.
