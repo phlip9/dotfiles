@@ -54,9 +54,11 @@ stdenv.mkDerivation (finalAttrs: {
 
     installBin $src
 
+    # Use the local auto-mode classifier with telemetry disabled.
     wrapProgram $out/bin/claude \
       --set DISABLE_AUTOUPDATER 1 \
       --set CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC 1 \
+      --set CLAUDE_CODE_AUTO_MODE_SERVER 0 \
       --set USE_BUILTIN_RIPGREP 0 \
       --unset DEV \
       --prefix PATH : ${
