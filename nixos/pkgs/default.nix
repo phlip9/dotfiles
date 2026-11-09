@@ -38,9 +38,7 @@ fix (phlipPkgsNixos: {
   grafana-alloy = callPackage ./grafana-alloy { };
 
   # Grafana Pyroscope datasource plugin, no longer in Grafana core
-  grafana-pyroscope-datasource =
-    callPackage ./grafana-pyroscope-datasource.nix
-      { };
+  grafana-pyroscope-datasource = callPackage ./grafana-pyroscope-datasource { };
 
   # greetd with PAM auth for the initial autologin session
   greetd = callPackage ./greetd { };
