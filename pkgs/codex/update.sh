@@ -18,7 +18,7 @@ BASE_URL="https://github.com/openai/codex/releases/download/rust-v${VERSION}"
 prefetch_hash() {
   local url=$1
   echo "Prefetching $url..." >&2
-  nix store prefetch-file "$url" --json | jq -r '.hash'
+  nix store prefetch-file "$url" --json | jq -er '.hash'
 }
 
 # Print the sources.json entry for one rust target's release artifacts.
@@ -27,8 +27,10 @@ platform_sources() {
   local codex_url="$BASE_URL/codex-${target}.zst"
   local code_mode_host_url="$BASE_URL/codex-code-mode-host-${target}.zst"
   local codex_hash code_mode_host_hash
-  codex_hash=$(prefetch_hash "$codex_url")
-  code_mode_host_hash=$(prefetch_hash "$code_mode_host_url")
+  # Bash disables errexit inside the caller's command substitution. Return
+  # explicitly so a failed download cannot write empty hashes to sources.json.
+  codex_hash=$(prefetch_hash "$codex_url") || return
+  code_mode_host_hash=$(prefetch_hash "$code_mode_host_url") || return
   jq -n \
     --arg target "$target" \
     --arg codex_url "$codex_url" \
