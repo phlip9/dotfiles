@@ -14,10 +14,10 @@ let
   craneLib = import sources.crane { inherit pkgs; };
 
   # Keep symbols + frame pointers for the eBPF profiler (Alloy
-  # `pyroscope.ebpf`): it unwinds user stacks by frame pointer and
-  # symbolizes from the on-disk `.symtab`. nixpkgs `buildRustPackage` gets
-  # FPs via `cargoSetupHook`; crane doesn't, and upstream strips all
-  # symbols (`-C strip=symbols`).
+  # `pyroscope.ebpf`). Function names come from the on-disk `.symtab`, and
+  # upstream strips it (`-C strip=symbols`). Unwinding works w/o frame
+  # pointers (`.eh_frame`), but FPs make it cheaper and match nixpkgs,
+  # whose `buildRustPackage` sets them via `cargoSetupHook`; crane doesn't.
   #
   # Upstream's `commonRUSTFLAGS` is a `let` binding, so patch the RUSTFLAGS
   # env vars on every crane builder call instead. This covers both the deps
