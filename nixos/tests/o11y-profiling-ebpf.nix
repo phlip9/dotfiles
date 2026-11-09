@@ -19,6 +19,8 @@
 #   Alloy (regression: GC'd off-CPU probe)
 # - a process that exits keeps its unit for its last samples, after
 #   discovery dropped it (regression: they went to `ebpf/unspecified`)
+# - many short-lived pids: one profile per labels, not per pid
+#   (regression: per-pid fan-out missed the push deadline under load)
 # - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
 #   VictoriaMetrics scrapes it
 # - `pyroscope_data_bytes` (pyroscope-du timer -> node-exporter)
@@ -29,6 +31,8 @@ let
   unit = "ebpf-target";
   # Same workload, started + stopped by the test: a process that exits
   exitedUnit = "ebpf-exited";
+  # Spawns short-lived CPU-burning children back to back, like nix builds
+  forkUnit = "ebpf-forker";
   # On-CPU fn, user frames only
   hotFn = "hot_loop_spin";
   # Blocks in nanosleep(2): off-CPU
@@ -127,6 +131,21 @@ in
 
       # Not started at boot, see the "exited process" subtest
       systemd.services.${exitedUnit}.serviceConfig = workloadConfig;
+
+      # Not started at boot, see the "short-lived pids" subtest. Each child
+      # burns a few ms of CPU, and dies long before discovery's next
+      # refresh.
+      systemd.services.${forkUnit}.serviceConfig = workloadConfig // {
+        ExecStart = pkgs.writeShellScript forkUnit ''
+          while :; do
+            ${lib.getExe pkgs.bash} -c \
+              'for ((idx = 0; idx < 500; idx++)); do :; done'
+          done
+        '';
+        # Outranks the `Nice = 10` spinners: more sampled pids per flush.
+        # 1 core max; Alloy + Pyroscope (nice 0) keep their fair share.
+        Nice = 0;
+      };
     };
 
   testScript = ''
@@ -158,6 +177,7 @@ in
     TARGET_SEL = f'{{service_name="{UNIT}"}}'
     EXITED_UNIT = "${exitedUnit}"
     EXITED_SEL = f'{{service_name="{EXITED_UNIT}"}}'
+    FORK_UNIT = "${forkUnit}"
     KERNEL_SEL = '{service_name="kernel"}'
     HOT_FN = "${hotFn}"
     COLD_FN = "${coldFn}"
@@ -300,6 +320,26 @@ in
         return alloy_metric(
             "pyroscope_ebpf_pprofs_total", f'service_name="{UNIT}"'
         )
+
+    # Alloy's per-service pprof counter `name`, summed over the forker's
+    # pids: undiscovered (most) + discovered ones
+    def fanout_metric(name: str) -> float:
+        return sum(
+            alloy_metric(name, f'service_name="{service}"')
+            for service in ["ebpf/unspecified", FORK_UNIT]
+        )
+
+    # Last pid the kernel handed out: pids created since = the delta,
+    # modulo pid_max (wraparound)
+    def last_pid() -> int:
+        out = machine.succeed("cat /proc/loadavg", timeout=CMD_TIMEOUT)
+        return int(out.split()[4])
+
+    def pids_since(pid0: int) -> int:
+        pid_max = int(machine.succeed(
+            "cat /proc/sys/kernel/pid_max", timeout=CMD_TIMEOUT
+        ))
+        return (last_pid() - pid0) % pid_max
 
     # Poll `check` back to back, w/o `retry`'s 1s sleeps: for ordering
     # events w/in one collect interval.
@@ -491,6 +531,57 @@ in
                 "exited cpu",
                 start_ms=stop_ms,
             )
+
+        # Regression: Alloy built + pushed one profile per (labels, pid)
+        # per collect interval. Nix builds' short-lived pids fanned out to
+        # ~600-850 pushes per 15s on sauna; under load the tail missed the
+        # push deadline (= collect interval) and was dropped. Now one per
+        # (labels, profile type). The fan-out: pids created per flush (the
+        # forker's children, all burning CPU). Negative control w/
+        # `perPidProfile = true`: ~100 pprofs per flush.
+        with subtest("short-lived pids: one profile per labels"):
+            machine.succeed(f"systemctl start {FORK_UNIT}", timeout=CMD_TIMEOUT)
+            # Skip the flush in flight at start: only part of its window
+            # had the forker.
+            flushes0 = flush_counter()
+            wait_fast(
+                lambda: flush_counter() > flushes0,
+                "first flush w/ the forker",
+                2 * COLLECT_INTERVAL_S,
+            )
+            pprofs0 = fanout_metric("pyroscope_ebpf_pprofs_total")
+            samples0 = fanout_metric("pyroscope_ebpf_pprof_samples_total")
+            pids0 = last_pid()
+            flushes = 3
+            for _ in range(flushes):
+                flushes0 = flush_counter()
+                wait_fast(
+                    lambda: flush_counter() > flushes0,
+                    "flush",
+                    2 * COLLECT_INTERVAL_S,
+                )
+            pids = pids_since(pids0)
+            pprofs = fanout_metric("pyroscope_ebpf_pprofs_total") - pprofs0
+            samples = (
+                fanout_metric("pyroscope_ebpf_pprof_samples_total") - samples0
+            )
+            machine.succeed(f"systemctl stop {FORK_UNIT}", timeout=CMD_TIMEOUT)
+            print(
+                f"fan-out per flush: {pids / flushes:.1f} new pids, "
+                f"{pprofs / flushes:.1f} pprofs, "
+                f"{samples / flushes:.1f} samples (compacted)"
+            )
+            # Many new pids per flush, >> the bound below, and profiled
+            assert pids >= 100 * flushes, pids
+            assert samples > 0, samples
+            # Per (labels, profile type): unspecified + forker, cpu +
+            # offcpu, + slack for flush boundaries
+            assert pprofs <= 8 * flushes, pprofs
+            for name in [
+                "pyroscope_write_dropped_profiles_total",
+                "pyroscope_ebpf_pprofs_dropped_total",
+            ]:
+                assert alloy_metric(name) == 0, name
 
         with subtest("Alloy metrics: pushes sent, none dropped, healthy"):
             sent = alloy_metric("pyroscope_write_sent_profiles_total")
