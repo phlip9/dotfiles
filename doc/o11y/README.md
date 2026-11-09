@@ -1,10 +1,12 @@
-# Metrics Observability Stack
+# Observability Stack
 
 ## Requirements
 
 - Single-node metrics collection, storage, and visualization
+- Continuous profiling of every process: on-CPU + off-CPU, symbolized, flame
+  graphs in Grafana. < 5% CPU
 - Up to 1 TiB storage, 1-3 months retention
-- Metrics are non-critical: no backups or redundancy
+- Metrics + profiles are non-critical: no backups or redundancy
 - Secure by default: all services on localhost, only nginx public
 - Use existing NixOS modules
 - Secrets via sops-nix
@@ -25,10 +27,12 @@ nginx (443, TLS/ACME)
     |
     v
 grafana (127.0.0.1:3000)
-    | MetricsQL queries
-    v
-victoriametrics (127.0.0.1:8428)  <-- vmalert rules, see Alerting
-    | promscrape (1m interval)
+    | MetricsQL queries                 | profile queries
+    v                                   v
+victoriametrics (127.0.0.1:8428)    pyroscope (127.0.0.1:4040)
+    | <-- vmalert rules,                ^ push, see Profiling
+    |     see Alerting                  |
+    | promscrape (1m interval)          alloy (127.0.0.1:12345, eBPF)
     +-- victoriametrics   localhost:8428/metrics
     +-- grafana           localhost:3000/metrics
     +-- node-exporter     localhost:9100/metrics
@@ -39,6 +43,8 @@ victoriametrics (127.0.0.1:8428)  <-- vmalert rules, see Alerting
     +-- rbitcoin          localhost:9332/metrics
     +-- vmalert           localhost:8880/metrics
     +-- alertmanager      localhost:9093/metrics
+    +-- pyroscope         localhost:4040/metrics
+    +-- alloy             localhost:12345/metrics
     +-- blackbox          localhost:9115/probe?target=<https url>
 ```
 
@@ -54,9 +60,14 @@ DNS: `grafana.phlip9.com`
 | `nixos/mods/o11y/rules.nix` | Alert rules + inhibitions |
 | `nixos/mods/o11y/alertmanager.tmpl` | Discord message templates |
 | `nixos/mods/o11y/tests/rules.yml` | Rule unit tests (vmalert-tool) |
+| `nixos/mods/o11y/profiling.nix` | Profiling: Pyroscope, Alloy eBPF collector |
+| `nixos/pkgs/grafana-alloy/` | Alloy (ahead of nixpkgs) |
+| `nixos/pkgs/grafana-pyroscope-datasource/` | Grafana Pyroscope datasource |
 | `nixos/tests/o11y.nix` | NixOS container test |
 | `nixos/tests/o11y-alerting.nix` | NixOS container test: alert delivery |
 | `nixos/tests/o11y-alerting-unit.nix` | Offline check: rules + routing |
+| `nixos/tests/o11y-profiling.nix` | NixOS container test: Pyroscope |
+| `nixos/tests/o11y-profiling-ebpf.nix` | NixOS VM test: Alloy eBPF end to end |
 | `nixos/sauna/default.nix` | NixOS machine config |
 | `nixos/sauna/grafana/` | Dashboards (Git Sync manifests) |
 | `.mcp.json` | `mcp-grafana` config for agents (points them at the skill) |
@@ -97,7 +108,7 @@ NixOS module: `services.grafana`
 Config:
 - Listen: `127.0.0.1:3000`
 - Database: sqlite3 (single user, no need for postgres)
-- Provisioned datasource: VictoriaMetrics
+- Provisioned datasources: VictoriaMetrics (default), Alertmanager, Pyroscope
 - Admin password: sops secret via `$__file{path}` provider
 - Secret key: sops secret via `$__file{path}` provider
 - Disable sign-up, disable gravatar, disable analytics
@@ -169,13 +180,15 @@ Grafana Git Sync to sync updates between Grafana and GitHub.
 
 1. Metrics exploration, incidents: Agent + `mcp-grafana` read tools
    (`query_prometheus`, `get_dashboard_summary`, ...).
-2. Edits in git: edit the manifest in place (agents: `grafana-outline` to
+2. Profiles: `mcp-grafana` `pyroscope` tools; ids, labels, and query
+   shapes in the `grafana-dashboard` skill's "Profiles" section.
+3. Edits in git: edit the manifest in place (agents: `grafana-outline` to
    map it, the `grafana-dashboard` skill's `dash.py` to edit it), dry-run
    save it on the live server (`just grafana-check [files...]`, default:
    all), commit, push.
-3. UI edits: Save opens the "Provisioned dashboard" drawer. Branch `master`
+4. UI edits: Save opens the "Provisioned dashboard" drawer. Branch `master`
    commits directly; any other branch name creates that branch + a PR.
-4. Live iteration w/ an agent: the agent edits an unmanaged copy in the
+5. Live iteration w/ an agent: the agent edits an unmanaged copy in the
    `Scratch` folder (uid `scratch`). We open the copy in the browser.
    Agents never write outside `Scratch` (= commit on `master`). The
    workflow lives in the `grafana-dashboard` skill; each tool documents
@@ -271,11 +284,54 @@ hc (healthchecks.io), on missed pings --> #watchdog
 - Downtime that stops the pipeline (vmalert/Alertmanager/VM/host): pause
   both checks in healthchecks.io too.
 
+## Profiling
+
+Alloy (`pyroscope.ebpf`, 127.0.0.1:12345) samples on-CPU + off-CPU stacks of
+every process, symbolizes them on the host, labels them w/ their systemd
+unit, and pushes one pprof per (labels, profile type) every 15s to Pyroscope
+(127.0.0.1:4040, 30d retention). Grafana: datasource `pyroscope`, Profiles
+Drilldown, `profiling` dashboard. Config + the why of every knob, cap, and
+hardening flag: `nixos/mods/o11y/profiling.nix`.
+
+- Profile types: `process_cpu:cpu:nanoseconds:cpu:nanoseconds`,
+  `offcpu:offcpu:nanoseconds::` (blocked time, sampled at p=0.02).
+- Labels: `service_name` = unit from the cgroup (`getty@tty1` -> `getty@`,
+  sessions -> `user-phlip9`, PID 1 -> `systemd`, kernel threads -> `kernel`,
+  procs younger than a 2s /proc rescan -> `ebpf/unspecified`), `exe` = binary
+  basename, `host`. No `pid`.
+- Symbols: `.symtab` or Go pclntab, no DWARF yet. Rust built w/ `-C
+  strip=symbols` needs the `nixos/pkgs/rbitcoin.nix` treatment.
+- Alloy is non-root but near root-equivalent (reads any process memory).
+- Sadly pyroscope has no storage cap, only a max retention period.
+
+### Query profiles from the CLI
+
+```bash
+$ profilecli() {
+    nix shell -f ~/dev/dotfiles pkgsUnstable.pyroscope -c profilecli "$@"
+  }
+# on sauna
+$ export PROFILECLI_URL=http://127.0.0.1:4040
+# elsewhere, via the Grafana datasource proxy
+$ export PROFILECLI_URL=https://grafana.phlip9.com/api/datasources/proxy/uid/pyroscope \
+    PROFILECLI_TOKEN="$(cat ~/.config/grafana/mcp-sa-token)"
+$ profilecli query top --from now-1h --query '{service_name="nix-daemon"}'
+$ profilecli query top --from now-1h \
+    --profile-type offcpu:offcpu:nanoseconds::
+$ profilecli query profile --from now-15m \
+    --query '{service_name="nix-daemon"}' --output pprof=tmp/nd.pprof
+$ nix shell -f ~/dev/dotfiles pkgs.go -c \
+    go tool pprof -symbolize=none -top tmp/nd.pprof
+```
+
 ## Future Work
 
 - **Additional exporters**: SMART/NVMe wear (`exporters.smartctl`), nginx
   per-vhost status codes + latency (access log or VTS module).
 - **Log aggregation**: Loki + promtail, separate from metrics.
+- **Profiling**: size retention, `MemoryMax`, and `PyroscopeDiskHigh` from
+  measured data; DWARF inline frames; phlipdesk push; app-side memory/mutex
+  pprof.
 
 ## Runbooks
 
