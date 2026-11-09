@@ -1,0 +1,413 @@
+diff -ruN a/internal/component/pyroscope/ebpf/args.go b/internal/component/pyroscope/ebpf/args.go
+--- a/internal/component/pyroscope/ebpf/args.go
++++ b/internal/component/pyroscope/ebpf/args.go
+@@ -44,6 +44,11 @@
+ 	// (default), else one per labels: one push per labels instead of one
+ 	// per pid, ex: w/ many short-lived pids.
+ 	PerPIDProfile bool `alloy:"per_pid_profile,attr,optional"`
++	// Bounds per pushed profile: samples, uncompressed bytes. Larger ones
++	// are split into several pushes. Defaults stay below Pyroscope's
++	// default limits. <= 0: unbounded.
++	MaxProfileSamples int `alloy:"max_profile_samples,attr,optional"`
++	MaxProfileBytes   int `alloy:"max_profile_bytes,attr,optional"`
+ }
+ 
+ type DeprecatedArguments struct {
+diff -ruN a/internal/component/pyroscope/ebpf/ebpf_linux.go b/internal/component/pyroscope/ebpf/ebpf_linux.go
+--- a/internal/component/pyroscope/ebpf/ebpf_linux.go
++++ b/internal/component/pyroscope/ebpf/ebpf_linux.go
+@@ -133,6 +133,8 @@
+ 		CommMode:                  rargs.CommMode(args.Comm),
+ 		KernelFrames:              args.KernelFrames,
+ 		PerPIDProfile:             args.PerPIDProfile,
++		MaxProfileSamples:         args.MaxProfileSamples,
++		MaxProfileBytes:           args.MaxProfileBytes,
+ 	}, discovery,
+ 		nfs,
+ 		func(ctx context.Context, ps []reporter.PPROF) {
+@@ -362,6 +364,9 @@
+ 		KernelFrames:  true,
+ 		PerPIDProfile: true,
+ 
++		MaxProfileSamples: reporter.DefaultMaxProfileSamples,
++		MaxProfileBytes:   reporter.DefaultMaxProfileBytes,
++
+ 		// Keep internal tuning defaults here; these options are intentionally undocumented.
+ 		PyroscopeDynamicProfilingPolicy: true,
+ 		SymbCachePath:                   "/tmp/symb-cache",
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/bound.go b/internal/component/pyroscope/ebpf/reporter/bound.go
+--- a/internal/component/pyroscope/ebpf/reporter/bound.go
++++ b/internal/component/pyroscope/ebpf/reporter/bound.go
+@@ -0,0 +1,155 @@
++//go:build unix
++
++package reporter
++
++import (
++	"bytes"
++	"encoding/binary"
++	"fmt"
++	"io"
++	"slices"
++
++	"github.com/google/pprof/profile"
++	"github.com/klauspost/compress/gzip"
++)
++
++// Default per-profile bounds, below Pyroscope's default per-profile limits
++// (16000 samples, 4 MiB uncompressed) and its 2 MiB ingestion burst: a
++// single push larger than the burst never passes the rate limiter.
++const (
++	DefaultMaxProfileSamples = 8000
++	DefaultMaxProfileBytes   = 1 << 20
++)
++
++// encodedProfile is one gzipped pprof w/ its sample count.
++type encodedProfile struct {
++	raw     []byte
++	samples int
++}
++
++// CompactSamples merges samples w/ equal stacks + labels into one, w/ the
++// sum of their values. Samples are keyed by (stack, comm, tid, cpu, ...)
++// per pid, so a profile merged from many pids or threads has many equal
++// rows when those aren't sample labels. Pyroscope merges them too, but
++// only after checking its per-profile sample limit.
++func (p *ProfileBuilder) CompactSamples() {
++	index := make(map[string]*profile.Sample, len(p.Profile.Sample))
++	compacted := p.Profile.Sample[:0]
++	var key []byte
++	for _, sample := range p.Profile.Sample {
++		key = appendSampleKey(key[:0], sample)
++		if prev, ok := index[string(key)]; ok {
++			for idx := range prev.Value {
++				prev.Value[idx] += sample.Value[idx]
++			}
++			continue
++		}
++		index[string(key)] = sample
++		compacted = append(compacted, sample)
++	}
++	clear(p.Profile.Sample[len(compacted):])
++	p.Profile.Sample = compacted
++}
++
++// appendSampleKey appends sample's identity to dst: its location IDs, then
++// its labels, sorted.
++func appendSampleKey(dst []byte, sample *profile.Sample) []byte {
++	dst = binary.AppendUvarint(dst, uint64(len(sample.Location)))
++	for _, loc := range sample.Location {
++		dst = binary.AppendUvarint(dst, loc.ID)
++	}
++	keys := make([]string, 0, len(sample.Label))
++	for key := range sample.Label {
++		keys = append(keys, key)
++	}
++	slices.Sort(keys)
++	for _, key := range keys {
++		dst = binary.AppendUvarint(dst, uint64(len(key)))
++		dst = append(dst, key...)
++		values := sample.Label[key]
++		dst = binary.AppendUvarint(dst, uint64(len(values)))
++		for _, value := range values {
++			dst = binary.AppendUvarint(dst, uint64(len(value)))
++			dst = append(dst, value...)
++		}
++	}
++	return dst
++}
++
++// encodeBounded encodes prof as one or more pprofs w/ <= maxSamples
++// samples and <= maxBytes uncompressed bytes each (<= 0: unbounded), so
++// each one stays under the backend's per-profile limits. Splits the
++// samples in halves, each w/ only the locations, functions, and mappings
++// it uses, until each half fits. A single sample is never split.
++func encodeBounded(prof *profile.Profile, maxSamples, maxBytes int) ([]encodedProfile, error) {
++	count := len(prof.Sample)
++	if count <= 1 || maxSamples <= 0 || count <= maxSamples {
++		raw, size, err := encodeProfile(prof)
++		if err != nil {
++			return nil, err
++		}
++		if count <= 1 || maxBytes <= 0 || size <= maxBytes {
++			return []encodedProfile{{raw: raw, samples: count}}, nil
++		}
++	}
++
++	var res []encodedProfile
++	half := count / 2
++	for _, part := range [][]*profile.Sample{prof.Sample[:half], prof.Sample[half:]} {
++		sub, err := profile.Merge([]*profile.Profile{{
++			SampleType:        prof.SampleType,
++			DefaultSampleType: prof.DefaultSampleType,
++			Sample:            part,
++			Mapping:           prof.Mapping,
++			Location:          prof.Location,
++			Function:          prof.Function,
++			Comments:          prof.Comments,
++			DropFrames:        prof.DropFrames,
++			KeepFrames:        prof.KeepFrames,
++			TimeNanos:         prof.TimeNanos,
++			DurationNanos:     prof.DurationNanos,
++			PeriodType:        prof.PeriodType,
++			Period:            prof.Period,
++		}})
++		if err != nil {
++			return nil, err
++		}
++		encoded, err := encodeBounded(sub, maxSamples, maxBytes)
++		if err != nil {
++			return nil, err
++		}
++		res = append(res, encoded...)
++	}
++	return res, nil
++}
++
++// encodeProfile gzips prof. Also returns its uncompressed size.
++func encodeProfile(prof *profile.Profile) ([]byte, int, error) {
++	buf := bytes.NewBuffer(nil)
++	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
++	gzipWriter.Reset(buf)
++	defer func() {
++		gzipWriter.Reset(io.Discard)
++		gzipWriterPool.Put(gzipWriter)
++	}()
++	counter := &countingWriter{dst: gzipWriter}
++	if err := prof.WriteUncompressed(counter); err != nil {
++		return nil, 0, fmt.Errorf("ebpf profile encode %w", err)
++	}
++	if err := gzipWriter.Close(); err != nil {
++		return nil, 0, fmt.Errorf("ebpf profile encode %w", err)
++	}
++	return buf.Bytes(), counter.count, nil
++}
++
++// countingWriter counts the bytes written through it to dst.
++type countingWriter struct {
++	dst   io.Writer
++	count int
++}
++
++func (w *countingWriter) Write(data []byte) (int, error) {
++	written, err := w.dst.Write(data)
++	w.count += written
++	return written, err
++}
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/bound_test.go b/internal/component/pyroscope/ebpf/reporter/bound_test.go
+--- a/internal/component/pyroscope/ebpf/reporter/bound_test.go
++++ b/internal/component/pyroscope/ebpf/reporter/bound_test.go
+@@ -0,0 +1,157 @@
++//go:build unix
++
++package reporter
++
++import (
++	"bytes"
++	"context"
++	"fmt"
++	"log/slog"
++	"strconv"
++	"strings"
++	"testing"
++
++	"github.com/google/pprof/profile"
++	"github.com/grafana/alloy/internal/component/pyroscope/ebpf/discovery"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	"go.opentelemetry.io/ebpf-profiler/libpf"
++	"go.opentelemetry.io/ebpf-profiler/reporter/samples"
++)
++
++// mergedReport runs one merged report over `tree` w/ `cfg` (targets: pids
++// 1..pids, all service_a), returns the pushed profiles.
++func mergedReport(t *testing.T, cfg Config, pids int, tree samples.TraceEventsTree) []PPROF {
++	t.Helper()
++	targets := make([]discovery.DiscoveredTarget, 0, pids)
++	for pid := 1; pid <= pids; pid++ {
++		targets = append(targets, discovery.DiscoveredTarget{
++			"__process_pid__": strconv.Itoa(pid), "service_name": "service_a",
++		})
++	}
++	tp := discovery.NewTargetProducer(discovery.TargetsOptions{Targets: targets})
++	cfg.SamplesPerSecond = 97
++	var profiles []PPROF
++	rep := NewPPROF(slog.New(slog.DiscardHandler), &cfg, tp, nil,
++		func(_ context.Context, ps []PPROF) { profiles = ps })
++	events := rep.traceEvents.WLock()
++	*events = tree
++	rep.traceEvents.WUnlock(&events)
++	rep.reportProfile(context.Background())
++	return profiles
++}
++
++// offCPUTree: pid i (1..pids) blocks for 100ns in `fn<i % stacks>`, so
++// `stacks` distinct stacks.
++func offCPUTree(pids, stacks int) samples.TraceEventsTree {
++	tree := make(samples.TraceEventsTree, pids)
++	for pid := 1; pid <= pids; pid++ {
++		tree[samples.ResourceKey{PID: int64(pid)}] = samples.ResourceToProfiles{
++			Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++				profileTypeOffCPU: {
++					{}: &samples.TraceEvents{
++						Frames: singleFrameTrace(libpf.PythonFrame, libpf.FrameMappingFile{}, 0,
++							fmt.Sprintf("fn%d", pid%stacks), "/bin/bar", 1),
++						Timestamps: []uint64{42},
++						Values:     []int64{100},
++					},
++				},
++			},
++		}
++	}
++	return tree
++}
++
++// parsed decodes p, checks its sample count + labels.
++func parsed(t *testing.T, p PPROF) *profile.Profile {
++	t.Helper()
++	res, err := profile.Parse(bytes.NewReader(p.Raw))
++	require.NoError(t, err)
++	assert.Len(t, res.Sample, p.Samples)
++	assert.Equal(t, "service_a", p.Labels.Get("service_name"))
++	return res
++}
++
++func TestPPROFReporter_MergedCompactsEqualSamples(t *testing.T) {
++	// 100 pids, 3 stacks: 3 rows, values summed
++	profiles := mergedReport(t, Config{}, 100, offCPUTree(100, 3))
++	require.Len(t, profiles, 1)
++	assert.Equal(t, 3, profiles[0].Samples)
++	total := int64(0)
++	for _, s := range parsed(t, profiles[0]).Sample {
++		total += s.Value[0]
++	}
++	assert.Equal(t, int64(100*100), total)
++
++	// Distinct sample labels stay distinct rows
++	profiles = mergedReport(t, Config{PIDLabel: true}, 100, offCPUTree(100, 3))
++	require.Len(t, profiles, 1)
++	assert.Equal(t, 100, profiles[0].Samples)
++}
++
++func TestPPROFReporter_BoundsProfileSamples(t *testing.T) {
++	// Just over Pyroscope's default 16000 sample limit, all distinct
++	const rows = 16001
++	profiles := mergedReport(t, Config{
++		MaxProfileSamples: DefaultMaxProfileSamples,
++		MaxProfileBytes:   DefaultMaxProfileBytes,
++	}, rows, offCPUTree(rows, rows))
++	require.Greater(t, len(profiles), 2)
++
++	seen := make(map[string]bool, rows)
++	total := int64(0)
++	for _, p := range profiles {
++		assert.LessOrEqual(t, p.Samples, DefaultMaxProfileSamples)
++		prof := parsed(t, p)
++		var uncompressed bytes.Buffer
++		require.NoError(t, prof.WriteUncompressed(&uncompressed))
++		assert.LessOrEqual(t, uncompressed.Len(), DefaultMaxProfileBytes)
++		// Each part only has the functions its samples use
++		assert.Len(t, prof.Function, p.Samples)
++		for _, s := range prof.Sample {
++			name := s.Location[0].Line[0].Function.Name
++			assert.False(t, seen[name], name)
++			seen[name] = true
++			total += s.Value[0]
++		}
++	}
++	assert.Len(t, seen, rows)
++	assert.Equal(t, int64(rows*100), total)
++}
++
++// withLongNames appends 2 KiB to every fn name in tree.
++func withLongNames(tree samples.TraceEventsTree) samples.TraceEventsTree {
++	for _, rtp := range tree {
++		for _, events := range rtp.Events {
++			for _, e := range events {
++				fr := e.Frames[0].Value()
++				name := fr.FunctionName.String() + strings.Repeat("x", 2048)
++				e.Frames = singleFrameTrace(libpf.PythonFrame, libpf.FrameMappingFile{}, 0,
++					name, "/bin/bar", 1)
++			}
++		}
++	}
++	return tree
++}
++
++func TestPPROFReporter_BoundsProfileBytes(t *testing.T) {
++	// 200 distinct stacks, ~2 KiB per row: ~400 KiB
++	const maxBytes = 64 << 10
++	profiles := mergedReport(t, Config{MaxProfileBytes: maxBytes}, 200,
++		withLongNames(offCPUTree(200, 200)))
++	require.Greater(t, len(profiles), 4)
++	total := 0
++	for _, p := range profiles {
++		var uncompressed bytes.Buffer
++		require.NoError(t, parsed(t, p).WriteUncompressed(&uncompressed))
++		assert.LessOrEqual(t, uncompressed.Len(), maxBytes)
++		total += p.Samples
++	}
++	assert.Equal(t, 200, total)
++
++	// A single sample over the bound still goes out, unsplit
++	profiles = mergedReport(t, Config{MaxProfileBytes: 1024}, 1,
++		withLongNames(offCPUTree(1, 1)))
++	require.Len(t, profiles, 1)
++	assert.Equal(t, 1, profiles[0].Samples)
++}
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/pprof.go b/internal/component/pyroscope/ebpf/reporter/pprof.go
+--- a/internal/component/pyroscope/ebpf/reporter/pprof.go
++++ b/internal/component/pyroscope/ebpf/reporter/pprof.go
+@@ -3,7 +3,6 @@
+ package reporter
+ 
+ import (
+-	"bytes"
+ 	"context"
+ 	"encoding/hex"
+ 	"fmt"
+@@ -48,6 +47,10 @@
+ 	// `__process_pid__`, share a profile. Per-sample labels (`pid`, `comm`)
+ 	// are unaffected.
+ 	PerPIDProfile bool
++	// Bounds per pushed profile: samples, uncompressed bytes. A larger
++	// profile is split into several. <= 0: unbounded.
++	MaxProfileSamples int
++	MaxProfileBytes   int
+ }
+ type PPROFReporter struct {
+ 	cfg *Config
+@@ -373,8 +376,11 @@
+ 	profileType := bs.opt.ProfileType
+ 	res := make([]PPROF, 0, len(bs.Builders))
+ 	for _, b := range bs.Builders {
+-		buf := bytes.NewBuffer(nil)
+-		_, err := b.Write(buf)
++		// Merged pids: many rows differ only by pid/tid/cpu
++		if !bs.opt.PerPIDProfile {
++			b.CompactSamples()
++		}
++		encoded, err := encodeBounded(b.Profile, p.cfg.MaxProfileSamples, p.cfg.MaxProfileBytes)
+ 		if err != nil {
+ 			p.log.Error("failed to encode profile", "err", err)
+ 			continue
+@@ -388,11 +394,14 @@
+ 		builder := labels.NewBuilder(ls)
+ 		builder.Set(model.MetricNameLabel, metric)
+ 		pyroscope.AddScopeLabels(builder, pyroscope.ScopeNameEBPF)
+-		res = append(res, PPROF{
+-			Raw:     buf.Bytes(),
+-			Samples: len(b.Profile.Sample),
+-			Labels:  builder.Labels(),
+-		})
++		profileLabels := builder.Labels()
++		for _, e := range encoded {
++			res = append(res, PPROF{
++				Raw:     e.raw,
++				Samples: e.samples,
++				Labels:  profileLabels,
++			})
++		}
+ 	}
+ 	return res
+ }

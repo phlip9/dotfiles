@@ -87,12 +87,25 @@
     # false` merges pids. The patch adds the source file + frame kind to
     # the key. Not upstream as of main 5c7b2a1. Unit test in the patch.
     #
+    # A merged profile (`per_pid_profile = false`) has no upper bound, while
+    # Pyroscope rejects a profile w/ > 16000 samples or > 4 MiB
+    # uncompressed, and a push > its 2 MiB ingestion burst never passes the
+    # rate limiter (all defaults). Off-CPU rows have no sampling ceiling.
+    # The patch (1) merges equal (stack, sample labels) rows of a merged
+    # profile: rows of different pids/tids/cpus are otherwise separate, and
+    # Pyroscope validates before it merges them; (2) splits any profile
+    # over `max_profile_samples` (default 8000) or `max_profile_bytes`
+    # (default 1 MiB, uncompressed) into several pushes. sauna's largest
+    # merged profile at a CI peak: ~6.1k samples, ~0.58 MB (estimated from
+    # Pyroscope's merged 15s windows). Not upstream. Unit tests in the patch.
+    #
     # (nixpkgs' custom patchPhase ignores `patches`)
     patchPhase = ''
       patch -p1 < ${./ebpf-keep-probes-alive.patch}
       patch -p1 < ${./ebpf-keep-exited-targets.patch}
       patch -p1 < ${./ebpf-per-pid-profile.patch}
       patch -p1 < ${./ebpf-location-source-file.patch}
+      patch -p1 < ${./ebpf-bound-profiles.patch}
     ''
     + prev.patchPhase;
   }
