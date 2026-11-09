@@ -435,6 +435,14 @@ in
         storage.backend = "filesystem";
 
         limits.retention_period = cfgP.retentionPeriod;
+        # The ingestion rate limiter (default 4 MiB/s, 2 MiB burst) counts
+        # uncompressed bytes. Alloy pushes a collect interval's profiles
+        # at once: ~1.2 MB (~2.4 MB w/ a 2x estimate error) per 15s at a CI
+        # peak on sauna, w/ one merged profile per labels. A rejected push
+        # retries w/ backoff, but within the same deadline. Burst headroom
+        # for a whole interval; Alloy is the only client.
+        # = `-distributor.ingestion-burst-size-mb`
+        limits.ingestion_burst_size_mb = 8;
 
         # Each ring member advertises an IP that it picks from a list of
         # private interfaces, w/ a fallback to `eth0,en0`. sauna has only
