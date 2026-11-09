@@ -259,7 +259,9 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
   `ebpf/unspecified` = kernel threads + procs younger than one discovery
   scan), `exe` = exe basename (`.foo-wrapped` -> `foo`), `host`. No pid.
 - UI: Profiles Drilldown,
-  `https://grafana.phlip9.com/a/grafana-pyroscope-app/explore?var-dataSource=pyroscope&var-serviceName=<unit>&var-profileMetricId=<type id>`.
+  `https://grafana.phlip9.com/a/grafana-pyroscope-app/explore?explorationType=flame-graph&var-dataSource=pyroscope&var-serviceName=<unit>&var-profileMetricId=<type id>`
+  (+ `&from=..&to=..`; `explorationType=all` = service list). One unit
+  only.
 - mcp tools (`pyroscope` group):
   - `list_pyroscope_profile_types {data_source_uid}`
   - `list_pyroscope_label_names` / `list_pyroscope_label_values {name}`,
@@ -273,9 +275,26 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
   w/ `"metrics"`): `{"kind": "DataQuery", "group":
   "grafana-pyroscope-datasource", "version": "v0", "datasource": {"name":
   "pyroscope"}, "spec": {"queryType": "profile", "profileTypeId": "...",
-  "labelSelector": "{service_name=\"nginx\"}", "groupBy": []}}`. Untested.
+  "labelSelector": "{service_name=\"nginx\"}", "groupBy": [], "maxNodes":
+  16384}}`. Reference: `nixos/sauna/grafana/profiling.json`.
+  - `metrics`: `groupBy: ["exe"]` + `limit: 10` = top-10 series; values in
+    `cores` (CPU s/s); no point when a series has no samples (gaps, not
+    0). Set `queryOptions.interval` (ex: `1m`), else the step is
+    `minStep` 15s.
+  - `profile`: `maxNodes` truncates into `other` nodes; whole-host
+    profiles are huge (16384 nodes -> ~50% `other`), per unit is fine.
+  - Variables: label-values query variable, spec `{"type": "labelValue",
+    "profileTypeId": "...", "labelName": "service_name"}` (also
+    `profileType`, `label`).
+  - The DS doesn't escape variables: use `service_name=~"${var:raw}"` w/
+    `allValue: ".+"`. `:regex` breaks: the selector parser rejects its
+    `\/` (`ebpf\/unspecified`).
 - Health metrics (VictoriaMetrics): jobs `alloy` + `pyroscope`,
-  `pyroscope_write_*`, `pyroscope_ebpf_*`, `pyroscope_data_bytes`.
+  `pyroscope_write_*`, `pyroscope_ebpf_*`, `pyroscope_data_bytes`,
+  `pyroscope_distributor_*`. `pyroscope_write_dropped_profiles_total` only
+  exists after the first drop (`or vector(0)`).
+- Don't query huge `maxNodes` (>= 1e6) by hand: Pyroscope RSS jumps to
+  ~1 GiB.
 
 ## Gotchas
 
