@@ -580,8 +580,7 @@ in
       ];
     };
 
-    # The module's default `configPath` loads every /etc/alloy/*.alloy and
-    # reloads Alloy when one changes.
+    # The module's default `configPath` loads every /etc/alloy/*.alloy.
     environment.etc."alloy/config.alloy" = lib.mkIf cfgC.enable {
       source = alloyConfigFile;
     };
@@ -595,6 +594,15 @@ in
     users.groups.alloy = lib.mkIf cfgC.enable { };
 
     systemd.services.alloy = lib.mkIf cfgC.enable {
+      # Restart, not reload (SIGHUP, the module's default), when the config
+      # changes: `pyroscope.ebpf` only applies `targets` + `forward_to` on a
+      # reload. Every other arg (sample rate, intervals, off-CPU threshold,
+      # per_pid_profile, ...) is read once at startup, so a reload accepts
+      # the new values but keeps running w/ the old ones. Costs <= 1 collect
+      # interval of profiles + the BPF load per config change.
+      restartTriggers = [ alloyConfigFile ];
+      reloadTriggers = lib.mkForce [ ];
+
       serviceConfig = {
         DynamicUser = lib.mkForce false;
         User = "alloy";
