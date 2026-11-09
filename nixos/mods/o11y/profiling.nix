@@ -528,81 +528,83 @@ in
     };
     users.groups.alloy = lib.mkIf cfgC.enable { };
 
-    systemd.services.alloy.serviceConfig = lib.mkIf cfgC.enable {
-      DynamicUser = lib.mkForce false;
-      User = "alloy";
-      Group = "alloy";
-      # Module adds `systemd-journal` for Loki log forwarding; unused
-      SupplementaryGroups = lib.mkForce [ ];
+    systemd.services.alloy = lib.mkIf cfgC.enable {
+      serviceConfig = {
+        DynamicUser = lib.mkForce false;
+        User = "alloy";
+        Group = "alloy";
+        # Module adds `systemd-journal` for Loki log forwarding; unused
+        SupplementaryGroups = lib.mkForce [ ];
 
-      AmbientCapabilities = alloyCaps;
-      CapabilityBoundingSet = alloyCaps;
-      # The engine raises RLIMIT_MEMLOCK at startup, up to the hard limit.
-      # systemd's default 8M hard limit fails BPF map creation; this
-      # replaces CAP_SYS_RESOURCE.
-      LimitMEMLOCK = "infinity";
+        AmbientCapabilities = alloyCaps;
+        CapabilityBoundingSet = alloyCaps;
+        # The engine raises RLIMIT_MEMLOCK at startup, up to the hard limit.
+        # systemd's default 8M hard limit fails BPF map creation; this
+        # replaces CAP_SYS_RESOURCE.
+        LimitMEMLOCK = "infinity";
 
-      # Symbol cache, see `symb_cache_path`
-      CacheDirectory = "alloy";
-      CacheDirectoryMode = "0700";
+        # Symbol cache, see `symb_cache_path`
+        CacheDirectory = "alloy";
+        CacheDirectoryMode = "0700";
 
-      # Hardening. Each setting below was tested w/ eBPF profiling in a VM.
-      DevicePolicy = "closed";
-      # Only pushes to Pyroscope + serves /metrics on loopback
-      IPAddressAllow = [ "localhost" ];
-      IPAddressDeny = [ "any" ];
-      LockPersonality = true;
-      MemoryDenyWriteExecute = true;
-      # Ambient caps still apply after exec
-      NoNewPrivileges = true;
-      PrivateDevices = true;
-      PrivateTmp = true;
-      ProtectClock = true;
-      # cgroup paths come from /proc/<pid>/cgroup
-      ProtectControlGroups = true;
-      ProtectHome = true;
-      ProtectHostname = true;
-      ProtectKernelModules = true;
-      # MUST stay off: `true` mounts an empty, mode 0000 file over
-      # /proc/kallsyms. The engine reads it (DAC_READ_SEARCH), finds no
-      # addresses, and fails to start: "failed to read kernel symbols:
-      # unable to read kallsyms addresses". W/o CAP_DAC_OVERRIDE or
-      # CAP_SYS_ADMIN the alloy user can't write /proc/sys + /sys anyway.
-      ProtectKernelTunables = false;
-      # Also MUST stay off, all fatal for the same reason (no kallsyms):
-      # - ProtectKernelLogs: drops CAP_SYSLOG from the bounding set
-      # - ProcSubset=pid: hides /proc/kallsyms
-      # And:
-      # - PrivateUsers: caps only apply in the child userns, so other
-      #   users' /proc/<pid>/exe is unreadable
-      # - PrivatePIDs: can't see other processes
-      # - PrivateNetwork: can't reach Pyroscope
-      # - ProtectProc=invisible: works, but a no-op w/ CAP_SYS_PTRACE
-      ProtectSystem = "strict";
-      RemoveIPC = true;
-      RestrictAddressFamilies = [
-        "AF_UNIX"
-        "AF_INET"
-        "AF_INET6"
-        # kallsyms monitor: kobject uevents on kernel module (un)load.
-        # W/o: WARN at startup + stale module symbols.
-        "AF_NETLINK"
-      ];
-      RestrictNamespaces = true;
-      RestrictRealtime = true;
-      RestrictSUIDSGID = true;
-      SystemCallArchitectures = "native";
-      # Order matters: allow-list, drop @privileged (has bpf), then re-add.
-      # perf_event_open is in @debug, but nothing else from it is needed.
-      SystemCallFilter = [
-        "@system-service"
-        "~@privileged"
-        "bpf perf_event_open"
-      ];
-      # EPERM, not SIGSYS. Ex: if tracefs is unreadable, Alloy tries to
-      # mount(2) it; that should fail, not kill Alloy.
-      SystemCallErrorNumber = "EPERM";
-      UMask = "0077";
+        # Hardening. Each setting below was tested w/ eBPF profiling in a VM.
+        DevicePolicy = "closed";
+        # Only pushes to Pyroscope + serves /metrics on loopback
+        IPAddressAllow = [ "localhost" ];
+        IPAddressDeny = [ "any" ];
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        # Ambient caps still apply after exec
+        NoNewPrivileges = true;
+        PrivateDevices = true;
+        PrivateTmp = true;
+        ProtectClock = true;
+        # cgroup paths come from /proc/<pid>/cgroup
+        ProtectControlGroups = true;
+        ProtectHome = true;
+        ProtectHostname = true;
+        ProtectKernelModules = true;
+        # MUST stay off: `true` mounts an empty, mode 0000 file over
+        # /proc/kallsyms. The engine reads it (DAC_READ_SEARCH), finds no
+        # addresses, and fails to start: "failed to read kernel symbols:
+        # unable to read kallsyms addresses". W/o CAP_DAC_OVERRIDE or
+        # CAP_SYS_ADMIN the alloy user can't write /proc/sys + /sys anyway.
+        ProtectKernelTunables = false;
+        # Also MUST stay off, all fatal for the same reason (no kallsyms):
+        # - ProtectKernelLogs: drops CAP_SYSLOG from the bounding set
+        # - ProcSubset=pid: hides /proc/kallsyms
+        # And:
+        # - PrivateUsers: caps only apply in the child userns, so other
+        #   users' /proc/<pid>/exe is unreadable
+        # - PrivatePIDs: can't see other processes
+        # - PrivateNetwork: can't reach Pyroscope
+        # - ProtectProc=invisible: works, but a no-op w/ CAP_SYS_PTRACE
+        ProtectSystem = "strict";
+        RemoveIPC = true;
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_INET"
+          "AF_INET6"
+          # kallsyms monitor: kobject uevents on kernel module (un)load.
+          # W/o: WARN at startup + stale module symbols.
+          "AF_NETLINK"
+        ];
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        SystemCallArchitectures = "native";
+        # Order matters: allow-list, drop @privileged (has bpf), then re-add.
+        # perf_event_open is in @debug, but nothing else from it is needed.
+        SystemCallFilter = [
+          "@system-service"
+          "~@privileged"
+          "bpf perf_event_open"
+        ];
+        # EPERM, not SIGSYS. Ex: if tracefs is unreadable, Alloy tries to
+        # mount(2) it; that should fail, not kill Alloy.
+        SystemCallErrorNumber = "EPERM";
+        UMask = "0077";
+      };
     };
   };
 }
