@@ -316,13 +316,19 @@ in
 
       refreshInterval = lib.mkOption {
         type = lib.types.str;
-        default = "10s";
+        default = "2s";
         description = ''
           How often Alloy rescans /proc for processes to label w/ their
-          unit. Each scan reads a few /proc files per process. Processes
-          younger than one scan are still profiled, but as
+          unit. Processes younger than one scan are still profiled, but as
           `service_name="ebpf/unspecified"`, so shorter = better attribution
-          of short-lived processes (ex: nix builds) for more CPU.
+          of short-lived processes (ex: nix builds: rustc, cc1, node).
+
+          Each scan reads 2 /proc files per process (~1.5ms CPU for ~300
+          processes on sauna), then relabels every process. Share of CPU
+          in unspecified, modeled on a /proc trace of nix builds on sauna,
+          w/ the exited-pid patch (see nixos/pkgs/grafana-alloy): ~28% at
+          "10s", ~13% at "5s", ~5% at "2s", ~2.5% at "1s". W/o the patch:
+          ~40% at "10s", and worse when shorter.
         '';
       };
 
