@@ -195,11 +195,17 @@ in
     VM_URL = "http://127.0.0.1:8428"
     AM_URL = "http://127.0.0.1:9093"
     GF_URL = "http://127.0.0.1:3000"
+    # Bound every request, so a hung server fails its step, not the test's
+    # globalTimeout, and `dump_evidence` still runs.
+    CURL = "curl -sS --connect-timeout 2 --max-time 10"
     # `enforce_domain` redirects requests for any other Host.
     GF_CURL = (
-        "curl -sS --fail-with-body -u admin:gf-admin-testpwd "
+        f"{CURL} --fail-with-body -u admin:gf-admin-testpwd "
         "-H 'Host: grafana.test'"
     )
+    # Upper bound for a unit or port to come up. The default is 15 min,
+    # past the test's globalTimeout.
+    UP_TIMEOUT = dt.timedelta(seconds=60)
     HOST_PING = "healthchecks-host-ping.service"
 
     # Requests the sink logged for `path`, oldest first.
@@ -235,15 +241,15 @@ in
     def push(*lines: str) -> None:
         body = shlex.quote("\n".join(lines) + "\n")
         machine.succeed(
-            f"printf %s {body} | curl -sSf --data-binary @- "
+            f"printf %s {body} | {CURL} -f --data-binary @- "
             f"{VM_URL}/api/v1/import/prometheus",
-            f"curl -sSf {VM_URL}/internal/force_flush",
+            f"{CURL} -f {VM_URL}/internal/force_flush",
         )
 
     # Alerts Alertmanager dropped from group flushes b/c of an inhibition.
     def inhibited() -> float:
         metric = "alertmanager_notifications_suppressed_total"
-        out = machine.succeed(f"curl -sSf {AM_URL}/metrics")
+        out = machine.succeed(f"{CURL} -f {AM_URL}/metrics")
         for line in out.splitlines():
             if line.startswith(f'{metric}{{reason="inhibition"}} '):
                 return float(line.split()[-1])
@@ -254,7 +260,7 @@ in
             "journalctl --no-pager -o cat -u vmalert -u alertmanager "
             f"-u {HOST_PING} -u alert-sink | tail -n 100",
             f"cat {SINK_LOG}",
-            f"curl -sS {AM_URL}/api/v2/alerts",
+            f"{CURL} {AM_URL}/api/v2/alerts",
         ]:
             print(f"$ {cmd}\n{machine.execute(cmd)[1]}")
 
@@ -269,14 +275,14 @@ in
                 "alertmanager.service",
                 "vmalert.service",
             ]:
-                machine.wait_for_unit(unit)
-            machine.wait_for_open_port(8880)
-            machine.wait_for_open_port(9093)
+                machine.wait_for_unit(unit, timeout=UP_TIMEOUT)
+            machine.wait_for_open_port(8880, timeout=UP_TIMEOUT)
+            machine.wait_for_open_port(9093, timeout=UP_TIMEOUT)
 
             # All rule groups, once every rule has run, else [].
             def rules_evaluated() -> list[dict[str, Any]]:
                 groups = json.loads(machine.succeed(
-                    "curl -sSf http://127.0.0.1:8880/api/v1/rules"
+                    f"{CURL} -f http://127.0.0.1:8880/api/v1/rules"
                 ))["data"]["groups"]
                 rules = [rule for group in groups for rule in group["rules"]]
                 if any(r["lastEvaluation"].startswith("0001-") for r in rules):
@@ -361,8 +367,8 @@ in
             machine.succeed("systemctl start vmalert.service")
 
         with subtest("Grafana Alertmanager datasource"):
-            machine.wait_for_unit("grafana.service")
-            machine.wait_for_open_port(3000)
+            machine.wait_for_unit("grafana.service", timeout=UP_TIMEOUT)
+            machine.wait_for_open_port(3000, timeout=UP_TIMEOUT)
             # Grafana's datasource test: GET /api/v2/status through its proxy
             machine.wait_until_succeeds(
                 f"{GF_CURL} {GF_URL}/api/datasources/proxy/uid/alertmanager"
