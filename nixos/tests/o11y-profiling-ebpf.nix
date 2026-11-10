@@ -39,11 +39,15 @@ let
   hotFn = "hot_loop_spin";
   # Blocks in nanosleep(2): off-CPU
   coldFn = "cold_block_wait";
-  # Alloy's pprof flush period, see `collector.collectInterval`
-  collectIntervalS = 5;
+  # Alloy's pprof flush period, see `collector.collectInterval`. Most
+  # waits below are a few flushes long. Also the push deadline: one round
+  # of pushes acks in ~0.5s (Pyroscope's segment flush). Alloy keeps an
+  # exited pid's target for 2 intervals: the exited-process subtest's
+  # removal -> flush steps must fit, also under host load.
+  collectIntervalS = 3;
   # /proc rescan period, see `collector.refreshInterval`. Short: the
   # exited-process subtest waits for Alloy to apply a start + a stop.
-  refreshIntervalS = 1;
+  refreshIntervalMs = 500;
 in
 {
   name = "o11y-profiling-ebpf";
@@ -114,7 +118,7 @@ in
           # Faster first profile + the exited-pid timeline. Everything
           # else: prod defaults.
           collector.collectInterval = "${toString collectIntervalS}s";
-          collector.refreshInterval = "${toString refreshIntervalS}s";
+          collector.refreshInterval = "${toString refreshIntervalMs}ms";
           # Flush on demand, applied targets: the exited-process subtest
           collector.testHooks = true;
         };
@@ -174,8 +178,8 @@ in
     CURL = "curl -sS --connect-timeout 2 --max-time 10"
     # Upper bound for one command, incl. its curl
     CMD_TIMEOUT = dt.timedelta(seconds=15)
-    # Upper bound for profiles to show up, in s. Usually ~15-25s after
-    # Alloy starts: BPF load + first collect interval + Pyroscope flush.
+    # Upper bound for profiles to show up, in s. Usually ~3-5s after
+    # Alloy starts: BPF load (~2.6s) + first flush + Pyroscope flush.
     PROFILE_TIMEOUT_S = 90
     # Upper bound for a service to start + turn ready
     UP_TIMEOUT = dt.timedelta(seconds=60)
