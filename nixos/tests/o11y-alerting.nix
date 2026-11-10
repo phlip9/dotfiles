@@ -273,10 +273,6 @@ in
             machine.wait_for_open_port(8880)
             machine.wait_for_open_port(9093)
 
-            # Create the test rules' series up front. VM makes new series
-            # searchable only every ~10s, new samples of known ones in ~1s.
-            push("test_page 0", "test_warn 0", "test_cause 0", "test_symptom 0")
-
             # All rule groups, once every rule has run, else [].
             def rules_evaluated() -> list[dict[str, Any]]:
                 groups = json.loads(machine.succeed(
