@@ -37,7 +37,7 @@
           "hide": false,
           "iconColor": "red",
           "legacyOptions": {
-            "expr": "count_values(\"boot\", nixos_boots_total{job=\"nixos-exporter\"} \u003e 1 and (delta(nixos_boots_total{job=\"nixos-exporter\"}[$__interval]) \u003e 0))",
+            "expr": "count_values(\"boot\", nixos_boots_total{job=\"nixos-exporter\", instance=\"$node\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=\"$node\"}[1d] offset $__interval))",
             "textFormat": "boot {{boot}}",
             "titleFormat": "Reboot"
           },
@@ -60,7 +60,7 @@
           "hide": false,
           "iconColor": "blue",
           "legacyOptions": {
-            "expr": "count_values(\"generation\", nixos_system_generation{job=\"nixos-exporter\"} and (changes(nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\"}[$__interval]) \u003e 0) unless (nixos_boots_total{job=\"nixos-exporter\"} \u003e 1 and (delta(nixos_boots_total{job=\"nixos-exporter\"}[$__interval]) \u003e 0)))",
+            "expr": "count_values(\"generation\", nixos_system_generation{job=\"nixos-exporter\", instance=\"$node\"} and (nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=\"$node\"} \u003e last_over_time(nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=\"$node\"}[1d] offset $__interval)) unless (nixos_boots_total{job=\"nixos-exporter\", instance=\"$node\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=\"$node\"}[1d] offset $__interval)))",
             "textFormat": "generation {{generation}}",
             "titleFormat": "Deploy"
           },
@@ -22495,8 +22495,8 @@
         "spec": {
           "allowCustomValue": true,
           "current": {
-            "text": "127.0.0.1:9100",
-            "value": "127.0.0.1:9100"
+            "text": "sauna",
+            "value": "sauna"
           },
           "definition": "label_values(node_uname_info{job=\"$job\", nodename=\"$nodename\"}, instance)",
           "hide": "dontHide",
