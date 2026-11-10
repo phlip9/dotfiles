@@ -228,15 +228,19 @@ in
             timeout=CMD_TIMEOUT,
         ))
 
-    # Open BPF link FDs of a unit's main process
+    # Open BPF link FDs of a unit's main process. Alloy opens + closes
+    # /proc files all the time; `find` fails on FDs that close while it
+    # lists them, but still prints every match. An unreadable fd dir
+    # counts 0.
     def bpf_links(unit: str) -> int:
         pid = machine.succeed(
             f"systemctl show {unit} -p MainPID --value", timeout=CMD_TIMEOUT
         ).strip()
-        return int(machine.succeed(
-            f"find /proc/{pid}/fd -lname 'anon_inode:bpf_link' | wc -l",
+        out = machine.succeed(
+            f"find /proc/{pid}/fd -lname 'anon_inode:bpf_link' || true",
             timeout=CMD_TIMEOUT,
-        ))
+        )
+        return len(out.split())
 
     # Query window: since boot, until well after now
     def vm_now_ms() -> int:
