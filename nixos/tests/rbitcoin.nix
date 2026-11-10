@@ -69,7 +69,8 @@
       };
       # Only VictoriaMetrics is under test.
       services.grafana.enable = lib.mkForce false;
-      services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
+      # The VM check waits for a scrape after node2's last new tip.
+      services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
     };
 
   testScript = ''
