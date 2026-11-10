@@ -299,16 +299,20 @@ in
         retry(poll, timeout=PROFILE_TIMEOUT)
         return seen
 
-    # Alloy's Prometheus metrics, summed per metric name + label filter.
-    def alloy_metric(name: str, match: str = "") -> float:
+    # One scrape of Alloy's Prometheus metrics: its sample lines
+    def alloy_scrape() -> list[str]:
         out = machine.succeed(
             f"{CURL} -f {ALLOY_URL}/metrics", timeout=CMD_TIMEOUT
         )
+        return [line for line in out.splitlines() if not line.startswith("#")]
+
+    # Metric `name` in `scrape`, summed over series w/ `match` in their
+    # labels
+    def metric(scrape: list[str], name: str, match: str = "") -> float:
         total = 0.0
-        for line in out.splitlines():
-            if line.startswith(name + "{") or line.startswith(name + " "):
-                if match in line:
-                    total += float(line.rsplit(" ", 1)[1])
+        for line in scrape:
+            if line.startswith((name + "{", name + " ")) and match in line:
+                total += float(line.rsplit(" ", 1)[1])
         return total
 
     # Every `service_name` in Alloy's current discovery targets
@@ -326,15 +330,17 @@ in
     # Changes on every pprof flush: each flush has profiles for the
     # always-busy workload unit.
     def flush_counter() -> float:
-        return alloy_metric(
-            "pyroscope_ebpf_pprofs_total", f'service_name="{UNIT}"'
+        return metric(
+            alloy_scrape(),
+            "pyroscope_ebpf_pprofs_total",
+            f'service_name="{UNIT}"',
         )
 
     # Alloy's per-service pprof counter `name`, summed over the forker's
     # pids: undiscovered (most) + discovered ones
-    def fanout_metric(name: str) -> float:
+    def fanout_metric(scrape: list[str], name: str) -> float:
         return sum(
-            alloy_metric(name, f'service_name="{service}"')
+            metric(scrape, name, f'service_name="{service}"')
             for service in ["ebpf/unspecified", FORK_UNIT]
         )
 
@@ -555,8 +561,11 @@ in
                 "first flush w/ the forker",
                 2 * COLLECT_INTERVAL_S,
             )
-            pprofs0 = fanout_metric("pyroscope_ebpf_pprofs_total")
-            samples0 = fanout_metric("pyroscope_ebpf_pprof_samples_total")
+            scrape0 = alloy_scrape()
+            pprofs0 = fanout_metric(scrape0, "pyroscope_ebpf_pprofs_total")
+            samples0 = fanout_metric(
+                scrape0, "pyroscope_ebpf_pprof_samples_total"
+            )
             pids0 = last_pid()
             flushes = 3
             for _ in range(flushes):
@@ -567,9 +576,13 @@ in
                     2 * COLLECT_INTERVAL_S,
                 )
             pids = pids_since(pids0)
-            pprofs = fanout_metric("pyroscope_ebpf_pprofs_total") - pprofs0
+            scrape1 = alloy_scrape()
+            pprofs = (
+                fanout_metric(scrape1, "pyroscope_ebpf_pprofs_total") - pprofs0
+            )
             samples = (
-                fanout_metric("pyroscope_ebpf_pprof_samples_total") - samples0
+                fanout_metric(scrape1, "pyroscope_ebpf_pprof_samples_total")
+                - samples0
             )
             machine.succeed(f"systemctl stop {FORK_UNIT}", timeout=CMD_TIMEOUT)
             print(
@@ -587,25 +600,28 @@ in
                 "pyroscope_write_dropped_profiles_total",
                 "pyroscope_ebpf_pprofs_dropped_total",
             ]:
-                assert alloy_metric(name) == 0, name
+                assert metric(scrape1, name) == 0, name
 
         with subtest("Alloy metrics: pushes sent, none dropped, healthy"):
-            sent = alloy_metric("pyroscope_write_sent_profiles_total")
+            scrape = alloy_scrape()
+            sent = metric(scrape, "pyroscope_write_sent_profiles_total")
             assert sent > 0, sent
             for name in [
                 "pyroscope_write_dropped_profiles_total",
                 "pyroscope_ebpf_pprofs_dropped_total",
                 "pyroscope_ebpf_profiling_sessions_failing_total",
             ]:
-                assert alloy_metric(name) == 0, name
+                assert metric(scrape, name) == 0, name
             # Prove the series exists before trusting the == 0 below
-            healthy = alloy_metric(
+            healthy = metric(
+                scrape,
                 "alloy_component_controller_running_components",
                 'health_type="healthy"',
             )
             assert healthy >= 4, healthy
             for health in ["unhealthy", "exited", "unknown"]:
-                assert alloy_metric(
+                assert metric(
+                    scrape,
                     "alloy_component_controller_running_components",
                     f'health_type="{health}"',
                 ) == 0, health
