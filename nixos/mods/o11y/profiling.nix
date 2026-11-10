@@ -217,6 +217,11 @@ let
       // frames. Overloads merge.
       demangle = "simplified"
 
+      ${lib.optionalString cfgC.testHooks ''
+        // Our patch: test-only endpoints, see `collector.testHooks`
+        test_hooks = true
+      ''}
+
       // Default /tmp/symb-cache is private + lost on restart (PrivateTmp)
       symb_cache_path = "/var/cache/alloy/symb-cache"
       // Default `true` pins maps in /sys/fs/bpf/otel (root 0700), which
@@ -403,6 +408,19 @@ in
         description = ''
           Alloy HTTP server: `/metrics`, `/-/ready`, debug UI. No authn,
           keep it on loopback.
+        '';
+      };
+
+      testHooks = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        internal = true;
+        description = ''
+          Tests only. Serve `pyroscope.ebpf`'s test endpoints (our patch,
+          see nixos/pkgs/grafana-alloy) under
+          `/api/v0/component/pyroscope.ebpf.host/`: flush on demand + hold
+          the periodic flushes, show the applied targets + pending samples.
+          No authn; a held flush stalls profiling.
         '';
       };
     };
