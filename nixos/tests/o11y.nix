@@ -247,6 +247,23 @@
             timeout=dt.timedelta(seconds=30),
         )
 
+    # Every host-local target is `instance=<hostname>`, not `<addr>:<port>`,
+    # so all jobs on a host share one `instance`. VM has loaded every target
+    # by now: it already scraped nixos-exporter above.
+    with subtest("Scrape targets are labeled instance=<hostname>"):
+        up = json.loads(
+            machine.succeed(
+                "curl -sf --max-time 5 "
+                "'http://127.0.0.1:8428/api/v1/query?query=up'"
+            )
+        )["data"]["result"]
+        instances = {r["metric"]["job"]: r["metric"]["instance"] for r in up}
+        jobs = {"victoriametrics", "node-exporter", "nixos-exporter", "grafana"}
+        assert set(instances) == jobs, instances
+        assert all(
+            instance == "machine" for instance in instances.values()
+        ), instances
+
     # Grafana credentials directory exists with secrets.
     with subtest("Grafana LoadCredential"):
         machine.succeed(

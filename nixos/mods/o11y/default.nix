@@ -72,9 +72,17 @@ let
       http.fail_if_not_ssl = true;
     };
   };
-  exporterTargets = exporter: [
-    { targets = [ (exporterAddr exporter) ]; }
+  # A scrape target on this host, labeled `instance=<hostname>` instead of
+  # the default `<loopback addr>:<port>`. Every job on a host then shares
+  # one `instance`, ex: Node Exporter Full's `instance="$node"` also matches
+  # nixos-exporter.
+  hostTargets = target: [
+    {
+      targets = [ target ];
+      labels.instance = config.networking.hostName;
+    }
   ];
+  exporterTargets = exporter: hostTargets (exporterAddr exporter);
 
   # Credentials directory for the grafana.service unit.
   gfCredsDir = "/run/credentials/grafana.service";
@@ -537,9 +545,7 @@ in
         scrape_configs = [
           {
             job_name = "victoriametrics";
-            static_configs = [
-              { targets = [ cfgVm.listenAddress ]; }
-            ];
+            static_configs = hostTargets cfgVm.listenAddress;
           }
         ]
         ++ lib.optional config.services.prometheus.exporters.node.enable {
@@ -549,16 +555,12 @@ in
         ++ [
           {
             job_name = "nixos-exporter";
-            static_configs = [
-              { targets = [ cfg.nixosExporter.listenAddress ]; }
-            ];
+            static_configs = hostTargets cfg.nixosExporter.listenAddress;
           }
         ]
         ++ lib.optional cfgGf.enable {
           job_name = "grafana";
-          static_configs = [
-            { targets = [ gfAddr ]; }
-          ];
+          static_configs = hostTargets gfAddr;
         }
         ++ lib.optional config.services.prometheus.exporters.nginx.enable ({
           job_name = "nginx-exporter";
@@ -571,31 +573,27 @@ in
         ++ lib.optional cfgNixbot.enable (
           let
             useTLS = config.services.nginx.virtualHosts.${cfgNixbot.domain}.forceSSL;
+            port = if useTLS then "443" else "80";
           in
           {
             job_name = "nixbot";
             scheme = if useTLS then "https" else "http";
             # VM uses server_name for both TLS verification/SNI and HTTP Host.
             tls_config.server_name = cfgNixbot.domain;
-            static_configs = [
-              { targets = [ "127.0.0.1:${if useTLS then "443" else "80"}" ]; }
-            ];
+            static_configs = hostTargets "127.0.0.1:${port}";
           }
         )
         ++ lib.optional config.services.niks3.enable ({
           job_name = "niks3";
-          static_configs = [
-            { targets = [ config.services.niks3.httpAddr ]; }
-          ];
+          static_configs = hostTargets config.services.niks3.httpAddr;
         })
         ++ lib.optional (cfgRbitcoin.enable && cfgRbitcoin.metrics) ({
           job_name = "rbitcoin";
-          static_configs = [
-            { targets = [ rbitcoinHealthAddr ]; }
-          ];
+          static_configs = hostTargets rbitcoinHealthAddr;
         })
         # Probe each URL through blackbox_exporter's `/probe?target=<url>`,
-        # labeled `instance=<url>`.
+        # labeled `instance=<url>`, not the hostname: the probe alerts name
+        # the URL.
         ++ lib.optional (cfg.probes != [ ]) {
           job_name = "blackbox";
           metrics_path = "/probe";
@@ -619,28 +617,20 @@ in
         ++ lib.optionals cfgAlerting.enable [
           {
             job_name = "vmalert";
-            static_configs = [
-              { targets = [ vmalertAddr ]; }
-            ];
+            static_configs = hostTargets vmalertAddr;
           }
           {
             job_name = "alertmanager";
-            static_configs = [
-              { targets = [ amAddr ]; }
-            ];
+            static_configs = hostTargets amAddr;
           }
         ]
         ++ lib.optional cfgProfiling.enable {
           job_name = "pyroscope";
-          static_configs = [
-            { targets = [ pyroscopeAddr ]; }
-          ];
+          static_configs = hostTargets pyroscopeAddr;
         }
         ++ lib.optional (cfgProfiling.enable && cfgProfiling.collector.enable) {
           job_name = "alloy";
-          static_configs = [
-            { targets = [ cfgProfiling.collector.listenAddress ]; }
-          ];
+          static_configs = hostTargets cfgProfiling.collector.listenAddress;
         };
       };
     };
