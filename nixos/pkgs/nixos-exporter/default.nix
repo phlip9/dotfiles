@@ -10,6 +10,8 @@ buildGoModule {
   src = lib.fileset.toSource {
     root = ./.;
     fileset = lib.fileset.unions [
+      ./cgroup.go
+      ./cgroup_test.go
       ./go.mod
       ./main.go
       ./main_test.go
@@ -25,7 +27,7 @@ buildGoModule {
   env.CGO_ENABLED = "0";
 
   meta = {
-    description = "Prometheus exporter for NixOS boots, generations, and pending reboots";
+    description = "Prometheus exporter for NixOS boots, generations, pending reboots, and per-unit resource usage";
     homepage = "https://github.com/phlip9/dotfiles";
     mainProgram = "nixos-exporter";
   };

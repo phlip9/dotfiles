@@ -1,6 +1,7 @@
 // nixos-exporter is a Prometheus exporter for NixOS host facts that
 // node-exporter can't see: boots, the system profile generation, the last
-// activation, and whether a reboot would change the kernel.
+// activation, whether a reboot would change the kernel, and per-unit
+// resource usage.
 //
 // Metrics (GET /metrics, computed on every scrape):
 //   - nixos_boots_total: boots counted since the exporter's state was
@@ -11,8 +12,10 @@
 //     i.e. the last boot or `switch-to-configuration`.
 //   - nixos_reboot_required: 1 if a reboot would boot a different kernel,
 //     initrd, kernel modules, or kernel params.
+//   - nixos_cgroup_*{cgroup}: memory, swap, CPU, IO, PSI, and OOM kills per
+//     systemd slice, service, and scope. See cgroup.go.
 //
-// Example scrape (sauna, 2026-11-10, fresh state dir):
+// Example scrape (sauna, 2026-11-10, fresh state dir, w/o nixos_cgroup_*):
 //
 //	$ curl -s http://127.0.0.1:9101/metrics
 //	# HELP nixos_boots_total Boots counted since the exporter's state was created.
@@ -96,6 +99,10 @@ type paths struct {
 	currentSystem string
 	// the system the kernel booted.
 	bootedSystem string
+	// the cgroup v2 hierarchy.
+	cgroupRoot string
+	// `<major>:<minor>` -> block device, to name io.stat's devices.
+	sysDevBlock string
 }
 
 // defaultPaths returns the real host paths.
@@ -106,6 +113,8 @@ func defaultPaths(stateDir string) paths {
 		systemProfile: "/nix/var/nix/profiles/system",
 		currentSystem: "/run/current-system",
 		bootedSystem:  "/run/booted-system",
+		cgroupRoot:    "/sys/fs/cgroup",
+		sysDevBlock:   "/sys/dev/block",
 	}
 }
 
@@ -324,6 +333,11 @@ func renderMetrics(hostPaths paths, boots uint64) ([]byte, error) {
 		return nil, fmt.Errorf("reboot required: %w", err)
 	}
 
+	cgroups, err := readCgroups(hostPaths.cgroupRoot, hostPaths.sysDevBlock)
+	if err != nil {
+		return nil, fmt.Errorf("cgroups: %w", err)
+	}
+
 	var buf bytes.Buffer
 	writeMetric(&buf, "nixos_boots_total", "counter",
 		"Boots counted since the exporter's state was created.",
@@ -340,6 +354,7 @@ func renderMetrics(hostPaths paths, boots uint64) ([]byte, error) {
 		"1 if a reboot would change the kernel, initrd, kernel modules, or "+
 			"kernel params.",
 		boolMetric(rebootRequired))
+	writeCgroupMetrics(&buf, cgroups)
 	return buf.Bytes(), nil
 }
 

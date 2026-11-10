@@ -1,5 +1,5 @@
 # nixos-exporter for the phlip9-o11y stack: NixOS boots, system profile
-# generation, last activation, pending reboot. See
+# generation, last activation, pending reboot, per-unit cgroup usage. See
 # nixos/pkgs/nixos-exporter/main.go.
 #
 # Socket-activated: systemd owns the loopback listener and passes it in, so
@@ -36,7 +36,7 @@ in
     };
 
     systemd.services.nixos-exporter = {
-      description = "NixOS boot + generation metrics exporter";
+      description = "NixOS boot, generation + cgroup metrics exporter";
       requires = [ "nixos-exporter.socket" ];
       after = [ "nixos-exporter.socket" ];
       # Count the boot at boot, not at the first scrape.
@@ -51,7 +51,9 @@ in
         RestartSec = 5;
 
         # Hardening. Only reads /proc/sys/kernel/random/boot_id, the system
-        # profile, /run/{current,booted}-system, and its StateDirectory.
+        # profile, /run/{current,booted}-system, /sys/fs/cgroup (read-only
+        # w/ `ProtectControlGroups`), /sys/dev/block, and its
+        # StateDirectory.
         # NOTE: no `ProcSubset=pid`, it hides /proc/sys.
         CapabilityBoundingSet = [ "" ];
         DevicePolicy = "closed";

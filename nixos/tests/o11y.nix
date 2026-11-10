@@ -2,7 +2,7 @@
 #
 # Single container with VictoriaMetrics + node-exporter + nixos-exporter +
 # Grafana. Verifies scraping, querying, nixos-exporter's boot counting +
-# reboot check, Grafana datasource provisioning, that
+# reboot check + cgroup metrics, Grafana datasource provisioning, that
 # Grafana's secrets manager encrypts with our key, a Git Sync round trip
 # (file -> dashboard -> API save -> file) w/ a `local` repository, and the
 # just/grafana-*.sh dashboard scripts.
@@ -227,6 +227,15 @@
         metrics = nixos_metrics()
         assert metrics["nixos_system_generation"] == "2", metrics
         assert metrics["nixos_reboot_required"] == "1", metrics
+
+        # Per-unit cgroup usage, read through the sandbox's read-only
+        # /sys/fs/cgroup. The build sandbox delegates no controllers to the
+        # container, so there are no memory.* or io.* files: check cpu.stat,
+        # which every cgroup has. The exporter's own cgroup exists while it
+        # serves.
+        for cgroup in ["system.slice", "system.slice/nixos-exporter.service"]:
+            name = f'nixos_cgroup_cpu_seconds_total{{cgroup="{cgroup}"}}'
+            assert float(metrics.get(name, "0")) > 0, (name, metrics)
 
         # VictoriaMetrics scrapes it.
         machine.wait_until_succeeds(

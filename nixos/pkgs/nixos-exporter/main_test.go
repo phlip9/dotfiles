@@ -12,8 +12,8 @@ import (
 )
 
 // fakeHost is a temp dir laid out like a NixOS host: a boot_id file, a
-// state dir, two system toplevels in a fake store, the system profile, and
-// /run/{current,booted}-system.
+// state dir, two system toplevels in a fake store, the system profile,
+// /run/{current,booted}-system, and an empty cgroup tree.
 type fakeHost struct {
 	t     *testing.T
 	root  string
@@ -33,9 +33,13 @@ func newFakeHost(t *testing.T) *fakeHost {
 			systemProfile: filepath.Join(root, "profiles", "system"),
 			currentSystem: filepath.Join(root, "run", "current-system"),
 			bootedSystem:  filepath.Join(root, "run", "booted-system"),
+			cgroupRoot:    filepath.Join(root, "cgroup"),
+			sysDevBlock:   filepath.Join(root, "dev-block"),
 		},
 	}
-	for _, dir := range []string{"state", "profiles", "run", "store"} {
+	for _, dir := range []string{
+		"state", "profiles", "run", "store", "cgroup", "dev-block",
+	} {
 		host.mkdir(dir)
 	}
 
@@ -211,6 +215,10 @@ func TestMetrics(t *testing.T) {
 	}
 	if !strings.Contains(body, "# TYPE nixos_boots_total counter\n") {
 		t.Fatalf("missing TYPE line:\n%s", body)
+	}
+	// No cgroups: no cgroup families, not even HELP + TYPE.
+	if strings.Contains(body, "nixos_cgroup_") {
+		t.Fatalf("unexpected cgroup metrics:\n%s", body)
 	}
 	got := samples(t, body)
 	if got["nixos_boots_total"] != "7" ||
