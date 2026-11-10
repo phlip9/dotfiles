@@ -209,10 +209,23 @@ Share the link. The user's open tab auto-reloads on every save.
 The committed manifest is the source of truth (UI saves land in it via Git
 Sync; old generator scripts are gone): edit it in place, never regenerate it.
 
-1. Map it: `just grafana-outline --queries nixos/sauna/grafana/<x>.json`.
+1. Resave first, as its own commit. A UI save after a Grafana upgrade
+   rewrites plugin `version`s, fills new defaults, and compacts the grid.
+   Commit that churn alone, so the real change's diff is only the edit:
+
+   ```bash
+   $ just grafana-push --force nixos/sauna/grafana/<x>.json
+   $ just grafana-resave scratch-<x>
+   $ just grafana-promote scratch-<x> nixos/sauna/grafana/<x>.json
+   $ git diff --stat   # empty: nothing to commit
+   $ nix eval --raw -f . nixosConfigs.sauna.config.services.grafana.package.version
+   ```
+
+   Commit: `grafana: <x>: resave w/ Grafana <version>`.
+2. Map it: `just grafana-outline --queries nixos/sauna/grafana/<x>.json`.
    Panel details: `jq '.spec.elements["panel-15"]' FILE`. New metrics:
    Discover (step 1) first.
-2. Edit w/ a throwaway `tmp/<x>/edit.py`:
+3. Edit w/ a throwaway `tmp/<x>/edit.py`:
 
    ```python
    import sys
@@ -235,15 +248,15 @@ Sync; old generator scripts are gone): edit it in place, never regenerate it.
    - Viz types w/o a builder (gauge, bargauge, table, ...): copy an
      existing panel of that type (`node-exporter-full.json` has most) and
      edit it. Don't guess option names: Grafana ignores unknown ones.
-3. Check: `just grafana-check FILE`, `just grafana-queries FILE`, `git
+4. Check: `just grafana-check FILE`, `just grafana-queries FILE`, `git
    diff`.
-4. Visual changes (new/re-laid-out panels, viz options): `just grafana-push
-   FILE`, then screenshot `scratch-<x>` as in Verify. If the user edits the
-   Scratch copy, `just grafana-promote scratch-<x> FILE` before your next
-   edit script.
-5. Commit the manifest: `grafana: <x>: <change>`. New panels: push,
+5. Visual changes (new/re-laid-out panels, viz options, annotations): `just
+   grafana-push FILE`, then screenshot `scratch-<x>` as in Verify. If the
+   user edits the Scratch copy, `just grafana-promote scratch-<x> FILE`
+   before your next edit script.
+6. Commit the manifest: `grafana: <x>: <change>`. New panels: push,
    `just grafana-resave scratch-<x>`, and promote back into FILE first
-   (Promote steps 1-2).
+   (Promote steps 1-2); after step 1, that diff is only your edit.
 
 ## Profiles
 
