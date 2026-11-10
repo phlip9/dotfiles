@@ -118,14 +118,14 @@ BARS: JsonObj = {"interval": "1h", "maxDataPoints": 200}
 def go_json(obj: Json) -> str:
     """JSON text formatted like Grafana Git Sync writes it (Go
     encoding/json): sorted keys, 2-space indent, raw UTF-8 but `<>&` and
-    U+2028/2029 escaped. Re-emitting an unchanged manifest is byte-identical
-    (plus a trailing newline, like `grafana-promote`)."""
+    U+2028/2029 escaped, no trailing newline. Re-emitting an unchanged
+    manifest is byte-identical."""
     text = json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False)
     # These chars only occur inside JSON strings, so plain replace is safe.
     for char, esc in (("<", "\\u003c"), (">", "\\u003e"), ("&", "\\u0026"),
                       ("\u2028", "\\u2028"), ("\u2029", "\\u2029")):
         text = text.replace(char, esc)
-    return text + "\n"
+    return text
 
 
 def element_refs(layout: Json) -> list[str]:

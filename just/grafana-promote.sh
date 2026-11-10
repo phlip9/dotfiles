@@ -6,7 +6,7 @@
 #
 # Fetches dashboard SCRATCH_UID from the v2 dashboards k8s API and writes
 # FILE as {apiVersion, kind, metadata.name, spec}, w/ the same bytes Git Sync
-# writes (+ a trailing newline). Doesn't touch git.
+# writes (no trailing newline). Doesn't touch git.
 #
 # Manifest uid: UID, else FILE's current metadata.name, else SCRATCH_UID w/o
 # its `scratch-` prefix.
@@ -79,6 +79,10 @@ fi
 gjq '.spec | manifest($uid)' --sort-keys --indent 2 --arg uid "$uid" \
   "$tmp/resp" \
   | sed 's/</\\u003c/g; s/>/\\u003e/g; s/&/\\u0026/g' >"$tmp/manifest.json"
+# Git Sync writes no trailing newline. W/ one, every UI save of the file
+# would also be a whitespace diff.
+manifest=$(<"$tmp/manifest.json")
+printf '%s' "$manifest" >"$tmp/manifest.json"
 jq -e . "$tmp/manifest.json" >/dev/null \
   || die "generated manifest is not valid JSON"
 

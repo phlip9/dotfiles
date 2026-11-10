@@ -679,6 +679,14 @@
             "jq -e '.metadata.name == \"other\"' /tmp/promote/other.json",
         )
 
+        # Byte-identical to Git Sync's own write of the same dashboard (incl.
+        # no trailing newline), so a later UI save of a promoted file only
+        # diffs the edit.
+        machine.succeed(
+            f"{promote} test-sync /tmp/promote/test-sync.json test-sync",
+            f"cmp /tmp/promote/test-sync.json {gs_dash_file}",
+        )
+
         # Errors.
         status, out = machine.execute(f"{promote} scratch-no /tmp/x.json 2>&1")
         assert status == 1 and "not found" in out, (status, out)
