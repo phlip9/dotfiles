@@ -160,9 +160,9 @@ in
     CURL = "curl -sS --connect-timeout 2 --max-time 10"
     # Upper bound for one command, incl. its curl
     CMD_TIMEOUT = dt.timedelta(seconds=15)
-    # Upper bound for profiles to show up. Usually ~15-25s after Alloy
-    # starts: BPF load + first collect interval + Pyroscope flush.
-    PROFILE_TIMEOUT = dt.timedelta(seconds=90)
+    # Upper bound for profiles to show up, in s. Usually ~15-25s after
+    # Alloy starts: BPF load + first collect interval + Pyroscope flush.
+    PROFILE_TIMEOUT_S = 90
     # Upper bound for a service to start + turn ready
     UP_TIMEOUT = dt.timedelta(seconds=60)
 
@@ -242,13 +242,16 @@ in
         )
         return len(out.split())
 
-    # Query window: since boot, until well after now
+    # The guest's clock, which stamps the profiles
     def vm_now_ms() -> int:
         return int(machine.succeed("date +%s%3N", timeout=CMD_TIMEOUT))
 
+    # Query window: since boot, until well after now. From the host's
+    # clock, w/o a round trip: the guest's RTC starts from it, and +-1h
+    # absorbs any skew.
     def window() -> dict:
-        now_ms = vm_now_ms()
-        return {"start": now_ms - 3_600_000, "end": now_ms + 60_000}
+        now_ms = int(time.time() * 1000)
+        return {"start": now_ms - 3_600_000, "end": now_ms + 3_600_000}
 
     # POST to Pyroscope's Connect query API, by default over `window()`.
     # {} on error, so polls retry.
@@ -289,14 +292,16 @@ in
     ):
         seen = set()
 
-        def poll(last_try: bool) -> bool:
+        def poll() -> bool:
             nonlocal seen
             seen = fn_names(ptype, selector, start_ms)
-            if last_try:
-                print(f"{what}: last names seen: {sorted(seen)[:60]}")
             return check(seen)
 
-        retry(poll, timeout=PROFILE_TIMEOUT)
+        try:
+            wait_fast(poll, what, PROFILE_TIMEOUT_S)
+        except Exception:
+            print(f"{what}: last names seen: {sorted(seen)[:60]}")
+            raise
         return seen
 
     # One scrape of Alloy's Prometheus metrics: its sample lines
@@ -356,8 +361,9 @@ in
         ))
         return (last_pid() - pid0) % pid_max
 
-    # Poll `check` back to back, w/o `retry`'s 1s sleeps: for ordering
-    # events w/in one collect interval.
+    # Poll `check` until it holds, back to back, w/o `retry`'s 1s sleeps:
+    # each check blocks on guest commands / API requests (no hard lower
+    # bound, often ~0.02-0.1s), so it's no CPU-only busy loop.
     def wait_fast(check, what: str, timeout_s: float) -> None:
         deadline = time.monotonic() + timeout_s
         while not check():
@@ -509,9 +515,10 @@ in
             machine.succeed(
                 f"systemctl start {EXITED_UNIT}", timeout=CMD_TIMEOUT
             )
-            retry(
-                lambda _: EXITED_UNIT in discovered_services(),
-                timeout=UP_TIMEOUT,
+            wait_fast(
+                lambda: EXITED_UNIT in discovered_services(),
+                "discovery finds the exited unit",
+                3 * REFRESH_INTERVAL_S,
             )
             flushes0 = flush_counter()
             wait_fast(
