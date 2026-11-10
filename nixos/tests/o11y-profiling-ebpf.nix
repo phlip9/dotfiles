@@ -165,12 +165,15 @@ in
     PROFILE_TIMEOUT_S = 90
     # Upper bound for a service to start + turn ready
     UP_TIMEOUT = dt.timedelta(seconds=60)
+    # Upper bound for one of Alloy's periodic events (discovery refresh,
+    # flush), in s. Generous: polls return right after the event, and a
+    # starved VM delays it.
+    EVENT_TIMEOUT_S = 30
 
     CPU_TYPE = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
     OFFCPU_TYPE = "offcpu:offcpu:nanoseconds::"
     COLLECT_INTERVAL_S = ${toString collectIntervalS}
     COLLECT_INTERVAL_MS = COLLECT_INTERVAL_S * 1000
-    REFRESH_INTERVAL_S = ${toString refreshIntervalS}
     UNIT = "${unit}"
     TARGET_SEL = f'{{service_name="{UNIT}"}}'
     EXITED_UNIT = "${exitedUnit}"
@@ -518,13 +521,13 @@ in
             wait_fast(
                 lambda: EXITED_UNIT in discovered_services(),
                 "discovery finds the exited unit",
-                3 * REFRESH_INTERVAL_S,
+                EVENT_TIMEOUT_S,
             )
             flushes0 = flush_counter()
             wait_fast(
                 lambda: flush_counter() > flushes0,
                 "flush F0",
-                2 * COLLECT_INTERVAL_S,
+                EVENT_TIMEOUT_S,
             )
             f0_t = time.monotonic()
             # Not a wait: the workload's runtime, its samples for F1
@@ -536,7 +539,7 @@ in
             wait_fast(
                 lambda: EXITED_UNIT not in discovered_services(),
                 "discovery drops the exited pid",
-                3 * REFRESH_INTERVAL_S,
+                EVENT_TIMEOUT_S,
             )
             # Else F1 still found the pid in the targets: proves nothing.
             # Flushes run on a fixed ticker; 0.5s for poll latency.
@@ -566,7 +569,7 @@ in
             wait_fast(
                 lambda: flush_counter() > flushes0,
                 "first flush w/ the forker",
-                2 * COLLECT_INTERVAL_S,
+                EVENT_TIMEOUT_S,
             )
             scrape0 = alloy_scrape()
             pprofs0 = fanout_metric(scrape0, "pyroscope_ebpf_pprofs_total")
@@ -580,7 +583,7 @@ in
                 wait_fast(
                     lambda: flush_counter() > flushes0,
                     "flush",
-                    2 * COLLECT_INTERVAL_S,
+                    EVENT_TIMEOUT_S,
                 )
             pids = pids_since(pids0)
             scrape1 = alloy_scrape()
