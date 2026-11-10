@@ -15,6 +15,8 @@ buildGoModule {
       ./go.mod
       ./main.go
       ./main_test.go
+      ./server.go
+      ./server_test.go
     ];
   };
   vendorHash = null;

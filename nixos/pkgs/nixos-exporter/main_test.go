@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeHost is a temp dir laid out like a NixOS host: a boot_id file, a
@@ -110,13 +111,35 @@ func (host *fakeHost) setProfile(generation int, system string) {
 	host.symlink(link, host.paths.systemProfile)
 }
 
+// serve runs the exporter's server on a loopback listener until the test
+// ends. Returns its `http://<addr>`.
+func (host *fakeHost) serve(boots uint64) string {
+	host.t.Helper()
+	return host.serveTimeout(boots, connTimeout)
+}
+
+// serveTimeout is serve w/ a per-connection timeout.
+func (host *fakeHost) serveTimeout(
+	boots uint64, timeout time.Duration,
+) string {
+	host.t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		host.t.Fatal(err)
+	}
+	host.t.Cleanup(func() { listener.Close() })
+	server := metricsServer{
+		hostPaths: host.paths, boots: boots, timeout: timeout,
+	}
+	// Returns once the listener closes.
+	go server.serve(listener)
+	return "http://" + listener.Addr().String()
+}
+
 // scrape GETs /metrics and returns the status + body.
 func (host *fakeHost) scrape(boots uint64) (int, string) {
 	host.t.Helper()
-	server := httptest.NewServer(newHandler(host.paths, boots))
-	defer server.Close()
-
-	resp, err := http.Get(server.URL + "/metrics")
+	resp, err := http.Get(host.serve(boots) + "/metrics")
 	if err != nil {
 		host.t.Fatal(err)
 	}
@@ -353,21 +376,5 @@ func TestSystemGeneration(t *testing.T) {
 		if got, err := systemGeneration(host.paths.systemProfile); err == nil {
 			t.Errorf("%s: expected error, got %d", target, got)
 		}
-	}
-}
-
-// TestMetricsMethodNotAllowed verifies only GET /metrics is served.
-func TestMetricsMethodNotAllowed(t *testing.T) {
-	host := newFakeHost(t)
-	server := httptest.NewServer(newHandler(host.paths, 1))
-	defer server.Close()
-
-	resp, err := http.Post(server.URL+"/metrics", "text/plain", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusMethodNotAllowed {
-		t.Fatalf("expected 405, got %d", resp.StatusCode)
 	}
 }

@@ -41,7 +41,8 @@
 //   - STATE_DIRECTORY (required): set by systemd `StateDirectory=`
 //
 // Socket activation: systemd LISTEN_FDS/LISTEN_PID (fd 3). The service needs
-// no network access of its own.
+// no network access of its own. HTTP: a minimal server, see server.go.
+// SIGTERM (systemd stop) just exits: systemd counts it as a clean stop.
 //
 // See also:
 //   - nixos/mods/o11y/nixos-exporter.nix
@@ -50,32 +51,19 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
 	"log"
 	"net"
-	"net/http"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
-	"time"
 )
 
-const (
-	// state file name in $STATE_DIRECTORY.
-	stateFileName = "boots"
-
-	// timeout for reading a scrape request's headers.
-	readHeaderTimeout = 10 * time.Second
-
-	// timeout for draining in-flight scrapes on shutdown.
-	shutdownTimeout = 5 * time.Second
-)
+// state file name in $STATE_DIRECTORY.
+const stateFileName = "boots"
 
 // files the reboot check compares between the booted system and the system
 // profile. `kernel`, `initrd`, `kernel-modules` are symlinks into the store,
@@ -129,7 +117,7 @@ func main() {
 	}
 }
 
-// run counts this boot, then serves /metrics until SIGTERM/SIGINT.
+// run counts this boot, then serves /metrics until killed.
 func run() error {
 	stateDir := os.Getenv("STATE_DIRECTORY")
 	if stateDir == "" {
@@ -146,33 +134,10 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("open systemd listener: %w", err)
 	}
-
-	server := &http.Server{
-		Handler:           newHandler(hostPaths, boots),
-		ReadHeaderTimeout: readHeaderTimeout,
+	server := metricsServer{
+		hostPaths: hostPaths, boots: boots, timeout: connTimeout,
 	}
-
-	// Graceful shutdown on SIGTERM (systemd stop) or SIGINT.
-	ctx, stop := signal.NotifyContext(
-		context.Background(), syscall.SIGTERM, syscall.SIGINT,
-	)
-	defer stop()
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(
-			context.Background(), shutdownTimeout,
-		)
-		defer cancel()
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			log.Printf("shutdown: %v", err)
-		}
-	}()
-
-	err = server.Serve(listener)
-	if errors.Is(err, http.ErrServerClosed) {
-		return nil
-	}
-	return err
+	return server.serve(listener)
 }
 
 // opens LISTEN_FDS fd=3 from systemd socket activation.
@@ -283,31 +248,6 @@ func writeState(path string, state bootState) error {
 	}
 	defer dirFile.Close()
 	return dirFile.Sync()
-}
-
-// newHandler serves GET /metrics, 404 for anything else.
-func newHandler(hostPaths paths, boots uint64) http.Handler {
-	mux := http.NewServeMux()
-	// No `GET /metrics` pattern: `just go-test` runs w/ GO111MODULE=off,
-	// which falls back to the pre-1.22 mux that has no method patterns.
-	mux.HandleFunc("/metrics", func(w http.ResponseWriter, req *http.Request) {
-		if req.Method != http.MethodGet && req.Method != http.MethodHead {
-			w.Header().Set("Allow", "GET, HEAD")
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		body, err := renderMetrics(hostPaths, boots)
-		if err != nil {
-			// Fail the whole scrape: `up` goes 0, which is alertable, vs
-			// a silently missing series.
-			log.Printf("scrape: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-		_, _ = w.Write(body)
-	})
-	return mux
 }
 
 // renderMetrics reads the host state and renders it in the Prometheus text
