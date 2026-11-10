@@ -206,8 +206,8 @@
         except Exception:
             node2.log(node2.succeed(f"curl -s {vm_url}/api/v1/targets"))
             raise
-        # New series only become searchable on VM's ~10s index refresh.
-        # `force_flush` runs it now.
+        # Scraped samples become searchable on VM's next pending rows
+        # flush, up to 2s later. `force_flush` runs it now.
         for query in (
             'up{job="rbitcoin"} == 1',
             'rbitcoin_build_info{job="rbitcoin",network="regtest"} == 1',
