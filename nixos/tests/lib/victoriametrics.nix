@@ -9,5 +9,9 @@
     # Queries hide samples younger than `-search.latencyOffset` (30s), which
     # would delay every "is it scraped yet" check by 30s.
     "-search.latencyOffset=0s"
+    # A query that runs before its series exists caches the empty match
+    # until the next indexdb flush callback, up to 10s later. A 1-byte
+    # cache evicts every entry right away.
+    "-storage.cacheSizeIndexDBTagFilters=1"
   ];
 }
