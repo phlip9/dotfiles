@@ -166,6 +166,20 @@ in
             assert "architecture_storage: v2" in lines, conf
             assert "retention_period: 30d" in lines, conf
 
+        # Before the Grafana subtests: its segment flush + indexing overlap
+        # w/ Grafana's startup.
+        with subtest("push a profile"):
+            # Pyroscope rejects profiles older than ~1h. The fixture is from
+            # 2021, so stamp it w/ the current time.
+            push_ms = int(time.time() * 1000)
+            machine.succeed(
+                f"profilecli upload --url {PYRO_URL} --override-timestamp "
+                f"--extra-labels service_name={SERVICE} /etc/o11y-test/cpu.pb.gz",
+                timeout=CMD_TIMEOUT,
+            )
+            start_ms = push_ms - 60_000
+            end_ms = push_ms + 600_000
+
         with subtest("VictoriaMetrics scrapes Pyroscope"):
             query = shlex.quote('up{job="pyroscope"}')
             machine.wait_until_succeeds(
@@ -193,18 +207,7 @@ in
             ))
             assert health["status"] == "OK", health
 
-        with subtest("push a profile, query it back through Grafana"):
-            # Pyroscope rejects profiles older than ~1h. The fixture is from
-            # 2021, so stamp it w/ the current time.
-            push_ms = int(time.time() * 1000)
-            machine.succeed(
-                f"profilecli upload --url {PYRO_URL} --override-timestamp "
-                f"--extra-labels service_name={SERVICE} /etc/o11y-test/cpu.pb.gz",
-                timeout=CMD_TIMEOUT,
-            )
-            start_ms = push_ms - 60_000
-            end_ms = push_ms + 600_000
-
+        with subtest("query the profile back through Grafana"):
             # The Connect API, via the datasource proxy, like Profiles
             # Drilldown. The profile is queryable once the segment writer
             # flushed it + the metastore indexed it.
