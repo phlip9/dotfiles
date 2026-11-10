@@ -60,7 +60,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -380,13 +379,17 @@ func systemGeneration(profile string) (uint64, error) {
 		return 0, err
 	}
 
-	name := regexp.QuoteMeta(filepath.Base(profile))
-	linkRe := regexp.MustCompile("^" + name + `-(\d+)-link$`)
-	match := linkRe.FindStringSubmatch(filepath.Base(target))
-	if match == nil {
+	// ParseUint rejects signs, so this matches `^<name>-(\d+)-link$`.
+	link := filepath.Base(target)
+	generation, ok := strings.CutPrefix(link, filepath.Base(profile)+"-")
+	if ok {
+		generation, ok = strings.CutSuffix(generation, "-link")
+	}
+	value, err := strconv.ParseUint(generation, 10, 64)
+	if !ok || err != nil {
 		return 0, fmt.Errorf("%s -> %s: not a generation link", profile, target)
 	}
-	return strconv.ParseUint(match[1], 10, 64)
+	return value, nil
 }
 
 // rebootRequired reports whether the next boot (the system profile) has a

@@ -325,6 +325,37 @@ func TestMetricsFailsScrape(t *testing.T) {
 	}
 }
 
+// TestSystemGeneration verifies only `<name>-<digits>-link` targets parse.
+func TestSystemGeneration(t *testing.T) {
+	host := newFakeHost(t)
+	cases := map[string]uint64{"system-89-link": 89, "system-0-link": 0}
+	for target, want := range cases {
+		host.symlink(target, host.paths.systemProfile)
+		got, err := systemGeneration(host.paths.systemProfile)
+		if err != nil || got != want {
+			t.Errorf("%s: expected %d, got %d, %v", target, want, got, err)
+		}
+	}
+
+	// The prefix is the profile's own name.
+	other := filepath.Join(filepath.Dir(host.paths.systemProfile), "other")
+	host.symlink("other-5-link", other)
+	if got, err := systemGeneration(other); err != nil || got != 5 {
+		t.Errorf("other-5-link: expected 5, got %d, %v", got, err)
+	}
+
+	for _, target := range []string{
+		"system", "system-89", "system-link", "system--link", "other-89-link",
+		"system--89-link", "system-+89-link", "system-8x9-link",
+		"system-89-link-link", "system-99999999999999999999-link",
+	} {
+		host.symlink(target, host.paths.systemProfile)
+		if got, err := systemGeneration(host.paths.systemProfile); err == nil {
+			t.Errorf("%s: expected error, got %d", target, got)
+		}
+	}
+}
+
 // TestMetricsMethodNotAllowed verifies only GET /metrics is served.
 func TestMetricsMethodNotAllowed(t *testing.T) {
 	host := newFakeHost(t)
