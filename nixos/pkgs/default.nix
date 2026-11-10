@@ -60,8 +60,9 @@ fix (phlipPkgsNixos: {
   # mpv with patched umpv
   mpv = callPackage ./mpv { };
 
-  # niks3 - S3-backed Nix binary cache with garbage collection
-  niks3 = callPackage (sources.niks3 + "/nix/packages/niks3.nix") { };
+  # niks3 - S3-backed Nix binary cache with garbage collection (client CLI),
+  # patched to pin `nix path-info --json-format 1`
+  niks3 = callPackage ./niks3 { inherit sources; };
 
   # niks3-server, patched w/ a configurable inventory metrics refresh interval
   niks3-server = callPackage ./niks3-server { inherit sources; };
