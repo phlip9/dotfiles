@@ -504,52 +504,6 @@ in
             cpu_t0 = time.monotonic()
             cpu_ns0 = unit_cpu_ns("alloy")
 
-        # Kernel threads have no exe, so a separate discovery labels them.
-        # Trigger some: page cache writeback runs in kworkers.
-        with subtest("CPU profile: kernel threads as service_name=kernel"):
-            machine.succeed(
-                "dd if=/dev/zero of=/var/tmp/writeback bs=1M count=128 "
-                "status=none && sync && rm /var/tmp/writeback",
-                timeout=CMD_TIMEOUT,
-            )
-            # Every kernel thread stack: ret_from_fork > kthread > ...
-            wait_for_profile(
-                CPU_TYPE, KERNEL_SEL,
-                lambda names: "kthread" in names,
-                "kernel cpu",
-            )
-            exes = label_values("exe", KERNEL_SEL)
-            assert exes == [], exes
-
-        # VictoriaMetrics is a go1.27 binary w/o `.symtab`, only
-        # `.gopclntab`. Alloy 1.21 rejects go1.27 pclntabs.
-        with subtest("CPU profile: Go frames"):
-            wait_for_profile(
-                CPU_TYPE,
-                '{service_name="victoriametrics"}',
-                lambda names: any(
-                    name.startswith(("runtime.", "github.com/VictoriaMetrics/"))
-                    for name in names
-                ),
-                "victoriametrics cpu",
-            )
-
-        with subtest("series labels: unit, exe, host; no pid, no __meta_*"):
-            resp = pyro_post("LabelNames", {"matchers": [TARGET_SEL]})
-            names = resp.get("names", [])
-            print(f"label names: {names}")
-            assert {"service_name", "exe", "host"} <= set(names), names
-            leaked = [
-                name for name in names
-                if name.startswith("__meta_") or "pid" in name
-            ]
-            assert not leaked, names
-            assert label_values("exe", TARGET_SEL) == [UNIT], names
-            assert label_values("host", TARGET_SEL) == ["machine"], names
-            services = label_values("service_name")
-            print(f"service_name values: {services}")
-            assert "alloy" in services, services
-
         with subtest("off-CPU profile: blocking fn"):
             wait_for_profile(
                 OFFCPU_TYPE, TARGET_SEL,
@@ -560,8 +514,9 @@ in
         # Regression: Alloy <= 1.22 dropped its only reference to the
         # off-CPU probe, so a GC closed the probe's BPF links: a few startup
         # off-CPU profiles, then silence, while Alloy stays healthy. Force a
-        # GC, then require a fresh off-CPU profile + the same BPF links.
-        with subtest("off-CPU profiling survives a GC in Alloy"):
+        # GC, then require a fresh off-CPU profile + the same BPF links,
+        # after the next subtest: its flushes are the wait.
+        with subtest("off-CPU profiling: force a GC in Alloy"):
             links0 = bpf_links("alloy")
             print(f"alloy BPF links before GC: {links0}")
             assert links0 > 0, links0
@@ -575,17 +530,6 @@ in
             # pre-GC samples. Only count batches flushed >= 1 collect
             # interval after the GC returned: all their samples are post-GC.
             fresh_ms = vm_now_ms() + COLLECT_INTERVAL_MS
-            wait_for_profile(
-                OFFCPU_TYPE, TARGET_SEL,
-                lambda names: COLD_FN in names,
-                "offcpu after GC",
-                start_ms=fresh_ms,
-            )
-            # GC cleanups ran long before the fresh profile: ~1 collect
-            # interval later
-            links1 = bpf_links("alloy")
-            print(f"alloy BPF links after GC: {links1}")
-            assert links1 == links0, (links0, links1)
 
         # Regression: Alloy looks up a pid's labels at flush time, in the
         # targets it applied last. So the last samples of a process that
@@ -685,6 +629,19 @@ in
                     )
                     assert not WORKLOAD_FNS & names, (name, names)
 
+        with subtest("off-CPU profiling survives the GC"):
+            wait_for_profile(
+                OFFCPU_TYPE, TARGET_SEL,
+                lambda names: COLD_FN in names,
+                "offcpu after GC",
+                start_ms=fresh_ms,
+            )
+            # GC cleanups ran long before the fresh profile: >= 1 collect
+            # interval later
+            links1 = bpf_links("alloy")
+            print(f"alloy BPF links after GC: {links1}")
+            assert links1 == links0, (links0, links1)
+
         # Regression: Alloy built + pushed one profile per (labels, pid)
         # per collect interval. Nix builds' short-lived pids fanned out to
         # ~600-850 pushes per 15s on sauna; under load the tail missed the
@@ -748,6 +705,52 @@ in
                 "pyroscope_ebpf_pprofs_dropped_total",
             ]:
                 assert metric(scrape1, name) == 0, name
+
+        # Kernel threads have no exe, so a separate discovery labels them.
+        # Trigger some: page cache writeback runs in kworkers.
+        with subtest("CPU profile: kernel threads as service_name=kernel"):
+            machine.succeed(
+                "dd if=/dev/zero of=/var/tmp/writeback bs=1M count=128 "
+                "status=none && sync && rm /var/tmp/writeback",
+                timeout=CMD_TIMEOUT,
+            )
+            # Every kernel thread stack: ret_from_fork > kthread > ...
+            wait_for_profile(
+                CPU_TYPE, KERNEL_SEL,
+                lambda names: "kthread" in names,
+                "kernel cpu",
+            )
+            exes = label_values("exe", KERNEL_SEL)
+            assert exes == [], exes
+
+        # VictoriaMetrics is a go1.27 binary w/o `.symtab`, only
+        # `.gopclntab`. Alloy 1.21 rejects go1.27 pclntabs.
+        with subtest("CPU profile: Go frames"):
+            wait_for_profile(
+                CPU_TYPE,
+                '{service_name="victoriametrics"}',
+                lambda names: any(
+                    name.startswith(("runtime.", "github.com/VictoriaMetrics/"))
+                    for name in names
+                ),
+                "victoriametrics cpu",
+            )
+
+        with subtest("series labels: unit, exe, host; no pid, no __meta_*"):
+            resp = pyro_post("LabelNames", {"matchers": [TARGET_SEL]})
+            names = resp.get("names", [])
+            print(f"label names: {names}")
+            assert {"service_name", "exe", "host"} <= set(names), names
+            leaked = [
+                name for name in names
+                if name.startswith("__meta_") or "pid" in name
+            ]
+            assert not leaked, names
+            assert label_values("exe", TARGET_SEL) == [UNIT], names
+            assert label_values("host", TARGET_SEL) == ["machine"], names
+            services = label_values("service_name")
+            print(f"service_name values: {services}")
+            assert "alloy" in services, services
 
         with subtest("Alloy metrics: pushes sent, none dropped, healthy"):
             scrape = alloy_scrape()
