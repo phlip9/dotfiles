@@ -544,14 +544,12 @@ in
           job_name = "node-exporter";
           static_configs = exporterTargets config.services.prometheus.exporters.node;
         }
-        ++ [
-          {
-            job_name = "grafana";
-            static_configs = [
-              { targets = [ gfAddr ]; }
-            ];
-          }
-        ]
+        ++ lib.optional cfgGf.enable {
+          job_name = "grafana";
+          static_configs = [
+            { targets = [ gfAddr ]; }
+          ];
+        }
         ++ lib.optional config.services.prometheus.exporters.nginx.enable ({
           job_name = "nginx-exporter";
           static_configs = exporterTargets config.services.prometheus.exporters.nginx;
