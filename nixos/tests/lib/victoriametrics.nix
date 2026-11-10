@@ -13,5 +13,8 @@
     # until the next indexdb flush callback, up to 10s later. A 1-byte
     # cache evicts every entry right away.
     "-storage.cacheSizeIndexDBTagFilters=1"
+    # One error per scrape of a target that is still starting up.
+    # `/api/v1/targets` keeps the last error per target.
+    "-promscrape.suppressScrapeErrors"
   ];
 }

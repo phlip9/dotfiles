@@ -119,10 +119,6 @@ in
       services.openssh.enable = lib.mkForce false;
 
       services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
-      services.victoriametrics.extraOptions = lib.mkAfter [
-        # Grafana's scrape job: one error per second
-        "-promscrape.suppressScrapeErrors"
-      ];
 
       systemd.services.${unit} = {
         wantedBy = [ "multi-user.target" ];
