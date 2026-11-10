@@ -257,29 +257,46 @@ in
         return {"start": now_ms - 3_600_000, "end": now_ms + 3_600_000}
 
     # POST to Pyroscope's Connect query API, by default over `window()`.
-    # {} on error, so polls retry.
-    def pyro_post(method: str, body: dict) -> dict:
+    # Retries transport errors + 5xx for `timeout_s`, then raises; fails at
+    # once on other 4xx (bad method, bad request). Never turns an error into
+    # an empty result: negative checks only see real responses.
+    def pyro_post(
+        method: str, body: dict, timeout_s: float = EVENT_TIMEOUT_S
+    ) -> dict:
         data = shlex.quote(json.dumps({**window(), **body}))
-        status, out = machine.execute(
-            f"{CURL} --fail-with-body -H 'Content-Type: application/json' "
-            f"--data-binary {data} "
-            f"{PYRO_URL}/querier.v1.QuerierService/{method}",
-            timeout=CMD_TIMEOUT,
+        cmd = (
+            f"{CURL} -w '\\n%{{http_code}}' "
+            f"-H 'Content-Type: application/json' --data-binary {data} "
+            f"{PYRO_URL}/querier.v1.QuerierService/{method}"
         )
-        if status != 0:
-            print(f"Pyroscope {method}: {out}")
-            return {}
-        return json.loads(out)
+        deadline = time.monotonic() + timeout_s
+        while True:
+            status, out = machine.execute(cmd, timeout=CMD_TIMEOUT)
+            body_out, _, code = out.rpartition("\n")
+            if status == 0 and code.startswith("2"):
+                resp = json.loads(body_out)
+                assert isinstance(resp, dict), out
+                return resp
+            print(f"Pyroscope {method}: exit {status}, HTTP {code}: {body_out}")
+            # 408 + 429 are transient, other 4xx won't get better
+            permanent = code.startswith("4") and code not in ("408", "429")
+            if status == 0 and permanent:
+                raise Exception(f"Pyroscope {method}: HTTP {code}: {body_out}")
+            if time.monotonic() > deadline:
+                raise Exception(f"Pyroscope {method}: failed for {timeout_s}s")
 
     # Function names in the merged flame graph of `ptype` for `selector`,
     # from profiles since `start_ms` (default: since boot).
     def fn_names(
-        ptype: str, selector: str, start_ms: int | None = None
+        ptype: str,
+        selector: str,
+        start_ms: int | None = None,
+        timeout_s: float = EVENT_TIMEOUT_S,
     ) -> set[str]:
         body = {"profileTypeID": ptype, "labelSelector": selector}
         if start_ms is not None:
             body["start"] = start_ms
-        resp = pyro_post("SelectMergeStacktraces", body)
+        resp = pyro_post("SelectMergeStacktraces", body, timeout_s)
         return set(resp.get("flamegraph", {}).get("names", []))
 
     def label_values(label: str, selector: str | None = None) -> list[str]:
@@ -294,10 +311,14 @@ in
         start_ms: int | None = None,
     ):
         seen = set()
+        deadline = time.monotonic() + PROFILE_TIMEOUT_S
 
         def poll() -> bool:
             nonlocal seen
-            seen = fn_names(ptype, selector, start_ms)
+            # Query retries share this wait's budget, so a Pyroscope outage
+            # can't stretch it by another EVENT_TIMEOUT_S.
+            left = max(0.0, deadline - time.monotonic())
+            seen = fn_names(ptype, selector, start_ms, left)
             return check(seen)
 
         try:
@@ -396,6 +417,13 @@ in
             machine.wait_until_succeeds(
                 f"{CURL} -f {PYRO_URL}/ready", timeout=UP_TIMEOUT
             )
+            # A failed query raises, never reads as "no profiles"
+            try:
+                pyro_post("NoSuchMethod", {}, timeout_s=0)
+            except Exception:
+                pass
+            else:
+                raise Exception("pyro_post: a failed request passed")
             machine.wait_for_unit("alloy.service", timeout=UP_TIMEOUT)
             machine.wait_until_succeeds(
                 f"{CURL} -f {ALLOY_URL}/-/ready", timeout=UP_TIMEOUT
