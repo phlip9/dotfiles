@@ -1,0 +1,11 @@
+--- a/nixbot/upload.py
++++ b/nixbot/upload.py
+@@ -109,6 +109,8 @@
+     "substitute",
+     "false",
+     "--json",
++    "--json-format",
++    "1",
+ ]
+ 
+ 
