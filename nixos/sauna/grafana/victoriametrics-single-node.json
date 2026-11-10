@@ -6009,7 +6009,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(vm_app_version{job=~\"$job\", instance=~\"$instance\"}) by(job, short_version)",
+                        "expr": "sum(vm_app_version{job=~\"$job\", instance=~\"$instance\"}) by(job, version)",
                         "format": "table",
                         "instant": true,
                         "range": false
@@ -11263,7 +11263,7 @@
             "text": "victoriametrics",
             "value": "victoriametrics"
           },
-          "definition": "label_values(vm_app_version{version=~\"victoria-metrics-.*\"}, job)",
+          "definition": "label_values(vm_data_size_bytes, job)",
           "hide": "dontHide",
           "includeAll": false,
           "multi": false,
@@ -11276,7 +11276,7 @@
             "group": "victoriametrics-metrics-datasource",
             "kind": "DataQuery",
             "spec": {
-              "query": "label_values(vm_app_version{version=~\"victoria-metrics-.*\"}, job)",
+              "query": "label_values(vm_data_size_bytes, job)",
               "refId": "VictoriaMetrics-job-Variable-Query"
             },
             "version": "v0"
@@ -11286,39 +11286,6 @@
           "regexApplyTo": "value",
           "skipUrlSync": false,
           "sort": "disabled"
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "allowCustomValue": true,
-          "current": {
-            "text": "",
-            "value": ""
-          },
-          "definition": "label_values(vm_app_version{job=~\"$job\", instance=~\"$instance\"},  version)",
-          "hide": "hideVariable",
-          "includeAll": false,
-          "multi": false,
-          "name": "version",
-          "options": [],
-          "query": {
-            "datasource": {
-              "name": "$ds"
-            },
-            "group": "victoriametrics-metrics-datasource",
-            "kind": "DataQuery",
-            "spec": {
-              "query": "label_values(vm_app_version{job=~\"$job\", instance=~\"$instance\"},  version)",
-              "refId": "VictoriaMetrics-version-Variable-Query"
-            },
-            "version": "v0"
-          },
-          "refresh": "onDashboardLoad",
-          "regex": "/.*-(?:tags|heads)-(.*)-(?:0|dirty)-.*/",
-          "regexApplyTo": "value",
-          "skipUrlSync": false,
-          "sort": "alphabeticalDesc"
         }
       },
       {
