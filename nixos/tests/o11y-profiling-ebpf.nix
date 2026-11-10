@@ -74,14 +74,16 @@ in
         # `service_name`.
         Slice = "workload.slice";
         DynamicUser = true;
-        # Leave CPU for Alloy + Pyroscope on 2 vCPUs
+        # Leave CPU for Alloy + Pyroscope
         Nice = 10;
       };
     in
     {
       imports = [ ./lib/victoriametrics.nix ];
 
-      virtualisation.cores = 2;
+      # 2 vCPUs for the workload's spinners, 2 for the rest. W/ 2 total, the
+      # spinners slow everything else: ex: Alloy's BPF load ~5s, not ~2.6s.
+      virtualisation.cores = 4;
       virtualisation.memorySize = 2048;
       # = sauna
       boot.kernelPackages = pkgs.linuxPackages_latest;
