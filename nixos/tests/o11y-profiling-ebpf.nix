@@ -18,7 +18,9 @@
 # - an `offcpu` profile w/ the blocking fn, also fresh after a forced GC in
 #   Alloy (regression: GC'd off-CPU probe)
 # - a process that exits keeps its unit for its last samples, after
-#   discovery dropped it (regression: they went to `ebpf/unspecified`)
+#   Alloy applied its removal (regression: they went to
+#   `ebpf/unspecified`), w/ Alloy's test hooks: flush on demand, applied
+#   targets, pending samples
 # - many short-lived pids: one profile per labels, not per pid
 #   (regression: per-pid fan-out missed the push deadline under load)
 # - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
@@ -39,8 +41,8 @@ let
   coldFn = "cold_block_wait";
   # Alloy's pprof flush period, see `collector.collectInterval`
   collectIntervalS = 5;
-  # /proc rescan period, see `collector.refreshInterval`. Well below
-  # `collectIntervalS`: discovery drops an exited pid before the next flush.
+  # /proc rescan period, see `collector.refreshInterval`. Short: the
+  # exited-process subtest waits for Alloy to apply a start + a stop.
   refreshIntervalS = 1;
 in
 {
@@ -113,6 +115,8 @@ in
           # else: prod defaults.
           collector.collectInterval = "${toString collectIntervalS}s";
           collector.refreshInterval = "${toString refreshIntervalS}s";
+          # Flush on demand, applied targets: the exited-process subtest
+          collector.testHooks = true;
         };
       };
 
@@ -128,7 +132,11 @@ in
       };
 
       # Not started at boot, see the "exited process" subtest
-      systemd.services.${exitedUnit}.serviceConfig = workloadConfig;
+      systemd.services.${exitedUnit}.serviceConfig = workloadConfig // {
+        # Outranks the `Nice = 10` spinners: the samples the subtest waits
+        # for come faster
+        Nice = 0;
+      };
 
       # Not started at boot, see the "short-lived pids" subtest. Each child
       # burns a few ms of CPU, and dies long before discovery's next
@@ -178,16 +186,19 @@ in
 
     CPU_TYPE = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
     OFFCPU_TYPE = "offcpu:offcpu:nanoseconds::"
-    COLLECT_INTERVAL_S = ${toString collectIntervalS}
-    COLLECT_INTERVAL_MS = COLLECT_INTERVAL_S * 1000
+    COLLECT_INTERVAL_MS = ${toString collectIntervalS} * 1000
     UNIT = "${unit}"
     TARGET_SEL = f'{{service_name="{UNIT}"}}'
     EXITED_UNIT = "${exitedUnit}"
     EXITED_SEL = f'{{service_name="{EXITED_UNIT}"}}'
+    UNSPECIFIED = "ebpf/unspecified"
+    UNSPECIFIED_SEL = f'{{service_name="{UNSPECIFIED}"}}'
     FORK_UNIT = "${forkUnit}"
     KERNEL_SEL = '{service_name="kernel"}'
     HOT_FN = "${hotFn}"
     COLD_FN = "${coldFn}"
+    # Every stack of the workload's threads has one of these
+    WORKLOAD_FNS = {HOT_FN, "hot_syscall_spin", COLD_FN}
     # Any of these under `hot_syscall_spin` = symbolized kernel frames
     KERNEL_FNS = {
         "do_syscall_64",
@@ -292,16 +303,19 @@ in
                 raise Exception(f"Pyroscope {method}: failed for {timeout_s}s")
 
     # Function names in the merged flame graph of `ptype` for `selector`,
-    # from profiles since `start_ms` (default: since boot).
+    # from profiles stamped in [`start_ms`, `end_ms`] (default: `window()`).
     def fn_names(
         ptype: str,
         selector: str,
         start_ms: int | None = None,
+        end_ms: int | None = None,
         timeout_s: float = EVENT_TIMEOUT_S,
     ) -> set[str]:
         body = {"profileTypeID": ptype, "labelSelector": selector}
         if start_ms is not None:
             body["start"] = start_ms
+        if end_ms is not None:
+            body["end"] = end_ms
         resp = pyro_post("SelectMergeStacktraces", body, timeout_s)
         # `total`: the flame graph's root, even w/o any profiles
         return set(resp.get("flamegraph", {}).get("names", [])) - {"total"}
@@ -316,6 +330,7 @@ in
     def wait_for_profile(
         ptype: str, selector: str, check, what: str,
         start_ms: int | None = None,
+        end_ms: int | None = None,
     ):
         seen = set()
         deadline = time.monotonic() + PROFILE_TIMEOUT_S
@@ -325,7 +340,7 @@ in
             # Query retries share this wait's budget, so a Pyroscope outage
             # can't stretch it by another EVENT_TIMEOUT_S.
             left = max(0.0, deadline - time.monotonic())
-            seen = fn_names(ptype, selector, start_ms, left)
+            seen = fn_names(ptype, selector, start_ms, end_ms, left)
             return check(seen)
 
         try:
@@ -351,25 +366,50 @@ in
                 total += float(line.rsplit(" ", 1)[1])
         return total
 
-    # Every `service_name` in Alloy's current discovery targets
-    def discovered_services() -> set[str]:
+    # One of `pyroscope.ebpf`'s test hooks (`collector.testHooks`, see
+    # nixos/pkgs/grafana-alloy): its JSON resp
+    def ebpf_hook(path: str, method: str = "GET") -> dict:
         out = machine.succeed(
-            f"{CURL} -f {ALLOY_URL}/api/v0/web/components/"
-            "discovery.relabel.units | jq -r '.exports[] "
-            '| select(.name == "output") | .value.value[].value[] '
-            '| select(.key == "service_name") | .value.value'
-            "'",
+            f"{CURL} -f -X {method} "
+            f"'{ALLOY_URL}/api/v0/component/pyroscope.ebpf.host/{path}'",
             timeout=CMD_TIMEOUT,
         )
-        return set(out.split())
+        return json.loads(out)
 
-    # Changes on every pprof flush: each flush has profiles for the
-    # always-busy workload unit.
-    def flush_counter() -> float:
-        return metric(
-            alloy_scrape(),
-            "pyroscope_ebpf_pprofs_total",
-            f'service_name="{UNIT}"',
+    # Flush now; returns once its pushes returned. `hold`: no periodic
+    # flushes until the next ebpf_flush w/o it. Pyroscope query window
+    # [`start_ms`, `end_ms`]: this flush's profiles, no other's.
+    def ebpf_flush(hold: bool) -> dict:
+        resp = ebpf_hook(f"flush?hold={str(hold).lower()}", "POST")
+        assert resp["failed_pushes"] == 0, resp
+        return resp
+
+    # The flush's profiles for `service`, of type `name` (`__name__`)
+    def flushed(flush: dict, service: str, name: str) -> list[dict]:
+        return [
+            prof for prof in flush["profiles"]
+            if prof["labels"].get("service_name") == service
+            and prof["labels"].get("__name__") == name
+        ]
+
+    # `pid`'s target in the targets Alloy's profiler applied, as
+    # (live, retained exited)
+    def applied_target(pid: int) -> tuple[dict | None, dict | None]:
+        resp = ebpf_hook("targets")
+
+        def find(kind: str) -> dict | None:
+            return next(
+                (target for target in resp[kind] if target["pid"] == pid),
+                None,
+            )
+
+        return find("live"), find("exited")
+
+    # `pid`'s on-CPU samples that await the next flush
+    def pending_cpu(pid: int) -> int:
+        return sum(
+            entry["samples"] for entry in ebpf_hook("pending")["pending"]
+            if entry["pid"] == pid and entry["type"] == "process_cpu"
         )
 
     # Alloy's per-service pprof counter `name`, summed over the forker's
@@ -377,7 +417,7 @@ in
     def fanout_metric(scrape: list[str], name: str) -> float:
         return sum(
             metric(scrape, name, f'service_name="{service}"')
-            for service in ["ebpf/unspecified", FORK_UNIT]
+            for service in [UNSPECIFIED, FORK_UNIT]
         )
 
     # Last pid the kernel handed out: pids created since = the delta,
@@ -544,50 +584,102 @@ in
             assert links1 == links0, (links0, links1)
 
         # Regression: Alloy looks up a pid's labels at flush time, in the
-        # targets of the last discovery refresh. So the last samples of a
-        # process that exits, and that discovery drops before the next
-        # flush, went to `ebpf/unspecified`. Timeline: flush F0, workload
-        # runs 1s, stops, discovery drops it (~1 refresh), flush F1 (F0 +
-        # 1 collect interval) w/ its last samples.
+        # targets it applied last. So the last samples of a process that
+        # exited, and whose removal Alloy applied before the next flush,
+        # went to `ebpf/unspecified`. Alloy's test hooks acknowledge every
+        # step, nothing races its timers:
+        #
+        # 1. start the unit; wait until Alloy applied its pid's target
+        # 2. flush H + hold: from here on, only the test flushes
+        # 3. wait for samples of the pid; flush F0 (hold): the unit's
+        #    profile, while live
+        # 4. wait for samples of the pid since F0: F1's last samples
+        # 5. stop the unit; wait until Alloy applied the removal; require
+        #    its target retained as exited
+        # 6. flush F1 (release): the unit's profile w/ those samples; no
+        #    unspecified profile of F0 or F1 has a workload fn
+        #
+        # W/o the fix: nothing retained at 5, and F1's samples of the pid
+        # land in unspecified.
         with subtest("exited process: last samples keep its unit"):
+            # Per wait: a few, from 2 spinning threads at nice 0
+            min_samples = 5
             machine.succeed(
                 f"systemctl start {EXITED_UNIT}", timeout=CMD_TIMEOUT
             )
+            pid = int(machine.succeed(
+                f"systemctl show {EXITED_UNIT} -p MainPID --value",
+                timeout=CMD_TIMEOUT,
+            ))
+            assert pid != 0, pid
+
+            def live_as_unit() -> bool:
+                live, _ = applied_target(pid)
+                return (
+                    live is not None
+                    and live["labels"].get("service_name") == EXITED_UNIT
+                )
+
+            wait_fast(live_as_unit, "Alloy applies the pid", EVENT_TIMEOUT_S)
+            ebpf_flush(hold=True)
             wait_fast(
-                lambda: EXITED_UNIT in discovered_services(),
-                "discovery finds the exited unit",
+                lambda: pending_cpu(pid) >= min_samples,
+                "samples of the pid",
                 EVENT_TIMEOUT_S,
             )
-            flushes0 = flush_counter()
+            f0 = ebpf_flush(hold=True)
+            assert flushed(f0, EXITED_UNIT, "process_cpu"), f0
+            wait_for_profile(
+                CPU_TYPE, EXITED_SEL,
+                lambda names: bool(WORKLOAD_FNS & names),
+                "F0: the unit's cpu profile",
+                start_ms=f0["start_ms"], end_ms=f0["end_ms"],
+            )
+
             wait_fast(
-                lambda: flush_counter() > flushes0,
-                "flush F0",
+                lambda: pending_cpu(pid) >= min_samples,
+                "samples of the pid since F0",
                 EVENT_TIMEOUT_S,
             )
-            f0_t = time.monotonic()
-            # Not a wait: the workload's runtime, its samples for F1
-            time.sleep(1)
             machine.succeed(
                 f"systemctl stop {EXITED_UNIT}", timeout=CMD_TIMEOUT
             )
-            stop_ms = vm_now_ms()
             wait_fast(
-                lambda: EXITED_UNIT not in discovered_services(),
-                "discovery drops the exited pid",
+                lambda: applied_target(pid)[0] is None,
+                "Alloy applies the pid's removal",
                 EVENT_TIMEOUT_S,
             )
-            # Else F1 still found the pid in the targets: proves nothing.
-            # Flushes run on a fixed ticker; 0.5s for poll latency.
-            dropped_s = time.monotonic() - f0_t
-            print(f"exited pid dropped {dropped_s:.2f}s after F0")
-            assert dropped_s < COLLECT_INTERVAL_S - 0.5, dropped_s
-            # Only F1 + later flushes are stamped after the stop
+            _, exited = applied_target(pid)
+            pending = pending_cpu(pid)
+            print(f"exited pid {pid}: {exited}, {pending} samples pending")
+            assert exited is not None, "removed pid's target not retained"
+            assert exited["labels"].get("service_name") == EXITED_UNIT, exited
+
+            f1 = ebpf_flush(hold=False)
+            assert flushed(f1, EXITED_UNIT, "process_cpu"), f1
             wait_for_profile(
                 CPU_TYPE, EXITED_SEL,
-                lambda names: HOT_FN in names,
-                "exited cpu",
-                start_ms=stop_ms,
+                lambda names: bool(WORKLOAD_FNS & names),
+                "F1: the exited unit's cpu profile",
+                start_ms=f1["start_ms"], end_ms=f1["end_ms"],
             )
+
+            # Per flush + type: one unspecified push, so once its window
+            # has data, all of it is queryable
+            for flush in [f0, f1]:
+                for ptype, name in [
+                    (CPU_TYPE, "process_cpu"), (OFFCPU_TYPE, "offcpu"),
+                ]:
+                    profs = flushed(flush, UNSPECIFIED, name)
+                    if not profs:
+                        continue
+                    assert len(profs) == 1, profs
+                    names = wait_for_profile(
+                        ptype, UNSPECIFIED_SEL, bool,
+                        f"unspecified {name} profile",
+                        start_ms=flush["start_ms"], end_ms=flush["end_ms"],
+                    )
+                    assert not WORKLOAD_FNS & names, (name, names)
 
         # Regression: Alloy built + pushed one profile per (labels, pid)
         # per collect interval. Nix builds' short-lived pids fanned out to
