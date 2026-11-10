@@ -1,7 +1,8 @@
 # NixOS container test for the phlip9-o11y module.
 #
-# Single container with VictoriaMetrics + node-exporter + Grafana.
-# Verifies scraping, querying, Grafana datasource provisioning, that
+# Single container with VictoriaMetrics + node-exporter + nixos-exporter +
+# Grafana. Verifies scraping, querying, nixos-exporter's boot counting +
+# reboot check, Grafana datasource provisioning, that
 # Grafana's secrets manager encrypts with our key, a Git Sync round trip
 # (file -> dashboard -> API save -> file) w/ a `local` repository, and the
 # just/grafana-*.sh dashboard scripts.
@@ -146,6 +147,93 @@
             "'http://127.0.0.1:8428/api/v1/query"
             "?query=up%7Bjob%3D%22node-exporter%22%7D' "
             "| jq -e '.data.result[0].value[1] == \"1\"'",
+            timeout=dt.timedelta(seconds=30),
+        )
+
+    # Scrape nixos-exporter, as `name -> value`. Fails w/ the error body.
+    def nixos_metrics() -> dict[str, str]:
+        out = machine.succeed(
+            "curl -s --max-time 5 -w '\\n%{http_code}' "
+            "http://127.0.0.1:9101/metrics"
+        )
+        out, _, status = out.rpartition("\n")
+        assert status == "200", f"{status}: {out}"
+        return dict(
+            line.split(" ", 1)
+            for line in out.splitlines()
+            if not line.startswith("#")
+        )
+
+    # nixos-exporter: socket-activated w/ `PrivateNetwork`, counts each
+    # boot_id once, reports the system profile's generation + whether a
+    # reboot would change the kernel.
+    with subtest("nixos-exporter"):
+        # The test driver boots the toplevel w/o a system profile. Make
+        # generation 1 = the booted system.
+        profiles = "/nix/var/nix/profiles"
+        machine.succeed(
+            f"mkdir -p {profiles}",
+            f"ln -sfn $(readlink /run/booted-system) {profiles}/system-1-link",
+            f"ln -sfn system-1-link {profiles}/system",
+        )
+
+        metrics = nixos_metrics()
+        assert metrics["nixos_boots_total"] == "1", metrics
+        assert metrics["nixos_system_generation"] == "1", metrics
+        assert metrics["nixos_reboot_required"] == "0", metrics
+        # Exported rounded to ms, so compare within 1ms, not by seconds.
+        switch_ts = float(
+            machine.succeed("stat -c %.9Y /run/current-system")
+        )
+        switch_metric = float(metrics["nixos_system_switch_timestamp_seconds"])
+        assert abs(switch_metric - switch_ts) <= 0.001, (switch_ts, metrics)
+
+        # Restarts within a boot don't count.
+        machine.succeed("systemctl restart nixos-exporter.service")
+        assert nixos_metrics()["nixos_boots_total"] == "1"
+
+        # Boot starts the exporter, not just the first scrape, so boots
+        # that never got scraped still count.
+        wanted_by = machine.succeed(
+            "systemctl show -p WantedBy --value nixos-exporter.service"
+        )
+        assert "multi-user.target" in wanted_by.split(), wanted_by
+
+        # Fake a reboot: the stored boot_id no longer matches the kernel's.
+        # Start the exporter w/ the socket down, so no scrape is involved:
+        # it must count the boot on startup alone.
+        state = "/var/lib/private/nixos-exporter/boots"
+        machine.succeed(
+            "systemctl stop nixos-exporter.socket nixos-exporter.service",
+            f"sed -i 's/ .*/ old-boot-id/' {state}",
+            "systemctl start nixos-exporter.service",
+        )
+        boot_id = machine.succeed("cat /proc/sys/kernel/random/boot_id")
+        machine.wait_until_succeeds(
+            f"grep -qx '2 {boot_id.strip()}' {state}",
+            timeout=dt.timedelta(seconds=10),
+        )
+        assert nixos_metrics()["nixos_boots_total"] == "2"
+
+        # Deploy generation 2 w/ a different kernel: reboot required. The
+        # booted container system has no kernel at all. Not in /tmp, the
+        # service has a `PrivateTmp`.
+        machine.succeed(
+            "mkdir /srv/system-2",
+            "ln -s /nix/store/fake-linux/bzImage /srv/system-2/kernel",
+            f"ln -sfn /srv/system-2 {profiles}/system-2-link",
+            f"ln -sfn system-2-link {profiles}/system",
+        )
+        metrics = nixos_metrics()
+        assert metrics["nixos_system_generation"] == "2", metrics
+        assert metrics["nixos_reboot_required"] == "1", metrics
+
+        # VictoriaMetrics scrapes it.
+        machine.wait_until_succeeds(
+            "curl -sf "
+            "'http://127.0.0.1:8428/api/v1/query"
+            "?query=nixos_boots_total%7Bjob%3D%22nixos-exporter%22%7D' "
+            "| jq -e '.data.result[0].value[1] == \"2\"'",
             timeout=dt.timedelta(seconds=30),
         )
 

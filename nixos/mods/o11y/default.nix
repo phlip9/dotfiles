@@ -6,6 +6,7 @@
 # - prometheus-node-exporter (system metrics)
 # - prometheus-nginx-exporter (nginx metrics, if nginx is enabled)
 # - prometheus-blackbox-exporter (HTTPS probes of `probes`, if any)
+# - nixos-exporter (boots, generation, pending reboot): see ./nixos-exporter.nix
 # - nginx virtualHost for Grafana (if grafana.domain is set)
 # - Grafana Git Sync: dashboard sync w/ git repo
 # - Alerting (vmalert + Alertmanager): see ./alerting.nix
@@ -311,6 +312,7 @@ in
 {
   imports = [
     ./alerting.nix
+    ./nixos-exporter.nix
     ./profiling.nix
   ];
 
@@ -544,6 +546,14 @@ in
           job_name = "node-exporter";
           static_configs = exporterTargets config.services.prometheus.exporters.node;
         }
+        ++ [
+          {
+            job_name = "nixos-exporter";
+            static_configs = [
+              { targets = [ cfg.nixosExporter.listenAddress ]; }
+            ];
+          }
+        ]
         ++ lib.optional cfgGf.enable {
           job_name = "grafana";
           static_configs = [
