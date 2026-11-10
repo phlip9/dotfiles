@@ -54,6 +54,54 @@ tests:
               summary: Most nixbot builds failed in the last hour
               description: https://ci.phlip9.com
 
+  # Boot 2's first sample is at 66m, after a 5m scrape gap. Fires from
+  # then until the 15m-old value is boot 2 too.
+  - name: HostRebooted fires for 15m after a reboot, across a scrape gap
+    interval: 1m
+    input_series:
+      - series: 'nixos_boots_total{job="nixos-exporter", instance="h"}'
+        values: 1x60 _x5 2x60
+    alert_rule_test:
+      - eval_time: 65m
+        groupname: host
+        alertname: HostRebooted
+        exp_alerts: []
+      - eval_time: 66m
+        groupname: host
+        alertname: HostRebooted
+        exp_alerts: &host_rebooted
+          - exp_labels:
+              severity: info
+              job: nixos-exporter
+              instance: h
+            exp_annotations:
+              summary: h rebooted (boot 2)
+              description: Expected after a deploy w/ a new kernel; else why?
+      - eval_time: 80m
+        groupname: host
+        alertname: HostRebooted
+        exp_alerts: *host_rebooted
+      - eval_time: 81m
+        groupname: host
+        alertname: HostRebooted
+        exp_alerts: []
+
+  # A series that starts mid-life (relabel, first install) isn't a reboot.
+  - name: HostRebooted ignores a new boot count series
+    interval: 1m
+    input_series:
+      - series: 'nixos_boots_total{job="nixos-exporter", instance="h"}'
+        values: _x30 2x60
+    alert_rule_test:
+      - eval_time: 30m
+        groupname: host
+        alertname: HostRebooted
+        exp_alerts: []
+      - eval_time: 40m
+        groupname: host
+        alertname: HostRebooted
+        exp_alerts: []
+
   # Timers that never ran report 0. Don't call them 30 years stale.
   - name: TimerStale skips never-run timers
     interval: 1m

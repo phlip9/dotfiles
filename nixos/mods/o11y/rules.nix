@@ -81,12 +81,21 @@ let
     name = "host";
     rules = [
       # Inhibits restart noise for 15m, see `inhibitRules`.
+      #
+      # Fires for 15m once nixos-exporter's boot count exceeds its last value
+      # from >= 15m ago, looking back up to a day: a reboot gap (+ its stale
+      # marker) doesn't hide the old value. Clock-independent, unlike
+      # `node_boot_time_seconds`. A new series (first install, relabel) has
+      # no old value, so no false reboot, unlike `delta`/`increase`.
       {
         alert = "HostRebooted";
-        expr = "time() - node_boot_time_seconds < 900";
+        expr = lib.concatStringsSep " " [
+          "nixos_boots_total"
+          "> last_over_time(nixos_boots_total[1d] offset 15m)"
+        ];
         labels.severity = "info";
         annotations = {
-          summary = "Host booted {{ $value | humanizeDuration }} ago";
+          summary = "{{ $labels.instance }} rebooted (boot {{ $value }})";
           description = "Expected after a deploy w/ a new kernel; else why?";
         };
       }
