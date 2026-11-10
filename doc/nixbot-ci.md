@@ -147,11 +147,12 @@ nix key convert-secret-to-public < key && echo ""
    - Contents: Read-only
    - Metadata: Read-only (set by default)
    - Pull requests: Read-only
+   - Issues: Read-only
 
 - **Organization permissions** (if app is for an org):
    - Members: Read-only
 
-- **Events**: Push, Pull request, Check run, Check suite
+- **Events**: Push, Pull request, Check run, Check suite, Issue comment
 
 - **After creation:**
    - Note the App ID and OAuth Client ID
