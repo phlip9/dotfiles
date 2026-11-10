@@ -219,6 +219,13 @@ in
             status[key] = val.strip()
         return status
 
+    # CPU time of a unit's cgroup, in ns
+    def unit_cpu_ns(unit: str) -> int:
+        return int(machine.succeed(
+            f"systemctl show {unit} -p CPUUsageNSec --value",
+            timeout=CMD_TIMEOUT,
+        ))
+
     # Open BPF link FDs of a unit's main process
     def bpf_links(unit: str) -> int:
         pid = machine.succeed(
@@ -395,10 +402,7 @@ in
             )
             print(f"kernel frames: {sorted(KERNEL_FNS & names)}")
             cpu_t0 = time.monotonic()
-            cpu_ns0 = int(machine.succeed(
-                "systemctl show alloy -p CPUUsageNSec --value",
-                timeout=CMD_TIMEOUT,
-            ))
+            cpu_ns0 = unit_cpu_ns("alloy")
 
         # Kernel threads have no exe, so a separate discovery labels them.
         # Trigger some: page cache writeback runs in kworkers.
@@ -623,9 +627,7 @@ in
 
         # Not an assertion: resource numbers for tuning. CPU over the
         # subtests above, after the first profile (startup excluded).
-        cpu_ns1 = int(machine.succeed(
-            "systemctl show alloy -p CPUUsageNSec --value", timeout=CMD_TIMEOUT
-        ))
+        cpu_ns1 = unit_cpu_ns("alloy")
         cpu_pct = (cpu_ns1 - cpu_ns0) / 1e9 / (time.monotonic() - cpu_t0) * 100
         print(f"alloy: {cpu_pct:.1f}% of a core")
         for svc in ["alloy", "pyroscope"]:
