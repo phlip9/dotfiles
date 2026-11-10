@@ -29,6 +29,52 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "red",
+          "legacyOptions": {
+            "expr": "count_values(\"boot\", nixos_boots_total{job=\"nixos-exporter\"} \u003e 1 and (delta(nixos_boots_total{job=\"nixos-exporter\"}[$__interval]) \u003e 0))",
+            "textFormat": "boot {{boot}}",
+            "titleFormat": "Reboot"
+          },
+          "name": "reboots",
+          "query": {
+            "datasource": {
+              "name": "${ds_prometheus}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "blue",
+          "legacyOptions": {
+            "expr": "count_values(\"generation\", nixos_system_generation{job=\"nixos-exporter\"} and (changes(nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\"}[$__interval]) \u003e 0) unless (nixos_boots_total{job=\"nixos-exporter\"} \u003e 1 and (delta(nixos_boots_total{job=\"nixos-exporter\"}[$__interval]) \u003e 0)))",
+            "textFormat": "generation {{generation}}",
+            "titleFormat": "Deploy"
+          },
+          "name": "deploys",
+          "query": {
+            "datasource": {
+              "name": "${ds_prometheus}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
       }
     ],
     "cursorSync": "Crosshair",
