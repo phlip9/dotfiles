@@ -91,6 +91,8 @@ in
       };
     in
     {
+      imports = [ ./lib/victoriametrics.nix ];
+
       environment.systemPackages = [
         pkgs.curl
         pkgs.jq
@@ -150,8 +152,6 @@ in
         "rule.evalDelay" = "0s";
       };
       services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
-      # Queries hide samples younger than `-search.latencyOffset` (30s).
-      services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
 
       systemd.services.alert-sink = {
         wantedBy = [ "multi-user.target" ];

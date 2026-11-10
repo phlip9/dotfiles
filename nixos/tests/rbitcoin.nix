@@ -48,6 +48,8 @@
       node1Port = toString containers.node1.services.rbitcoin.p2p.port;
     in
     {
+      imports = [ ./lib/victoriametrics.nix ];
+
       # Regtest has no seeds. Dial node1 by IP, since node1 only listens on
       # IPv4 and its hostname may resolve to IPv6 first.
       services.rbitcoin.extraArgs = [
@@ -68,8 +70,6 @@
       # Only VictoriaMetrics is under test.
       services.grafana.enable = lib.mkForce false;
       services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
-      # Queries hide samples younger than `-search.latencyOffset` (30s).
-      services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
     };
 
   testScript = ''

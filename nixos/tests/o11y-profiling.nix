@@ -29,6 +29,8 @@ in
       secret = name: text: pkgs.writeText name "${text}\n";
     in
     {
+      imports = [ ./lib/victoriametrics.nix ];
+
       environment.systemPackages = [
         pkgs.curl
         pkgs.jq
@@ -62,8 +64,6 @@ in
       services.openssh.enable = lib.mkForce false;
 
       services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
-      # Queries hide samples younger than `-search.latencyOffset` (30s).
-      services.victoriametrics.extraOptions = [ "-search.latencyOffset=0s" ];
 
       # Grafana's startup chatter. Keep warnings + errors only.
       services.grafana.settings.log.filters = lib.concatStringsSep " " [

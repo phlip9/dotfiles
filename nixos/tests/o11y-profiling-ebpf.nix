@@ -79,6 +79,8 @@ in
       };
     in
     {
+      imports = [ ./lib/victoriametrics.nix ];
+
       virtualisation.cores = 2;
       virtualisation.memorySize = 2048;
       # = sauna
@@ -117,9 +119,7 @@ in
       services.openssh.enable = lib.mkForce false;
 
       services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
-      # Queries hide samples younger than `-search.latencyOffset` (30s).
-      services.victoriametrics.extraOptions = [
-        "-search.latencyOffset=0s"
+      services.victoriametrics.extraOptions = lib.mkAfter [
         # Grafana's scrape job: one error per second
         "-promscrape.suppressScrapeErrors"
       ];
