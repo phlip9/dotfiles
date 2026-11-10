@@ -132,16 +132,22 @@ in
 
       # Not started at boot, see the "short-lived pids" subtest. Each child
       # burns a few ms of CPU, and dies long before discovery's next
-      # refresh.
+      # refresh. 2 loops: enough new pids per flush even on a starved CI
+      # host (1 loop: ~38 per flush at host load 30).
       systemd.services.${forkUnit}.serviceConfig = workloadConfig // {
         ExecStart = pkgs.writeShellScript forkUnit ''
-          while :; do
-            ${lib.getExe pkgs.bash} -c \
-              'for ((idx = 0; idx < 500; idx++)); do :; done'
-          done
+          spawn() {
+            while :; do
+              ${lib.getExe pkgs.bash} -c \
+                'for ((idx = 0; idx < 500; idx++)); do :; done'
+            done
+          }
+          spawn &
+          spawn &
+          wait
         '';
         # Outranks the `Nice = 10` spinners: more sampled pids per flush.
-        # 1 core max; Alloy + Pyroscope (nice 0) keep their fair share.
+        # 2 of 4 vCPUs max; Alloy + Pyroscope (nice 0) keep their share.
         Nice = 0;
       };
     };
@@ -297,7 +303,8 @@ in
         if start_ms is not None:
             body["start"] = start_ms
         resp = pyro_post("SelectMergeStacktraces", body, timeout_s)
-        return set(resp.get("flamegraph", {}).get("names", []))
+        # `total`: the flame graph's root, even w/o any profiles
+        return set(resp.get("flamegraph", {}).get("names", [])) - {"total"}
 
     def label_values(label: str, selector: str | None = None) -> list[str]:
         matchers = [selector] if selector else []
@@ -586,54 +593,60 @@ in
         # per collect interval. Nix builds' short-lived pids fanned out to
         # ~600-850 pushes per 15s on sauna; under load the tail missed the
         # push deadline (= collect interval) and was dropped. Now one per
-        # (labels, profile type). The fan-out: pids created per flush (the
-        # forker's children, all burning CPU). Negative control w/
-        # `perPidProfile = true`: ~100 pprofs per flush.
+        # (labels, profile type). The fan-out: the forker's new pids, all
+        # burning CPU. Negative control w/ `perPidProfile = true`: ~0.8
+        # pprofs per new pid.
+        #
+        # The window ends at a pid count, not a flush count: a starved VM
+        # makes fewer pids per flush. Alloy's counters can't mark flushes
+        # either: it bumps them as it queues pushes, 32 at once, so one
+        # flush's bumps can straddle a scrape.
         with subtest("short-lived pids: one profile per labels"):
-            machine.succeed(f"systemctl start {FORK_UNIT}", timeout=CMD_TIMEOUT)
-            # Skip the flush in flight at start: only part of its window
-            # had the forker.
-            flushes0 = flush_counter()
-            wait_fast(
-                lambda: flush_counter() > flushes0,
-                "first flush w/ the forker",
-                EVENT_TIMEOUT_S,
-            )
-            scrape0 = alloy_scrape()
-            pprofs0 = fanout_metric(scrape0, "pyroscope_ebpf_pprofs_total")
-            samples0 = fanout_metric(
-                scrape0, "pyroscope_ebpf_pprof_samples_total"
-            )
+            fanout_pids = 300
+            start_ms = vm_now_ms()
             pids0 = last_pid()
-            flushes = 3
-            for _ in range(flushes):
-                flushes0 = flush_counter()
-                wait_fast(
-                    lambda: flush_counter() > flushes0,
-                    "flush",
-                    EVENT_TIMEOUT_S,
-                )
+            scrape0 = alloy_scrape()
+            machine.succeed(f"systemctl start {FORK_UNIT}", timeout=CMD_TIMEOUT)
+            wait_fast(
+                lambda: pids_since(pids0) >= fanout_pids,
+                f"{fanout_pids} new pids",
+                PROFILE_TIMEOUT_S,
+            )
+            stop_ms = int(machine.succeed(
+                f"systemctl stop {FORK_UNIT} && date +%s%3N",
+                timeout=CMD_TIMEOUT,
+            ))
             pids = pids_since(pids0)
+            # Every sample before the stop is flushed by the 2nd flush
+            # after it, w/ slack for the profiler's processing lag.
+            wait_fast(
+                lambda: bool(
+                    fn_names(CPU_TYPE, "{}", stop_ms + COLLECT_INTERVAL_MS)
+                ),
+                "the 2nd flush after the stop",
+                PROFILE_TIMEOUT_S,
+            )
             scrape1 = alloy_scrape()
-            pprofs = (
-                fanout_metric(scrape1, "pyroscope_ebpf_pprofs_total") - pprofs0
-            )
-            samples = (
-                fanout_metric(scrape1, "pyroscope_ebpf_pprof_samples_total")
-                - samples0
-            )
-            machine.succeed(f"systemctl stop {FORK_UNIT}", timeout=CMD_TIMEOUT)
+            end_ms = vm_now_ms()
+            pprofs = fanout_metric(
+                scrape1, "pyroscope_ebpf_pprofs_total"
+            ) - fanout_metric(scrape0, "pyroscope_ebpf_pprofs_total")
+            samples = fanout_metric(
+                scrape1, "pyroscope_ebpf_pprof_samples_total"
+            ) - fanout_metric(scrape0, "pyroscope_ebpf_pprof_samples_total")
+            # Flushes in the window, + 1 at each end: partial, or bumps
+            # straddling the scrape
+            flushes = (end_ms - start_ms) / COLLECT_INTERVAL_MS + 2
             print(
-                f"fan-out per flush: {pids / flushes:.1f} new pids, "
-                f"{pprofs / flushes:.1f} pprofs, "
-                f"{samples / flushes:.1f} samples (compacted)"
+                f"fan-out: {pids} new pids, {pprofs:.0f} pprofs, "
+                f"{samples:.0f} samples (compacted), <= {flushes:.1f} "
+                "flushes"
             )
-            # Many new pids per flush, >> the bound below, and profiled
-            assert pids >= 100 * flushes, pids
+            assert pids >= fanout_pids, pids
             assert samples > 0, samples
-            # Per (labels, profile type): unspecified + forker, cpu +
-            # offcpu, + slack for flush boundaries
-            assert pprofs <= 8 * flushes, pprofs
+            # Per flush + (labels, profile type): unspecified + forker,
+            # cpu + offcpu. Negative control: 257 pprofs.
+            assert pprofs <= 4 * flushes, (pprofs, flushes)
             for name in [
                 "pyroscope_write_dropped_profiles_total",
                 "pyroscope_ebpf_pprofs_dropped_total",
