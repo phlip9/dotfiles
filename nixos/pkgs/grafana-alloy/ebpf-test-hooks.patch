@@ -1,0 +1,849 @@
+diff -ruN a/internal/component/pyroscope/ebpf/args.go b/internal/component/pyroscope/ebpf/args.go
+--- a/internal/component/pyroscope/ebpf/args.go
++++ b/internal/component/pyroscope/ebpf/args.go
+@@ -49,6 +49,10 @@
+ 	// default limits. <= 0: unbounded.
+ 	MaxProfileSamples int `alloy:"max_profile_samples,attr,optional"`
+ 	MaxProfileBytes   int `alloy:"max_profile_bytes,attr,optional"`
++	// Serve test-only endpoints under /api/v0/component/<id>/: flush on
++	// demand, show the applied targets + pending samples, see Handler.
++	// Read once at startup.
++	TestHooks bool `alloy:"test_hooks,attr,optional"`
+ }
+ 
+ type DeprecatedArguments struct {
+diff -ruN a/internal/component/pyroscope/ebpf/discovery/snapshot.go b/internal/component/pyroscope/ebpf/discovery/snapshot.go
+--- a/internal/component/pyroscope/ebpf/discovery/snapshot.go
++++ b/internal/component/pyroscope/ebpf/discovery/snapshot.go
+@@ -0,0 +1,45 @@
++package discovery
++
++import (
++	"time"
++
++	"github.com/prometheus/prometheus/model/labels"
++)
++
++// TargetsSnapshot is the pid -> target map FindTarget resolves from now,
++// i.e. after Update applied the targets. Test hook.
++type TargetsSnapshot struct {
++	// Pids in Targets
++	Live []PIDTarget
++	// Pids that left Targets, still within ExitedRetention
++	Exited []PIDTarget
++}
++
++// PIDTarget is one pid's target in a TargetsSnapshot.
++type PIDTarget struct {
++	PID    uint32
++	Labels labels.Labels
++	// When the pid left Targets. Zero for live pids.
++	Since time.Time
++}
++
++func (tf *targetProducer) Snapshot() TargetsSnapshot {
++	tf.sync.Lock()
++	defer tf.sync.Unlock()
++	var res TargetsSnapshot
++	for pid, target := range tf.pid2target {
++		res.Live = append(res.Live, PIDTarget{PID: pid, Labels: target.labels})
++	}
++	// Expired entries linger until the next Update or lookup
++	now := tf.now()
++	for pid, exited := range tf.exited {
++		if now.Sub(exited.since) < tf.retention {
++			res.Exited = append(res.Exited, PIDTarget{
++				PID:    pid,
++				Labels: exited.target.labels,
++				Since:  exited.since,
++			})
++		}
++	}
++	return res
++}
+diff -ruN a/internal/component/pyroscope/ebpf/discovery/snapshot_test.go b/internal/component/pyroscope/ebpf/discovery/snapshot_test.go
+--- a/internal/component/pyroscope/ebpf/discovery/snapshot_test.go
++++ b/internal/component/pyroscope/ebpf/discovery/snapshot_test.go
+@@ -0,0 +1,45 @@
++package discovery
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestSnapshot(t *testing.T) {
++	opts := exitedTestOptions(30*time.Second, false)
++	tf, clock := exitedTestProducer(t, opts)
++	pids := func(targets []PIDTarget) []uint32 {
++		var res []uint32
++		for _, target := range targets {
++			res = append(res, target.PID)
++		}
++		return res
++	}
++
++	snap := tf.Snapshot()
++	require.ElementsMatch(t, []uint32{10, 11}, pids(snap.Live))
++	require.Empty(t, snap.Exited)
++
++	// pid 10 exits: retained, w/ when it left
++	left := clock.now
++	tf.Update(opts("11"))
++	snap = tf.Snapshot()
++	require.Equal(t, []uint32{11}, pids(snap.Live))
++	require.Len(t, snap.Exited, 1)
++	require.Equal(t, uint32(10), snap.Exited[0].PID)
++	require.Equal(t, "a10", snap.Exited[0].Labels.Get("service_name"))
++	require.Equal(t, left, snap.Exited[0].Since)
++	require.True(t, snap.Live[0].Since.IsZero())
++
++	// Expired, before any Update or lookup drops it
++	clock.now = clock.now.Add(30 * time.Second)
++	require.Empty(t, tf.Snapshot().Exited)
++
++	// No retention: never exited
++	opts = exitedTestOptions(0, false)
++	tf, _ = exitedTestProducer(t, opts)
++	tf.Update(opts("11"))
++	require.Empty(t, tf.Snapshot().Exited)
++}
+diff -ruN a/internal/component/pyroscope/ebpf/discovery/target.go b/internal/component/pyroscope/ebpf/discovery/target.go
+--- a/internal/component/pyroscope/ebpf/discovery/target.go
++++ b/internal/component/pyroscope/ebpf/discovery/target.go
+@@ -120,6 +120,8 @@
+ type TargetProducer interface {
+ 	FindTarget(pid uint32, containerID string) *Target
+ 	Update(args TargetsOptions)
++	// Test hook, see TargetsSnapshot
++	Snapshot() TargetsSnapshot
+ }
+ type TargetsOptions struct {
+ 	Targets       []DiscoveredTarget
+diff -ruN a/internal/component/pyroscope/ebpf/ebpf_linux.go b/internal/component/pyroscope/ebpf/ebpf_linux.go
+--- a/internal/component/pyroscope/ebpf/ebpf_linux.go
++++ b/internal/component/pyroscope/ebpf/ebpf_linux.go
+@@ -9,6 +9,7 @@
+ 	"os"
+ 	"path/filepath"
+ 	"sync"
++	"sync/atomic"
+ 	"syscall"
+ 	"time"
+ 
+@@ -122,6 +123,7 @@
+ 		reportInterval:         cfg.ReporterInterval,
+ 		argsUpdate:             make(chan Arguments, 4),
+ 		symbols:                nfs,
++		testHooks:              args.TestHooks,
+ 	}
+ 
+ 	r := reporter.NewPPROF(logger, &reporter.Config{
+@@ -142,6 +144,7 @@
+ 		})
+ 
+ 	cfg.Reporter = r
++	res.reporter = r
+ 	cfg.ExecutableReporter = res
+ 
+ 	if cfg.VerboseMode {
+@@ -168,6 +171,12 @@
+ 	healthMut sync.RWMutex
+ 	health    component.Health
+ 	symbols   *irsymcache.Resolver
++
++	// Test hooks, see Arguments.TestHooks. Fixed at New.
++	testHooks bool
++	reporter  *reporter.PPROFReporter
++	// Pushes that failed or were dropped, see the flush hook
++	pushFailures atomic.Int64
+ }
+ 
+ func (c *Component) Run(ctx context.Context) error {
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/flush.go b/internal/component/pyroscope/ebpf/reporter/flush.go
+--- a/internal/component/pyroscope/ebpf/reporter/flush.go
++++ b/internal/component/pyroscope/ebpf/reporter/flush.go
+@@ -0,0 +1,105 @@
++//go:build unix
++
++package reporter
++
++import (
++	"context"
++	"time"
++
++	"github.com/grafana/alloy/internal/component/pyroscope/ebpf/discovery"
++)
++
++// Test hooks: flush on demand, inspect the samples awaiting a flush. Unused
++// unless the component enables its test hooks; w/o a Flush call the
++// reporting loop behaves as upstream.
++
++// FlushResult is one manual flush, see Flush.
++type FlushResult struct {
++	// Before the flush took the pending samples, and after the consumer
++	// returned: its profiles are stamped in [Start, End]. Flushes are
++	// serial, and the flush before this one ended >= 2 ms boundaries
++	// before Start, see manualFlush.
++	Start, End time.Time
++	// What the consumer got
++	Profiles []PPROF
++}
++
++// flushReq asks the reporting loop for a flush, see Flush.
++type flushReq struct {
++	hold bool
++	// Buffered: the loop never waits for a requester that gave up
++	done chan FlushResult
++}
++
++// Flush builds + consumes the samples since the last flush now, on the
++// reporting loop, and returns once the consumer returned. W/ hold, the
++// loop then skips its periodic flushes until the next Flush w/o hold:
++// every sample from now on goes to that next Flush. Blocks until the loop
++// runs (see Start) or ctx ends.
++func (p *PPROFReporter) Flush(ctx context.Context, hold bool) (FlushResult, error) {
++	req := flushReq{hold: hold, done: make(chan FlushResult, 1)}
++	select {
++	case p.flushReqs <- req:
++	case <-ctx.Done():
++		return FlushResult{}, ctx.Err()
++	}
++	select {
++	case res := <-req.done:
++		return res, nil
++	case <-ctx.Done():
++		return FlushResult{}, ctx.Err()
++	}
++}
++
++// manualFlush is one Flush, on the reporting loop, after the flush that
++// ended at `prev`. Queries take ms: starts >= 2 ms boundaries after `prev`,
++// so no ms holds stamps of both, and [Start, End] widened to whole ms
++// holds no other flush's profiles (manual flushes run in order, the next
++// periodic one is a full interval later).
++func (p *PPROFReporter) manualFlush(ctx context.Context, prev time.Time) FlushResult {
++	time.Sleep(time.Until(time.UnixMilli(prev.UnixMilli() + 2)))
++	start := time.Now()
++	profiles := p.reportProfile(ctx)
++	return FlushResult{Start: start, End: time.Now(), Profiles: profiles}
++}
++
++// PendingSamples counts one pid's samples of one profile type that await
++// the next flush.
++type PendingSamples struct {
++	PID int64 `json:"pid"`
++	// `__name__` of the profile: discovery.MetricValueProcessCPU or
++	// discovery.MetricValueOffCPU
++	Type    string `json:"type"`
++	Samples int    `json:"samples"`
++}
++
++// Pending returns the samples since the last flush, per (pid, profile
++// type). Samples the profiler hasn't handed to the reporter yet don't
++// count.
++func (p *PPROFReporter) Pending() []PendingSamples {
++	type key struct {
++		pid int64
++		typ string
++	}
++	counts := make(map[key]int)
++	tree := p.traceEvents.RLock()
++	for resourceKey, rtp := range *tree {
++		// Equal profile types can be different pointers: sum per name
++		for profileType, events := range rtp.Events {
++			typ := discovery.MetricValueProcessCPU
++			if profileType.ReportValues {
++				typ = discovery.MetricValueOffCPU
++			}
++			for _, event := range events {
++				counts[key{resourceKey.PID, typ}] += len(event.Timestamps)
++			}
++		}
++	}
++	p.traceEvents.RUnlock(&tree)
++
++	res := make([]PendingSamples, 0, len(counts))
++	for pidType, count := range counts {
++		res = append(res, PendingSamples{PID: pidType.pid, Type: pidType.typ, Samples: count})
++	}
++	return res
++}
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/flush_test.go b/internal/component/pyroscope/ebpf/reporter/flush_test.go
+--- a/internal/component/pyroscope/ebpf/reporter/flush_test.go
++++ b/internal/component/pyroscope/ebpf/reporter/flush_test.go
+@@ -0,0 +1,153 @@
++//go:build unix
++
++package reporter
++
++import (
++	"bytes"
++	"context"
++	"log/slog"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/google/pprof/profile"
++	"github.com/grafana/alloy/internal/component/pyroscope/ebpf/discovery"
++	"github.com/stretchr/testify/require"
++	"go.opentelemetry.io/ebpf-profiler/libpf"
++	"go.opentelemetry.io/ebpf-profiler/reporter/samples"
++)
++
++// flushTestReporter is a started reporter w/ pid 1 = service_a, flushing
++// every `interval`, that records what it consumes.
++type flushTestReporter struct {
++	*PPROFReporter
++	mu       sync.Mutex
++	consumed [][]PPROF
++}
++
++func newFlushTestReporter(t *testing.T, interval time.Duration) *flushTestReporter {
++	tp := discovery.NewTargetProducer(discovery.TargetsOptions{
++		Targets: []discovery.DiscoveredTarget{
++			{"__process_pid__": "1", "service_name": "service_a"},
++		},
++	})
++	res := &flushTestReporter{}
++	res.PPROFReporter = NewPPROF(slog.New(slog.DiscardHandler),
++		&Config{ReportInterval: interval, SamplesPerSecond: 97},
++		tp, nil,
++		func(_ context.Context, ps []PPROF) {
++			res.mu.Lock()
++			defer res.mu.Unlock()
++			res.consumed = append(res.consumed, ps)
++		})
++	require.NoError(t, res.Start(t.Context()))
++	t.Cleanup(res.Stop)
++	return res
++}
++
++// addSample adds one CPU sample of pid 1 in `fn`, as the profiler does.
++func (r *flushTestReporter) addSample(t *testing.T, fn string) {
++	trace := &libpf.Trace{
++		Frames: singleFrameTrace(libpf.PythonFrame, libpf.FrameMappingFile{}, 0x30,
++			fn, "/bin/bar", 1),
++	}
++	require.NoError(t, r.ReportTraceEvent(trace, &samples.TraceEventMeta{
++		PID:         1,
++		ProfileType: profileTypeSampling,
++		Timestamp:   42,
++	}))
++}
++
++func (r *flushTestReporter) flushes() int {
++	r.mu.Lock()
++	defer r.mu.Unlock()
++	return len(r.consumed)
++}
++
++func TestPPROFReporter_Flush(t *testing.T) {
++	rep := newFlushTestReporter(t, time.Hour)
++	rep.addSample(t, "f0")
++	require.Equal(t, []PendingSamples{
++		{PID: 1, Type: discovery.MetricValueProcessCPU, Samples: 1},
++	}, rep.Pending())
++
++	// Returns after the consumer got the profile, stamped w/in the result
++	res, err := rep.Flush(t.Context(), false)
++	require.NoError(t, err)
++	require.Equal(t, 1, rep.flushes())
++	require.Len(t, res.Profiles, 1)
++	require.Equal(t, "service_a", res.Profiles[0].Labels.Get("service_name"))
++	parsed, err := profile.Parse(bytes.NewReader(res.Profiles[0].Raw))
++	require.NoError(t, err)
++	stamp := time.Unix(0, parsed.TimeNanos)
++	require.False(t, stamp.Before(res.Start), "%v < %v", stamp, res.Start)
++	require.False(t, res.End.Before(stamp), "%v < %v", res.End, stamp)
++	require.Empty(t, rep.Pending())
++
++	// Nothing pending: an empty flush, >= 2 ms boundaries after the last
++	prev := res
++	res, err = rep.Flush(t.Context(), false)
++	require.NoError(t, err)
++	require.Empty(t, res.Profiles)
++	require.GreaterOrEqual(t, res.Start.UnixMilli(), prev.End.UnixMilli()+2)
++}
++
++func TestPPROFReporter_FlushHold(t *testing.T) {
++	const interval = 5 * time.Millisecond
++	rep := newFlushTestReporter(t, interval)
++
++	// Held: many ticks pass, the sample stays pending
++	_, err := rep.Flush(t.Context(), true)
++	require.NoError(t, err)
++	flushes := rep.flushes()
++	rep.addSample(t, "held")
++	time.Sleep(20 * interval)
++	require.Equal(t, flushes, rep.flushes())
++	require.Len(t, rep.Pending(), 1)
++
++	// The next flush w/o hold gets it + releases the ticker
++	res, err := rep.Flush(t.Context(), false)
++	require.NoError(t, err)
++	require.Len(t, res.Profiles, 1)
++	rep.addSample(t, "released")
++	require.Eventually(t, func() bool { return len(rep.Pending()) == 0 },
++		5*time.Second, interval)
++}
++
++// W/o the reporting loop, Flush waits for ctx.
++func TestPPROFReporter_FlushNotStarted(t *testing.T) {
++	rep := newReporter()
++	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
++	defer cancel()
++	_, err := rep.Flush(ctx, false)
++	require.ErrorIs(t, err, context.DeadlineExceeded)
++}
++
++func TestPPROFReporter_Pending(t *testing.T) {
++	rep := newReporter()
++	// Equal profile types as different pointers sum up
++	cpuType := *profileTypeSampling
++	events := func(timestamps ...uint64) samples.SampleToEvents {
++		return samples.SampleToEvents{
++			{}: &samples.TraceEvents{Timestamps: timestamps},
++		}
++	}
++	tree := rep.traceEvents.WLock()
++	*tree = samples.TraceEventsTree{
++		{PID: 1}: {Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++			profileTypeSampling: events(1, 2),
++			&cpuType:            events(3),
++			profileTypeOffCPU:   events(4),
++		}},
++		{PID: 2}: {Events: map[*samples.TypeMetadata]samples.SampleToEvents{
++			profileTypeSampling: events(5),
++		}},
++	}
++	rep.traceEvents.WUnlock(&tree)
++
++	require.ElementsMatch(t, []PendingSamples{
++		{PID: 1, Type: discovery.MetricValueProcessCPU, Samples: 3},
++		{PID: 1, Type: discovery.MetricValueOffCPU, Samples: 1},
++		{PID: 2, Type: discovery.MetricValueProcessCPU, Samples: 1},
++	}, rep.Pending())
++}
+diff -ruN a/internal/component/pyroscope/ebpf/reporter/pprof.go b/internal/component/pyroscope/ebpf/reporter/pprof.go
+--- a/internal/component/pyroscope/ebpf/reporter/pprof.go
++++ b/internal/component/pyroscope/ebpf/reporter/pprof.go
+@@ -65,6 +65,9 @@
+ 
+ 	wg              sync.WaitGroup
+ 	cancelReporting context.CancelFunc
++
++	// Manual flushes for the reporting loop, see Flush
++	flushReqs chan flushReq
+ }
+ 
+ func NewPPROF(log *slog.Logger,
+@@ -82,6 +85,7 @@
+ 		sd:          sd,
+ 		consumer:    consumer,
+ 		symbols:     symbols,
++		flushReqs:   make(chan flushReq),
+ 	}
+ }
+ 
+@@ -144,12 +148,26 @@
+ 		defer p.wg.Done()
+ 		tick := time.NewTicker(p.cfg.ReportInterval)
+ 		defer tick.Stop()
++		// Skip periodic flushes, see Flush. Always false w/o manual flushes.
++		held := false
++		// End of the last flush, see manualFlush
++		var lastFlush time.Time
+ 		for {
+ 			select {
+ 			case <-ctx.Done():
+ 				return
+ 			case <-tick.C:
+-				p.reportProfile(ctx)
++				if !held {
++					p.reportProfile(ctx)
++					lastFlush = time.Now()
++				}
++			case req := <-p.flushReqs:
++				held = req.hold
++				res := p.manualFlush(ctx, lastFlush)
++				lastFlush = res.End
++				req.done <- res
++				// The next periodic flush gets a full interval
++				tick.Reset(p.cfg.ReportInterval)
+ 			}
+ 		}
+ 	}()
+@@ -164,7 +182,9 @@
+ 	p.wg.Wait()
+ }
+ 
+-func (p *PPROFReporter) reportProfile(ctx context.Context) {
++// reportProfile builds + consumes the samples since the last flush.
++// Returns the consumed profiles.
++func (p *PPROFReporter) reportProfile(ctx context.Context) []PPROF {
+ 	traceEventsPtr := p.traceEvents.WLock()
+ 	reportedEvents := *traceEventsPtr
+ 	newEvents := make(samples.TraceEventsTree)
+@@ -188,6 +208,7 @@
+ 		sz += len(it.Raw)
+ 	}
+ 	p.log.Debug("pprof report successful", "count", len(profiles), "total-size", sz)
++	return profiles
+ }
+ 
+ func (p *PPROFReporter) createProfile(resourceKey samples.ResourceKey, profileType *samples.TypeMetadata, events map[samples.SampleKey]*samples.TraceEvents) []PPROF {
+diff -ruN a/internal/component/pyroscope/ebpf/send.go b/internal/component/pyroscope/ebpf/send.go
+--- a/internal/component/pyroscope/ebpf/send.go
++++ b/internal/component/pyroscope/ebpf/send.go
+@@ -39,6 +39,7 @@
+ 			samples := []*pyroscope.RawSample{{RawProfile: rawProfile}}
+ 			err := appender.Append(ctx, p.Labels, samples)
+ 			if err != nil {
++				c.pushFailures.Add(1)
+ 				c.logger.Error("ebpf pprof write", "err", err)
+ 			}
+ 		}
+@@ -48,6 +49,7 @@
+ 		case <-ctx.Done():
+ 			dropped := n - j
+ 			c.metrics.pprofsDroppedTotal.Add(float64(dropped))
++			c.pushFailures.Add(int64(dropped))
+ 			c.logger.Debug("dropped profiles", "count", dropped)
+ 			return
+ 		}
+diff -ruN a/internal/component/pyroscope/ebpf/testhooks_linux.go b/internal/component/pyroscope/ebpf/testhooks_linux.go
+--- a/internal/component/pyroscope/ebpf/testhooks_linux.go
++++ b/internal/component/pyroscope/ebpf/testhooks_linux.go
+@@ -0,0 +1,152 @@
++//go:build linux && (arm64 || amd64)
++
++package ebpf
++
++import (
++	"cmp"
++	"encoding/json"
++	"net/http"
++	"slices"
++	"strconv"
++
++	"github.com/grafana/alloy/internal/component/pyroscope/ebpf/reporter"
++)
++
++// Test hooks, w/ `test_hooks = true`, for tests that must order their
++// steps w/ the reporter's flushes + the applied targets instead of racing
++// timers. Under /api/v0/component/<id>/:
++//
++//   - POST /flush[?hold=true]: flush now, return once the flush's pushes
++//     returned. `hold`: then skip periodic flushes until the next
++//     /flush w/o it. Returns flushResp.
++//   - GET /targets: the pid -> target map the reporter resolves from, as
++//     applied (args updates are async). Returns targetsResp.
++//   - GET /pending: samples awaiting the next flush, per pid + profile
++//     type. Returns pendingResp.
++//
++// Unauthenticated + can stall profiling, so never on by default.
++
++// flushResp is the result of POST /flush.
++type flushResp struct {
++	// Its profiles are stamped in [StartMs, EndMs), and no other flush's
++	// in [StartMs - 1, EndMs]: a query window for exactly this flush.
++	StartMs int64 `json:"start_ms"`
++	EndMs   int64 `json:"end_ms"`
++	Held    bool  `json:"held"`
++	// Failed + dropped pushes while the request ran, incl. a periodic
++	// flush it waited for: 0 = every profile below was pushed.
++	FailedPushes int64            `json:"failed_pushes"`
++	Profiles     []flushedProfile `json:"profiles"`
++}
++
++// flushedProfile is one pushed profile of a flushResp.
++type flushedProfile struct {
++	Labels map[string]string `json:"labels"`
++	// Sample rows, after compaction
++	Samples int `json:"samples"`
++	Bytes   int `json:"bytes"`
++}
++
++// targetsResp is the result of GET /targets, see TargetsSnapshot.
++type targetsResp struct {
++	Live   []pidTarget `json:"live"`
++	Exited []pidTarget `json:"exited"`
++}
++
++// pidTarget is one pid's target in a targetsResp.
++type pidTarget struct {
++	PID    uint32            `json:"pid"`
++	Labels map[string]string `json:"labels"`
++	// When it left the targets; exited pids only
++	SinceMs int64 `json:"since_ms,omitempty"`
++}
++
++// pendingResp is the result of GET /pending.
++type pendingResp struct {
++	Pending []reporter.PendingSamples `json:"pending"`
++}
++
++// Handler implements the HTTP service's component handler: the test hooks,
++// or nil (404, as w/o a handler) w/o `test_hooks`.
++func (c *Component) Handler() http.Handler {
++	if !c.testHooks {
++		return nil
++	}
++	mux := http.NewServeMux()
++	mux.HandleFunc("POST /flush", c.serveFlush)
++	mux.HandleFunc("GET /targets", c.serveTargets)
++	mux.HandleFunc("GET /pending", c.servePending)
++	return mux
++}
++
++func (c *Component) serveFlush(w http.ResponseWriter, r *http.Request) {
++	hold := false
++	if v := r.URL.Query().Get("hold"); v != "" {
++		var err error
++		if hold, err = strconv.ParseBool(v); err != nil {
++			http.Error(w, "bad hold: "+err.Error(), http.StatusBadRequest)
++			return
++		}
++	}
++	failures0 := c.pushFailures.Load()
++	res, err := c.reporter.Flush(r.Context(), hold)
++	if err != nil {
++		http.Error(w, "flush: "+err.Error(), http.StatusServiceUnavailable)
++		return
++	}
++	resp := flushResp{
++		StartMs:      res.Start.UnixMilli(),
++		EndMs:        res.End.UnixMilli() + 1,
++		Held:         hold,
++		FailedPushes: c.pushFailures.Load() - failures0,
++		Profiles:     make([]flushedProfile, 0, len(res.Profiles)),
++	}
++	for _, prof := range res.Profiles {
++		resp.Profiles = append(resp.Profiles, flushedProfile{
++			Labels:  prof.Labels.Map(),
++			Samples: prof.Samples,
++			Bytes:   len(prof.Raw),
++		})
++	}
++	writeJSON(w, resp)
++}
++
++func (c *Component) serveTargets(w http.ResponseWriter, _ *http.Request) {
++	snap := c.targetFinder.Snapshot()
++	resp := targetsResp{
++		Live:   make([]pidTarget, 0, len(snap.Live)),
++		Exited: make([]pidTarget, 0, len(snap.Exited)),
++	}
++	for _, target := range snap.Live {
++		resp.Live = append(resp.Live, pidTarget{
++			PID:    target.PID,
++			Labels: target.Labels.Map(),
++		})
++	}
++	for _, target := range snap.Exited {
++		resp.Exited = append(resp.Exited, pidTarget{
++			PID:     target.PID,
++			Labels:  target.Labels.Map(),
++			SinceMs: target.Since.UnixMilli(),
++		})
++	}
++	byPID := func(a, b pidTarget) int { return cmp.Compare(a.PID, b.PID) }
++	slices.SortFunc(resp.Live, byPID)
++	slices.SortFunc(resp.Exited, byPID)
++	writeJSON(w, resp)
++}
++
++func (c *Component) servePending(w http.ResponseWriter, _ *http.Request) {
++	pending := c.reporter.Pending()
++	slices.SortFunc(pending, func(a, b reporter.PendingSamples) int {
++		return cmp.Or(cmp.Compare(a.PID, b.PID), cmp.Compare(a.Type, b.Type))
++	})
++	writeJSON(w, pendingResp{Pending: pending})
++}
++
++func writeJSON(w http.ResponseWriter, v any) {
++	w.Header().Set("Content-Type", "application/json")
++	if err := json.NewEncoder(w).Encode(v); err != nil {
++		http.Error(w, err.Error(), http.StatusInternalServerError)
++	}
++}
+diff -ruN a/internal/component/pyroscope/ebpf/testhooks_test.go b/internal/component/pyroscope/ebpf/testhooks_test.go
+--- a/internal/component/pyroscope/ebpf/testhooks_test.go
++++ b/internal/component/pyroscope/ebpf/testhooks_test.go
+@@ -0,0 +1,172 @@
++//go:build (linux && arm64) || (linux && amd64)
++
++package ebpf
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/prometheus/model/labels"
++	"github.com/stretchr/testify/require"
++	"go.opentelemetry.io/ebpf-profiler/libpf"
++	"go.opentelemetry.io/ebpf-profiler/reporter/samples"
++
++	"github.com/grafana/alloy/internal/component/pyroscope"
++	alloydiscovery "github.com/grafana/alloy/internal/component/pyroscope/ebpf/discovery"
++	"github.com/grafana/alloy/internal/component/pyroscope/ebpf/reporter"
++	"github.com/grafana/alloy/internal/util"
++)
++
++// testHooksTargets are pid 1 = service_a, or none
++func testHooksTargets(live bool) alloydiscovery.TargetsOptions {
++	opts := alloydiscovery.TargetsOptions{
++		DefaultTarget:   alloydiscovery.DiscoveredTarget{"service_name": "ebpf/unspecified"},
++		ExitedRetention: time.Minute,
++	}
++	if live {
++		opts.Targets = []alloydiscovery.DiscoveredTarget{
++			{"__process_pid__": "1", "service_name": "service_a"},
++		}
++	}
++	return opts
++}
++
++// newTestHooksComponent is a component w/ test hooks, a started reporter
++// that only flushes on demand, and `appendFn` as pyroscope.write.
++func newTestHooksComponent(
++	t *testing.T,
++	appendFn func(context.Context, labels.Labels, []*pyroscope.RawSample) error,
++) *Component {
++	reg := prometheus.NewRegistry()
++	c := &Component{testHooks: true}
++	c.logger = util.TestAlloyLogger(t).Slog()
++	c.metrics = newMetrics(reg)
++	c.args.CollectInterval = time.Second
++	c.appendable = pyroscope.NewFanout([]pyroscope.Appendable{
++		pyroscope.AppendableFunc(appendFn),
++	}, "", reg)
++	c.targetFinder = alloydiscovery.NewTargetProducer(testHooksTargets(true))
++	c.reporter = reporter.NewPPROF(c.logger,
++		&reporter.Config{ReportInterval: time.Hour, SamplesPerSecond: 97},
++		c.targetFinder, nil, c.sendProfiles)
++	require.NoError(t, c.reporter.Start(t.Context()))
++	t.Cleanup(c.reporter.Stop)
++	return c
++}
++
++// addTestHooksSample adds one CPU sample of pid 1, as the profiler does.
++func addTestHooksSample(t *testing.T, c *Component) {
++	frames := make(libpf.Frames, 0, 1)
++	frames.Append(&libpf.Frame{
++		Type:         libpf.PythonFrame,
++		FunctionName: libpf.Intern("fn"),
++		SourceFile:   libpf.Intern("a.py"),
++	})
++	require.NoError(t, c.reporter.ReportTraceEvent(
++		&libpf.Trace{Frames: frames},
++		&samples.TraceEventMeta{
++			PID:         1,
++			ProfileType: &samples.TypeMetadata{SampleType: "samples", SampleUnit: "count"},
++		},
++	))
++}
++
++// testHooksDo sends one request to c's hooks, returns the status + body.
++func testHooksDo(t *testing.T, c *Component, method, path string) (int, string) {
++	rec := httptest.NewRecorder()
++	req := httptest.NewRequestWithContext(t.Context(), method, path, nil)
++	c.Handler().ServeHTTP(rec, req)
++	return rec.Code, rec.Body.String()
++}
++
++// testHooksJSON sends one request to c's hooks, decodes the 200 resp.
++func testHooksJSON[T any](t *testing.T, c *Component, method, path string) T {
++	code, body := testHooksDo(t, c, method, path)
++	require.Equal(t, http.StatusOK, code, body)
++	var res T
++	require.NoError(t, json.Unmarshal([]byte(body), &res), body)
++	return res
++}
++
++func TestTestHooksOff(t *testing.T) {
++	require.Nil(t, new(Component).Handler())
++}
++
++func TestTestHooksFlush(t *testing.T) {
++	var pushed []labels.Labels
++	c := newTestHooksComponent(t, func(_ context.Context, ls labels.Labels, _ []*pyroscope.RawSample) error {
++		pushed = append(pushed, ls)
++		return nil
++	})
++	addTestHooksSample(t, c)
++
++	resp := testHooksJSON[flushResp](t, c, "POST", "/flush?hold=true")
++	require.True(t, resp.Held)
++	require.Zero(t, resp.FailedPushes)
++	require.Less(t, resp.StartMs, resp.EndMs)
++	require.Len(t, resp.Profiles, 1)
++	require.Equal(t, "service_a", resp.Profiles[0].Labels["service_name"])
++	require.Equal(t, "process_cpu", resp.Profiles[0].Labels["__name__"])
++	require.Equal(t, 1, resp.Profiles[0].Samples)
++	require.Positive(t, resp.Profiles[0].Bytes)
++	// Pushed before the response
++	require.Len(t, pushed, 1)
++
++	resp = testHooksJSON[flushResp](t, c, "POST", "/flush")
++	require.False(t, resp.Held)
++	require.Empty(t, resp.Profiles)
++
++	code, _ := testHooksDo(t, c, "GET", "/flush")
++	require.Equal(t, http.StatusMethodNotAllowed, code)
++	code, _ = testHooksDo(t, c, "POST", "/flush?hold=maybe")
++	require.Equal(t, http.StatusBadRequest, code)
++}
++
++func TestTestHooksFlushFailedPushes(t *testing.T) {
++	c := newTestHooksComponent(t, func(context.Context, labels.Labels, []*pyroscope.RawSample) error {
++		return errors.New("push failed")
++	})
++	addTestHooksSample(t, c)
++	resp := testHooksJSON[flushResp](t, c, "POST", "/flush")
++	require.EqualValues(t, 1, resp.FailedPushes)
++	require.Len(t, resp.Profiles, 1)
++}
++
++func TestTestHooksTargetsPending(t *testing.T) {
++	c := newTestHooksComponent(t, func(context.Context, labels.Labels, []*pyroscope.RawSample) error {
++		return nil
++	})
++
++	targets := testHooksJSON[targetsResp](t, c, "GET", "/targets")
++	require.Len(t, targets.Live, 1)
++	require.Equal(t, uint32(1), targets.Live[0].PID)
++	require.Equal(t, "service_a", targets.Live[0].Labels["service_name"])
++	require.Empty(t, targets.Exited)
++
++	// Applied removal: exited, w/ when
++	before := time.Now().UnixMilli()
++	c.targetFinder.Update(testHooksTargets(false))
++	targets = testHooksJSON[targetsResp](t, c, "GET", "/targets")
++	require.Empty(t, targets.Live)
++	require.Len(t, targets.Exited, 1)
++	require.Equal(t, uint32(1), targets.Exited[0].PID)
++	require.GreaterOrEqual(t, targets.Exited[0].SinceMs, before)
++	_, body := testHooksDo(t, c, "GET", "/targets")
++	require.True(t, strings.Contains(body, `"live":[]`), body)
++
++	pending := testHooksJSON[pendingResp](t, c, "GET", "/pending")
++	require.Empty(t, pending.Pending)
++	addTestHooksSample(t, c)
++	addTestHooksSample(t, c)
++	pending = testHooksJSON[pendingResp](t, c, "GET", "/pending")
++	require.Equal(t, []reporter.PendingSamples{
++		{PID: 1, Type: "process_cpu", Samples: 2},
++	}, pending.Pending)
++}

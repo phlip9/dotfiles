@@ -99,6 +99,16 @@
     # merged profile at a CI peak: ~6.1k samples, ~0.58 MB (estimated from
     # Pyroscope's merged 15s windows). Not upstream. Unit tests in the patch.
     #
+    # Test-only hooks, for nixos/tests/o11y-profiling-ebpf.nix: its checks
+    # must order their steps w/ the reporter's flushes + the targets the
+    # reporter actually applied (args updates are async), not race timers.
+    # Off by default: no HTTP handler, no behavior change. W/ `test_hooks =
+    # true` (`collector.testHooks`), `/api/v0/component/<id>/` serves
+    # `POST flush[?hold=true]` (flush now, return after the pushes; hold
+    # the periodic flushes until the next flush w/o hold), `GET targets`
+    # (applied live + retained exited pids), `GET pending` (samples per pid
+    # awaiting the next flush). Not for upstream. Unit tests in the patch.
+    #
     # (nixpkgs' custom patchPhase ignores `patches`)
     patchPhase = ''
       patch -p1 < ${./ebpf-keep-probes-alive.patch}
@@ -106,6 +116,7 @@
       patch -p1 < ${./ebpf-per-pid-profile.patch}
       patch -p1 < ${./ebpf-location-source-file.patch}
       patch -p1 < ${./ebpf-bound-profiles.patch}
+      patch -p1 < ${./ebpf-test-hooks.patch}
     ''
     + prev.patchPhase;
   }
