@@ -229,12 +229,15 @@ in
         retry(check, timeout=dt.timedelta(seconds=timeout))
         return result[0]
 
-    # Push samples (Prometheus text format) into VictoriaMetrics.
+    # Push samples (Prometheus text format) into VictoriaMetrics. Flush
+    # them, so vmalert's next evaluation sees them, not one after VM's
+    # next pending rows flush, up to 2s later.
     def push(*lines: str) -> None:
         body = shlex.quote("\n".join(lines) + "\n")
         machine.succeed(
             f"printf %s {body} | curl -sSf --data-binary @- "
-            f"{VM_URL}/api/v1/import/prometheus"
+            f"{VM_URL}/api/v1/import/prometheus",
+            f"curl -sSf {VM_URL}/internal/force_flush",
         )
 
     # Alerts Alertmanager dropped from group flushes b/c of an inhibition.
