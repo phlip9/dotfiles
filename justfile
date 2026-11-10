@@ -79,6 +79,8 @@ go-test-inner:
         CGO_ENABLED=0 GOCACHE=/tmp/go-cache GO111MODULE=off go test
     cd nixos/pkgs/github-agent-authd && \
         CGO_ENABLED=0 GOCACHE=/tmp/go-cache GO111MODULE=off go test
+    cd nixos/pkgs/nixos-exporter && \
+        CGO_ENABLED=0 GOCACHE=/tmp/go-cache GO111MODULE=off go test
 
 # --- python --- #
 

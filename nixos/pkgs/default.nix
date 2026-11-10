@@ -66,6 +66,10 @@ fix (phlipPkgsNixos: {
   # niks3-server, patched w/ a configurable inventory metrics refresh interval
   niks3-server = callPackage ./niks3-server { inherit sources; };
 
+  # nixos-exporter - Prometheus exporter for NixOS boots, generations, and
+  # pending reboots
+  nixos-exporter = callPackage ./nixos-exporter { };
+
   # nixbot - CI service, patched to upload already-local outputs + w/ a
   # configurable metrics cache TTL
   nixbot = pkgs.python3Packages.callPackage ./nixbot {
