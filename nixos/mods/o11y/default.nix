@@ -711,6 +711,10 @@ in
           listenAddress = "127.0.0.1";
           port = 9187;
           runAsLocalSuperUser = true;
+          # PostgreSQL 17 moved checkpoint stats out of pg_stat_bgwriter into
+          # pg_stat_checkpointer. Keep in sync:
+          # nixos/sauna/grafana/postgres-overview.json "Buffers".
+          extraFlags = [ "--collector.stat_checkpointer" ];
         };
 
     # ===================================================================
