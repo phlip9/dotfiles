@@ -204,7 +204,7 @@
                         "value": 3
                       },
                       {
-                        "color": "green",
+                        "color": "text",
                         "value": 14
                       }
                     ]
@@ -396,7 +396,7 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "green",
+                              "color": "text",
                               "value": 0
                             },
                             {
@@ -424,7 +424,7 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "green",
+                              "color": "text",
                               "value": 0
                             },
                             {
@@ -623,11 +623,11 @@
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "green",
+                        "color": "transparent",
                         "value": 0
                       },
                       {
-                        "color": "red",
+                        "color": "dark-red",
                         "value": 1
                       }
                     ]
@@ -647,7 +647,7 @@
                           {
                             "options": {
                               "-1": {
-                                "color": "#8e8e8e",
+                                "color": "dark-purple",
                                 "index": 0,
                                 "text": "?"
                               }
@@ -662,15 +662,15 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "#8e8e8e",
+                              "color": "dark-purple",
                               "value": 0
                             },
                             {
-                              "color": "green",
+                              "color": "transparent",
                               "value": 0
                             },
                             {
-                              "color": "red",
+                              "color": "dark-red",
                               "value": 1
                             }
                           ]
@@ -690,7 +690,7 @@
                           {
                             "options": {
                               "-1": {
-                                "color": "#8e8e8e",
+                                "color": "dark-purple",
                                 "index": 0,
                                 "text": "?"
                               }
@@ -705,15 +705,15 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "#8e8e8e",
+                              "color": "dark-purple",
                               "value": 0
                             },
                             {
-                              "color": "green",
+                              "color": "transparent",
                               "value": 0
                             },
                             {
-                              "color": "orange",
+                              "color": "dark-orange",
                               "value": 1
                             }
                           ]
@@ -742,7 +742,7 @@
                           {
                             "options": {
                               "-1": {
-                                "color": "#8e8e8e",
+                                "color": "dark-purple",
                                 "index": 0,
                                 "text": "?"
                               }
@@ -757,15 +757,15 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "#8e8e8e",
+                              "color": "dark-purple",
                               "value": 0
                             },
                             {
-                              "color": "green",
+                              "color": "transparent",
                               "value": 0
                             },
                             {
-                              "color": "red",
+                              "color": "dark-red",
                               "value": 1
                             }
                           ]
@@ -785,15 +785,15 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "#8e8e8e",
+                              "color": "dark-purple",
                               "value": 0
                             },
                             {
-                              "color": "green",
+                              "color": "transparent",
                               "value": 0
                             },
                             {
-                              "color": "yellow",
+                              "color": "dark-yellow",
                               "value": 1
                             }
                           ]
@@ -805,17 +805,17 @@
                           {
                             "options": {
                               "-1": {
-                                "color": "#8e8e8e",
+                                "color": "dark-purple",
                                 "index": 0,
                                 "text": "?"
                               },
                               "0": {
-                                "color": "green",
+                                "color": "transparent",
                                 "index": 1,
                                 "text": "no"
                               },
                               "1": {
-                                "color": "yellow",
+                                "color": "dark-yellow",
                                 "index": 2,
                                 "text": "REQUIRED"
                               }
@@ -838,11 +838,11 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "red",
+                              "color": "dark-red",
                               "value": 0
                             },
                             {
-                              "color": "green",
+                              "color": "transparent",
                               "value": 1
                             }
                           ]
@@ -854,17 +854,17 @@
                           {
                             "options": {
                               "-1": {
-                                "color": "#8e8e8e",
+                                "color": "dark-purple",
                                 "index": 0,
                                 "text": "?"
                               },
                               "0": {
-                                "color": "red",
+                                "color": "dark-red",
                                 "index": 1,
                                 "text": "BAD"
                               },
                               "1": {
-                                "color": "green",
+                                "color": "transparent",
                                 "index": 2,
                                 "text": "synced"
                               }
@@ -887,11 +887,11 @@
                           "mode": "absolute",
                           "steps": [
                             {
-                              "color": "red",
+                              "color": "dark-red",
                               "value": 0
                             },
                             {
-                              "color": "green",
+                              "color": "transparent",
                               "value": 1
                             }
                           ]
@@ -903,17 +903,17 @@
                           {
                             "options": {
                               "-1": {
-                                "color": "#8e8e8e",
+                                "color": "dark-purple",
                                 "index": 0,
                                 "text": "?"
                               },
                               "0": {
-                                "color": "red",
+                                "color": "dark-red",
                                 "index": 1,
                                 "text": "FAILED"
                               },
                               "1": {
-                                "color": "green",
+                                "color": "transparent",
                                 "index": 2,
                                 "text": "OK"
                               }
@@ -927,7 +927,7 @@
                 ]
               },
               "options": {
-                "colorMode": "background",
+                "colorMode": "background_solid",
                 "graphMode": "none",
                 "justifyMode": "center",
                 "orientation": "vertical",
@@ -1215,22 +1215,22 @@
                     {
                       "options": {
                         "0": {
-                          "color": "red",
+                          "color": "dark-red",
                           "index": 0,
                           "text": "DOWN"
                         },
                         "0.25": {
-                          "color": "#8e8e8e",
+                          "color": "dark-purple",
                           "index": 1,
                           "text": "UNKNOWN"
                         },
                         "0.5": {
-                          "color": "yellow",
+                          "color": "dark-yellow",
                           "index": 2,
                           "text": "REBOOT"
                         },
                         "1": {
-                          "color": "green",
+                          "color": "transparent",
                           "index": 3,
                           "text": "UP"
                         }
@@ -1243,19 +1243,19 @@
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "red",
+                        "color": "dark-red",
                         "value": 0
                       },
                       {
-                        "color": "#8e8e8e",
+                        "color": "dark-purple",
                         "value": 0.25
                       },
                       {
-                        "color": "yellow",
+                        "color": "dark-yellow",
                         "value": 0.5
                       },
                       {
-                        "color": "green",
+                        "color": "transparent",
                         "value": 1
                       }
                     ]
@@ -1368,7 +1368,7 @@
                 ]
               },
               "options": {
-                "colorMode": "background",
+                "colorMode": "background_solid",
                 "graphMode": "none",
                 "justifyMode": "center",
                 "orientation": "vertical",
@@ -2931,11 +2931,12 @@
               "fieldConfig": {
                 "defaults": {
                   "color": {
-                    "mode": "thresholds"
+                    "fixedColor": "#323632",
+                    "mode": "fixed"
                   },
                   "custom": {
                     "axisPlacement": "auto",
-                    "fillOpacity": 80,
+                    "fillOpacity": 100,
                     "hideFrom": {
                       "legend": false,
                       "tooltip": false,
@@ -2954,7 +2955,7 @@
                           "text": "DOWN"
                         },
                         "0.25": {
-                          "color": "#8e8e8e",
+                          "color": "dark-purple",
                           "index": 1,
                           "text": "UNKNOWN"
                         },
@@ -2964,7 +2965,7 @@
                           "text": "REBOOT"
                         },
                         "1": {
-                          "color": "green",
+                          "color": "#323632",
                           "index": 3,
                           "text": "UP"
                         }
@@ -2980,7 +2981,7 @@
                         "value": 0
                       },
                       {
-                        "color": "#8e8e8e",
+                        "color": "dark-purple",
                         "value": 0.25
                       },
                       {
@@ -2988,7 +2989,7 @@
                         "value": 0.5
                       },
                       {
-                        "color": "green",
+                        "color": "#323632",
                         "value": 1
                       }
                     ]
