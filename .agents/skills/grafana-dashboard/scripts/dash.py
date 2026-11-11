@@ -7,14 +7,17 @@ new dashboard (from the repo root, in a throwaway tmp/<name>/gen.py):
 
     import sys
     sys.path.insert(0, ".agents/skills/grafana-dashboard/scripts")
-    from dash import Dashboard, pos_delta, thresholds
+    from dash import Dashboard, add_matcher, pos_delta, thresholds
 
     d = Dashboard("Nix CI", tags=["ci"], time_from="now-7d")
-    up = d.stat("stat-up", "nixbot", "Scrape status.", 'up{job="nixbot"}',
+    d.follow_overview()  # $instance, annotations, nav: like the others
+    up = d.stat("stat-up", "nixbot", "Scrape status.",
+                'up{job="nixbot", instance=~"$instance"}',
                 mappings=d.UP_MAP, color_mode="background_solid",
                 thr=d.UP_THR, graph=False)
     rate = d.timeseries("ts-rate", "Requests", "Req rate by route.",
-                        [("sum by (route) (rate(x[$__rate_interval]))",
+                        [(add_matcher("sum by (route) "
+                                      "(rate(x[$__rate_interval]))"),
                           "{{route}}")], unit="reqps")
     d.row("Overview", [(4, [(up, 4)]), (8, [(rate, 24)])])
     d.write("tmp/nix-ci/nix-ci.json", uid="nix-ci")  # Git Sync manifest
@@ -36,13 +39,22 @@ update an existing dashboard in place (tmp/<name>/edit.py; find keys w/
 edits.
 """
 
+import copy
 import json
 import os
+import re
 from collections.abc import Sequence
 from typing import Any, ClassVar, Literal, Self
 
 GROUP = "victoriametrics-metrics-datasource"
 DS_VAR = "DS_PROMETHEUS"
+# Source of truth for the conventions every dashboard shares
+# (`Dashboard.follow_overview`). Paths are relative to the repo root.
+OVERVIEW = "nixos/sauna/grafana/overview.json"
+# Tag on every dashboard; its "Dashboards" dropdown link lists them.
+NAV_TAG = "o11y"
+# Series selector filter for the shared `$instance` var.
+INSTANCE_MATCHER = 'instance=~"$instance"'
 
 # A JSON object, ex: a spec or panel. Grafana's v2 schema is too big to type
 # here, so its values are `Any`.
@@ -113,6 +125,118 @@ STATUS_COLORS: list[JsonObj] = [
 
 # Event-count bar charts: >= 1h buckets keep sparse events readable.
 BARS: JsonObj = {"interval": "1h", "maxDataPoints": 200}
+
+
+# --- add_matcher --- #
+
+# Keywords followed by a parenthesized label list, not an expression.
+_GROUPING = {"by", "without", "on", "ignoring", "group_left", "group_right"}
+# Other bare words that aren't metric names.
+_KEYWORDS = {"bool", "and", "or", "unless", "offset", "atan2", "inf", "nan",
+             "keep_metric_names", "default", "if", "ifnot", "limit"}
+_IDENT = re.compile(r"[a-zA-Z_:][a-zA-Z0-9_:.]*")
+_NUMBER = re.compile(r"\d[\d.]*([eE][+-]?\d+)?[a-zA-Z]*")
+_VAR = re.compile(r"\$(\{[^}]*\}|\w+)")
+_AGG = re.compile(r"(by|without)\s*\(", re.IGNORECASE)
+# A quoted label value (any PromQL quote style, w/ escapes).
+_QUOTED = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`[^`]*`')
+
+
+def _string_end(expr: str, i: int) -> int:
+    """Index after the quoted string starting at `i`."""
+    quote, j = expr[i], i + 1
+    while expr[j] != quote:
+        j += 2 if expr[j] == "\\" else 1
+    return j + 1
+
+
+def _close(expr: str, i: int, open_: str, close: str) -> int:
+    """Index after the `close` matching `open_` at `i` (strings skipped)."""
+    depth, j = 0, i
+    while True:
+        char = expr[j]
+        if char in "\"'`":
+            j = _string_end(expr, j)
+            continue
+        depth += (char == open_) - (char == close)
+        j += 1
+        if depth == 0:
+            return j
+
+
+def _with_matcher(braces: str, matcher: str) -> str:
+    """`{...}` selector w/ `matcher` appended, unless it already has a
+    matcher on the same label (label names only, not quoted values)."""
+    label = matcher.split("=")[0].rstrip("!~ ")
+    names = _QUOTED.sub('""', braces)
+    if re.search(r"(^|[{,\s])" + re.escape(label) + r"\s*[!=]", names):
+        return braces
+    # A trailing comma (`{a="b",}`) is valid: don't double it.
+    inner = braces[1:-1].strip().removesuffix(",").rstrip()
+    return "{" + (inner + ", " if inner else "") + matcher + "}"
+
+
+def add_matcher(expr: str, matcher: str = INSTANCE_MATCHER) -> str:
+    """PromQL/MetricsQL `expr` w/ `matcher` added to every series selector
+    (ex: an upstream dashboard's queries -> filtered by `$instance`).
+    Keeps the rest of the text (formatting, `#` comments) as is; idempotent.
+    Not for `label_values(metric, label)` variable queries: their label arg
+    isn't a selector. Raises ValueError on MetricsQL `WITH (...)` templates:
+    it can't tell template names from metric names.
+
+    >>> add_matcher('sum by (le) (rate(x{a="b"}[5m])) / y')
+    'sum by (le) (rate(x{a="b", instance=~"$instance"}[5m])) / y{instance=~"$instance"}'
+    """
+    out: list[str] = []
+    i, end = 0, len(expr)
+    while i < end:
+        char = expr[i]
+        if char in "\"'`":
+            j = _string_end(expr, i)
+            out.append(expr[i:j])
+        elif char == "#":  # comment to end of line
+            j = expr.find("\n", i)
+            j = end if j < 0 else j
+            out.append(expr[i:j])
+        elif char == "[":  # range / subquery window
+            j = expr.index("]", i) + 1
+            out.append(expr[i:j])
+        elif char == "{":  # selector w/o metric name
+            j = _close(expr, i, "{", "}")
+            out.append(_with_matcher(expr[i:j], matcher))
+        elif char == "$" and (m := _VAR.match(expr, i)):
+            j = m.end()
+            out.append(m.group())
+        elif char.isdigit() and (m := _NUMBER.match(expr, i)):
+            j = m.end()
+            out.append(m.group())
+        elif m := _IDENT.match(expr, i):
+            word, j = m.group(), m.end()
+            k = j
+            while k < end and expr[k].isspace():
+                k += 1
+            nxt = expr[k] if k < end else ""
+            low = word.lower()
+            if low == "with" and nxt == "(":
+                raise ValueError(f"add_matcher: WITH templates unsupported: "
+                                 f"{expr!r}")
+            if low in _GROUPING and nxt == "(":  # label list
+                j = _close(expr, k, "(", ")")
+                out.append(expr[i:j])
+            elif (low in _KEYWORDS or low in _GROUPING or nxt == "("
+                  or _AGG.match(expr, k)):  # keyword, fn, `sum by (..)`
+                out.append(word)
+            elif nxt == "{":
+                j = _close(expr, k, "{", "}")
+                out.append(word + expr[m.end():k]
+                           + _with_matcher(expr[k:j], matcher))
+            else:  # bare metric name
+                out.append(word + "{" + matcher + "}")
+        else:
+            j = i + 1
+            out.append(char)
+        i = j
+    return "".join(out)
 
 
 def go_json(obj: Json) -> str:
@@ -287,6 +411,51 @@ class Dashboard:
         if layout["kind"] != "RowsLayout":
             raise ValueError(f"layout is {layout['kind']}, not RowsLayout")
         return layout["spec"]["rows"]
+
+    # --- shared conventions --- #
+
+    def follow_overview(self, overview: str = OVERVIEW) -> None:
+        """Copy the conventions every dashboard shares from `overview`
+        (the source of truth), replacing older copies; idempotent:
+        `NAV_TAG` + "Dashboards" dropdown link, overview's annotations
+        (reboots, deploys, alerts, OOM kills), the `$instance` var right
+        after the datasource var, refresh choices, shared crosshair.
+        Queries still need `INSTANCE_MATCHER` (see `add_matcher`)."""
+        ov = Dashboard.load(overview).data
+        spec = self.data
+        # Loaded bare specs may omit any of these.
+        for key, default in (("tags", []), ("links", []),
+                             ("annotations", []), ("timeSettings", {})):
+            spec.setdefault(key, default)
+        if NAV_TAG not in spec["tags"]:
+            spec["tags"].append(NAV_TAG)
+
+        nav = next(link for link in ov["links"] if link["type"] == "dashboards")
+        spec["links"] = [copy.deepcopy(nav)] + [
+            link for link in spec["links"] if link["type"] != "dashboards"]
+
+        # Built-in "Annotations & Alerts" first, then overview's, then ours.
+        shared = [a for a in ov["annotations"] if not a["spec"].get("builtIn")]
+        names = {a["spec"]["name"] for a in shared}
+        own = [a for a in spec["annotations"] if a["spec"]["name"] not in names]
+        builtin = [a for a in own if a["spec"].get("builtIn")]
+        rest = [a for a in own if not a["spec"].get("builtIn")]
+        spec["annotations"] = builtin + copy.deepcopy(shared) + rest
+
+        inst = next(v for v in ov["variables"]
+                    if v["spec"]["name"] == "instance")
+        variables = [v for v in self.variables
+                     if v["spec"]["name"] != "instance"]
+        # Right after the datasource var, else first (fixed datasource).
+        ds_idx = next((i for i, v in enumerate(variables)
+                       if v["kind"] == "DatasourceVariable"), -1)
+        variables.insert(ds_idx + 1, copy.deepcopy(inst))
+        spec["variables"] = variables
+
+        ts, ov_ts = spec["timeSettings"], ov["timeSettings"]
+        ts["autoRefresh"] = ov_ts["autoRefresh"]
+        ts["autoRefreshIntervals"] = list(ov_ts["autoRefreshIntervals"])
+        spec["cursorSync"] = ov["cursorSync"]
 
     # --- lookup --- #
 

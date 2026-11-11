@@ -215,9 +215,14 @@ grafana-promote scratch-uid file uid="":
 
 grafana-ci: grafana-test
 
-# Unit test the shared jq defs (just/grafana.jq) w/ jq --run-tests
+# Unit test the shared jq defs (just/grafana.jq) w/ jq --run-tests, and the
+# grafana-dashboard skill's dash.py
 grafana-test:
     nix shell -f . pkgs.jq --command jq -L just --run-tests just/grafana.jq.test
+    nix shell -f . pythonDev --command python3 -m unittest discover \
+        --start-directory .agents/skills/grafana-dashboard/scripts \
+        --top-level-directory .agents/skills/grafana-dashboard/scripts \
+        --pattern '*_test.py'
 
 # Upload a dashboard file to its Scratch copy (scratch-<stem>); see --help
 [positional-arguments]

@@ -97,12 +97,23 @@ errors), "is the host OK?" (runtime row, collapsed).
 
 Conventions (see `nixos/sauna/grafana/nix-ci.json` as the reference):
 
+- Shared by every dashboard, copied from `overview.json` (the source of
+  truth) by `d.follow_overview()`: `$instance` var (one host, default
+  `sauna`), overview's annotations (reboots, deploys, page/warn alerts, OOM
+  kills), `o11y` tag + "Dashboards" dropdown (keeps time + vars), 1m
+  refresh, shared crosshair. Every series selector filters
+  `instance=~"$instance"` (`add_matcher(expr)` adds it). Pin a job w/
+  `job="<name>"`, no job picker: `process_*`/`go_*` exist on every job.
+  Overview's shared parts changed? Rerun `follow_overview()` on every
+  dashboard: `just grafana-test` fails until they all match.
 - `RowsLayout`; each row a `GridLayout`, 24 columns. Overview row first:
   stat tiles w=4 h=4, 6 per line. Detail rows: 2-3 panels per line, h=7-8.
   Collapse rarely used rows (runtime/host).
 - Every panel gets a 1-sentence `description` (units, caveats, what an
   anomaly looks like).
-- Stats: background sparkline on metric tiles.
+- Stats: background sparkline on metric tiles. Metric tiles color the
+  value, not the fill: thresholds `text`, then `orange` warn, `red` bad;
+  never green (also for gauges, bar gauges).
 - Status displays (UP/DOWN tiles, health strips, state timelines):
   neutral when healthy, color only for anomalies. A glance w/ no color
   anywhere = all OK.
@@ -144,11 +155,12 @@ Write `tmp/<name>/gen.py` using the builder library:
 ```python
 import sys
 sys.path.insert(0, ".agents/skills/grafana-dashboard/scripts")
-from dash import BARS, STATUS_COLORS, Dashboard, color, hidden, pos_delta, thresholds
+from dash import BARS, STATUS_COLORS, Dashboard, add_matcher, color, hidden, pos_delta, thresholds
 ```
 
-See the `scripts/dash.py` docstrings: `Dashboard.stat`, `.timeseries`,
-`.panel` (any other viz, raw options), `.row`, `.write(path, uid=...)`.
+See the `scripts/dash.py` docstrings: `Dashboard.follow_overview`,
+`.stat`, `.timeseries`, `.panel` (any other viz, raw options), `.row`,
+`.write(path, uid=...)`, and `add_matcher`.
 It validates element refs + row widths and writes Grafana's own JSON
 formatting. Then:
 
@@ -357,6 +369,13 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
 - Timeline `fillOpacity` replaces a color's own alpha: `rgba(...)` colors
   come out opaque-ish. For an exact shade, use an opaque hex at
   `fillOpacity: 100`.
+- Bar gauge value text takes the bar color: neutral `#323632` bars need
+  `valueMode: "text"`, else the value is unreadable.
+- `grafana-push` prefixes the Scratch copy's tags w/ `scratch-` (promote
+  strips it), so tag lists (the "Dashboards" dropdown) never show copies.
+- History before 2026-11-10 ~20:00Z has `instance="127.0.0.1:<port>"`
+  (pre-relabel), so `$instance` filters hide it until it ages out
+  (~2027-02); not backfilled.
 - Compact tiles: one stat panel w/ one query per tile (legend = tile name),
   `textMode: "value_and_name"`, `wideLayout: false` (else wide tiles put
   the name beside the value), `graphMode: "none"`, fixed `text` sizes.
