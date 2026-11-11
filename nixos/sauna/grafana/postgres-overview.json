@@ -679,8 +679,7 @@
               "fieldConfig": {
                 "defaults": {
                   "color": {
-                    "fixedColor": "rgb(31, 120, 193)",
-                    "mode": "fixed"
+                    "mode": "thresholds"
                   },
                   "decimals": 0,
                   "mappings": [
@@ -698,7 +697,7 @@
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "green",
+                        "color": "text",
                         "value": 0
                       }
                     ]
