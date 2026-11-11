@@ -151,6 +151,7 @@
     extraGroups = [
       "wheel"
       "github-agent" # github-agent-authd group
+      "rbitcoin" # plain `rbitcoin-cli` via the shared RPC socket
     ];
     openssh.authorizedKeys.keys = import ../../nix/ssh-pubkeys.nix;
 
@@ -171,6 +172,7 @@
   # - system.slice: infra (sshd, nginx, grafana, victoriametrics, ...)
   # - workload.slice: killable, restartable agent + CI work
   # - user.slice: my ssh/tmux sessions + user services
+  # - rbitcoin.slice: bitcoin full node, capped
 
   # ### system.slice
   # avoid reclaiming pages from important services when under mem pressure
@@ -201,6 +203,23 @@
     MemoryMax = "75%";
     MemorySwapMax = "8G";
   };
+
+  # ### rbitcoin.slice
+  # MemoryMax includes the node's page cache, so its chain scans can't evict
+  # other services' cache. The node sizes its IBD + index workers to the
+  # cap. No swap, so the `-.slice` swap kill below never picks it. No oomd
+  # pressure kill: SIGKILL drops the node's last unflushed writes.
+  # TODO(phlip9): once the first IBD + scripthash index build finish, drop
+  # to CPUWeight = 25 (yield like workload.slice) and MemoryMax = "24G".
+  systemd.slices.rbitcoin = {
+    description = "rbitcoin full node";
+    sliceConfig = {
+      CPUWeight = 100;
+      MemoryMax = "32G";
+      MemorySwapMax = 0;
+    };
+  };
+  systemd.services.rbitcoin.serviceConfig.Slice = "rbitcoin.slice";
 
   # systemd-oomd: userspace backstop OOM killer. Doesn't monitor any cgroups by
   # default. oomd SIGKILLs a whole leaf cgroup (e.g. paseo.service). memory
@@ -438,6 +457,32 @@
   # spent minutes on serial narinfo lookups. Nix 2.35 probes concurrently.
   # TODO(phlip9): drop once nixos-unstable's default `pkgs.nix` is >= 2.35.
   nix.package = pkgs.nixVersions.latest;
+
+  # =========================================================================
+  # rbitcoin - Bitcoin full node (mainnet)
+  # =========================================================================
+  # Full archive (~0.8 TiB in /var/lib/rbitcoin) w/ the scripthash index for
+  # a local Esplora. The first IBD takes 10h+, then the index build takes
+  # tens of minutes to hours. o11y turns on its health + /metrics listener.
+  # see: nixos/mods/rbitcoin.nix
+  # see: nixos/tests/rbitcoin.nix
+  services.rbitcoin = {
+    enable = true;
+    # Inbound P2P on [::]:8333, IPv4 + IPv6.
+    p2p = {
+      address = "::";
+      openFirewall = true;
+      maxInbound = 64;
+    };
+    # Loopback only, for local wallets + tools: no TLS or auth. Grafana has
+    # :3000. Turns on the scripthash index for address history.
+    esplora = {
+      enable = true;
+      port = 3001;
+    };
+    # For `rbitcoin` group members, ex: phlip9.
+    rpc.socketPath = "/run/rbitcoin/rpc.sock";
+  };
 
   # =========================================================================
   # Observability (o11y)
