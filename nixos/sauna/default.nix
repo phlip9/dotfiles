@@ -505,6 +505,23 @@
     # see: nixos/mods/o11y/profiling.nix
     profiling.enable = true;
   };
+  # node-exporter collectors w/o data on sauna, else each reports
+  # node_scrape_collector_success=0 (a failed row in Node Exporter Full's
+  # "Node Exporter Scrape"): no bcachefs, bonding, Fibre Channel,
+  # InfiniBand, IPVS, NFS client/server, tape, or ZFS. RAPL energy counters
+  # are root-only on purpose (CVE-2020-8694 power side channel).
+  services.prometheus.exporters.node.disabledCollectors = [
+    "bcachefs"
+    "bonding"
+    "fibrechannel"
+    "infiniband"
+    "ipvs"
+    "nfs"
+    "nfsd"
+    "rapl"
+    "tapestats"
+    "zfs"
+  ];
   sops.secrets.grafana-admin-password = { };
   sops.secrets.grafana-secret-key = { };
   sops.secrets.grafana-secrets-manager-key.restartUnits = [ "grafana.service" ];
