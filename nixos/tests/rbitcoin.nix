@@ -61,6 +61,10 @@
     {
       imports = [ ./lib/victoriametrics.nix ];
 
+      # Esplora REST on 127.0.0.1:3000, like sauna (there on another port).
+      # Turns on the scripthash index, which node2 builds after its IBD.
+      services.rbitcoin.esplora.enable = true;
+
       # Regtest has no seeds. Dial node1 by IP, since node1 only listens on
       # IPv4 and its hostname may resolve to IPv6 first.
       services.rbitcoin.p2p.connect = [ "${node1Ip}:${node1Port}" ];
@@ -82,6 +86,7 @@
     };
 
   testScript = ''
+    import hashlib
     import shlex
     from datetime import timedelta
 
@@ -136,10 +141,15 @@
         node.fail("systemctl is-active rbitcoin-synced.target")
         node.fail(f"test -e {synced_marker}")
 
-    def mine(blocks: int) -> str:
-        """Mine `blocks` blocks on node1. Returns the new tip hash."""
-        node1.succeed(f"{cli} generatetodescriptor {blocks} 'raw(51)'")
+    def mine(blocks: int, script: str = "51") -> str:
+        """Mine `blocks` blocks on node1, paying their coinbases to the
+        hex `script`. Returns the new tip hash."""
+        node1.succeed(f"{cli} generatetodescriptor {blocks} 'raw({script})'")
         return rpc(node1, "getbestblockhash")
+
+    def scripthash(script: str) -> str:
+        """Electrum/Esplora scripthash of a hex script."""
+        return hashlib.sha256(bytes.fromhex(script)).digest()[::-1].hex()
 
     def wait_for_tip(node, tip: str) -> None:
         """Wait for the node's best block to reach `tip`."""
@@ -291,6 +301,26 @@
                 timeout=timedelta(seconds=60),
             )
 
+    with subtest("node2 serves Esplora w/ the scripthash index"):
+        esplora_url = "http://127.0.0.1:3000"
+        # Synced implies Esplora is up, after the index caught up.
+        assert node2.succeed(f"curl -sf {esplora_url}/blocks/tip/hash") == tip
+        # IBD's bulk build: every coinbase so far pays to `raw(51)`. The
+        # index trails new tips briefly (write-behind).
+        node2.wait_until_succeeds(
+            f"curl -sf {esplora_url}/scripthash/{scripthash('51')} "
+            f"| jq -e '.chain_stats.tx_count == {ibd_blocks + 5}'",
+            timeout=timedelta(seconds=30),
+        )
+        # Write-behind: a new tip pays to a fresh script.
+        tip = mine(1, script="52")
+        wait_for_tip(node2, tip)
+        node2.wait_until_succeeds(
+            f"curl -sf {esplora_url}/scripthash/{scripthash('52')} "
+            "| jq -e '.chain_stats.funded_txo_count == 1'",
+            timeout=timedelta(seconds=30),
+        )
+
     with subtest("chain state persists across restarts"):
         # Restart each node while the other is down, so it can't re-sync
         # its chain from its peer.
@@ -311,6 +341,6 @@
         wait_for_synced(node1)
         tip = mine(1)
         wait_for_tip(node2, tip)
-        assert rpc(node2, "getblockcount") == str(ibd_blocks + 6)
+        assert rpc(node2, "getblockcount") == str(ibd_blocks + 7)
   '';
 }
