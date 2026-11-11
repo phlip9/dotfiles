@@ -49,6 +49,12 @@ Json = JsonObj | list[Any] | str | float | bool | None
 
 Theme = Literal["dark", "light"]
 
+# Default viewport width: the dashboard width phlip9 sees on phlipdesk (a
+# 2548px browser viewport w/ Grafana's nav menu docked: 2113px panel area).
+# Kiosk mode has no nav menu, so the same panel layout needs a narrower
+# viewport: 2172px.
+DEFAULT_WIDTH = 2172
+
 # Grafana's kiosk footer is `position: fixed`; hide it so it doesn't cover
 # panels in full-page shots.
 HIDE_CSS = '[data-testid="public-dashboard-footer"] { display: none !important; }'
@@ -250,8 +256,9 @@ class ScreenshotArgs:
 
     uid: str
     out: str | None
-    time_from: str
-    time_to: str
+    # None: the dashboard's own default time range
+    time_from: str | None
+    time_to: str | None
     panel: int | None
     expand: bool
     width: int
@@ -268,8 +275,14 @@ def screenshot_args(argv: list[str]) -> ScreenshotArgs:
     )
     parser.add_argument("uid", help="dashboard uid, ex: scratch-nginx")
     parser.add_argument("-o", "--out", help="output PNG (default: <uid>.png)")
-    parser.add_argument("--from", dest="time_from", default="now-24h")
-    parser.add_argument("--to", dest="time_to", default="now")
+    parser.add_argument(
+        "--from",
+        dest="time_from",
+        help="range start, ex: now-7d (default: the dashboard's own range)",
+    )
+    parser.add_argument(
+        "--to", dest="time_to", help="range end (default: now, w/ --from)"
+    )
     parser.add_argument(
         "--panel",
         type=int,
@@ -278,7 +291,12 @@ def screenshot_args(argv: list[str]) -> ScreenshotArgs:
     parser.add_argument(
         "--expand", action="store_true", help="expand all collapsed rows"
     )
-    parser.add_argument("--width", type=int, default=1600)
+    parser.add_argument(
+        "--width",
+        type=int,
+        default=DEFAULT_WIDTH,
+        help=f"viewport width (default: {DEFAULT_WIDTH}, see DEFAULT_WIDTH)",
+    )
     parser.add_argument(
         "--height",
         type=int,
@@ -300,11 +318,14 @@ def screenshot_args(argv: list[str]) -> ScreenshotArgs:
 
 
 def screenshot_url(args: ScreenshotArgs) -> str:
-    params = [
-        ("from", args.time_from),
-        ("to", args.time_to),
-        ("theme", args.theme),
-    ]
+    # W/o from/to, Grafana uses the dashboard's default range.
+    params: list[tuple[str, str]] = []
+    if args.time_from is not None:
+        params.append(("from", args.time_from))
+        params.append(("to", args.time_to or "now"))
+    elif args.time_to is not None:
+        sys.exit("error: --to needs --from")
+    params.append(("theme", args.theme))
     if args.panel is not None:
         params.append(("viewPanel", f"panel-{args.panel}"))
     for var in args.var:

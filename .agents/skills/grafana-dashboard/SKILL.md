@@ -169,6 +169,9 @@ $ just grafana-screenshot scratch-<name> --panel 14 -o tmp/<name>/p14.png
   match status meaning, no near-empty panels, bars readable, row heights
   balanced. Tall full-page shots get downscaled when read; use `--panel ID`
   (element `.spec.id`) for detail.
+- The default `--width` (2172) renders the panel layout phlip9 sees on
+  phlipdesk. Screenshot at the default only. W/o `--from`, shots use the
+  dashboard's own default range.
 - Cross-check headline numbers against a direct `query_prometheus`.
 
 ## 5. Iterate
