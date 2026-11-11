@@ -121,8 +121,8 @@
           "hide": false,
           "iconColor": "dark-red",
           "legacyOptions": {
-            "expr": "sum by (cgroup) (increase(nixos_cgroup_oom_kills_total{instance=~\"$instance\", cgroup=~\".+/.+\"}[2m])) \u003e 0",
-            "textFormat": "{{cgroup}}",
+            "expr": "sum by (unit) (increase(nixos_cgroup_oom_kills_total{instance=~\"$instance\", slice=~\".+\", slice!=\"-.slice\"}[2m])) \u003e 0",
+            "textFormat": "{{unit}}",
             "titleFormat": "OOM kill"
           },
           "name": "OOM kills",
@@ -5041,9 +5041,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(nixos_cgroup_cpu_seconds_total{instance=~\"$instance\", cgroup!~\".+/.+\"}[$__rate_interval])",
+                        "expr": "rate(nixos_cgroup_cpu_seconds_total{instance=~\"$instance\", slice=\"-.slice\"}[$__rate_interval])",
                         "instant": false,
-                        "legendFormat": "{{cgroup}}",
+                        "legendFormat": "{{unit}}",
                         "range": true
                       },
                       "version": "v0"
@@ -5217,9 +5217,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixos_cgroup_memory_bytes{instance=~\"$instance\", cgroup!~\".+/.+\"}",
+                        "expr": "nixos_cgroup_memory_bytes{instance=~\"$instance\", slice=\"-.slice\"}",
                         "instant": false,
-                        "legendFormat": "{{cgroup}}",
+                        "legendFormat": "{{unit}}",
                         "range": true
                       },
                       "version": "v0"
@@ -5238,9 +5238,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixos_cgroup_memory_max_bytes{instance=~\"$instance\", cgroup!~\".+/.+\"}",
+                        "expr": "nixos_cgroup_memory_max_bytes{instance=~\"$instance\", slice=\"-.slice\"}",
                         "instant": false,
-                        "legendFormat": "{{cgroup}} max",
+                        "legendFormat": "{{unit}} max",
                         "range": true
                       },
                       "version": "v0"
@@ -5259,7 +5259,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(nixos_cgroup_memory_stat_bytes{instance=~\"$instance\", cgroup!~\".+/.+\", type=~\"anon|file_mapped\"})",
+                        "expr": "sum(nixos_cgroup_memory_stat_bytes{instance=~\"$instance\", slice=\"-.slice\", type=~\"anon|file_mapped\"})",
                         "instant": false,
                         "legendFormat": "RSS (all)",
                         "range": true
@@ -5508,9 +5508,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(nixos_cgroup_pressure_stalled_seconds_total{instance=~\"$instance\", resource=\"memory\", kind=\"full\", cgroup=~\"[^/]+|user.slice/user-.+\"}[$__rate_interval])",
+                        "expr": "rate(nixos_cgroup_pressure_stalled_seconds_total{instance=~\"$instance\", resource=\"memory\", kind=\"full\", slice=~\"-.slice|user.slice\"}[$__rate_interval])",
                         "instant": false,
-                        "legendFormat": "{{cgroup}}",
+                        "legendFormat": "{{unit}}",
                         "range": true
                       },
                       "version": "v0"
@@ -5686,9 +5686,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixos_cgroup_memory_swap_bytes{instance=~\"$instance\", cgroup!~\".+/.+\"}",
+                        "expr": "nixos_cgroup_memory_swap_bytes{instance=~\"$instance\", slice=\"-.slice\"}",
                         "instant": false,
-                        "legendFormat": "{{cgroup}}",
+                        "legendFormat": "{{unit}}",
                         "range": true
                       },
                       "version": "v0"
@@ -5707,9 +5707,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixos_cgroup_memory_swap_max_bytes{instance=~\"$instance\", cgroup!~\".+/.+\"}",
+                        "expr": "nixos_cgroup_memory_swap_max_bytes{instance=~\"$instance\", slice=\"-.slice\"}",
                         "instant": false,
-                        "legendFormat": "{{cgroup}} max",
+                        "legendFormat": "{{unit}} max",
                         "range": true
                       },
                       "version": "v0"
@@ -5913,7 +5913,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "label_replace(label_replace(label_replace(topk_max(10, rate(nixos_cgroup_cpu_seconds_total{instance=~\"$instance\", cgroup=~\".+/.+\"}[$__rate_interval])), \"unit\", \"$1\", \"cgroup\", \".+/(.+)\"), \"service_name\", \"$1\", \"unit\", \"(.+)\\\\.service\"), \"service_name\", \"$1\", \"service_name\", \"(.+@).*\")",
+                        "expr": "label_replace(label_replace(topk_max(10, rate(nixos_cgroup_cpu_seconds_total{instance=~\"$instance\", slice=~\".+\", slice!=\"-.slice\"}[$__rate_interval])), \"service_name\", \"$1\", \"unit\", \"(.+)\\\\.service\"), \"service_name\", \"$1\", \"service_name\", \"(.+@).*\")",
                         "instant": false,
                         "legendFormat": "{{unit}}",
                         "range": true
@@ -6037,7 +6037,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "label_replace(topk_max(10, sum by (cgroup) (nixos_cgroup_memory_stat_bytes{instance=~\"$instance\", cgroup=~\".+/.+\", type=~\"anon|file_mapped\"})), \"unit\", \"$1\", \"cgroup\", \".+/(.+)\")",
+                        "expr": "topk_max(10, sum by (unit) (nixos_cgroup_memory_stat_bytes{instance=~\"$instance\", slice=~\".+\", slice!=\"-.slice\", type=~\"anon|file_mapped\"}))",
                         "instant": false,
                         "legendFormat": "{{unit}}",
                         "range": true
