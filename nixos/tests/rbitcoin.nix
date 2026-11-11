@@ -159,6 +159,26 @@
         status_text = node1.succeed(unit_prop.format("StatusText")).strip()
         assert status_text == "following", status_text
 
+    with subtest("rbitcoin.service is sandboxed"):
+        # Exposure from 0 (best) to 10, but `--threshold` takes tenths:
+        # 11 = 1.1. Raise only w/ a reason; see the sandbox in
+        # nixos/mods/rbitcoin.nix.
+        status, out = node1.execute(
+            "systemd-analyze security --threshold=11 --no-pager "
+            "rbitcoin.service 2>&1"
+        )
+        assert status == 0, out
+        # The seccomp filter allows io_uring; the node logs its IO backend.
+        node1.succeed(
+            "journalctl -u rbitcoin.service -o cat --no-pager "
+            "| grep -E 'rbitcoin-node starting .* io=io_uring'"
+        )
+        # `~@resources` still lets the node raise its NOFILE soft limit.
+        node1.succeed(
+            "grep -E '^Max open files +16384 ' "
+            "/proc/$(systemctl show -p MainPID --value rbitcoin.service)/limits"
+        )
+
     with subtest("health probes answer before the node is ready"):
         node1.succeed(f"curl -sf {health_url}/healthz")
         # The regtest genesis block is years old, so the tip is stale.

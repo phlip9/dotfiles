@@ -90,5 +90,63 @@ in
     (lib.mkIf (cfg.enable && hasShellHooks) {
       systemd.services.rbitcoin.path = [ pkgs.bash ];
     })
+
+    # Sandbox the node beyond upstream's NoNewPrivileges, PrivateTmp,
+    # ProtectHome, and ProtectSystem=strict. It parses untrusted P2P and
+    # API input. Check w/ `systemd-analyze security rbitcoin.service`;
+    # nixos/tests/rbitcoin.nix fails if the exposure score regresses.
+    (lib.mkIf cfg.enable {
+      systemd.services.rbitcoin.serviceConfig = {
+        # Unprivileged user. P2P and all listeners use ports > 1024.
+        CapabilityBoundingSet = "";
+        # Owner-only files by default. The node chmods the files it shares,
+        # ex: the 0660 `rpc.socketPath` socket.
+        UMask = "0077";
+
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        PrivateDevices = true;
+        # NOTE: hides the tor control cookie's group. Revisit w/ Tor.
+        PrivateUsers = true;
+        ProtectClock = true;
+        # Read-only. The node reads its cgroup's memory limits to size its
+        # IBD + index workers.
+        ProtectControlGroups = true;
+        ProtectHostname = true;
+        ProtectKernelLogs = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        # Not `ProcSubset = "pid"`: the node reads /proc/meminfo
+        # (MemAvailable) to size those same workers.
+        ProtectProc = "invisible";
+        RemoveIPC = true;
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+
+        # AF_UNIX: sd_notify, unix RPC. No AF_NETLINK: the node learns its
+        # public address from peers and never lists interfaces.
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_INET"
+          "AF_INET6"
+        ];
+
+        SystemCallArchitectures = "native";
+        # io_uring is the node's default bulk store IO backend
+        # (`RBITCOIN_IO`), but isn't in @system-service. W/o it, the node
+        # falls back to pread w/ only a warning. `~@resources` still allows
+        # `prlimit64`, which glibc's `setrlimit` uses to raise NOFILE.
+        SystemCallFilter = [
+          "@system-service"
+          "io_uring_enter"
+          "io_uring_register"
+          "io_uring_setup"
+          "~@privileged"
+          "~@resources"
+        ];
+        SystemCallErrorNumber = "EPERM";
+      };
+    })
   ];
 }
