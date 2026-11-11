@@ -233,8 +233,12 @@
         # container, so there are no memory.* or io.* files: check cpu.stat,
         # which every cgroup has. The exporter's own cgroup exists while it
         # serves.
-        for cgroup in ["system.slice", "system.slice/nixos-exporter.service"]:
-            name = f'nixos_cgroup_cpu_seconds_total{{cgroup="{cgroup}"}}'
+        for slice, unit in [
+            ("-.slice", "system.slice"),
+            ("system.slice", "nixos-exporter.service"),
+        ]:
+            labels = f'slice="{slice}",unit="{unit}"'
+            name = f"nixos_cgroup_cpu_seconds_total{{{labels}}}"
             assert float(metrics.get(name, "0")) > 0, (name, metrics)
 
         # VictoriaMetrics scrapes it.

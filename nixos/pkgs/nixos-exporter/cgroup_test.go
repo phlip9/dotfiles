@@ -102,15 +102,23 @@ func TestCgroupMetrics(t *testing.T) {
 	key := func(name string, labels ...string) string {
 		return "nixos_cgroup_" + name + "{" + strings.Join(labels, ",") + "}"
 	}
-	paseo := `cgroup="workload.slice/paseo.service"`
-	fsck := `cgroup="system.slice/systemd-fsck@dev-disk-by\\x2duuid.service"`
+	// A cgroup's labels: root cgroups are units in `-.slice`.
+	labels := func(slice, unit string) string {
+		return `slice="` + slice + `",unit="` + unit + `"`
+	}
+	initScope := labels("-.slice", "init.scope")
+	workload := labels("-.slice", "workload.slice")
+	user := labels("user.slice", "user-1000.slice")
+	paseo := labels("workload.slice", "paseo.service")
+	fsck := labels("system.slice",
+		`systemd-fsck@dev-disk-by\\x2duuid.service`)
 	want := map[string]string{
-		key("cpu_seconds_total", `cgroup="init.scope"`): "2.500000",
+		key("cpu_seconds_total", initScope): "2.500000",
 
-		key("memory_bytes", `cgroup="workload.slice"`):             "4096",
-		key("memory_max_bytes", `cgroup="workload.slice"`):         "8192",
-		key("memory_bytes", `cgroup="user.slice/user-1000.slice"`): "64",
-		key("memory_bytes", fsck):                                  "1",
+		key("memory_bytes", workload):     "4096",
+		key("memory_max_bytes", workload): "8192",
+		key("memory_bytes", user):         "64",
+		key("memory_bytes", fsck):         "1",
 
 		key("memory_bytes", paseo):                            "500",
 		key("memory_stat_bytes", paseo, `type="anon"`):        "300",

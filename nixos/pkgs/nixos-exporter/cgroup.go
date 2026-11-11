@@ -14,9 +14,18 @@
 // Values are hierarchical: a slice includes its children, so don't sum
 // across levels. Counters restart from 0 when a unit restarts (new cgroup).
 //
-// Keep in sync: nixos/sauna/grafana/overview.json "Resources" row queries
-// these names and relies on the `cgroup` label shape: root cgroups have no
-// `/` (`cgroup!~".+/.+"`), units are `<root slice>/<unit>`.
+// Labels, like systemd's own model (`systemctl show -p Slice <unit>`):
+//   - unit: the unit, ex: `paseo.service`. Unit names are unique, so this
+//     alone identifies a cgroup. Its path: `<slice>/<unit>`, or `<unit>` for
+//     a root cgroup.
+//   - slice: the unit's slice. Root cgroups are in `-.slice`, the root slice.
+//     So root cgroups: `slice="-.slice"`; one slice's units:
+//     `slice="workload.slice"`; units below the root slices:
+//     `slice=~".+", slice!="-.slice"` (series from before these labels
+//     have no `slice`).
+//
+// Keep in sync: nixos/sauna/grafana/overview.json "Resources" row + OOM
+// kill annotations query these names + labels.
 //
 // Missing interface files are skipped, not errors: a controller not enabled
 // for that cgroup, swap accounting off, PSI disabled (`psi=0`), or a cgroup
@@ -24,14 +33,14 @@
 //
 // Example samples (sauna, 2026-11-10, 804 samples over 38 cgroups):
 //
-//	nixos_cgroup_memory_bytes{cgroup="workload.slice/paseo.service"} 4109930496
-//	nixos_cgroup_memory_stat_bytes{cgroup="workload.slice/paseo.service",type="anon"} 802414592
-//	nixos_cgroup_memory_stat_bytes{cgroup="workload.slice/paseo.service",type="file_mapped"} 341110784
-//	nixos_cgroup_memory_max_bytes{cgroup="workload.slice/paseo.service"} 50451218432
-//	nixos_cgroup_cpu_seconds_total{cgroup="workload.slice/paseo.service"} 759.893149
-//	nixos_cgroup_io_read_bytes_total{cgroup="workload.slice/paseo.service",device="md127"} 2568458240
-//	nixos_cgroup_pressure_stalled_seconds_total{cgroup="workload.slice/paseo.service",kind="some",resource="io"} 1.238054
-//	nixos_cgroup_oom_kills_total{cgroup="workload.slice/paseo.service"} 0
+//	nixos_cgroup_memory_bytes{slice="-.slice",unit="workload.slice"} 8385507328
+//	nixos_cgroup_memory_bytes{slice="workload.slice",unit="paseo.service"} 4109930496
+//	nixos_cgroup_memory_stat_bytes{slice="workload.slice",unit="paseo.service",type="anon"} 802414592
+//	nixos_cgroup_memory_max_bytes{slice="workload.slice",unit="paseo.service"} 50451218432
+//	nixos_cgroup_cpu_seconds_total{slice="workload.slice",unit="paseo.service"} 759.893149
+//	nixos_cgroup_io_read_bytes_total{slice="workload.slice",unit="paseo.service",device="md127"} 2568458240
+//	nixos_cgroup_pressure_stalled_seconds_total{slice="workload.slice",unit="paseo.service",kind="some",resource="io"} 1.238054
+//	nixos_cgroup_oom_kills_total{slice="workload.slice",unit="paseo.service"} 0
 //
 // Cost (sauna, 38 cgroups, 11 files each): one scrape reads ~420 files in
 // ~3ms, w/ ~1,800 syscalls and ~1,500 allocations. The reader reuses one
@@ -70,7 +79,7 @@ const (
 	// is ~1.6 KiB on Linux 7.3). Grows if needed.
 	readBufferSize = 4096
 
-	// rendered size of one cgroup's samples (~2.2 KiB on sauna), to size
+	// rendered size of one cgroup's samples (~2.3 KiB on sauna), to size
 	// the output buffer up front.
 	bytesPerCgroup = 2560
 )
@@ -87,7 +96,7 @@ type optionalUint struct {
 type cgroupStats struct {
 	// path relative to the cgroup root, ex: `workload.slice/paseo.service`.
 	path string
-	// `cgroup="<path>"`, escaped.
+	// `slice="<slice>",unit="<unit>"`, escaped. See `cgroupLabels`.
 	label string
 	// memory.current: all memory charged, incl. page cache + kernel.
 	memory optionalUint
@@ -138,9 +147,21 @@ func readCgroups(root, sysDevBlock string) ([]cgroupStats, error) {
 			return nil, fmt.Errorf("cgroup %s: %w", path, err)
 		}
 		stats[idx].path = path
-		stats[idx].label = `cgroup="` + labelEscaper.Replace(path) + `"`
+		stats[idx].label = cgroupLabels(path)
 	}
 	return stats, nil
+}
+
+// cgroupLabels are the labels of the cgroup at `path`: see the file
+// comment. Paths are at most 2 deep (see `listCgroups`), so a root cgroup is
+// a unit in `-.slice`, and any other is a unit in its root slice.
+func cgroupLabels(path string) string {
+	slice, unit, nested := strings.Cut(path, "/")
+	if !nested {
+		slice, unit = "-.slice", path
+	}
+	return `slice="` + labelEscaper.Replace(slice) +
+		`",unit="` + labelEscaper.Replace(unit) + `"`
 }
 
 // listCgroups returns the selected cgroups (see the file comment), sorted

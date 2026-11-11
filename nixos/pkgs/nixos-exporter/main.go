@@ -12,8 +12,8 @@
 //     i.e. the last boot or `switch-to-configuration`.
 //   - nixos_reboot_required: 1 if a reboot would boot a different kernel,
 //     initrd, kernel modules, or kernel params.
-//   - nixos_cgroup_*{cgroup}: memory, swap, CPU, IO, PSI, and OOM kills per
-//     systemd slice, service, and scope. See cgroup.go.
+//   - nixos_cgroup_*{slice,unit}: memory, swap, CPU, IO, PSI, and OOM
+//     kills per systemd slice, service, and scope. See cgroup.go.
 //
 // Keep in sync: dashboards query these names. nixos/sauna/grafana/
 // overview.json ("System", "Host health", annotations) and
