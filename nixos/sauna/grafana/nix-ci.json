@@ -192,7 +192,7 @@
                   },
                   "custom": {
                     "axisPlacement": "auto",
-                    "fillOpacity": 70,
+                    "fillOpacity": 100,
                     "hideFrom": {
                       "legend": false,
                       "tooltip": false,
@@ -204,12 +204,12 @@
                     {
                       "options": {
                         "0": {
-                          "color": "green",
+                          "color": "#323632",
                           "index": 0,
                           "text": "ok"
                         },
                         "1": {
-                          "color": "red",
+                          "color": "dark-red",
                           "index": 1,
                           "text": "failed"
                         }
@@ -221,11 +221,11 @@
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "green",
+                        "color": "#323632",
                         "value": 0
                       },
                       {
-                        "color": "red",
+                        "color": "dark-red",
                         "value": 1
                       }
                     ]
@@ -734,7 +734,7 @@
                         "value": 0
                       },
                       {
-                        "color": "yellow",
+                        "color": "orange",
                         "value": 93600
                       },
                       {
@@ -822,28 +822,39 @@
                     {
                       "options": {
                         "0": {
-                          "color": "red",
+                          "color": "dark-red",
                           "index": 0,
                           "text": "DOWN"
                         },
                         "1": {
-                          "color": "green",
+                          "color": "transparent",
                           "index": 1,
                           "text": "UP"
                         }
                       },
                       "type": "value"
+                    },
+                    {
+                      "options": {
+                        "match": "null+nan",
+                        "result": {
+                          "color": "dark-purple",
+                          "index": 2,
+                          "text": "UNKNOWN"
+                        }
+                      },
+                      "type": "special"
                     }
                   ],
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "red",
+                        "color": "dark-red",
                         "value": 0
                       },
                       {
-                        "color": "green",
+                        "color": "transparent",
                         "value": 1
                       }
                     ]
@@ -853,8 +864,8 @@
                 "overrides": []
               },
               "options": {
-                "colorMode": "background",
-                "graphMode": "area",
+                "colorMode": "background_solid",
+                "graphMode": "none",
                 "justifyMode": "center",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -927,28 +938,39 @@
                     {
                       "options": {
                         "0": {
-                          "color": "red",
+                          "color": "dark-red",
                           "index": 0,
                           "text": "DOWN"
                         },
                         "1": {
-                          "color": "green",
+                          "color": "transparent",
                           "index": 1,
                           "text": "UP"
                         }
                       },
                       "type": "value"
+                    },
+                    {
+                      "options": {
+                        "match": "null+nan",
+                        "result": {
+                          "color": "dark-purple",
+                          "index": 2,
+                          "text": "UNKNOWN"
+                        }
+                      },
+                      "type": "special"
                     }
                   ],
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "red",
+                        "color": "dark-red",
                         "value": 0
                       },
                       {
-                        "color": "green",
+                        "color": "transparent",
                         "value": 1
                       }
                     ]
@@ -958,8 +980,8 @@
                 "overrides": []
               },
               "options": {
-                "colorMode": "background",
-                "graphMode": "area",
+                "colorMode": "background_solid",
+                "graphMode": "none",
                 "justifyMode": "center",
                 "orientation": "auto",
                 "percentChangeColorMode": "standard",
@@ -1036,7 +1058,7 @@
                         "value": 0
                       },
                       {
-                        "color": "yellow",
+                        "color": "orange",
                         "value": 3600
                       },
                       {
@@ -1128,7 +1150,7 @@
                         "value": 0
                       },
                       {
-                        "color": "yellow",
+                        "color": "orange",
                         "value": 5
                       },
                       {
@@ -1222,11 +1244,11 @@
                         "value": 0
                       },
                       {
-                        "color": "yellow",
+                        "color": "orange",
                         "value": 0.8
                       },
                       {
-                        "color": "green",
+                        "color": "text",
                         "value": 0.95
                       }
                     ]
@@ -1314,7 +1336,7 @@
                         "value": 0
                       },
                       {
-                        "color": "yellow",
+                        "color": "orange",
                         "value": 100
                       },
                       {
