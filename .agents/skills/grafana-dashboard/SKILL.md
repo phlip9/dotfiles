@@ -335,6 +335,12 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
   `grafana-push` refuses.
 - `byRegexp` override matchers are anchored (`^...$`) unless written
   `/.../`: `" max$"` matches nothing, `".+ max"` works.
+- state-timeline w/ `mergeValues` + `color.mode: "thresholds"` buckets
+  values by threshold (tooltip "1+") and ignores value mappings. Use
+  `color.mode: "fixed"` + mappings w/ colors for labeled states.
+- Timeline `fillOpacity` replaces a color's own alpha: `rgba(...)` colors
+  come out opaque-ish. For an exact shade, use an opaque hex at
+  `fillOpacity: 100`.
 - Compact tiles: one stat panel w/ one query per tile (legend = tile name),
   `textMode: "value_and_name"`, `wideLayout: false` (else wide tiles put
   the name beside the value), `graphMode: "none"`, fixed `text` sizes.
