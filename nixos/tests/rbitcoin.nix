@@ -131,6 +131,15 @@
             f"test \"$(stat -c '%a %U' {datadir}/rpc.sock)\" = '600 rbitcoin'"
         )
 
+    with subtest("node reports readiness and phase to systemd"):
+        unit_prop = "systemctl show -p {} --value rbitcoin.service"
+        assert node1.succeed(unit_prop.format("Type")).strip() == "notify"
+        # At genesis w/o peers, catch-up ends at once and the node follows.
+        node1.wait_until_succeeds(
+            f"test \"$({unit_prop.format('StatusText')})\" = following",
+            timeout=timedelta(seconds=60),
+        )
+
     with subtest("health probes answer before the node is ready"):
         node1.wait_until_succeeds(f"curl -sf {health_url}/healthz")
         # The regtest genesis block is years old, so the tip is stale.
