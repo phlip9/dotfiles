@@ -1047,138 +1047,6 @@
                       "spec": {
                         "alias": "Buffers Allocated",
                         "dsType": "prometheus",
-                        "expr": "irate(pg_stat_bgwriter_buffers_backend_fsync_total{instance=~\"$instance\"}[$__rate_interval])",
-                        "format": "time_series",
-                        "groupBy": [
-                          {
-                            "params": [
-                              "$interval"
-                            ],
-                            "type": "time"
-                          },
-                          {
-                            "params": [
-                              "null"
-                            ],
-                            "type": "fill"
-                          }
-                        ],
-                        "intervalFactor": 2,
-                        "legendFormat": "buffers_backend_fsync",
-                        "measurement": "postgresql",
-                        "policy": "default",
-                        "resultFormat": "time_series",
-                        "select": [
-                          [
-                            {
-                              "params": [
-                                "buffers_alloc"
-                              ],
-                              "type": "field"
-                            },
-                            {
-                              "params": [],
-                              "type": "mean"
-                            },
-                            {
-                              "params": [],
-                              "type": "difference"
-                            }
-                          ]
-                        ],
-                        "step": 240,
-                        "tags": [
-                          {
-                            "key": "instance",
-                            "operator": "=~",
-                            "value": "/^$instance$/"
-                          }
-                        ]
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "B"
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "group": "victoriametrics-metrics-datasource",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "alias": "Buffers Allocated",
-                        "dsType": "prometheus",
-                        "expr": "irate(pg_stat_bgwriter_buffers_backend_total{instance=~\"$instance\"}[$__rate_interval])",
-                        "format": "time_series",
-                        "groupBy": [
-                          {
-                            "params": [
-                              "$interval"
-                            ],
-                            "type": "time"
-                          },
-                          {
-                            "params": [
-                              "null"
-                            ],
-                            "type": "fill"
-                          }
-                        ],
-                        "intervalFactor": 2,
-                        "legendFormat": "buffers_backend",
-                        "measurement": "postgresql",
-                        "policy": "default",
-                        "resultFormat": "time_series",
-                        "select": [
-                          [
-                            {
-                              "params": [
-                                "buffers_alloc"
-                              ],
-                              "type": "field"
-                            },
-                            {
-                              "params": [],
-                              "type": "mean"
-                            },
-                            {
-                              "params": [],
-                              "type": "difference"
-                            }
-                          ]
-                        ],
-                        "step": 240,
-                        "tags": [
-                          {
-                            "key": "instance",
-                            "operator": "=~",
-                            "value": "/^$instance$/"
-                          }
-                        ]
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "C"
-                  }
-                },
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "datasource": {
-                        "name": "${DS_PROMETHEUS}"
-                      },
-                      "group": "victoriametrics-metrics-datasource",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "alias": "Buffers Allocated",
-                        "dsType": "prometheus",
                         "expr": "irate(pg_stat_bgwriter_buffers_clean_total{instance=~\"$instance\"}[$__rate_interval])",
                         "format": "time_series",
                         "groupBy": [
@@ -1245,7 +1113,7 @@
                       "spec": {
                         "alias": "Buffers Allocated",
                         "dsType": "prometheus",
-                        "expr": "irate(pg_stat_bgwriter_buffers_checkpoint_total{instance=~\"$instance\"}[$__rate_interval])",
+                        "expr": "irate(pg_stat_checkpointer_buffers_written_total{instance=~\"$instance\"}[$__rate_interval])",
                         "format": "time_series",
                         "groupBy": [
                           {
@@ -1303,7 +1171,7 @@
               "transformations": []
             }
           },
-          "description": "",
+          "description": "Buffers/s allocated + cleaned by the bgwriter (pg_stat_bgwriter) and written by checkpoints (pg_stat_checkpointer, PG 17+). Backend writes/fsyncs moved to pg_stat_io in PG 17, which postgres_exporter doesn't collect.",
           "id": 2,
           "links": [],
           "title": "Buffers",
