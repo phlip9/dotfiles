@@ -90,7 +90,7 @@ fix (phlipPkgsNixos: {
   paseo-relay = callPackage ./paseo-relay.nix { };
 
   # rbitcoin - Bitcoin full node + Electrum + Esplora server (dynamic glibc)
-  rbitcoin = callPackage ./rbitcoin.nix { inherit sources; };
+  rbitcoin = callPackage ./rbitcoin { inherit sources; };
 
   # rusty-path-of-building with its missing system library dependencies
   rusty-path-of-building = callPackage ./rusty-path-of-building.nix { };
