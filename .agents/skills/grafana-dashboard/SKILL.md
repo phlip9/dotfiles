@@ -176,7 +176,9 @@ $ just grafana-screenshot scratch-<name> --panel 14 -o tmp/<name>/p14.png
   (element `.spec.id`) for detail.
 - The default `--width` (2172) renders the panel layout phlip9 sees on
   phlipdesk. Screenshot at the default only. W/o `--from`, shots use the
-  dashboard's own default range.
+  dashboard's own default range. The default `--theme` is phlip9's Grafana
+  theme (`gildedgrove`: `#1d2220` panels), not the stock dark theme: pick
+  colors against it.
 - Cross-check headline numbers against a direct `query_prometheus`.
 
 ## 5. Iterate

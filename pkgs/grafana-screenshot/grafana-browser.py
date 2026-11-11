@@ -47,7 +47,12 @@ JsonObj = dict[str, Any]
 # Any JSON value, ex: from `json.loads`. Narrow it w/ isinstance.
 Json = JsonObj | list[Any] | str | float | bool | None
 
+# Browser color scheme. Grafana's own theme is the `theme` URL param.
 Theme = Literal["dark", "light"]
+
+# Default Grafana theme: the one phlip9 uses (Grafana 13 extra theme ids:
+# `gildedgrove`, `sapphiredusk`, ...; also `dark`, `light`).
+DEFAULT_THEME = "gildedgrove"
 
 # Default viewport width: the dashboard width phlip9 sees on phlipdesk (a
 # 2548px browser viewport w/ Grafana's nav menu docked: 2113px panel area).
@@ -263,7 +268,8 @@ class ScreenshotArgs:
     expand: bool
     width: int
     height: int | None
-    theme: Theme
+    # Grafana theme id
+    theme: str
     var: list[str]
     timeout: float
 
@@ -303,7 +309,11 @@ def screenshot_args(argv: list[str]) -> ScreenshotArgs:
         help="viewport + image height (default: full dashboard, or 900 w/ "
         "--panel)",
     )
-    parser.add_argument("--theme", choices=["dark", "light"], default="dark")
+    parser.add_argument(
+        "--theme",
+        default=DEFAULT_THEME,
+        help=f"Grafana theme id (default: {DEFAULT_THEME}, see DEFAULT_THEME)",
+    )
     parser.add_argument(
         "--var",
         action="append",
@@ -345,7 +355,10 @@ async def screenshot(args: ScreenshotArgs) -> None:
         browser = await pw.firefox.launch()
         try:
             context = await new_context(
-                browser, args.width, args.height or 900, args.theme
+                browser,
+                args.width,
+                args.height or 900,
+                "light" if args.theme == "light" else "dark",
             )
             page = await context.new_page()
             tracker = QueryTracker(page)
