@@ -76,7 +76,13 @@
                     "mode": "thresholds"
                   },
                   "custom": {
+                    "axisPlacement": "auto",
                     "fillOpacity": 70,
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
                     "lineWidth": 0
                   },
                   "mappings": [
@@ -101,7 +107,7 @@
                     "steps": [
                       {
                         "color": "green",
-                        "value": null
+                        "value": 0
                       },
                       {
                         "color": "red",
@@ -128,7 +134,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -213,7 +219,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -298,7 +304,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -383,7 +389,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -467,7 +473,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -552,7 +558,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -644,7 +650,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -749,7 +755,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -854,7 +860,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -946,7 +952,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -1038,7 +1044,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -1132,7 +1138,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -1224,7 +1230,7 @@
                 "wideLayout": true
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -1479,7 +1485,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -1618,7 +1624,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -1857,7 +1863,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -1969,7 +1975,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2080,7 +2086,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2198,7 +2204,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2406,7 +2412,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2521,7 +2527,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2639,7 +2645,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2773,7 +2779,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2824,12 +2830,22 @@
                     "mode": "palette-classic"
                   },
                   "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 1,
+                    "barWidthFactor": 0.6,
                     "drawStyle": "line",
                     "fillOpacity": 10,
                     "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
                     "lineInterpolation": "linear",
                     "lineWidth": 2,
                     "pointSize": 6,
@@ -2837,6 +2853,7 @@
                       "type": "linear"
                     },
                     "showPoints": "never",
+                    "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
@@ -2853,7 +2870,7 @@
                     "steps": [
                       {
                         "color": "green",
-                        "value": null
+                        "value": 0
                       }
                     ]
                   },
@@ -2878,7 +2895,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -2971,12 +2988,22 @@
                     "mode": "palette-classic"
                   },
                   "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 1,
+                    "barWidthFactor": 0.6,
                     "drawStyle": "line",
                     "fillOpacity": 10,
                     "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
                     "lineInterpolation": "linear",
                     "lineWidth": 2,
                     "pointSize": 6,
@@ -2984,6 +3011,7 @@
                       "type": "linear"
                     },
                     "showPoints": "never",
+                    "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
@@ -2999,7 +3027,7 @@
                     "steps": [
                       {
                         "color": "green",
-                        "value": null
+                        "value": 0
                       }
                     ]
                   },
@@ -3024,7 +3052,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3163,7 +3191,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3214,12 +3242,22 @@
                     "mode": "palette-classic"
                   },
                   "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 1,
+                    "barWidthFactor": 0.6,
                     "drawStyle": "line",
                     "fillOpacity": 10,
                     "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
                     "lineInterpolation": "linear",
                     "lineWidth": 2,
                     "pointSize": 6,
@@ -3227,6 +3265,7 @@
                       "type": "linear"
                     },
                     "showPoints": "never",
+                    "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
@@ -3243,7 +3282,7 @@
                     "steps": [
                       {
                         "color": "green",
-                        "value": null
+                        "value": 0
                       }
                     ]
                   },
@@ -3268,7 +3307,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3340,12 +3379,22 @@
                     "mode": "palette-classic"
                   },
                   "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 1,
+                    "barWidthFactor": 0.6,
                     "drawStyle": "line",
                     "fillOpacity": 10,
                     "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
                     "lineInterpolation": "linear",
                     "lineWidth": 2,
                     "pointSize": 6,
@@ -3353,6 +3402,7 @@
                       "type": "linear"
                     },
                     "showPoints": "never",
+                    "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
@@ -3368,7 +3418,7 @@
                     "steps": [
                       {
                         "color": "green",
-                        "value": null
+                        "value": 0
                       }
                     ]
                   },
@@ -3392,7 +3442,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3464,12 +3514,22 @@
                     "mode": "palette-classic"
                   },
                   "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 1,
+                    "barWidthFactor": 0.6,
                     "drawStyle": "line",
                     "fillOpacity": 10,
                     "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
                     "lineInterpolation": "linear",
                     "lineWidth": 2,
                     "pointSize": 6,
@@ -3477,6 +3537,7 @@
                       "type": "linear"
                     },
                     "showPoints": "never",
+                    "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
@@ -3492,7 +3553,7 @@
                     "steps": [
                       {
                         "color": "green",
-                        "value": null
+                        "value": 0
                       }
                     ]
                   },
@@ -3517,7 +3578,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3568,12 +3629,22 @@
                     "mode": "palette-classic"
                   },
                   "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 1,
+                    "barWidthFactor": 0.6,
                     "drawStyle": "line",
                     "fillOpacity": 10,
                     "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
                     "lineInterpolation": "linear",
                     "lineWidth": 2,
                     "pointSize": 6,
@@ -3581,6 +3652,7 @@
                       "type": "linear"
                     },
                     "showPoints": "never",
+                    "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
@@ -3596,7 +3668,7 @@
                     "steps": [
                       {
                         "color": "green",
-                        "value": null
+                        "value": 0
                       }
                     ]
                   },
@@ -3618,7 +3690,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3730,7 +3802,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3864,7 +3936,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -3977,7 +4049,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4096,7 +4168,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4211,7 +4283,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4326,7 +4398,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4439,7 +4511,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4591,7 +4663,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4706,7 +4778,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4824,7 +4896,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       },
@@ -4942,7 +5014,7 @@
                 }
               }
             },
-            "version": "13.2.4"
+            "version": "13.3.0"
           }
         }
       }
