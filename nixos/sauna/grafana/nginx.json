@@ -21,9 +21,124 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "purple",
+          "legacyOptions": {
+            "expr": "count_values(\"boot\", nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval))",
+            "textFormat": "boot {{boot}}",
+            "titleFormat": "Reboot"
+          },
+          "name": "reboots",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "blue",
+          "legacyOptions": {
+            "expr": "count_values(\"generation\", nixos_system_generation{job=\"nixos-exporter\", instance=~\"$instance\"} and (nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)) unless (nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)))",
+            "textFormat": "generation {{generation}}",
+            "titleFormat": "Deploy"
+          },
+          "name": "deploys",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "red",
+          "legacyOptions": {
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"page\"}",
+            "tagKeys": "severity,instance,name",
+            "titleFormat": "{{alertname}}"
+          },
+          "name": "page alerts",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": false,
+          "hide": false,
+          "iconColor": "orange",
+          "legacyOptions": {
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"warn\"}",
+            "tagKeys": "severity,instance,name",
+            "titleFormat": "{{alertname}}"
+          },
+          "name": "warn alerts",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "dark-red",
+          "legacyOptions": {
+            "expr": "sum by (unit) (increase(nixos_cgroup_oom_kills_total{instance=~\"$instance\", slice=~\".+\", slice!=\"-.slice\"}[2m])) \u003e 0",
+            "textFormat": "{{unit}}",
+            "titleFormat": "OOM kill"
+          },
+          "name": "OOM kills",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
       }
     ],
-    "cursorSync": "Off",
+    "cursorSync": "Crosshair",
     "description": "Official dashboard for NGINX Prometheus exporter",
     "editable": true,
     "elements": {
@@ -661,6 +776,19 @@
     },
     "links": [
       {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "o11y"
+        ],
+        "targetBlank": false,
+        "title": "Dashboards",
+        "tooltip": "",
+        "type": "dashboards"
+      },
+      {
         "asDropdown": false,
         "icon": "external link",
         "includeVars": false,
@@ -678,21 +806,18 @@
     "tags": [
       "nginx",
       "prometheus",
-      "nginx prometheus exporter"
+      "nginx prometheus exporter",
+      "o11y"
     ],
     "timeSettings": {
-      "autoRefresh": "30s",
+      "autoRefresh": "1m",
       "autoRefreshIntervals": [
-        "5s",
-        "10s",
         "30s",
         "1m",
         "5m",
         "15m",
         "30m",
-        "1h",
-        "2h",
-        "1d"
+        "1h"
       ],
       "fiscalYearStartMonth": 0,
       "from": "now-24h",
@@ -727,22 +852,24 @@
         "spec": {
           "allowCustomValue": true,
           "current": {
-            "text": "All",
-            "value": [
-              "$__all"
-            ]
+            "text": "sauna",
+            "value": "sauna"
           },
-          "definition": "label_values(nginx_up, instance)",
+          "definition": "label_values(node_uname_info, instance)",
           "hide": "dontHide",
-          "includeAll": true,
-          "multi": true,
+          "includeAll": false,
+          "label": "instance",
+          "multi": false,
           "name": "instance",
           "options": [],
           "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
             "group": "victoriametrics-metrics-datasource",
             "kind": "DataQuery",
             "spec": {
-              "__legacyStringValue": "label_values(nginx_up, instance)"
+              "__legacyStringValue": "label_values(node_uname_info, instance)"
             },
             "version": "v0"
           },
@@ -750,7 +877,7 @@
           "regex": "",
           "regexApplyTo": "value",
           "skipUrlSync": false,
-          "sort": "disabled"
+          "sort": "alphabeticalAsc"
         }
       }
     ]
