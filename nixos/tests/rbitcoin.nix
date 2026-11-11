@@ -52,10 +52,7 @@
 
       # Regtest has no seeds. Dial node1 by IP, since node1 only listens on
       # IPv4 and its hostname may resolve to IPv6 first.
-      services.rbitcoin.extraArgs = [
-        "--connect"
-        "${node1Ip}:${node1Port}"
-      ];
+      services.rbitcoin.p2p.connect = [ "${node1Ip}:${node1Port}" ];
 
       # Scrape node2's metrics into VictoriaMetrics, like on sauna.
       services.phlip9-o11y = {
