@@ -3176,7 +3176,7 @@
           "links": [
             {
               "title": "Nix CI",
-              "url": "/d/nix-ci?${__url_time_range}"
+              "url": "/d/nix-ci?${__url_time_range}\u0026${instance:queryparam}"
             }
           ],
           "title": "Oldest active build",
@@ -3294,7 +3294,7 @@
           "links": [
             {
               "title": "Nix CI",
-              "url": "/d/nix-ci?${__url_time_range}"
+              "url": "/d/nix-ci?${__url_time_range}\u0026${instance:queryparam}"
             }
           ],
           "title": "Build queue",
@@ -3432,7 +3432,7 @@
           "links": [
             {
               "title": "Nix CI",
-              "url": "/d/nix-ci?${__url_time_range}"
+              "url": "/d/nix-ci?${__url_time_range}\u0026${instance:queryparam}"
             }
           ],
           "title": "Cache upload backlog",
@@ -4348,7 +4348,7 @@
           "links": [
             {
               "title": "NGINX",
-              "url": "/d/MsjffzSZz?${__url_time_range}"
+              "url": "/d/MsjffzSZz?${__url_time_range}\u0026${instance:queryparam}"
             }
           ],
           "title": "nginx connections",
@@ -4465,7 +4465,7 @@
           "links": [
             {
               "title": "NGINX",
-              "url": "/d/MsjffzSZz?${__url_time_range}"
+              "url": "/d/MsjffzSZz?${__url_time_range}\u0026${instance:queryparam}"
             }
           ],
           "title": "nginx requests/s",
@@ -4703,7 +4703,7 @@
           "links": [
             {
               "title": "Profiling",
-              "url": "/d/profiling?${__url_time_range}"
+              "url": "/d/profiling?${__url_time_range}\u0026${instance:queryparam}"
             }
           ],
           "title": "Profiles dropped",
@@ -4826,7 +4826,7 @@
           "links": [
             {
               "title": "VictoriaMetrics",
-              "url": "/d/wNf0q_kZk_vm?${__url_time_range}"
+              "url": "/d/wNf0q_kZk_vm?${__url_time_range}\u0026${instance:queryparam}"
             }
           ],
           "title": "Failed scrapes",
@@ -6591,11 +6591,26 @@
         ]
       }
     },
-    "links": [],
+    "links": [
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "o11y"
+        ],
+        "targetBlank": false,
+        "title": "Dashboards",
+        "tooltip": "",
+        "type": "dashboards"
+      }
+    ],
     "liveNow": false,
     "preload": false,
     "tags": [
-      "overview"
+      "overview",
+      "o11y"
     ],
     "timeSettings": {
       "autoRefresh": "1m",
