@@ -326,6 +326,17 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
   (TabsLayout) don't get their defaults filled in.
 - A resave changes the copy: promote before the next push, else
   `grafana-push` refuses.
+- `byRegexp` override matchers are anchored (`^...$`) unless written
+  `/.../`: `" max$"` matches nothing, `".+ max"` works.
+- Compact tiles: one stat panel w/ one query per tile (legend = tile name),
+  `textMode: "value_and_name"`, `wideLayout: false` (else wide tiles put
+  the name beside the value), `graphMode: "none"`, fixed `text` sizes.
+  Per-tile links/units/mappings: `byName` overrides.
+- Text tiles (versions, kernel): instant query w/ `format: "table"`, a
+  label as the value (`label_keep(label_copy(x, "release", "kernel"),
+  "kernel")`), picked by `reduceOptions.fields: "/^(kernel|...)$/"`.
+  Grafana builds table frames after plain series: in a mixed panel, the
+  numeric tiles come first.
 
 ## Improve this skill
 
