@@ -21,6 +21,121 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "purple",
+          "legacyOptions": {
+            "expr": "count_values(\"boot\", nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval))",
+            "textFormat": "boot {{boot}}",
+            "titleFormat": "Reboot"
+          },
+          "name": "reboots",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "blue",
+          "legacyOptions": {
+            "expr": "count_values(\"generation\", nixos_system_generation{job=\"nixos-exporter\", instance=~\"$instance\"} and (nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)) unless (nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)))",
+            "textFormat": "generation {{generation}}",
+            "titleFormat": "Deploy"
+          },
+          "name": "deploys",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "red",
+          "legacyOptions": {
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"page\"}",
+            "tagKeys": "severity,instance,name",
+            "titleFormat": "{{alertname}}"
+          },
+          "name": "page alerts",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": false,
+          "hide": false,
+          "iconColor": "orange",
+          "legacyOptions": {
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"warn\"}",
+            "tagKeys": "severity,instance,name",
+            "titleFormat": "{{alertname}}"
+          },
+          "name": "warn alerts",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "dark-red",
+          "legacyOptions": {
+            "expr": "sum by (unit) (increase(nixos_cgroup_oom_kills_total{instance=~\"$instance\", slice=~\".+\", slice!=\"-.slice\"}[2m])) \u003e 0",
+            "textFormat": "{{unit}}",
+            "titleFormat": "OOM kill"
+          },
+          "name": "OOM kills",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
       }
     ],
     "cursorSync": "Crosshair",
@@ -45,7 +160,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max by (name) (node_systemd_unit_state{name=~\"nixbot.service|niks3.service|niks3-gc.service|nix-daemon.service\",state=\"failed\"})",
+                        "expr": "max by (name) (node_systemd_unit_state{name=~\"nixbot.service|niks3.service|niks3-gc.service|nix-daemon.service\",state=\"failed\", instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "{{name}}",
                         "range": true
@@ -156,7 +271,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "running_sum(sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_sum[1m]), 0)[$__interval:1m])) / running_sum(sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_count[1m]), 0)[$__interval:1m]))",
+                        "expr": "running_sum(sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_sum{instance=~\"$instance\"}[1m]), 0)[$__interval:1m])) / running_sum(sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_count{instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -241,7 +356,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(sum_over_time(clamp_min(delta(nixbot_builds{status=~\"succeeded|failed|cancelled\"}[1m]), 0)[$__interval:1m]))",
+                        "expr": "sum(sum_over_time(clamp_min(delta(nixbot_builds{status=~\"succeeded|failed|cancelled\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -326,7 +441,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_cache_objects",
+                        "expr": "niks3_cache_objects{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -411,7 +526,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_cache_logical_bytes",
+                        "expr": "niks3_cache_logical_bytes{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -495,7 +610,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/pending_closures/{id}/complete\",status=~\"2..\"}[$__interval]))",
+                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/pending_closures/{id}/complete\",status=~\"2..\", instance=~\"$instance\"}[$__interval]))",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -580,7 +695,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "time() - node_systemd_timer_last_trigger_seconds{name=\"niks3-gc.timer\"}",
+                        "expr": "time() - node_systemd_timer_last_trigger_seconds{name=\"niks3-gc.timer\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -672,7 +787,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "up{job=\"niks3\"}",
+                        "expr": "up{job=\"niks3\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -777,7 +892,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "up{job=\"nixbot\"}",
+                        "expr": "up{job=\"nixbot\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -882,7 +997,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixbot_builds_oldest_active_age_seconds",
+                        "expr": "nixbot_builds_oldest_active_age_seconds{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -974,7 +1089,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixbot_queue_depth",
+                        "expr": "nixbot_queue_depth{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -1066,7 +1181,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "running_sum(sum(sum_over_time(clamp_min(delta(nixbot_builds{status=\"succeeded\"}[1m]), 0)[$__interval:1m]))) / running_sum(sum(sum_over_time(clamp_min(delta(nixbot_builds{status=~\"succeeded|failed\"}[1m]), 0)[$__interval:1m])))",
+                        "expr": "running_sum(sum(sum_over_time(clamp_min(delta(nixbot_builds{status=\"succeeded\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))) / running_sum(sum(sum_over_time(clamp_min(delta(nixbot_builds{status=~\"succeeded|failed\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m])))",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -1160,7 +1275,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(nixbot_upload_queue_depth) or vector(0)",
+                        "expr": "sum(nixbot_upload_queue_depth{instance=~\"$instance\"}) or vector(0)",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -1252,7 +1367,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (status) (sum_over_time(clamp_min(delta(nixbot_attributes{status!~\"pending|building\"}[1m]), 0)[$__interval:1m]))",
+                        "expr": "sum by (status) (sum_over_time(clamp_min(delta(nixbot_attributes{status!~\"pending|building\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))",
                         "instant": false,
                         "legendFormat": "{{status}}",
                         "range": true
@@ -1507,7 +1622,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_sum[1m]), 0)[$__interval:1m]) / sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_count[1m]), 0)[$__interval:1m])",
+                        "expr": "sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_sum{instance=~\"$instance\"}[1m]), 0)[$__interval:1m]) / sum_over_time(clamp_min(delta(nixbot_build_duration_seconds_count{instance=~\"$instance\"}[1m]), 0)[$__interval:1m])",
                         "instant": false,
                         "legendFormat": "build",
                         "range": true
@@ -1528,7 +1643,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum_over_time(clamp_min(delta(nixbot_eval_duration_seconds_sum[1m]), 0)[$__interval:1m]) / sum_over_time(clamp_min(delta(nixbot_eval_duration_seconds_count[1m]), 0)[$__interval:1m])",
+                        "expr": "sum_over_time(clamp_min(delta(nixbot_eval_duration_seconds_sum{instance=~\"$instance\"}[1m]), 0)[$__interval:1m]) / sum_over_time(clamp_min(delta(nixbot_eval_duration_seconds_count{instance=~\"$instance\"}[1m]), 0)[$__interval:1m])",
                         "instant": false,
                         "legendFormat": "eval",
                         "range": true
@@ -1646,7 +1761,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (status) (sum_over_time(clamp_min(delta(nixbot_builds{status=~\"succeeded|failed|cancelled\"}[1m]), 0)[$__interval:1m]))",
+                        "expr": "sum by (status) (sum_over_time(clamp_min(delta(nixbot_builds{status=~\"succeeded|failed|cancelled\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))",
                         "instant": false,
                         "legendFormat": "{{status}}",
                         "range": true
@@ -1885,7 +2000,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_cache_objects",
+                        "expr": "niks3_cache_objects{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "objects",
                         "range": true
@@ -1997,7 +2112,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_cache_logical_bytes",
+                        "expr": "niks3_cache_logical_bytes{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "logical size",
                         "range": true
@@ -2108,7 +2223,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/pending_closures/{id}/complete\",status=~\"2..\"}[$__interval]))",
+                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/pending_closures/{id}/complete\",status=~\"2..\", instance=~\"$instance\"}[$__interval]))",
                         "instant": false,
                         "legendFormat": "closures",
                         "range": true
@@ -2226,7 +2341,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_http_requests_in_flight",
+                        "expr": "niks3_http_requests_in_flight{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "http in flight",
                         "range": true
@@ -2247,7 +2362,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_pending_closures",
+                        "expr": "niks3_pending_closures{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "pending closures",
                         "range": true
@@ -2268,7 +2383,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_db_connections_in_use",
+                        "expr": "niks3_db_connections_in_use{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "db conns in use",
                         "range": true
@@ -2289,7 +2404,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "niks3_db_connections_max",
+                        "expr": "niks3_db_connections_max{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "db conns max",
                         "range": true
@@ -2434,7 +2549,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max by (owner) (nixbot_effects_oldest_running_age_seconds)",
+                        "expr": "max by (owner) (nixbot_effects_oldest_running_age_seconds{instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "{{owner}}",
                         "range": true
@@ -2549,7 +2664,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (owner, status) (sum_over_time(clamp_min(delta(nixbot_effects{status!~\"pending|running\"}[1m]), 0)[$__interval:1m]))",
+                        "expr": "sum by (owner, status) (sum_over_time(clamp_min(delta(nixbot_effects{status!~\"pending|running\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))",
                         "instant": false,
                         "legendFormat": "{{owner}} {{status}}",
                         "range": true
@@ -2667,7 +2782,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(increase(niks3_gc_objects_deleted_total[$__interval]))",
+                        "expr": "sum(increase(niks3_gc_objects_deleted_total{instance=~\"$instance\"}[$__interval]))",
                         "instant": false,
                         "legendFormat": "deleted",
                         "range": true
@@ -2801,7 +2916,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval]))",
+                        "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "busy",
                         "range": true
@@ -2917,7 +3032,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(node_pressure_cpu_waiting_seconds_total[$__rate_interval])",
+                        "expr": "rate(node_pressure_cpu_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval])",
                         "instant": false,
                         "legendFormat": "cpu some",
                         "range": true
@@ -2938,7 +3053,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(node_pressure_memory_waiting_seconds_total[$__rate_interval])",
+                        "expr": "rate(node_pressure_memory_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval])",
                         "instant": false,
                         "legendFormat": "mem some",
                         "range": true
@@ -2959,7 +3074,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(node_pressure_io_waiting_seconds_total[$__rate_interval])",
+                        "expr": "rate(node_pressure_io_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval])",
                         "instant": false,
                         "legendFormat": "io some",
                         "range": true
@@ -3074,7 +3189,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/uploads/complete\",status=~\"2..\"}[$__interval]))",
+                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/uploads/complete\",status=~\"2..\", instance=~\"$instance\"}[$__interval]))",
                         "instant": false,
                         "legendFormat": "single",
                         "range": true
@@ -3095,7 +3210,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/multipart/complete\",status=~\"2..\"}[$__interval]))",
+                        "expr": "sum(increase(niks3_http_requests_total{route=\"POST /api/multipart/complete\",status=~\"2..\", instance=~\"$instance\"}[$__interval]))",
                         "instant": false,
                         "legendFormat": "multipart",
                         "range": true
@@ -3213,7 +3328,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(process_cpu_seconds_total{job=\"niks3\"}[$__rate_interval])",
+                        "expr": "rate(process_cpu_seconds_total{job=\"niks3\", instance=~\"$instance\"}[$__rate_interval])",
                         "instant": false,
                         "legendFormat": "cpu",
                         "range": true
@@ -3329,7 +3444,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "process_resident_memory_bytes{job=\"niks3\"}",
+                        "expr": "process_resident_memory_bytes{job=\"niks3\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "rss",
                         "range": true
@@ -3350,7 +3465,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "go_memstats_heap_inuse_bytes{job=\"niks3\"}",
+                        "expr": "go_memstats_heap_inuse_bytes{job=\"niks3\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "heap in use",
                         "range": true
@@ -3464,7 +3579,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(process_network_transmit_bytes_total{job=\"niks3\"}[$__rate_interval])",
+                        "expr": "rate(process_network_transmit_bytes_total{job=\"niks3\", instance=~\"$instance\"}[$__rate_interval])",
                         "instant": false,
                         "legendFormat": "tx",
                         "range": true
@@ -3485,7 +3600,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "rate(process_network_receive_bytes_total{job=\"niks3\"}[$__rate_interval])",
+                        "expr": "rate(process_network_receive_bytes_total{job=\"niks3\", instance=~\"$instance\"}[$__rate_interval])",
                         "instant": false,
                         "legendFormat": "rx",
                         "range": true
@@ -3600,7 +3715,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "node_filesystem_avail_bytes{mountpoint=\"/nix/store\"}",
+                        "expr": "node_filesystem_avail_bytes{mountpoint=\"/nix/store\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "free",
                         "range": true
@@ -3712,7 +3827,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixbot_builds_oldest_active_age_seconds",
+                        "expr": "nixbot_builds_oldest_active_age_seconds{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "oldest",
                         "range": true
@@ -3824,7 +3939,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(increase(niks3_upload_skipped_paths_total[$__interval]))",
+                        "expr": "sum(increase(niks3_upload_skipped_paths_total{instance=~\"$instance\"}[$__interval]))",
                         "instant": false,
                         "legendFormat": "paths",
                         "range": true
@@ -3958,7 +4073,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixbot_queue_depth",
+                        "expr": "nixbot_queue_depth{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "pending + running",
                         "range": true
@@ -4071,7 +4186,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (route, status) (increase(niks3_http_requests_total{status!~\"2..\"}[$__interval]))",
+                        "expr": "sum by (route, status) (increase(niks3_http_requests_total{status!~\"2..\", instance=~\"$instance\"}[$__interval]))",
                         "instant": false,
                         "legendFormat": "{{status}} {{route}}",
                         "range": true
@@ -4190,7 +4305,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "histogram_quantile(0.95, sum by (route, le) (rate(niks3_http_request_duration_seconds_bucket{route!=\"GET /metrics\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.95, sum by (route, le) (rate(niks3_http_request_duration_seconds_bucket{route!=\"GET /metrics\", instance=~\"$instance\"}[$__rate_interval])))",
                         "instant": false,
                         "legendFormat": "{{route}}",
                         "range": true
@@ -4305,7 +4420,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (route) (rate(niks3_http_requests_total{route!=\"GET /metrics\"}[$__rate_interval]))",
+                        "expr": "sum by (route) (rate(niks3_http_requests_total{route!=\"GET /metrics\", instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "{{route}}",
                         "range": true
@@ -4420,7 +4535,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "nixbot_scheduled_effect_lag_seconds",
+                        "expr": "nixbot_scheduled_effect_lag_seconds{instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "lag",
                         "range": true
@@ -4533,7 +4648,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(nixbot_upload_queue_depth) or vector(0)",
+                        "expr": "sum(nixbot_upload_queue_depth{instance=~\"$instance\"}) or vector(0)",
                         "instant": false,
                         "legendFormat": "queued",
                         "range": true
@@ -4554,7 +4669,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(nixbot_upload_queue_retrying) or vector(0)",
+                        "expr": "sum(nixbot_upload_queue_retrying{instance=~\"$instance\"}) or vector(0)",
                         "instant": false,
                         "legendFormat": "retrying",
                         "range": true
@@ -4685,7 +4800,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max by (kind) (nixbot_work_queue_oldest_age_seconds)",
+                        "expr": "max by (kind) (nixbot_work_queue_oldest_age_seconds{instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "{{kind}}",
                         "range": true
@@ -4800,7 +4915,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (kind) (sum_over_time(clamp_min(delta(nixbot_work_queue{status=\"done\"}[1m]), 0)[$__interval:1m]))",
+                        "expr": "sum by (kind) (sum_over_time(clamp_min(delta(nixbot_work_queue{status=\"done\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))",
                         "instant": false,
                         "legendFormat": "{{kind}}",
                         "range": true
@@ -4918,7 +5033,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (kind) (sum_over_time(clamp_min(delta(nixbot_work_queue{status=\"failed\"}[1m]), 0)[$__interval:1m]))",
+                        "expr": "sum by (kind) (sum_over_time(clamp_min(delta(nixbot_work_queue{status=\"failed\", instance=~\"$instance\"}[1m]), 0)[$__interval:1m]))",
                         "instant": false,
                         "legendFormat": "{{kind}}",
                         "range": true
@@ -5629,13 +5744,28 @@
         ]
       }
     },
-    "links": [],
+    "links": [
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "o11y"
+        ],
+        "targetBlank": false,
+        "title": "Dashboards",
+        "tooltip": "",
+        "type": "dashboards"
+      }
+    ],
     "liveNow": false,
     "preload": false,
     "tags": [
       "nixbot",
       "niks3",
-      "ci"
+      "ci",
+      "o11y"
     ],
     "timeSettings": {
       "autoRefresh": "1m",
@@ -5673,6 +5803,39 @@
           "refresh": "onDashboardLoad",
           "regex": "",
           "skipUrlSync": false
+        }
+      },
+      {
+        "kind": "QueryVariable",
+        "spec": {
+          "allowCustomValue": true,
+          "current": {
+            "text": "sauna",
+            "value": "sauna"
+          },
+          "definition": "label_values(node_uname_info, instance)",
+          "hide": "dontHide",
+          "includeAll": false,
+          "label": "instance",
+          "multi": false,
+          "name": "instance",
+          "options": [],
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {
+              "__legacyStringValue": "label_values(node_uname_info, instance)"
+            },
+            "version": "v0"
+          },
+          "refresh": "onDashboardLoad",
+          "regex": "",
+          "regexApplyTo": "value",
+          "skipUrlSync": false,
+          "sort": "alphabeticalAsc"
         }
       }
     ]
