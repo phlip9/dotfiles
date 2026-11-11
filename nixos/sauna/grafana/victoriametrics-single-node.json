@@ -33,17 +33,110 @@
       {
         "kind": "AnnotationQuery",
         "spec": {
-          "enable": false,
+          "enable": true,
+          "hide": false,
+          "iconColor": "purple",
+          "legacyOptions": {
+            "expr": "count_values(\"boot\", nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval))",
+            "textFormat": "boot {{boot}}",
+            "titleFormat": "Reboot"
+          },
+          "name": "reboots",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "blue",
+          "legacyOptions": {
+            "expr": "count_values(\"generation\", nixos_system_generation{job=\"nixos-exporter\", instance=~\"$instance\"} and (nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)) unless (nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)))",
+            "textFormat": "generation {{generation}}",
+            "titleFormat": "Deploy"
+          },
+          "name": "deploys",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
           "hide": false,
           "iconColor": "red",
           "legacyOptions": {
-            "expr": "sum(ALERTS{job=~\"$job\", instance=~\"$instance\", alertgroup=\"vmsingle\",alertstate=\"firing\",show_at=\"dashboard\"}) by(alertname)",
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"page\"}",
+            "tagKeys": "severity,instance,name",
             "titleFormat": "{{alertname}}"
           },
-          "name": "alerts",
+          "name": "page alerts",
           "query": {
             "datasource": {
-              "name": "$ds"
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": false,
+          "hide": false,
+          "iconColor": "orange",
+          "legacyOptions": {
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"warn\"}",
+            "tagKeys": "severity,instance,name",
+            "titleFormat": "{{alertname}}"
+          },
+          "name": "warn alerts",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "dark-red",
+          "legacyOptions": {
+            "expr": "sum by (unit) (increase(nixos_cgroup_oom_kills_total{instance=~\"$instance\", slice=~\".+\", slice!=\"-.slice\"}[2m])) \u003e 0",
+            "textFormat": "{{unit}}",
+            "titleFormat": "OOM kill"
+          },
+          "name": "OOM kills",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
             },
             "group": "victoriametrics-metrics-datasource",
             "kind": "DataQuery",
@@ -59,14 +152,14 @@
           "hide": true,
           "iconColor": "dark-blue",
           "legacyOptions": {
-            "expr": "sum(vm_app_version{job=~\"$job\", instance=~\"$instance\"}) by(version) unless (sum(vm_app_version{job=~\"$job\", instance=~\"$instance\"} offset $__interval) by(version))",
+            "expr": "sum(vm_app_version{job=\"victoriametrics\", instance=~\"$instance\"}) by(version) unless (sum(vm_app_version{job=\"victoriametrics\", instance=~\"$instance\"} offset $__interval) by(version))",
             "textFormat": "{{version}}",
             "titleFormat": "Version change"
           },
           "name": "version",
           "query": {
             "datasource": {
-              "name": "$ds"
+              "name": "${DS_PROMETHEUS}"
             },
             "group": "victoriametrics-metrics-datasource",
             "kind": "DataQuery",
@@ -82,13 +175,13 @@
           "hide": false,
           "iconColor": "dark-yellow",
           "legacyOptions": {
-            "expr": "sum(changes(vm_app_start_timestamp{job=~\"$job\", instance=~\"$instance\"}[$__interval])) by(job)",
+            "expr": "sum(changes(vm_app_start_timestamp{job=\"victoriametrics\", instance=~\"$instance\"}[$__interval])) by(job)",
             "textFormat": "{{job}} restarted"
           },
           "name": "restarts",
           "query": {
             "datasource": {
-              "name": "$ds"
+              "name": "${DS_PROMETHEUS}"
             },
             "group": "victoriametrics-metrics-datasource",
             "kind": "DataQuery",
@@ -115,13 +208,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_rows_inserted_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by ( job,type) \u003e 0",
+                        "expr": "sum(rate(vm_rows_inserted_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by ( job,type) \u003e 0",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - {{type}}",
@@ -239,13 +332,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum(rate(vm_rows_read_per_series_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
+                        "expr": "histogram_quantile(0.99, sum(rate(vm_rows_read_per_series_bucket{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -365,13 +458,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum(rate(vm_rows_scanned_per_query_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
+                        "expr": "histogram_quantile(0.99, sum(rate(vm_rows_scanned_per_query_bucket{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -491,13 +584,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_rows_inserted_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (type, instance) \u003e 0",
+                        "expr": "sum(rate(vm_rows_inserted_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (type, instance) \u003e 0",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{instance}} - {{type}}",
@@ -620,14 +713,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(rate(vm_rows_inserted_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+                        "expr": "sum(rate(vm_rows_inserted_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval]))",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -708,14 +801,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(rate(vm_http_requests_total{job=~\"$job\", instance=~\"$instance\", path!~\".*(/write|/metrics)\"}[$__rate_interval]))",
+                        "expr": "sum(rate(vm_http_requests_total{job=\"victoriametrics\", instance=~\"$instance\", path!~\".*(/write|/metrics)\"}[$__rate_interval]))",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -796,13 +889,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_log_messages_total{job=~\"$job\",instance=~\"$instance\", level!=\"info\"}[$__rate_interval])) by (job, level) \u003e 0",
+                        "expr": "sum(rate(vm_log_messages_total{job=\"victoriametrics\",instance=~\"$instance\", level!=\"info\"}[$__rate_interval])) by (job, level) \u003e 0",
                         "interval": "5m",
                         "legendFormat": "{{job}} - {{level}}",
                         "range": true
@@ -868,7 +961,7 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=154\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=154\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "thresholds": {
@@ -930,14 +1023,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max(\n    max_over_time(process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    vm_available_memory_bytes{job=~\"$job\", instance=~\"$instance\"}\n) by(job)",
+                        "expr": "max(\n    max_over_time(process_resident_memory_bytes{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    vm_available_memory_bytes{job=\"victoriametrics\", instance=~\"$instance\"}\n) by(job)",
                         "interval": "",
                         "legendFormat": "__auto",
                         "range": true
@@ -1003,12 +1096,12 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown - RSS memory usage",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=148\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=148\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     },
                     {
                       "targetBlank": true,
                       "title": "Drilldown - Memory usage breakdown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=141\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=141\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "min": 0,
@@ -1072,14 +1165,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max(\n    rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    process_cpu_cores_available{job=~\"$job\", instance=~\"$instance\"}\n) by(job)",
+                        "expr": "max(\n    rate(process_cpu_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    process_cpu_cores_available{job=\"victoriametrics\", instance=~\"$instance\"}\n) by(job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -1147,7 +1240,7 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=151\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=151\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "min": 0,
@@ -1211,14 +1304,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(increase(vm_assisted_merges_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(instance, type) \u003e 0",
+                        "expr": "sum(increase(vm_assisted_merges_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(instance, type) \u003e 0",
                         "format": "time_series",
                         "interval": "5m",
                         "intervalFactor": 1,
@@ -1335,14 +1428,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max(\n    rate(vm_cache_misses_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    rate(vm_cache_requests_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])\n) by (type)",
+                        "expr": "max(\n    rate(vm_cache_misses_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    rate(vm_cache_requests_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n) by (type)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -1462,13 +1555,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_http_requests_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (path) \u003e 0",
+                        "expr": "sum(rate(vm_http_requests_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (path) \u003e 0",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -1593,13 +1686,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum(rate(vm_rows_read_per_query_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
+                        "expr": "histogram_quantile(0.99, sum(rate(vm_rows_read_per_query_bucket{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -1719,14 +1812,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max(\n    max_over_time(process_resident_memory_anon_bytes{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    vm_available_memory_bytes{job=~\"$job\", instance=~\"$instance\"}\n) by(job)",
+                        "expr": "max(\n    max_over_time(process_resident_memory_anon_bytes{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    vm_available_memory_bytes{job=\"victoriametrics\", instance=~\"$instance\"}\n) by(job)",
                         "interval": "",
                         "legendFormat": "__auto",
                         "range": true
@@ -1792,7 +1885,7 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=149\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=149\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "min": 0,
@@ -1856,13 +1949,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_io_read_syscalls_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(rate(process_io_read_syscalls_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -1880,13 +1973,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_io_write_syscalls_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(rate(process_io_write_syscalls_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -2023,13 +2116,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(\n  rate(go_gc_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]) \n / rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])\n ) by(job)",
+                        "expr": "max(\n  rate(go_gc_cpu_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval]) \n / rate(process_cpu_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n ) by(job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -2153,14 +2246,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(flag{is_set=\"true\", job=~\"$job\", instance=~\"$instance\"}) by(job, instance, name, value)",
+                        "expr": "sum(flag{is_set=\"true\", job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance, name, value)",
                         "format": "table",
                         "instant": true,
                         "legendFormat": "__auto",
@@ -2278,13 +2371,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_tcplistener_read_bytes_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(name) * 8 \u003e 0",
+                        "expr": "sum(rate(vm_tcplistener_read_bytes_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(name) * 8 \u003e 0",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "read via {{name}}",
@@ -2301,13 +2394,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_tcplistener_written_bytes_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(name) * 8 \u003e 0",
+                        "expr": "sum(rate(vm_tcplistener_written_bytes_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(name) * 8 \u003e 0",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "write via {{name}}",
@@ -2443,13 +2536,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(histogram_quantile(0.99, sum(rate(go_sched_latencies_seconds_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job, instance, le))) by(job)",
+                        "expr": "max(histogram_quantile(0.99, sum(rate(go_sched_latencies_seconds_bucket{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, instance, le))) by(job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -2573,13 +2666,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(changes(vm_app_start_timestamp{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval]) \u003e 0) by(job)",
+                        "expr": "sum(changes(vm_app_start_timestamp{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval]) \u003e 0) by(job)",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{job}}"
@@ -2597,7 +2690,7 @@
           "description": "Shows the number of restarts per job. The chart can be useful to identify periodic process restarts and correlate them with potential issues or anomalies. Normally, processes shouldn't restart unless restart was inited by user. The reason of restarts should be figured out by checking the logs of each specific service. ",
           "id": 129,
           "links": [],
-          "title": "Restarts ($job)",
+          "title": "Restarts",
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -2695,14 +2788,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "vm_snapshots{job=~\"$job\", instance=~\"$instance\"}",
+                        "expr": "vm_snapshots{job=\"victoriametrics\", instance=~\"$instance\"}",
                         "interval": "",
                         "legendFormat": "{{job}}",
                         "range": true
@@ -2812,14 +2905,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "sum(increase(vm_rows_ignored_total{job=~\"$job\", instance=~\"$instance\"}[1h])) by (job, reason)",
+                        "expr": "sum(increase(vm_rows_ignored_total{job=\"victoriametrics\", instance=~\"$instance\"}[1h])) by (job, reason)",
                         "interval": "",
                         "legendFormat": "{{instance}} - {{reason}}",
                         "range": true
@@ -2835,13 +2928,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(increase(vm_relabel_metrics_dropped_total{job=~\"$job\", instance=~\"$instance\"}[1h])) by(job)",
+                        "expr": "sum(increase(vm_relabel_metrics_dropped_total{job=\"victoriametrics\", instance=~\"$instance\"}[1h])) by(job)",
                         "instant": false,
                         "legendFormat": "{{job}} - relabeling",
                         "range": true
@@ -2957,14 +3050,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "sum(rate(vm_deduplicated_samples_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(job, type) \u003e0",
+                        "expr": "sum(rate(vm_deduplicated_samples_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(job, type) \u003e0",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -3087,13 +3180,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(rate(go_memstats_alloc_bytes_total{job=~\"$job\"}[$__rate_interval])) by (job)",
+                        "expr": "max(rate(go_memstats_alloc_bytes_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -3213,13 +3306,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_pressure_cpu_waiting_seconds_total{job=~\"$job\"}[$__rate_interval])) by (job, instance)",
+                        "expr": "sum(rate(process_pressure_cpu_waiting_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, instance)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -3237,13 +3330,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_pressure_cpu_stalled_seconds_total{job=~\"$job\"}[$__rate_interval])) by (job, instance)",
+                        "expr": "sum(rate(process_pressure_cpu_stalled_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, instance)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -3365,13 +3458,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_pressure_memory_waiting_seconds_total{job=~\"$job\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(rate(process_pressure_memory_waiting_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -3389,13 +3482,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_pressure_memory_stalled_seconds_total{job=~\"$job\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(rate(process_pressure_memory_stalled_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -3517,13 +3610,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_pressure_io_waiting_seconds_total{job=~\"$job\"}[$__rate_interval])) by (job, instance)",
+                        "expr": "sum(rate(process_pressure_io_waiting_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, instance)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -3541,13 +3634,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_pressure_io_stalled_seconds_total{job=~\"$job\"}[$__rate_interval])) by (job, instance)",
+                        "expr": "sum(rate(process_pressure_io_stalled_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, instance)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -3669,13 +3762,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_major_pagefaults_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job) \u003e 0",
+                        "expr": "sum(rate(process_major_pagefaults_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job) \u003e 0",
                         "legendFormat": "__auto",
                         "range": true
                       },
@@ -3740,7 +3833,7 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=140\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=140\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "thresholds": {
@@ -3832,13 +3925,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_major_pagefaults_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job,instance) \u003e 0",
+                        "expr": "sum(rate(process_major_pagefaults_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job,instance) \u003e 0",
                         "legendFormat": "{{instance}} ({{job}})",
                         "range": true
                       },
@@ -3950,13 +4043,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "# go other\nmax(\n    go_memstats_gc_sys_bytes{job=~\"$job\", instance=~\"$instance\"} +\n    go_memstats_mspan_sys_bytes{job=~\"$job\", instance=~\"$instance\"} +\n    go_memstats_other_sys_bytes{job=~\"$job\", instance=~\"$instance\"} +\n    go_memstats_mcache_sys_bytes{job=~\"$job\", instance=~\"$instance\"}\n)",
+                        "expr": "# go other\nmax(\n    go_memstats_gc_sys_bytes{job=\"victoriametrics\", instance=~\"$instance\"} +\n    go_memstats_mspan_sys_bytes{job=\"victoriametrics\", instance=~\"$instance\"} +\n    go_memstats_other_sys_bytes{job=\"victoriametrics\", instance=~\"$instance\"} +\n    go_memstats_mcache_sys_bytes{job=\"victoriametrics\", instance=~\"$instance\"}\n)",
                         "legendFormat": "Go: Other",
                         "range": true
                       },
@@ -3971,13 +4064,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "# go stack\nmax(go_memstats_stack_inuse_bytes{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "# go stack\nmax(go_memstats_stack_inuse_bytes{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "Go: Stack",
                         "range": true
@@ -3993,13 +4086,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "#go heap inuse\nmax(\n    go_memstats_heap_inuse_bytes{job=~\"$job\", instance=~\"$instance\"}\n    +\n    (\n        go_memstats_heap_idle_bytes{job=~\"$job\", instance=~\"$instance\"}\n        -\n        go_memstats_heap_released_bytes{job=~\"$job\", instance=~\"$instance\"}\n    )\n)",
+                        "expr": "#go heap inuse\nmax(\n    go_memstats_heap_inuse_bytes{job=\"victoriametrics\", instance=~\"$instance\"}\n    +\n    (\n        go_memstats_heap_idle_bytes{job=\"victoriametrics\", instance=~\"$instance\"}\n        -\n        go_memstats_heap_released_bytes{job=\"victoriametrics\", instance=~\"$instance\"}\n    )\n)",
                         "instant": false,
                         "legendFormat": "Go: Heap",
                         "range": true
@@ -4015,13 +4108,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "# go heap reserved\nmax(go_memstats_heap_released_bytes{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "# go heap reserved\nmax(go_memstats_heap_released_bytes{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "Go: Heap Reserved",
                         "range": true
@@ -4037,13 +4130,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "# vm cache\nmax(sum(vm_cache_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job, instance))",
+                        "expr": "# vm cache\nmax(sum(vm_cache_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job, instance))",
                         "instant": false,
                         "legendFormat": "Mmap: VM Cache",
                         "range": true
@@ -4059,13 +4152,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "${ds}"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "# file pages\nmax(process_resident_memory_file_bytes{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "# file pages\nmax(process_resident_memory_file_bytes{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "File cache",
                         "range": true
@@ -4179,14 +4272,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "max(\n    max_over_time(process_open_fds{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    process_max_fds{job=~\"$job\", instance=~\"$instance\"}\n) by(job)",
+                        "expr": "max(\n    max_over_time(process_open_fds{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n    /\n    process_max_fds{job=\"victoriametrics\", instance=~\"$instance\"}\n) by(job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -4328,14 +4421,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "sum(max_over_time(process_num_threads{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(job)",
+                        "expr": "sum(max_over_time(process_num_threads{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 2,
@@ -4461,14 +4554,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "max(\n    max_over_time(vm_concurrent_insert_current{job=~\"$job\", \n    instance=~\"$instance\"}[$__rate_interval])\n)",
+                        "expr": "max(\n    max_over_time(vm_concurrent_insert_current{job=\"victoriametrics\", \n    instance=~\"$instance\"}[$__rate_interval])\n)",
                         "interval": "",
                         "legendFormat": "current",
                         "range": true
@@ -4484,14 +4577,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "min(vm_concurrent_insert_capacity{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "min(vm_concurrent_insert_capacity{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "interval": "",
                         "legendFormat": "max",
                         "range": true
@@ -4629,13 +4722,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(\n    sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance) /\n    (\n        sum(vm_free_disk_space_bytes{job=~\"$job\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance) +\n        sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance)\n    ) \n)",
+                        "expr": "max(\n    sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance) /\n    (\n        sum(vm_free_disk_space_bytes{job=\"victoriametrics\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance) +\n        sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance)\n    ) \n)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "max",
@@ -4652,13 +4745,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "min(\n    sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance) /\n    (\n        sum(vm_free_disk_space_bytes{job=~\"$job\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance) +\n        sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance)\n    ) \n)",
+                        "expr": "min(\n    sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance) /\n    (\n        sum(vm_free_disk_space_bytes{job=\"victoriametrics\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance) +\n        sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance)\n    ) \n)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "min",
@@ -4675,13 +4768,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "quantile(0.5,\n    sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance) /\n    (\n        sum(vm_free_disk_space_bytes{job=~\"$job\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance) +\n        sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance)\n    ) \n)",
+                        "expr": "quantile(0.5,\n    sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance) /\n    (\n        sum(vm_free_disk_space_bytes{job=\"victoriametrics\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance) +\n        sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance)\n    ) \n)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "median",
@@ -4748,7 +4841,7 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=153\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=153\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "min": 0,
@@ -4806,13 +4899,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(\n    sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type=~\"indexdb.*\"}) by(job, instance)\n    / \n    sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance)\n)",
+                        "expr": "max(\n    sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type=~\"indexdb.*\"}) by(job, instance)\n    / \n    sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance)\n)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "indexdb",
@@ -4829,13 +4922,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(\n    sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) by(job, instance)\n    / \n    sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance)\n)",
+                        "expr": "max(\n    sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) by(job, instance)\n    / \n    sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance)\n)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "datapoints",
@@ -4902,7 +4995,7 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=152\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=152\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "min": 0,
@@ -4956,13 +5049,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(max_over_time(vm_pending_rows{job=~\"$job\", instance=~\"$instance\", type=\"storage\"}[$__rate_interval]))",
+                        "expr": "sum(max_over_time(vm_pending_rows{job=\"victoriametrics\", instance=~\"$instance\", type=\"storage\"}[$__rate_interval]))",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "pending datapoints",
@@ -4979,13 +5072,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(max_over_time(vm_pending_rows{job=~\"$job\", instance=~\"$instance\", type=\"indexdb\"}[$__rate_interval]))",
+                        "expr": "sum(max_over_time(vm_pending_rows{job=\"victoriametrics\", instance=~\"$instance\", type=\"indexdb\"}[$__rate_interval]))",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "pending index entries",
@@ -5120,14 +5213,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "max_over_time(process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])",
+                        "expr": "max_over_time(process_resident_memory_bytes{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])",
                         "interval": "",
                         "legendFormat": "{{instance}} ({{job}})",
                         "range": true
@@ -5240,14 +5333,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "max_over_time(process_resident_memory_anon_bytes{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])",
+                        "expr": "max_over_time(process_resident_memory_anon_bytes{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])",
                         "interval": "",
                         "legendFormat": "{{instance}} ({{job}})",
                         "range": true
@@ -5360,13 +5453,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(vm_free_disk_space_bytes{job=~\"$job\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=~\"$job\", instance=~\"$instance\"}) \n/ \nignoring(path) (\n    (rate(vm_rows_added_to_storage_total{job=~\"$job\", instance=~\"$instance\"}[1d]) - \n        sum(rate(vm_deduplicated_samples_total{job=~\"$job\", instance=~\"$instance\"}[1d])) without(type)) * \n    (\n        sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type) /\n        sum(vm_rows{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type)\n    )\n    +\n    rate(vm_new_timeseries_created_total{job=~\"$job\", instance=~\"$instance\"}[1d]) * \n    (\n        sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type) /\n        sum(vm_rows{job=~\"$job\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type)\n    )\n) \u003e 0",
+                        "expr": "(vm_free_disk_space_bytes{job=\"victoriametrics\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) \n/ \nignoring(path) (\n    (rate(vm_rows_added_to_storage_total{job=\"victoriametrics\", instance=~\"$instance\"}[1d]) - \n        sum(rate(vm_deduplicated_samples_total{job=\"victoriametrics\", instance=~\"$instance\"}[1d])) without(type)) * \n    (\n        sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type) /\n        sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type)\n    )\n    +\n    rate(vm_new_timeseries_created_total{job=\"victoriametrics\", instance=~\"$instance\"}[1d]) * \n    (\n        sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type) /\n        sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type)\n    )\n) \u003e 0",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -5485,14 +5578,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(job, instance)",
+                        "expr": "sum(rate(process_cpu_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(job, instance)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -5607,13 +5700,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type=~\"indexdb.*\"}) by(job, instance)",
+                        "expr": "sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type=~\"indexdb.*\"}) by(job, instance)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}}:{{instance}} (indexdb)",
@@ -5630,13 +5723,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) by(job, instance)",
+                        "expr": "sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) by(job, instance)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}}:{{instance}} (datapoints)",
@@ -5750,13 +5843,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by(job, instance)",
+                        "expr": "sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, instance)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "",
@@ -5870,14 +5963,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": true,
-                        "expr": "sum(rate(vm_log_messages_total{job=~\"$job\",instance=~\"$instance\", level!=\"info\"}[$__rate_interval])) by (job, instance, level, app_version, location) \u003e 0",
+                        "expr": "sum(rate(vm_log_messages_total{job=\"victoriametrics\",instance=~\"$instance\", level!=\"info\"}[$__rate_interval])) by (job, instance, level, app_version, location) \u003e 0",
                         "format": "time_series",
                         "interval": "5m",
                         "intervalFactor": 1,
@@ -6003,14 +6096,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(vm_app_version{job=~\"$job\", instance=~\"$instance\"}) by(job, version)",
+                        "expr": "sum(vm_app_version{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, version)",
                         "format": "table",
                         "instant": true,
                         "range": false
@@ -6119,13 +6212,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(min_over_time(vm_app_version{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(min_over_time(vm_app_version{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{job}}"
@@ -6143,7 +6236,7 @@
           "description": "",
           "id": 156,
           "links": [],
-          "title": "Uptime ($job)",
+          "title": "Uptime",
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -6247,13 +6340,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(vm_request_duration_seconds{job=~\"$job\", instance=~\"$instance\", quantile=\"0.99\"}) by (path) \u003e 0",
+                        "expr": "max(vm_request_duration_seconds{job=\"victoriametrics\", instance=~\"$instance\", quantile=\"0.99\"}) by (path) \u003e 0",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{path}}",
@@ -6377,14 +6470,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(vm_rows{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"})",
+                        "expr": "sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"})",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -6465,13 +6558,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_rows{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) by (job)",
+                        "expr": "sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -6489,13 +6582,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job)\n/ sum(vm_rows{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) by (job)",
+                        "expr": "sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job)\n/ sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -6631,13 +6724,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "vm_pending_rows{job=~\"$job\", instance=~\"$instance\", type=\"storage\"}",
+                        "expr": "vm_pending_rows{job=\"victoriametrics\", instance=~\"$instance\", type=\"storage\"}",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - pending datapoints",
@@ -6654,13 +6747,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "vm_pending_rows{job=~\"$job\", instance=~\"$instance\", type=\"indexdb\"}",
+                        "expr": "vm_pending_rows{job=\"victoriametrics\", instance=~\"$instance\", type=\"indexdb\"}",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - pending index entries",
@@ -6795,14 +6888,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(rate(vm_http_request_errors_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job, path) \u003e 0",
+                        "expr": "sum(rate(vm_http_request_errors_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, path) \u003e 0",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -6924,13 +7017,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_parts{job=~\"$job\", instance=~\"$instance\", type=~\"indexdb.*\"}) by (job, type)",
+                        "expr": "sum(vm_parts{job=\"victoriametrics\", instance=~\"$instance\", type=~\"indexdb.*\"}) by (job, type)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - {{type}}",
@@ -6947,13 +7040,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(vm_last_partition_parts{job=~\"$job\", instance=~\"$instance\"}) by(job, type)",
+                        "expr": "max(vm_last_partition_parts{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, type)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - {{type}}",
@@ -7071,13 +7164,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_tcplistener_conns{job=~\"$job\", instance=~\"$instance\"}) by(job)",
+                        "expr": "sum(vm_tcplistener_conns{job=\"victoriametrics\", instance=~\"$instance\"}) by(job)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}}",
@@ -7201,14 +7294,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(vm_cache_entries{job=~\"$job\", instance=~\"$instance\", type=\"storage/hour_metric_ids\"})",
+                        "expr": "sum(vm_cache_entries{job=\"victoriametrics\", instance=~\"$instance\", type=\"storage/hour_metric_ids\"})",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -7289,13 +7382,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(go_memstats_sys_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job) + sum(vm_cache_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job)",
+                        "expr": "sum(go_memstats_sys_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job) + sum(vm_cache_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - requested from system",
@@ -7312,13 +7405,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(go_memstats_heap_inuse_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job) + sum(vm_cache_size_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job)",
+                        "expr": "sum(go_memstats_heap_inuse_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job) + sum(vm_cache_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - heap inuse",
@@ -7335,13 +7428,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(go_memstats_stack_inuse_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job)",
+                        "expr": "sum(go_memstats_stack_inuse_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}} - stack inuse",
@@ -7358,13 +7451,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(process_resident_memory_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job)",
+                        "expr": "sum(process_resident_memory_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -7382,14 +7475,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(process_resident_memory_anon_bytes{job=~\"$job\", instance=~\"$instance\"}) by (job)",
+                        "expr": "sum(process_resident_memory_anon_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -7521,13 +7614,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(go_goroutines{job=~\"$job\", instance=~\"$instance\"}) by(job)",
+                        "expr": "sum(go_goroutines{job=\"victoriametrics\", instance=~\"$instance\"}) by(job)",
                         "format": "time_series",
                         "intervalFactor": 2,
                         "legendFormat": "{{job}}",
@@ -7652,13 +7745,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_tcplistener_accepts_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(job)",
+                        "expr": "sum(rate(vm_tcplistener_accepts_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(job)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}}",
@@ -7782,13 +7875,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_cache_entries{job=~\"$job\", instance=~\"$instance\", type=\"storage/hour_metric_ids\"})",
+                        "expr": "sum(vm_cache_entries{job=\"victoriametrics\", instance=~\"$instance\", type=\"storage/hour_metric_ids\"})",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{instance}}",
@@ -7916,13 +8009,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) by (job)",
+                        "expr": "sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -7940,13 +8033,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "vm_free_disk_space_bytes{job=~\"$job\", instance=~\"$instance\"} - vm_free_disk_space_limit_bytes{job=~\"$job\", instance=~\"$instance\"}",
+                        "expr": "vm_free_disk_space_bytes{job=\"victoriametrics\", instance=~\"$instance\"} - vm_free_disk_space_limit_bytes{job=\"victoriametrics\", instance=~\"$instance\"}",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -7964,13 +8057,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type=~\"indexdb.*\"}) by (job)",
+                        "expr": "sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type=~\"indexdb.*\"}) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -8089,13 +8182,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "rate(process_cpu_seconds_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])",
+                        "expr": "rate(process_cpu_seconds_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -8113,14 +8206,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "min(process_cpu_cores_available{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "min(process_cpu_cores_available{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -8261,14 +8354,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(increase(vm_rows_ignored_total{job=~\"$job\", instance=~\"$instance\"}[1h])) by (instance, reason)",
+                        "expr": "sum(increase(vm_rows_ignored_total{job=\"victoriametrics\", instance=~\"$instance\"}[1h])) by (instance, reason)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -8385,13 +8478,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max_over_time(vm_concurrent_insert_capacity{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])",
+                        "expr": "max_over_time(vm_concurrent_insert_capacity{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -8409,13 +8502,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_concurrent_insert_current{job=~\"$job\", instance=~\"$instance\"}) by (instance)",
+                        "expr": "sum(vm_concurrent_insert_current{job=\"victoriametrics\", instance=~\"$instance\"}) by (instance)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{instance}} - current",
@@ -8547,13 +8640,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_slow_queries_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(rate(vm_slow_queries_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "intervalFactor": 1,
                         "legendFormat": "{{job}}",
@@ -8671,13 +8764,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(vm_active_merges{job=~\"$job\", instance=~\"$instance\"}) by(job, type)",
+                        "expr": "sum(vm_active_merges{job=\"victoriametrics\", instance=~\"$instance\"}) by(job, type)",
                         "legendFormat": "{{job}} - {{type}}",
                         "range": true
                       },
@@ -8792,13 +8885,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_rows_merged_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by(job, type)",
+                        "expr": "sum(rate(vm_rows_merged_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by(job, type)",
                         "legendFormat": "{{job}} - {{type}}",
                         "range": true
                       },
@@ -8915,13 +9008,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(vm_new_timeseries_created_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) ",
+                        "expr": "sum(rate(vm_new_timeseries_created_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) ",
                         "interval": "",
                         "legendFormat": "churn rate",
                         "range": true
@@ -8937,13 +9030,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(increase(vm_new_timeseries_created_total{job=~\"$job\", instance=~\"$instance\"}[24h]))",
+                        "expr": "sum(increase(vm_new_timeseries_created_total{job=\"victoriametrics\", instance=~\"$instance\"}[24h]))",
                         "interval": "",
                         "legendFormat": "new series over 24h",
                         "range": true
@@ -9060,13 +9153,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "max(\n    rate(vm_slow_row_inserts_total{job=~\"$job\"}[$__rate_interval]) \n    / rate(vm_rows_added_to_storage_total{job=~\"$job\"}[$__rate_interval])\n)",
+                        "expr": "max(\n    rate(vm_slow_row_inserts_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval]) \n    / rate(vm_rows_added_to_storage_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])\n)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -9186,13 +9279,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(vm_free_disk_space_bytes{job=~\"$job\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=~\"$job\", instance=~\"$instance\"}) \n/ \nignoring(path) (\n    (rate(vm_rows_added_to_storage_total{job=~\"$job\", instance=~\"$instance\"}[1d]) - \n        sum(rate(vm_deduplicated_samples_total{job=~\"$job\", instance=~\"$instance\"}[1d])) without(type)) * \n    (\n        sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type) /\n        sum(vm_rows{job=~\"$job\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type)\n    )\n    +\n    rate(vm_new_timeseries_created_total{job=~\"$job\", instance=~\"$instance\"}[1d]) * \n    (\n        sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type) /\n        sum(vm_rows{job=~\"$job\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type)\n    )\n) \u003e 0",
+                        "expr": "(vm_free_disk_space_bytes{job=\"victoriametrics\", instance=~\"$instance\"}-vm_free_disk_space_limit_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) \n/ \nignoring(path) (\n    (rate(vm_rows_added_to_storage_total{job=\"victoriametrics\", instance=~\"$instance\"}[1d]) - \n        sum(rate(vm_deduplicated_samples_total{job=\"victoriametrics\", instance=~\"$instance\"}[1d])) without(type)) * \n    (\n        sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type) /\n        sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\", type!~\"indexdb.*\"}) without(type)\n    )\n    +\n    rate(vm_new_timeseries_created_total{job=\"victoriametrics\", instance=~\"$instance\"}[1d]) * \n    (\n        sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type) /\n        sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\", type=\"indexdb/file\"}) without(type)\n    )\n) \u003e 0",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -9260,7 +9353,7 @@
                     {
                       "targetBlank": true,
                       "title": "Drilldown",
-                      "url": "/d/wNf0q_kZk_vm?viewPanel=150\u0026var-job=${__field.labels.job}\u0026var-ds=$ds\u0026${__url_time_range}"
+                      "url": "/d/wNf0q_kZk_vm?viewPanel=150\u0026var-DS_PROMETHEUS=${DS_PROMETHEUS}\u0026${instance:queryparam}\u0026${__url_time_range}"
                     }
                   ],
                   "min": 0,
@@ -9318,13 +9411,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_io_storage_read_bytes_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(rate(process_io_storage_read_bytes_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -9342,13 +9435,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(process_io_storage_written_bytes_total{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
+                        "expr": "sum(rate(process_io_storage_written_bytes_total{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job)",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -9485,13 +9578,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "exemplar": false,
-                        "expr": "sum(vm_available_cpu_cores{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "sum(vm_available_cpu_cores{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -9572,13 +9665,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "exemplar": false,
-                        "expr": "sum(vm_available_memory_bytes{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "sum(vm_available_memory_bytes{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -9659,14 +9752,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"})",
+                        "expr": "sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"})",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -9747,14 +9840,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max(sum(vm_data_size_bytes{job=~\"$job\", instance=~\"$instance\"}) / sum(vm_rows{job=~\"$job\", instance=~\"$instance\"}))",
+                        "expr": "max(sum(vm_data_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"}) / sum(vm_rows{job=\"victoriametrics\", instance=~\"$instance\"}))",
                         "format": "time_series",
                         "instant": true,
                         "interval": "",
@@ -9835,14 +9928,14 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "max(\n    vm_cache_size_bytes{job=~\"$job\", instance=~\"$instance\"} \n    /\n    vm_cache_size_max_bytes{job=~\"$job\", instance=~\"$instance\"}\n) by(type)",
+                        "expr": "max(\n    vm_cache_size_bytes{job=\"victoriametrics\", instance=~\"$instance\"} \n    /\n    vm_cache_size_max_bytes{job=\"victoriametrics\", instance=~\"$instance\"}\n) by(type)",
                         "interval": "",
                         "legendFormat": "__auto",
                         "range": true
@@ -9958,13 +10051,13 @@
                     "hidden": false,
                     "query": {
                       "datasource": {
-                        "name": "$ds"
+                        "name": "${DS_PROMETHEUS}"
                       },
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum(rate(vm_series_read_per_query_bucket{job=~\"$job\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
+                        "expr": "histogram_quantile(0.99, sum(rate(vm_series_read_per_query_bucket{job=\"victoriametrics\", instance=~\"$instance\"}[$__rate_interval])) by (job, vmrange))",
                         "format": "time_series",
                         "interval": "",
                         "intervalFactor": 1,
@@ -11140,6 +11233,19 @@
     },
     "links": [
       {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "o11y"
+        ],
+        "targetBlank": false,
+        "title": "Dashboards",
+        "tooltip": "",
+        "type": "dashboards"
+      },
+      {
         "asDropdown": false,
         "icon": "doc",
         "includeVars": false,
@@ -11215,20 +11321,18 @@
     "liveNow": false,
     "preload": false,
     "tags": [
-      "victoriametrics"
+      "victoriametrics",
+      "o11y"
     ],
     "timeSettings": {
-      "autoRefresh": "30s",
+      "autoRefresh": "1m",
       "autoRefreshIntervals": [
-        "10s",
         "30s",
         "1m",
         "5m",
         "15m",
         "30m",
-        "1h",
-        "2h",
-        "1d"
+        "1h"
       ],
       "fiscalYearStartMonth": 0,
       "from": "now-24h",
@@ -11248,8 +11352,9 @@
           },
           "hide": "dontHide",
           "includeAll": false,
+          "label": "datasource",
           "multi": false,
-          "name": "ds",
+          "name": "DS_PROMETHEUS",
           "options": [],
           "pluginId": "victoriametrics-metrics-datasource",
           "refresh": "onDashboardLoad",
@@ -11262,58 +11367,24 @@
         "spec": {
           "allowCustomValue": true,
           "current": {
-            "text": "victoriametrics",
-            "value": "victoriametrics"
+            "text": "sauna",
+            "value": "sauna"
           },
-          "definition": "label_values(vm_data_size_bytes, job)",
+          "definition": "label_values(node_uname_info, instance)",
           "hide": "dontHide",
           "includeAll": false,
+          "label": "instance",
           "multi": false,
-          "name": "job",
-          "options": [],
-          "query": {
-            "datasource": {
-              "name": "$ds"
-            },
-            "group": "victoriametrics-metrics-datasource",
-            "kind": "DataQuery",
-            "spec": {
-              "query": "label_values(vm_data_size_bytes, job)",
-              "refId": "VictoriaMetrics-job-Variable-Query"
-            },
-            "version": "v0"
-          },
-          "refresh": "onDashboardLoad",
-          "regex": "",
-          "regexApplyTo": "value",
-          "skipUrlSync": false,
-          "sort": "disabled"
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "allValue": ".*",
-          "allowCustomValue": true,
-          "current": {
-            "text": "All",
-            "value": "$__all"
-          },
-          "definition": "label_values(vm_app_version{job=~\"$job\"}, instance)",
-          "hide": "dontHide",
-          "includeAll": true,
-          "multi": true,
           "name": "instance",
           "options": [],
           "query": {
             "datasource": {
-              "name": "$ds"
+              "name": "${DS_PROMETHEUS}"
             },
             "group": "victoriametrics-metrics-datasource",
             "kind": "DataQuery",
             "spec": {
-              "query": "label_values(vm_app_version{job=~\"$job\"}, instance)",
-              "refId": "VictoriaMetrics-instance-Variable-Query"
+              "__legacyStringValue": "label_values(node_uname_info, instance)"
             },
             "version": "v0"
           },
@@ -11321,12 +11392,12 @@
           "regex": "",
           "regexApplyTo": "value",
           "skipUrlSync": false,
-          "sort": "disabled"
+          "sort": "alphabeticalAsc"
         }
       },
       {
         "datasource": {
-          "name": "$ds"
+          "name": "${DS_PROMETHEUS}"
         },
         "group": "victoriametrics-metrics-datasource",
         "kind": "AdhocVariable",
