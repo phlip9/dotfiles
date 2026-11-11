@@ -74,8 +74,7 @@ let
   };
   # A scrape target on this host, labeled `instance=<hostname>` instead of
   # the default `<loopback addr>:<port>`. Every job on a host then shares
-  # one `instance`, ex: Node Exporter Full's `instance="$node"` also matches
-  # nixos-exporter.
+  # one `instance`, so one dashboard `$instance` var filters them all.
   # Keep in sync: nixos/sauna/grafana/*.json `$instance` var
   # (label_values(node_uname_info, instance)) + `instance=~"$instance"`
   # filters.
@@ -571,9 +570,10 @@ in
       extraOptions = [ "-enableTCP6" ];
 
       prometheusConfig = {
-        # Keep in sync: nixos/sauna/grafana/overview.json queries these
-        # `job_name`s: "Services" tiles (`up{job=...}`), probes
-        # (`blackbox`), annotations (`nixos-exporter`).
+        # Keep in sync: nixos/sauna/grafana/*.json select by these
+        # `job_name`s, ex: overview "Services" tiles (`up{job=...}`), probes
+        # (`blackbox`), annotations (`nixos-exporter`); nix-ci (`nixbot`,
+        # `niks3`); victoriametrics + node-exporter-full pin their own job.
         scrape_configs = [
           {
             job_name = "victoriametrics";
