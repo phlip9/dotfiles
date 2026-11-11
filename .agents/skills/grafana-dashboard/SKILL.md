@@ -102,15 +102,31 @@ Conventions (see `nixos/sauna/grafana/nix-ci.json` as the reference):
   Collapse rarely used rows (runtime/host).
 - Every panel gets a 1-sentence `description` (units, caveats, what an
   anomaly looks like).
-- Stats: background sparkline on every tile. `up` tiles: value mapping
-  UP/DOWN + `colorMode: background`.
+- Stats: background sparkline on metric tiles.
+- Status displays (UP/DOWN tiles, health strips, state timelines):
+  neutral when healthy, color only for anomalies. A glance w/ no color
+  anywhere = all OK.
+  - Healthy: no color. Tiles unfilled (mapping/threshold color
+    `transparent` + `colorMode: "background_solid"`), plain values
+    (`text`). Timeline bars `#323632` (the Gilded grove selected-nav gray)
+    w/ `fillOpacity: 100` + `color.mode: "fixed"`.
+  - Anomalies: the palette's dark shades, readable w/ white text:
+    `dark-red` down/failed/paging, `dark-orange` warn, `dark-yellow` needs
+    action (ex: reboot), `dark-purple` unknown/no data. No bright `orange`
+    or `yellow` fills: white text on them is unreadable.
+  - No data is never healthy: an explicit UNKNOWN (purple) on tiles; on
+    timelines, leave the step empty.
+  - Status tiles: `graphMode: "none"`, history lives in a timeline.
+  - Reference: `nixos/sauna/grafana/overview.json` (Services, Host health,
+    Status timeline). `Dashboard.UP_MAP` follows this.
 - Range totals in stats: per-interval counts + `calc: "sum"`; ratios and
   means as running ratios (`running_sum(a) / running_sum(b)`) w/
   `lastNotNull`. Don't use `[$__range]` instant queries: no sparkline.
 - Event counts: stacked bars, >= 1h buckets (`queryOptions: {interval:
   "1h", maxDataPoints: 200}`), legend table w/ `sum`.
-- Status colors reserved: succeeded green, failed red, cancelled/skipped
-  gray. Hide a dominating series by default (`custom.hideFrom.viz`).
+- Event-count series (charts, not status displays): succeeded green,
+  failed red, cancelled/skipped gray (`STATUS_COLORS`). Hide a dominating
+  series by default (`custom.hideFrom.viz`).
 - One y-axis per panel; different units -> separate panels.
 - Units: `s`, `bytes`, `Bps`, `reqps`, `percentunit`, `short`.
 - Datasource via the `DS_PROMETHEUS` DatasourceVariable, like the others.

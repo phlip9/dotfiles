@@ -11,8 +11,8 @@ new dashboard (from the repo root, in a throwaway tmp/<name>/gen.py):
 
     d = Dashboard("Nix CI", tags=["ci"], time_from="now-7d")
     up = d.stat("stat-up", "nixbot", "Scrape status.", 'up{job="nixbot"}',
-                mappings=d.UP_MAP, color_mode="background",
-                thr=thresholds(("red", None), ("green", 1)))
+                mappings=d.UP_MAP, color_mode="background_solid",
+                thr=d.UP_THR, graph=False)
     rate = d.timeseries("ts-rate", "Requests", "Req rate by route.",
                         [("sum by (route) (rate(x[$__rate_interval]))",
                           "{{route}}")], unit="reqps")
@@ -164,15 +164,19 @@ class Dashboard:
     `spec()` / `write()` validate + emit it.
     """
 
+    # `up`-style status tiles: neutral when healthy (UP unfilled), color only
+    # for anomalies. Use w/ color_mode="background_solid" + thr=UP_THR.
     UP_MAP: ClassVar[list[JsonObj]] = [
         {
             "type": "value",
             "options": {
-                "0": {"text": "DOWN", "color": "red", "index": 0},
-                "1": {"text": "UP", "color": "green", "index": 1},
+                "0": {"text": "DOWN", "color": "dark-red", "index": 0},
+                "1": {"text": "UP", "color": "transparent", "index": 1},
             },
         }
     ]
+    UP_THR: ClassVar[JsonObj] = thresholds(("dark-red", None),
+                                           ("transparent", 1))
 
     def __init__(self, title: str, description: str = "",
                  tags: Sequence[str] = (), time_from: str = "now-24h",
