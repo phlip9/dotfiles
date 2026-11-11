@@ -624,33 +624,39 @@
                     {
                       "options": {
                         "0": {
-                          "text": "Down"
+                          "color": "dark-red",
+                          "index": 0,
+                          "text": "DOWN"
+                        },
+                        "1": {
+                          "color": "transparent",
+                          "index": 1,
+                          "text": "UP"
                         }
                       },
                       "type": "value"
                     },
                     {
                       "options": {
-                        "1": {
-                          "text": "Up"
+                        "match": "null+nan",
+                        "result": {
+                          "color": "dark-purple",
+                          "index": 2,
+                          "text": "UNKNOWN"
                         }
                       },
-                      "type": "value"
+                      "type": "special"
                     }
                   ],
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
                       {
-                        "color": "#E02F44",
+                        "color": "dark-red",
                         "value": 0
                       },
                       {
-                        "color": "#FF9830",
-                        "value": 1
-                      },
-                      {
-                        "color": "#299c46",
+                        "color": "transparent",
                         "value": 1
                       }
                     ]
@@ -660,7 +666,7 @@
                 "overrides": []
               },
               "options": {
-                "colorMode": "background",
+                "colorMode": "background_solid",
                 "graphMode": "none",
                 "justifyMode": "auto",
                 "orientation": "horizontal",
