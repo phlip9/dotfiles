@@ -76,6 +76,9 @@ let
   # the default `<loopback addr>:<port>`. Every job on a host then shares
   # one `instance`, ex: Node Exporter Full's `instance="$node"` also matches
   # nixos-exporter.
+  # Keep in sync: nixos/sauna/grafana/*.json `$instance` var
+  # (label_values(node_uname_info, instance)) + `instance=~"$instance"`
+  # filters.
   hostTargets = target: [
     {
       targets = [ target ];
