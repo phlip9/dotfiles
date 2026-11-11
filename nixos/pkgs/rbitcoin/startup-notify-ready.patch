@@ -1,0 +1,258 @@
+From 7b1b4971f0792eb81ef131540c6bf4a8c68b1aa4 Mon Sep 17 00:00:00 2001
+From: Philip Kannegaard Hayes <philiphayes9@gmail.com>
+Date: Wed, 11 Nov 2026 04:39:52 +0000
+Subject: [PATCH] node: run --startup-notify once /readyz is ready and
+ listeners are up
+
+The hook ran at tip entry, before /readyz could answer ok, and before
+Electrum and Esplora bound when the scripthash index lagged the tip
+(they bind later, from the tip loop). A hook that starts services
+depending on the node raced both.
+
+Run it once, from the tip loop, after /readyz would first answer ok and
+every configured Electrum and Esplora listener is bound. The readiness
+check reads the store, so it runs on the blocking pool, and only until
+the hook has run. A run that never enters tip follow (incomplete
+catch-up, --max-run-secs 0) no longer runs the hook.
+---
+ changelog.d/startup-notify-listeners.md     |  9 ++++
+ crates/rbitcoin-node/src/config.rs          |  2 +-
+ crates/rbitcoin-node/src/run.rs             | 44 ++++++++++++------
+ crates/rbitcoin-test/tests/cross_surface.rs | 50 ++++++++++++++++++---
+ 4 files changed, 84 insertions(+), 21 deletions(-)
+ create mode 100644 changelog.d/startup-notify-listeners.md
+
+diff --git a/changelog.d/startup-notify-listeners.md b/changelog.d/startup-notify-listeners.md
+new file mode 100644
+index 000000000..cf8060fda
+--- /dev/null
++++ b/changelog.d/startup-notify-listeners.md
+@@ -0,0 +1,9 @@
++Fixed
++
++- **`--startup-notify` runs once the node is ready.** It ran at tip entry,
++  before `/readyz` could answer ok, and before Electrum and Esplora bound
++  when the scripthash index lagged the tip. A hook that starts services
++  depending on the node raced both. It now runs once, from tip follow, after
++  `/readyz` first answers ok and every configured listener is up. A run
++  that never enters tip follow (including `--max-run-secs 0`) does not run
++  it.
+diff --git a/crates/rbitcoin-node/src/config.rs b/crates/rbitcoin-node/src/config.rs
+index 75d7f3b03..f2acf0562 100644
+--- a/crates/rbitcoin-node/src/config.rs
++++ b/crates/rbitcoin-node/src/config.rs
+@@ -541,7 +541,7 @@ pub struct NodeConfig {
+     pub net_permission_relay: bool,
+     /// `--net-permission-force-relay` (default false): implicit forcerelay on a bare CIDR grant.
+     pub net_permission_force_relay: bool,
+-    /// `--startup-notify` shell command (run once after start).
++    /// `--startup-notify` shell command, run once `/readyz` is ok and every configured listener is up.
+     pub startup_notify: Option<String>,
+     /// `--alert-notify` shell command (`%s` = warning text).
+     pub alert_notify: Option<String>,
+diff --git a/crates/rbitcoin-node/src/run.rs b/crates/rbitcoin-node/src/run.rs
+index bcf1e94de..c1d58fb57 100644
+--- a/crates/rbitcoin-node/src/run.rs
++++ b/crates/rbitcoin-node/src/run.rs
+@@ -1,6 +1,6 @@
+ use crate::config::{parse_btc_to_sat, ListenOpts, NodeConfig};
+ use crate::error::NodeError;
+-use crate::health::{run_health, NodeStatus, Phase};
++use crate::health::{readiness, run_health, NodeStatus, Phase};
+ use bitcoin::consensus::Encodable;
+ use rbitcoin_electrum::{run_electrum, ElectrumConfig, ElectrumHandle, TipNotify};
+ use rbitcoin_esplora::{run_esplora, BlockTemplateFn, EsploraConfig, EsploraHandle, EsploraListen};
+@@ -1440,18 +1440,6 @@ pub async fn run_p2p(config: NodeConfig) -> Result<(), NodeError> {
+         }
+     }
+ 
+-    if let Some(cmd) = config
+-        .startup_notify
+-        .as_deref()
+-        .filter(|_| !shutdown.requested())
+-    {
+-        match std::process::Command::new("sh").arg("-c").arg(cmd).status() {
+-            Ok(st) if st.success() => {}
+-            Ok(st) => warn!("startup-notify exited {st}: {cmd}"),
+-            Err(e) => warn!("startup-notify failed: {e}: {cmd}"),
+-        }
+-    }
+-
+     if tip_follow_ready && config.max_run_secs != Some(0) && !shutdown.requested() {
+         status.enter(Phase::Following);
+         let deadline = config
+@@ -1479,6 +1467,7 @@ pub async fn run_p2p(config: NodeConfig) -> Result<(), NodeError> {
+         refill_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+         refill_tick.tick().await;
+         let mut window_blocks: u64 = 0;
++        let mut startup_notify = config.startup_notify.as_deref();
+ 
+         loop {
+             if shutdown.requested() {
+@@ -1601,6 +1590,11 @@ pub async fn run_p2p(config: NodeConfig) -> Result<(), NodeError> {
+                     info!("node: scripthash inclusion reached the tip — wallet services bound");
+                 }
+             }
++            let wallet_bound = (config.listen.electrum.is_none() || !electrum_handles.is_empty())
++                && (config.listen.esplora.is_none() || !esplora_handles.is_empty());
++            if startup_notify.is_some() && wallet_bound && readyz_ok(&status).await? {
++                run_startup_notify(startup_notify.take(), &shutdown);
++            }
+ 
+             // Prefer shutdown, then the 5s perf tick when both ready. Do **not**
+             // put tip_rx ahead of perf under `biased` — multi-block catch-up can
+@@ -2905,6 +2899,30 @@ pub async fn sync_tx_relay(
+     Ok(())
+ }
+ 
++/// `/readyz` would answer ok now.
++async fn readyz_ok(status: &Arc<NodeStatus>) -> Result<bool, NodeError> {
++    let status = Arc::clone(status);
++    tokio::task::spawn_blocking(move || {
++        let _g = BlockingRegion::enter();
++        readiness(&status.ready_snapshot()).is_ok()
++    })
++    .await
++    .map_err(|e| NodeError::Config(format!("readiness task: {e}")))
++}
++
++/// Run `--startup-notify` through `sh -c` and wait for it, unless the node
++/// is stopping.
++fn run_startup_notify(cmd: Option<&str>, shutdown: &Shutdown) {
++    let Some(cmd) = cmd.filter(|_| !shutdown.requested()) else {
++        return;
++    };
++    match std::process::Command::new("sh").arg("-c").arg(cmd).status() {
++        Ok(st) if st.success() => {}
++        Ok(st) => warn!("startup-notify exited {st}: {cmd}"),
++        Err(e) => warn!("startup-notify failed: {e}: {cmd}"),
++    }
++}
++
+ #[allow(clippy::too_many_arguments)] // call-site args stay unbundled
+ pub async fn start_electrum_if_ready(
+     sh_tip_ready: bool,
+diff --git a/crates/rbitcoin-test/tests/cross_surface.rs b/crates/rbitcoin-test/tests/cross_surface.rs
+index 68a3bf7be..763e734be 100644
+--- a/crates/rbitcoin-test/tests/cross_surface.rs
++++ b/crates/rbitcoin-test/tests/cross_surface.rs
+@@ -2786,9 +2786,11 @@ async fn node_listen_and_exit() {
+         ephemeral_addr(),
+         ephemeral_addr(),
+     );
++    let notified = dir.join("startup-notified");
+     let mut cfg = listen_and_exit_cfg(&dir);
+     cfg.milestone_height = 100;
+     cfg.shindex = true;
++    cfg.startup_notify = Some(format!("touch '{}'", notified.display()));
+     cfg.listen.electrum = Some(electrum_addr);
+     cfg.listen.esplora = Some(rbitcoin_esplora::EsploraListen::Tcp(esplora_addr));
+     cfg.rpc.listen = Some(rpc_addr);
+@@ -2805,6 +2807,10 @@ async fn node_listen_and_exit() {
+         (503, "not ready: initial block download".into()),
+         "genesis tip is older than --max-tip-age"
+     );
++    assert!(
++        !notified.exists(),
++        "startup-notify ran before /readyz was ready"
++    );
+     pin_health_scrape(health_addr, false, 0.0).await;
+     let (st, height) = http_get(esplora_addr, "/blocks/tip/height").await;
+     assert_eq!((st, height.as_str()), (200, "0"), "esplora on genesis");
+@@ -2824,6 +2830,15 @@ async fn node_listen_and_exit() {
+         tokio::time::sleep(Duration::from_millis(50)).await;
+     };
+     assert_eq!(ready, (200, "ok".into()), "a fresh tip is ready");
++    let deadline = Instant::now() + Duration::from_secs(10);
++    while !notified.exists() && Instant::now() < deadline {
++        tokio::time::sleep(Duration::from_millis(50)).await;
++    }
++    assert!(
++        notified.exists(),
++        "startup-notify runs once /readyz is ready"
++    );
++    std::fs::remove_file(&notified).unwrap();
+     pin_health_scrape(health_addr, true, 1.0).await;
+     stop_run_p2p(rpc_addr, node).await;
+ 
+@@ -2857,7 +2872,6 @@ async fn node_listen_and_exit() {
+     // as started for `--startup-notify`.
+     let electrum_published = dir.join("run").join("electrum.addr");
+     let _ = std::fs::remove_file(&electrum_published);
+-    let notified = dir.join("startup-notified");
+     let mut cfg = listen_and_exit_cfg(&dir);
+     cfg.shindex = true;
+     cfg.listen.electrum = Some("127.0.0.1:0".parse().unwrap());
+@@ -3615,7 +3629,8 @@ async fn history_len(electrum_addr: SocketAddr, scripthash: &str) -> usize {
+ /// on the first start with it on; turning it off closes Electrum and keeps
+ /// the index; turning it back on after a crash that left a collect run and
+ /// a lagging high-water mark resumes the write-behind, discards the run,
+-/// and follows the next block.
++/// binds Electrum from the tip loop before `--startup-notify` runs, and
++/// follows the next block.
+ #[tokio::test(flavor = "multi_thread")]
+ async fn enter_tip_mode_indexes() {
+     let td = TestDatadir::new().unwrap();
+@@ -3632,7 +3647,7 @@ async fn enter_tip_mode_indexes() {
+         .unwrap();
+     }
+     let (electrum_addr, rpc_addr) = (ephemeral_addr(), ephemeral_addr());
+-    let start = |shindex: bool| {
++    let config = |shindex: bool| {
+         let mut cfg = NodeConfig::default()
+             .with_datadir(&dir)
+             .with_network(Network::Regtest)
+@@ -3649,8 +3664,9 @@ async fn enter_tip_mode_indexes() {
+         } else {
+             60
+         });
+-        spawn_run_p2p(cfg)
++        cfg
+     };
++    let start = |shindex: bool| spawn_run_p2p(config(shindex));
+     let op_true = electrum_scripthash_hex(&[0x51]);
+ 
+     // No scripthash index: tip follow, RPC, and Electrum listen.
+@@ -3679,16 +3695,36 @@ async fn enter_tip_mode_indexes() {
+     stop_run_p2p(rpc_addr, node).await;
+ 
+     // A crash left a collect run behind and the write-behind mark short of
+-    // the tip. Open unlinks the leftover. The history already indexed stays,
+-    // and the next block lands in it.
++    // the tip. Open unlinks the leftover. Electrum stays down at tip entry
++    // and binds once the write-behind covers the tip. `--startup-notify`
++    // waits for that bind: the hook copies the published Electrum address.
++    // The history already indexed stays, and the next block lands in it.
+     let runs = store.join("scripthash.runs");
+     std::fs::create_dir_all(&runs).unwrap();
+     std::fs::write(runs.join("000050.run"), b"leftover").unwrap();
+     let hwm_path = store.join(rbitcoin_store::INCLUDE_HWM_NAME);
+     let hwm = u64::from_le_bytes(std::fs::read(&hwm_path).unwrap().try_into().unwrap());
+     std::fs::write(&hwm_path, (hwm - 2).to_le_bytes()).unwrap();
+-    let node = start(true);
++    let electrum_published = dir.join("run").join("electrum.addr");
++    std::fs::remove_file(&electrum_published).unwrap();
++    let notified = dir.join("startup-notified");
++    let mut cfg = config(true);
++    cfg.startup_notify = Some(format!(
++        "cp '{}' '{}'",
++        electrum_published.display(),
++        notified.display()
++    ));
++    let node = spawn_run_p2p(cfg);
+     wait_listeners(&[electrum_addr, rpc_addr]).await;
++    let deadline = Instant::now() + Duration::from_secs(10);
++    while !notified.exists() && Instant::now() < deadline {
++        tokio::time::sleep(Duration::from_millis(50)).await;
++    }
++    assert_eq!(
++        std::fs::read_to_string(&notified).ok(),
++        Some(format!("{electrum_addr}\n")),
++        "--startup-notify runs once the deferred Electrum bind is published"
++    );
+     assert!(!runs.join("000050.run").exists(), "leftover run discarded");
+     assert_eq!(
+         history_len(electrum_addr, &op_true).await,
+-- 
+2.54.0
+

@@ -52,6 +52,11 @@ let
     # Report readiness + phase to systemd (`Type=notify`). See
     # nixos/mods/rbitcoin.nix.
     ./sd-notify.patch
+    # Run `--startup-notify` once `/readyz` first answers ok and every
+    # Electrum + Esplora listener is bound, not at tip entry. Pending
+    # upstream commit 7b1b4971f, w/o its docs/, nix/, and TESTING.md hunks,
+    # which the build source omits.
+    ./startup-notify-ready.patch
   ];
 
   # Upstream's package skips tests. Run the product crates' tests in a
