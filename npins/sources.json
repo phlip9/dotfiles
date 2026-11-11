@@ -110,14 +110,14 @@
       "type": "Git",
       "repository": {
         "type": "GitHub",
-        "owner": "reardencode",
+        "owner": "rbitcoin-org",
         "repo": "rbitcoin"
       },
       "branch": "master",
       "submodules": false,
-      "revision": "118dafdbb373580eef29a5dcd6fe2a09d159465a",
-      "url": "https://github.com/reardencode/rbitcoin/archive/118dafdbb373580eef29a5dcd6fe2a09d159465a.tar.gz",
-      "hash": "sha256-j6dHTbusKcPVwqYsRjuVw+IhbyMS6oQJzB8Ct0FlKFA="
+      "revision": "41be5e45fdc27f3ff14b4b928c50878fdee5e3e6",
+      "url": "https://github.com/rbitcoin-org/rbitcoin/archive/41be5e45fdc27f3ff14b4b928c50878fdee5e3e6.tar.gz",
+      "hash": "sha256-J+JLul2/tYiEnIv0/AVM5vTiP90b979LBmEdKtXUGOg="
     },
     "sops-nix": {
       "type": "Git",

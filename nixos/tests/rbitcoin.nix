@@ -108,10 +108,11 @@
 
     def wait_for_tip(node, tip: str) -> None:
         """Wait for the node's best block to reach `tip`."""
-        # `waitforblock` checks the tip every 50ms, vs. the driver's 1s
-        # retries. On timeout, it returns the current tip, not an error.
+        # `waitforblock` wakes on each new tip, vs. the driver's 1s retries.
+        # On timeout, it returns the current tip, not an error. Like
+        # `bitcoin-cli`, `rbitcoin-cli` sends string params as-is, unquoted.
         node.succeed(
-            f"{cli} waitforblock '\"{tip}\"' 120000 "
+            f"{cli} waitforblock {tip} 120000 "
             f"| jq -e --arg tip {tip} '.hash == $tip'",
             timeout=timedelta(seconds=150),
         )
