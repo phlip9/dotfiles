@@ -309,6 +309,8 @@ in
         # ... and restore pending `for` state from them on restart.
         "remoteRead.url" = "http://${cfgVm.listenAddress}";
         "notifier.url" = [ "http://${amAddr}" ];
+        # Keep in sync: nixos/sauna/grafana/overview.json treats the alert
+        # feed as stale w/o a Watchdog sample in 3m (> 2 evaluations).
         evaluationInterval = lib.mkDefault "1m";
         # Base of each alert's source link (`generatorURL`, Grafana's "See
         # source"): `<external.url>/vmalert/alert?...` on vmalert's own UI.

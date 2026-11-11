@@ -184,6 +184,8 @@
     sliceConfig = {
       MemoryMax = "85%";
       MemorySwapMax = "8G";
+      # Keep in sync: nixos/sauna/grafana/overview.json "Slice CPU (cores)"
+      # description.
       CPUWeight = 25;
     };
   };
@@ -213,6 +215,8 @@
   systemd.oomd.enableUserSlices = true;
   systemd.slices.workload.sliceConfig = {
     ManagedOOMMemoryPressure = "kill";
+    # Keep in sync: nixos/sauna/grafana/overview.json "Slice memory pressure
+    # (full)" threshold line (0.8) + description (80%, 30s, which slices).
     ManagedOOMMemoryPressureLimit = "80%";
   };
   systemd.slices."-".sliceConfig.ManagedOOMSwap = "kill";
@@ -446,7 +450,9 @@
     enable = true;
     retentionPeriod = "3"; # months
 
-    # HTTPS probes + cert expiry of the public vhosts + R2 cache
+    # HTTPS probes + cert expiry of the public vhosts + R2 cache. Keep in
+    # sync: nixos/sauna/grafana/overview.json "Services" tiles + "Status
+    # timeline" match these URLs per service.
     probes = [
       "https://cache.phlip9.com/nix-cache-info"
       "https://ci.phlip9.com/"

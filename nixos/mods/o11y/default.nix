@@ -542,6 +542,9 @@ in
       extraOptions = [ "-enableTCP6" ];
 
       prometheusConfig = {
+        # Keep in sync: nixos/sauna/grafana/overview.json queries these
+        # `job_name`s: "Services" tiles (`up{job=...}`), probes
+        # (`blackbox`), annotations (`nixos-exporter`).
         scrape_configs = [
           {
             job_name = "victoriametrics";

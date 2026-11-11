@@ -15,6 +15,10 @@
 //   - nixos_cgroup_*{cgroup}: memory, swap, CPU, IO, PSI, and OOM kills per
 //     systemd slice, service, and scope. See cgroup.go.
 //
+// Keep in sync: dashboards query these names. nixos/sauna/grafana/
+// overview.json ("System", "Host health", annotations) and
+// node-exporter-full.json (annotations).
+//
 // Example scrape (sauna, 2026-11-10, fresh state dir, w/o nixos_cgroup_*):
 //
 //	$ curl -s http://127.0.0.1:9101/metrics

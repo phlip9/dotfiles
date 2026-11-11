@@ -14,6 +14,10 @@
 // Values are hierarchical: a slice includes its children, so don't sum
 // across levels. Counters restart from 0 when a unit restarts (new cgroup).
 //
+// Keep in sync: nixos/sauna/grafana/overview.json "Resources" row queries
+// these names and relies on the `cgroup` label shape: root cgroups have no
+// `/` (`cgroup!~".+/.+"`), units are `<root slice>/<unit>`.
+//
 // Missing interface files are skipped, not errors: a controller not enabled
 // for that cgroup, swap accounting off, PSI disabled (`psi=0`), or a cgroup
 // removed mid-scrape.

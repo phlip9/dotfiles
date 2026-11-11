@@ -115,6 +115,11 @@ Conventions (see `nixos/sauna/grafana/nix-ci.json` as the reference):
 - Units: `s`, `bytes`, `Bps`, `reqps`, `percentunit`, `short`.
 - Datasource via the `DS_PROMETHEUS` DatasourceVariable, like the others.
 - Default time range matches event density (CI: 7d; HTTP: 24h).
+- Values copied from config (alert thresholds, oomd limits, unit/job
+  names, probe URLs, metric label shapes): dashboard JSON can't hold
+  comments, so add `Keep in sync: nixos/sauna/grafana/<x>.json "<panel>"
+  (<what>)` at the source. When changing such a source, `rg 'Keep in sync'`
+  near it and update the dashboard too.
 
 ## 3. Build
 

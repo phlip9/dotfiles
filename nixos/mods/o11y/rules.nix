@@ -10,6 +10,10 @@
 # 1m), `summary` says what, `description` says where to look. Thresholds
 # were back-tested over 90d of sauna data.
 #
+# Keep in sync: nixos/sauna/grafana/overview.json mirrors some rules in its
+# tiles, thresholds, and descriptions; each such rule says so. Its alert
+# table, counts, and annotations use the `severity` values above.
+#
 # Unit tests: ./tests/rules.yml
 {
   config,
@@ -24,6 +28,10 @@ let
   # Units that must stay active. `github-agent-authd.service` is socket
   # activated and idles inactive, so watch its socket. Units that don't
   # exist on a host have no series and never fire.
+  #
+  # Keep in sync: nixos/sauna/grafana/overview.json "Services" tiles +
+  # "Status timeline" check most of these units by name, plus
+  # paseo-relay, vmalert, alertmanager, alloy, pyroscope, nix-daemon.socket.
   watchedUnits = [
     "github-agent-authd.socket"
     "github-webhook.service"
@@ -42,7 +50,9 @@ let
   alertnameIn = names: ''alertname=~"${lib.concatStringsSep "|" names}"'';
 
   # Always-firing heartbeat. Alertmanager routes it only to healthchecks.io,
-  # which alerts (off-box) when the pings stop.
+  # which alerts (off-box) when the pings stop. Keep in sync:
+  # nixos/sauna/grafana/overview.json uses it as the alert feed heartbeat
+  # (alerting tile, Host health counts, alert tables) and hides it by name.
   watchdogGroup = {
     name = "watchdog";
     rules = [
@@ -62,7 +72,8 @@ let
   targetsGroup = {
     name = "targets";
     rules = [
-      # rbitcoin restarts slowly, see its own group.
+      # rbitcoin restarts slowly, see its own group. Keep in sync:
+      # nixos/sauna/grafana/overview.json "Failed scrapes" description (5m).
       {
         alert = "TargetDown";
         expr = ''up{job!="rbitcoin"} == 0'';
@@ -138,6 +149,8 @@ let
           description = "Runaway CI build or agent? systemd-cgtop";
         };
       }
+      # Keep in sync: nixos/sauna/grafana/overview.json "Host health" clock
+      # tile (same checks).
       {
         alert = "ClockBad";
         expr = lib.concatStringsSep " " [
@@ -238,6 +251,8 @@ let
         };
       }
       # RAID0: one lost member loses the array, so this fires late.
+      # Keep in sync: nixos/sauna/grafana/overview.json "Host health" RAID
+      # tile (same checks).
       {
         alert = "MdFailed";
         expr = lib.concatStringsSep " " [
@@ -377,7 +392,9 @@ let
   grafanaGroup = {
     name = "grafana";
     rules = [
-      # Health checks run ~10/h.
+      # Health checks run ~10/h. Keep in sync:
+      # nixos/sauna/grafana/overview.json "Services" grafana tile + "Status
+      # timeline" (>= 2 failed checks in 15m).
       {
         alert = "GrafanaSyncUnhealthy";
         expr = lib.concatStrings [
@@ -481,7 +498,9 @@ let
       }
       # ACME renews 30d out, so <3d left = renewals failing for 4 weeks.
       # Once expired, TLS verification fails and the probe stops reporting
-      # expiry, so ProbeFailed takes over.
+      # expiry, so ProbeFailed takes over. Keep in sync:
+      # nixos/sauna/grafana/overview.json "Min cert validity" (red < 3d,
+      # description).
       {
         alert = "CertExpiry";
         expr = lib.concatStringsSep " " [
@@ -532,7 +551,9 @@ let
           description = "Dispatcher stuck? journalctl -u nixbot";
         };
       }
-      # Uploads go through niks3 to R2.
+      # Uploads go through niks3 to R2. Keep in sync:
+      # nixos/sauna/grafana/overview.json "Cache upload backlog" description
+      # (30m, 15m).
       {
         alert = "NixbotUploadStuck";
         expr = lib.concatStringsSep " " [
@@ -580,7 +601,8 @@ let
       # or rejecting), or profiles that missed their push deadline (one
       # collect interval). Drops must keep happening for 15m (short window
       # + `for`), so one-off bursts don't fire, ex: a big nix build. The
-      # write counter only exists after its first drop.
+      # write counter only exists after its first drop. Keep in sync:
+      # nixos/sauna/grafana/overview.json "Profiles dropped" (same metrics).
       {
         alert = "ProfilesDropped";
         expr = lib.concatStrings [
