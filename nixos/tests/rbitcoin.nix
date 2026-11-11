@@ -1,9 +1,10 @@
 # Two-node regtest NixOS test for the rbitcoin full node service.
 #
 # node1 mines blocks over RPC. node2 dials node1 over P2P, catches up via IBD,
-# then follows new tips. Also covers unix socket + TCP Bearer RPC, health
-# probes, VictoriaMetrics scraping `/metrics` via o11y, and chain state
-# persistence across restarts.
+# then follows new tips. Also covers systemd readiness (`Type=notify`, the
+# `rbitcoin-synced.target`), unix socket + TCP Bearer RPC, health probes,
+# VictoriaMetrics scraping `/metrics` via o11y, and chain state persistence
+# across restarts.
 {
   name = "rbitcoin";
 
@@ -86,17 +87,43 @@
     # Crosses Core's 2000-header `headers` batch and rbitcoin's 1024-block
     # IBD download window, so node2's IBD takes multiple rounds of each.
     ibd_blocks = 2100
+    synced_marker = "/run/rbitcoin-ready/synced"
 
     def rpc(node, args: str) -> str:
         """Call JSON-RPC over the node's unix socket."""
         return node.succeed(f"{cli} {args}").strip()
 
-    def wait_for_rpc(node) -> None:
-        """Wait for the unix socket RPC to answer, e.g. after a restart."""
-        node.wait_for_unit("rbitcoin.service")
+    def wait_for_synced(node) -> None:
+        """Wait for `rbitcoin-synced.target`: /readyz ok, all listeners up."""
+        # Not `wait_for_unit`: it fails fast on an inactive unit w/o a
+        # pending job, and only the path unit starts the target.
+        try:
+            node.wait_until_succeeds(
+                "systemctl is-active rbitcoin-synced.target",
+                timeout=timedelta(seconds=60),
+            )
+        except Exception:
+            node.log(
+                node.execute(
+                    "systemctl status rbitcoin.service rbitcoin-synced.path "
+                    "rbitcoin-synced.target; "
+                    "journalctl -u rbitcoin.service -n 50 --no-pager"
+                )[1]
+            )
+            raise
+
+    def wait_for_following(node) -> None:
+        """Wait for the node to follow the tip, per its systemd status."""
         node.wait_until_succeeds(
-            f"{cli} getblockcount", timeout=timedelta(seconds=60)
+            "test \"$(systemctl show -p StatusText --value rbitcoin.service)\" "
+            "= following",
+            timeout=timedelta(seconds=60),
         )
+
+    def assert_not_synced(node) -> None:
+        """The target and its marker are gone, e.g. after a stop."""
+        node.fail("systemctl is-active rbitcoin-synced.target")
+        node.fail(f"test -e {synced_marker}")
 
     def mine(blocks: int) -> str:
         """Mine `blocks` blocks on node1. Returns the new tip hash."""
@@ -114,18 +141,13 @@
             timeout=timedelta(seconds=150),
         )
 
-    def wait_for_ready(node) -> None:
-        """Wait for /readyz: following a fresh tip w/ all listeners up."""
-        node.wait_until_succeeds(
-            f"curl -sf {health_url}/readyz", timeout=timedelta(seconds=60)
-        )
-
     # Boot node2 only after node1 has a chain. A node at genesis w/ only
     # genesis peers never leaves IBD catch-up.
     node1.start()
 
     with subtest("node1 starts at genesis"):
-        wait_for_rpc(node1)
+        # At genesis w/o peers, catch-up ends at once.
+        wait_for_following(node1)
         assert rpc(node1, "getblockcount") == "0"
         node1.succeed(
             f"test \"$(stat -c '%a %U' {datadir}/rpc.sock)\" = '600 rbitcoin'"
@@ -134,16 +156,15 @@
     with subtest("node reports readiness and phase to systemd"):
         unit_prop = "systemctl show -p {} --value rbitcoin.service"
         assert node1.succeed(unit_prop.format("Type")).strip() == "notify"
-        # At genesis w/o peers, catch-up ends at once and the node follows.
-        node1.wait_until_succeeds(
-            f"test \"$({unit_prop.format('StatusText')})\" = following",
-            timeout=timedelta(seconds=60),
-        )
+        status_text = node1.succeed(unit_prop.format("StatusText")).strip()
+        assert status_text == "following", status_text
 
     with subtest("health probes answer before the node is ready"):
-        node1.wait_until_succeeds(f"curl -sf {health_url}/healthz")
+        node1.succeed(f"curl -sf {health_url}/healthz")
         # The regtest genesis block is years old, so the tip is stale.
         node1.fail(f"curl -sf {health_url}/readyz")
+        # So node1 follows the tip, but `startupNotify` hasn't run.
+        assert_not_synced(node1)
 
     with subtest("TCP RPC requires the Bearer token"):
         node1.wait_for_open_port(18443)
@@ -172,18 +193,22 @@
             f"--rpc-token-file {token_file} getblockcount)\" = 0"
         )
 
-    with subtest("node1 mines blocks and becomes ready"):
+    with subtest("node1 mines blocks and becomes synced"):
         tip = mine(ibd_blocks)
         assert rpc(node1, "getblockcount") == str(ibd_blocks)
-        wait_for_ready(node1)
+        # The fresh tip passes /readyz, and wakes the follow loop, which
+        # then runs `startupNotify`.
+        wait_for_synced(node1)
+        node1.succeed(f"curl -sf {health_url}/readyz")
 
     node2.start()
 
     with subtest("node2 catches up to node1 over P2P"):
-        wait_for_rpc(node2)
-        wait_for_tip(node2, tip)
+        # Synced means /readyz passed at the tip: no further waits.
+        wait_for_synced(node2)
+        assert rpc(node2, "getbestblockhash") == tip
         assert rpc(node2, "getblockcount") == str(ibd_blocks)
-        wait_for_ready(node2)
+        node2.succeed(f"curl -sf {health_url}/readyz")
         # node2 dialed node1, so node1 sees an inbound peer and vice versa.
         node2.succeed(
             f"{cli} getpeerinfo | jq -e 'any(.[]; .inbound == false)'"
@@ -234,17 +259,20 @@
         # Restart each node while the other is down, so it can't re-sync
         # its chain from its peer.
         node2.succeed("systemctl stop rbitcoin.service")
+        # node2 was synced above. Stopping the node takes the target down.
+        assert_not_synced(node2)
         node1.succeed("systemctl restart rbitcoin.service")
-        wait_for_rpc(node1)
+        wait_for_synced(node1)
         assert rpc(node1, "getbestblockhash") == tip
         node1.succeed("systemctl stop rbitcoin.service")
         node2.succeed("systemctl start rbitcoin.service")
-        wait_for_rpc(node2)
+        # node2 can't reach node1, so catch-up gives up on its stored chain.
+        wait_for_synced(node2)
         assert rpc(node2, "getbestblockhash") == tip
 
     with subtest("node2 redials node1 and follows new tips"):
         node1.succeed("systemctl start rbitcoin.service")
-        wait_for_rpc(node1)
+        wait_for_synced(node1)
         tip = mine(1)
         wait_for_tip(node2, tip)
         assert rpc(node2, "getblockcount") == str(ibd_blocks + 6)
