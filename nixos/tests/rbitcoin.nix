@@ -37,6 +37,8 @@
     };
 
   containers.node1 = {
+    # Dual-stack P2P listen on [::]:18444, like sauna.
+    services.rbitcoin.p2p.address = "::";
     services.rbitcoin.p2p.openFirewall = true;
 
     # RPC socket access: alice is in the node's group, bob isn't.
@@ -65,8 +67,8 @@
       # Turns on the scripthash index, which node2 builds after its IBD.
       services.rbitcoin.esplora.enable = true;
 
-      # Regtest has no seeds. Dial node1 by IP, since node1 only listens on
-      # IPv4 and its hostname may resolve to IPv6 first.
+      # Regtest has no seeds. Dial node1's IPv4 address, which its [::]
+      # listener accepts as a v4-mapped peer.
       services.rbitcoin.p2p.connect = [ "${node1Ip}:${node1Port}" ];
 
       # Scrape node2's metrics into VictoriaMetrics, like on sauna.
