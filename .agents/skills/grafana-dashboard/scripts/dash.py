@@ -165,7 +165,8 @@ class Dashboard:
     """
 
     # `up`-style status tiles: neutral when healthy (UP unfilled), color only
-    # for anomalies. Use w/ color_mode="background_solid" + thr=UP_THR.
+    # for anomalies. No data (no series, or null) is UNKNOWN, never healthy.
+    # Use w/ color_mode="background_solid" + thr=UP_THR.
     UP_MAP: ClassVar[list[JsonObj]] = [
         {
             "type": "value",
@@ -173,7 +174,15 @@ class Dashboard:
                 "0": {"text": "DOWN", "color": "dark-red", "index": 0},
                 "1": {"text": "UP", "color": "transparent", "index": 1},
             },
-        }
+        },
+        {
+            "type": "special",
+            "options": {
+                "match": "null+nan",
+                "result": {"text": "UNKNOWN", "color": "dark-purple",
+                           "index": 2},
+            },
+        },
     ]
     UP_THR: ClassVar[JsonObj] = thresholds(("dark-red", None),
                                            ("transparent", 1))
