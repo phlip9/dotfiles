@@ -6,7 +6,8 @@
 #
 # Fetches dashboard SCRATCH_UID from the v2 dashboards k8s API and writes
 # FILE as {apiVersion, kind, metadata.name, spec}, w/ the same bytes Git Sync
-# writes (no trailing newline). Doesn't touch git.
+# writes (no trailing newline). Doesn't touch git. For a dashboard in the
+# Scratch folder, strips the `scratch-` tag prefix grafana-push.sh adds.
 #
 # Manifest uid: UID, else FILE's current metadata.name, else SCRATCH_UID w/o
 # its `scratch-` prefix.
@@ -20,6 +21,8 @@ set -euo pipefail
 
 # shellcheck source=just/grafana-lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/grafana-lib.sh"
+# grafana-push.sh's Scratch folder.
+folder_uid=scratch
 
 usage() {
   cat >&2 <<'USAGE'
@@ -75,8 +78,14 @@ fi
 # json.MarshalIndent sorts map keys, indents by 2, and escapes <, >, & as
 # \u003c, \u003e, \u0026. jq emits those raw, and JSON only has them inside
 # strings, so a global sed is safe.
+# Only Scratch copies carry grafana-push.sh's tag prefix: other dashboards'
+# `scratch-` tags are their own.
 # shellcheck disable=SC2016 # jq vars
-gjq '.spec | manifest($uid)' --sort-keys --indent 2 --arg uid "$uid" \
+gjq 'annotations["grafana.app/folder"] as $folder
+  | .spec
+  | if $folder == $scratch then unscratch_tags else . end
+  | manifest($uid)' \
+  --sort-keys --indent 2 --arg uid "$uid" --arg scratch "$folder_uid" \
   "$tmp/resp" \
   | sed 's/</\\u003c/g; s/>/\\u003e/g; s/&/\\u0026/g' >"$tmp/manifest.json"
 # Git Sync writes no trailing newline. W/ one, every UI save of the file

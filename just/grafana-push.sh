@@ -19,6 +19,10 @@
 # or pass --force to discard it. Tracks the copy's generation per FILE in
 # grafana-lib.sh's $sync_dir.
 #
+# The copy's tags get a `scratch-` prefix (grafana-promote.sh strips it), so
+# tag-based dashboard lists, like the "Dashboards" link dropdown, never show
+# copies.
+#
 # Refuses uids w/o a `scratch-` prefix and dashboards outside `Scratch`, so it
 # can't save a Git Sync managed dashboard (= a commit on `master`).
 #
@@ -124,7 +128,7 @@ case $status in
 esac
 
 # shellcheck disable=SC2016 # jq vars
-gjq 'manifest($uid)
+gjq 'scratch_tags | manifest($uid)
   | .metadata.annotations = {"grafana.app/folder": $folder}
   | if $rv == "" then . else .metadata.resourceVersion = $rv end' \
   --arg uid "$uid" --arg folder "$folder_uid" --arg rv "$rv" \

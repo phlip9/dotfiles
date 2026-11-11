@@ -21,6 +21,16 @@ def manifest($uid): {
   spec: .
 };
 
+# The input spec w/ a `scratch-` prefix on each tag, for a Scratch copy. Tag
+# searches (ex: a "dashboards" link w/ tags, the browse page tag filter) then
+# never list the copy next to the real dashboard. Always adds one prefix, so
+# unscratch_tags is its exact inverse, even for tags already starting w/
+# `scratch-`.
+def scratch_tags: if .tags then .tags |= map("scratch-" + .) else . end;
+
+# The input spec w/o scratch_tags' prefix: strips exactly one `scratch-`.
+def unscratch_tags: if .tags then .tags |= map(ltrimstr("scratch-")) else . end;
+
 # Queries ([PanelQuery.spec]) of the input panel spec.
 def panel_queries: [.data.spec.queries[]?.spec];
 

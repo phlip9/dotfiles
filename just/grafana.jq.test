@@ -26,6 +26,22 @@ include "grafana"; manifest("x")
 {"title": "t"}
 {"apiVersion": "dashboard.grafana.app/v2", "kind": "Dashboard", "metadata": {"name": "x"}, "spec": {"title": "t"}}
 
+include "grafana"; scratch_tags
+{"tags": ["o11y", "scratch-ci"]}
+{"tags": ["scratch-o11y", "scratch-scratch-ci"]}
+
+include "grafana"; scratch_tags
+{"title": "t"}
+{"title": "t"}
+
+include "grafana"; unscratch_tags
+{"tags": ["scratch-scratch-ci", "scratch-o11y"]}
+{"tags": ["scratch-ci", "o11y"]}
+
+include "grafana"; scratch_tags | unscratch_tags
+{"tags": ["o11y", "scratch-ci"]}
+{"tags": ["o11y", "scratch-ci"]}
+
 # --- API objects --- #
 
 include "grafana"; unmanaged_in("scratch")
