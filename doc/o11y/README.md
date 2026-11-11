@@ -174,7 +174,9 @@ Grafana Git Sync to sync updates between Grafana and GitHub.
 - Config: `services.phlip9-o11y.grafana.gitSync` in `nixos/sauna/default.nix`.
   `grafana-git-sync-setup.service` creates/updates the Grafana `Repository`
   resource, re-sends the PAT, and triggers a pull on every Grafana start
-  (Grafana itself doesn't sync on startup).
+  (Grafana itself doesn't sync on startup). It also sets the org home
+  dashboard (`gitSync.homeDashboard`): `overview`. A user's own home
+  dashboard preference (Profile -> Preferences) overrides it.
 
 ### Agent Workflows
 

@@ -147,6 +147,7 @@ let
     # - GRAFANA_ADMIN_USER: admin login
     # - REPO_NAME: Repository metadata.name
     # - REPO_MANIFEST: Repository JSON file, w/o secure values
+    # - HOME_DASHBOARD: dashboard uid for the org home dashboard, or ""
     text = ''
       base_url=$GRAFANA_URL
       api_url="$base_url/apis/provisioning.grafana.app/v0alpha1"
@@ -155,6 +156,7 @@ let
       admin_user=$GRAFANA_ADMIN_USER
       name=$REPO_NAME
       manifest=$REPO_MANIFEST
+      home_uid=$HOME_DASHBOARD
       creds=$CREDENTIALS_DIRECTORY
 
       umask 077
@@ -314,6 +316,18 @@ let
       else
         die_http "trigger pull job for repository $name" "$status"
       fi
+
+      # Org home dashboard. PATCH only sets this preference, unlike PUT,
+      # which resets the omitted ones (theme, timezone). Grafana stores the
+      # uid as is: no need to wait for the pull to sync the dashboard.
+      if [[ -n $home_uid ]]; then
+        jq --null-input --arg uid "$home_uid" \
+          '{homeDashboardUID: $uid}' > "$tmp/prefs.json"
+        status=$(api PATCH "$base_url/api/org/preferences" "$tmp/prefs.json")
+        [[ $status == 2?? ]] \
+          || die_http "set home dashboard $home_uid" "$status"
+        echo "set org home dashboard to $home_uid"
+      fi
     '';
   };
 in
@@ -470,6 +484,18 @@ in
             for `type = "github"`. Stored in Grafana's secrets manager,
             re-sent (rotated) every time the setup unit runs.
             In production, use config.sops.secrets.*.path.
+          '';
+        };
+
+        homeDashboard = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "overview";
+          description = ''
+            Uid of a synced dashboard to set as the org's home dashboard
+            (org preference), on every setup run. Users w/o their own home
+            dashboard preference land on it. Until it syncs, Grafana falls
+            back to its default home. null: leave the preference alone.
           '';
         };
 
@@ -923,6 +949,9 @@ in
         GRAFANA_ADMIN_USER = cfgGf.settings.security.admin_user;
         REPO_NAME = cfgGs.name;
         REPO_MANIFEST = gsRepoFile;
+        HOME_DASHBOARD = lib.optionalString (
+          cfgGs.homeDashboard != null
+        ) cfgGs.homeDashboard;
       };
 
       serviceConfig = {

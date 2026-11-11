@@ -81,6 +81,8 @@
           type = "local";
           local.path = "/var/lib/grafana-git-sync";
           intervalSeconds = 10;
+          # Synced later, by "Git Sync pulls dashboard into its root folder".
+          homeDashboard = "test-sync";
         };
       };
 
@@ -455,6 +457,13 @@
             timeout=dt.timedelta(seconds=60),
         )
 
+    # The setup unit sets the org home dashboard, even before it's synced.
+    with subtest("Git Sync setup sets the org home dashboard"):
+        machine.succeed(
+            f"{gf_curl} http://127.0.0.1:3000/api/org/preferences "
+            "| jq -e '.homeDashboardUID == \"test-sync\"'"
+        )
+
     # Re-running the setup unit takes the update (PUT) path, then pulls again.
     with subtest("Git Sync setup is idempotent"):
         machine.succeed("systemctl restart grafana-git-sync-setup.service")
@@ -533,6 +542,11 @@
             f"{gf_curl} http://127.0.0.1:3000/api/folders/{gs_folder} "
             "| jq -e '.title == \"machine\" and .parentUid == null "
             "and .managedBy == \"repo\"'"
+        )
+        # Synced, the home dashboard (setup's org preference) resolves.
+        machine.succeed(
+            f"{gf_curl} http://127.0.0.1:3000/api/dashboards/home "
+            "| jq -e '.redirectUri | startswith(\"/d/test-sync/\")'"
         )
 
     # Saving a repo-managed dashboard through the dashboard API gets

@@ -479,6 +479,9 @@
         github.branch = "master";
         github.path = "nixos/sauna/grafana";
         tokenFile = config.sops.secrets.grafana-git-sync-token.path;
+        # Grafana home page: the incident overview,
+        # nixos/sauna/grafana/overview.json.
+        homeDashboard = "overview";
       };
     };
 
