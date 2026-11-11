@@ -37,6 +37,18 @@ let
 
   # The node runs these hooks w/ `sh -c`.
   hasShellHooks = cfg.startupNotify != null || cfg.alertNotify != null;
+
+  # `rbitcoin-cli` that talks to the group-shared `rpc.socketPath`. The cli
+  # has no env var or conf file for it, and otherwise looks for
+  # `./datadir/rpc.sock`. A later `--rpc-socket` or `--rpc-url` overrides it.
+  sharedSocketCli =
+    pkgs.runCommand "rbitcoin-cli-shared-socket"
+      { nativeBuildInputs = [ pkgs.makeBinaryWrapper ]; }
+      ''
+        makeWrapper ${lib.getExe' cfg.package "rbitcoin-cli"} \
+          $out/bin/rbitcoin-cli \
+          --add-flags ${lib.escapeShellArg "--rpc-socket ${cfg.rpc.socketPath}"}
+      '';
 in
 {
   config = lib.mkMerge [
@@ -89,6 +101,12 @@ in
     # only log a warning.
     (lib.mkIf (cfg.enable && hasShellHooks) {
       systemd.services.rbitcoin.path = [ pkgs.bash ];
+    })
+
+    # Members of `group` can run plain `rbitcoin-cli`. Shadows the
+    # package's own cli, which upstream also installs.
+    (lib.mkIf (cfg.enable && cfg.rpc.socketPath != null) {
+      environment.systemPackages = [ (lib.hiPrio sharedSocketCli) ];
     })
 
     # Sandbox the node beyond upstream's NoNewPrivileges, PrivateTmp,

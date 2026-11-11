@@ -21,8 +21,11 @@
       services.rbitcoin = {
         enable = true;
         network = "regtest";
-        # TCP RPC on 127.0.0.1:18443. Also binds the {dataDir}/rpc.sock socket.
+        # TCP RPC on 127.0.0.1:18443.
         rpc.enable = true;
+        # Like sauna: a unix RPC socket the `rbitcoin` group can use, which
+        # plain `rbitcoin-cli` talks to.
+        rpc.socketPath = "/run/rbitcoin/rpc.sock";
         # /healthz, /readyz on 127.0.0.1:9332.
         health.enable = true;
       };
@@ -35,6 +38,13 @@
 
   containers.node1 = {
     services.rbitcoin.p2p.openFirewall = true;
+
+    # RPC socket access: alice is in the node's group, bob isn't.
+    users.users.alice = {
+      isNormalUser = true;
+      extraGroups = [ "rbitcoin" ];
+    };
+    users.users.bob.isNormalUser = true;
   };
 
   containers.node2 =
@@ -76,9 +86,10 @@
     from datetime import timedelta
 
     datadir = "/var/lib/rbitcoin"
-    # Force the unix socket; w/o `--rpc-socket`, the cli silently falls back
-    # to TCP when the socket is missing.
-    cli = f"rbitcoin-cli --rpc-socket {datadir}/rpc.sock"
+    rpc_socket = "/run/rbitcoin/rpc.sock"
+    # nixos/mods/rbitcoin.nix wraps the cli to always use `rpc_socket`, so it
+    # never silently falls back to TCP.
+    cli = "rbitcoin-cli"
     rpc_url = "http://127.0.0.1:18443/"
     health_url = "http://127.0.0.1:9332"
     getblockcount_req = (
@@ -149,9 +160,14 @@
         # At genesis w/o peers, catch-up ends at once.
         wait_for_following(node1)
         assert rpc(node1, "getblockcount") == "0"
+
+    with subtest("RPC socket admits the rbitcoin group only"):
         node1.succeed(
-            f"test \"$(stat -c '%a %U' {datadir}/rpc.sock)\" = '600 rbitcoin'"
+            f"test \"$(stat -c '%a %U %G' {rpc_socket})\" "
+            "= '660 rbitcoin rbitcoin'"
         )
+        node1.succeed(f"test \"$(runuser -u alice -- {cli} getblockcount)\" = 0")
+        node1.fail(f"runuser -u bob -- {cli} getblockcount")
 
     with subtest("node reports readiness and phase to systemd"):
         unit_prop = "systemctl show -p {} --value rbitcoin.service"
