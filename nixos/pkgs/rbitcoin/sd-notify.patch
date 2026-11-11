@@ -1,0 +1,250 @@
+From f5fbcd63f0f0b184041e798b4a68fbf58c025c87 Mon Sep 17 00:00:00 2001
+From: Philip Kannegaard Hayes <philiphayes9@gmail.com>
+Date: Wed, 11 Nov 2026 02:07:28 +0000
+Subject: [PATCH] node: report readiness and phase to systemd (sd_notify)
+
+Send `READY=1` once the datadir is locked, before the store opens, so a
+`Type=notify` start job (boot, `systemctl restart`, a deploy) does not wait
+out a schema migration or catch-up. Mirror each phase change into the
+unit's status text and send `STOPPING=1` at shutdown.
+
+std-only: one datagram to `$NOTIFY_SOCKET` (a path or a Linux `@abstract`
+name). A no-op when unset and on non-Unix targets.
+---
+ changelog.d/sd-notify.md                |  8 +++
+ crates/rbitcoin-node/src/health.rs      |  6 +-
+ crates/rbitcoin-node/src/lib.rs         |  2 +
+ crates/rbitcoin-node/src/run.rs         |  7 ++
+ crates/rbitcoin-node/src/sd_notify.rs   | 88 +++++++++++++++++++++++++
+ crates/rbitcoin-node/tests/sd_notify.rs | 53 +++++++++++++++
+ crates/rbitcoin-node/tests/suite.rs     |  1 +
+ 7 files changed, 164 insertions(+), 1 deletion(-)
+ create mode 100644 changelog.d/sd-notify.md
+ create mode 100644 crates/rbitcoin-node/src/sd_notify.rs
+ create mode 100644 crates/rbitcoin-node/tests/sd_notify.rs
+
+diff --git a/changelog.d/sd-notify.md b/changelog.d/sd-notify.md
+new file mode 100644
+index 0000000..beff1ee
+--- /dev/null
++++ b/changelog.d/sd-notify.md
+@@ -0,0 +1,8 @@
++Added
++
++- **rbitcoin-node reports readiness and phase to systemd.** Under a
++  `Type=notify` unit, the node sends `READY=1` once the datadir is locked,
++  before the store opens, so a start job does not wait out a schema migration
++  or catch-up. Each phase change sets the unit's status text (`opening`,
++  `starting`, `catch-up`, `indexing`, `following`, `stopping`), and shutdown
++  sends `STOPPING=1`. Without `$NOTIFY_SOCKET` nothing is sent.
+diff --git a/crates/rbitcoin-node/src/health.rs b/crates/rbitcoin-node/src/health.rs
+index 97837b8..327b84e 100644
+--- a/crates/rbitcoin-node/src/health.rs
++++ b/crates/rbitcoin-node/src/health.rs
+@@ -116,7 +116,11 @@ impl NodeStatus {
+     }
+ 
+     pub fn enter(&self, phase: Phase) {
+-        self.phase.store(phase as u8, Ordering::Release);
++        let prev = self.phase.swap(phase as u8, Ordering::AcqRel);
++        // Mirror each phase change into `systemctl status`.
++        if prev != phase as u8 {
++            crate::sd_notify::notify(&crate::sd_notify::phase_state(phase));
++        }
+     }
+ 
+     pub fn attach_p2p(&self, chain: &Arc<ChainHub>, peers: &Arc<PeerHub>) {
+diff --git a/crates/rbitcoin-node/src/lib.rs b/crates/rbitcoin-node/src/lib.rs
+index 2f31def..bcd7b94 100644
+--- a/crates/rbitcoin-node/src/lib.rs
++++ b/crates/rbitcoin-node/src/lib.rs
+@@ -15,6 +15,8 @@ pub mod lock;
+ #[doc(hidden)]
+ pub mod run;
+ #[doc(hidden)]
++pub mod sd_notify;
++#[doc(hidden)]
+ pub mod tor_control;
+ 
+ pub use cli::{cli_main, process_main};
+diff --git a/crates/rbitcoin-node/src/run.rs b/crates/rbitcoin-node/src/run.rs
+index bcf1e94..009c6a2 100644
+--- a/crates/rbitcoin-node/src/run.rs
++++ b/crates/rbitcoin-node/src/run.rs
+@@ -363,6 +363,13 @@ pub fn run_node(config: NodeConfig) -> Result<NodeHandle, NodeError> {
+     let dir_locks = crate::lock::lock_node_dirs(&config)?;
+     let params = config.chain_params()?;
+     let marker = DatadirNetwork::check(config.datadir.path(), config.network, &params)?;
++    // The datadir is ours and on the configured network. Tell systemd the node
++    // is up before the store opens: a schema migration or catch-up can take
++    // hours, and a `Type=notify` start job must not wait for either.
++    crate::sd_notify::notify(&format!(
++        "READY=1\n{}",
++        crate::sd_notify::phase_state(Phase::Opening)
++    ));
+     let query = Query::open_or_create_layout_checkblocks(
+         config.store_layout(),
+         config.check_blocks_window(),
+diff --git a/crates/rbitcoin-node/src/sd_notify.rs b/crates/rbitcoin-node/src/sd_notify.rs
+new file mode 100644
+index 0000000..fd7b282
+--- /dev/null
++++ b/crates/rbitcoin-node/src/sd_notify.rs
+@@ -0,0 +1,88 @@
++//! systemd service notifications (`sd_notify(3)`) for `Type=notify` units.
++//!
++//! `run_node` sends `READY=1` once the datadir is locked, before the store
++//! opens: a schema migration or catch-up can take hours, and a start job
++//! (boot, `systemctl restart`, a deploy) must not wait for it. Each
++//! `NodeStatus::enter` mirrors the phase as `STATUS=<phase>`, so
++//! `systemctl status` shows `opening`, `catch-up`, `following`, and so on.
++//! Shutdown also sends `STOPPING=1`.
++//!
++//! A no-op without `$NOTIFY_SOCKET` (not started by systemd) and on non-Unix
++//! targets. Send errors only log: a lost `READY=1` surfaces as the unit's
++//! start timeout.
++
++use crate::health::Phase;
++use rbitcoin_log::warn;
++use std::ffi::OsStr;
++use std::io;
++
++/// Environment variable systemd sets to the service's notification socket.
++pub const NOTIFY_SOCKET_ENV: &str = "NOTIFY_SOCKET";
++
++/// Send `state`, newline-separated `KEY=VALUE` assignments, to
++/// `$NOTIFY_SOCKET`. Does nothing when it is unset.
++pub fn notify(state: &str) {
++    let Some(socket) = std::env::var_os(NOTIFY_SOCKET_ENV) else {
++        return;
++    };
++    if let Err(e) = notify_socket(&socket, state) {
++        warn!("sd_notify: send {state:?} to {socket:?}: {e}");
++    }
++}
++
++/// Notification for entering `phase`: `STATUS=<phase>`, plus `STOPPING=1`
++/// once shutdown starts.
++pub fn phase_state(phase: Phase) -> String {
++    let stopping = if phase == Phase::Stopping {
++        "STOPPING=1\n"
++    } else {
++        ""
++    };
++    format!("{stopping}STATUS={}", phase.as_str())
++}
++
++/// Send one datagram with `state` to `socket`: an absolute path, or `@name`
++/// for a Linux abstract socket (systemd uses both).
++#[cfg(unix)]
++pub fn notify_socket(socket: &OsStr, state: &str) -> io::Result<()> {
++    use std::os::unix::ffi::OsStrExt;
++    use std::os::unix::net::{SocketAddr, UnixDatagram};
++
++    let addr = match socket.as_bytes().split_first() {
++        Some((b'@', name)) => abstract_addr(name)?,
++        Some((b'/', _)) => SocketAddr::from_pathname(socket)?,
++        _ => {
++            return Err(io::Error::new(
++                io::ErrorKind::InvalidInput,
++                "not an absolute path or @abstract name",
++            ))
++        }
++    };
++    let sent = UnixDatagram::unbound()?.send_to_addr(state.as_bytes(), &addr)?;
++    if sent != state.len() {
++        return Err(io::Error::new(io::ErrorKind::WriteZero, "short datagram"));
++    }
++    Ok(())
++}
++
++#[cfg(not(unix))]
++pub fn notify_socket(_socket: &OsStr, _state: &str) -> io::Result<()> {
++    Ok(())
++}
++
++#[cfg(any(target_os = "linux", target_os = "android"))]
++fn abstract_addr(name: &[u8]) -> io::Result<std::os::unix::net::SocketAddr> {
++    #[cfg(target_os = "android")]
++    use std::os::android::net::SocketAddrExt;
++    #[cfg(target_os = "linux")]
++    use std::os::linux::net::SocketAddrExt;
++    std::os::unix::net::SocketAddr::from_abstract_name(name)
++}
++
++#[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
++fn abstract_addr(_name: &[u8]) -> io::Result<std::os::unix::net::SocketAddr> {
++    Err(io::Error::new(
++        io::ErrorKind::Unsupported,
++        "abstract sockets are Linux-only",
++    ))
++}
+diff --git a/crates/rbitcoin-node/tests/sd_notify.rs b/crates/rbitcoin-node/tests/sd_notify.rs
+new file mode 100644
+index 0000000..e3d516f
+--- /dev/null
++++ b/crates/rbitcoin-node/tests/sd_notify.rs
+@@ -0,0 +1,53 @@
++//! `sd_notify` messages: phase mapping and datagram delivery.
++
++use rbitcoin_node::health::Phase;
++use rbitcoin_node::sd_notify::{notify_socket, phase_state};
++
++#[test]
++fn phase_state_maps_each_phase() {
++    assert_eq!(phase_state(Phase::Opening), "STATUS=opening");
++    assert_eq!(phase_state(Phase::CatchUp), "STATUS=catch-up");
++    assert_eq!(phase_state(Phase::Following), "STATUS=following");
++    assert_eq!(phase_state(Phase::Stopping), "STOPPING=1\nSTATUS=stopping");
++}
++
++/// Receive one datagram from `sock` as UTF-8.
++#[cfg(unix)]
++fn recv(sock: &std::os::unix::net::UnixDatagram) -> String {
++    sock.set_read_timeout(Some(std::time::Duration::from_secs(5)))
++        .unwrap();
++    let mut buf = [0u8; 256];
++    let n = sock.recv(&mut buf).expect("notification");
++    String::from_utf8(buf[..n].to_vec()).unwrap()
++}
++
++#[cfg(unix)]
++#[test]
++fn path_socket_receives_state() {
++    // `sun_path` is ~104 bytes; `for_socket` keeps the dir name short.
++    let dir = rbitcoin_store::testutil::TempDir::for_socket().unwrap();
++    let path = dir.path.join("notify");
++    let sock = std::os::unix::net::UnixDatagram::bind(&path).unwrap();
++    notify_socket(path.as_os_str(), "READY=1\nSTATUS=opening").unwrap();
++    assert_eq!(recv(&sock), "READY=1\nSTATUS=opening");
++}
++
++#[cfg(target_os = "linux")]
++#[test]
++fn abstract_socket_receives_state() {
++    use std::os::linux::net::SocketAddrExt;
++    use std::os::unix::net::{SocketAddr, UnixDatagram};
++    let name = format!("rbitcoin-sdnotify-{}", std::process::id());
++    let sock = UnixDatagram::bind_addr(&SocketAddr::from_abstract_name(&name).unwrap()).unwrap();
++    notify_socket(format!("@{name}").as_ref(), "STATUS=following").unwrap();
++    assert_eq!(recv(&sock), "STATUS=following");
++}
++
++#[cfg(unix)]
++#[test]
++fn relative_socket_is_refused() {
++    let err = notify_socket("notify".as_ref(), "READY=1").unwrap_err();
++    assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
++    let err = notify_socket("".as_ref(), "READY=1").unwrap_err();
++    assert_eq!(err.kind(), std::io::ErrorKind::InvalidInput);
++}
+diff --git a/crates/rbitcoin-node/tests/suite.rs b/crates/rbitcoin-node/tests/suite.rs
+index 16b50a1..c7fed29 100644
+--- a/crates/rbitcoin-node/tests/suite.rs
++++ b/crates/rbitcoin-node/tests/suite.rs
+@@ -6,4 +6,5 @@ mod inhibit;
+ mod lock;
+ mod regtest_rpc;
+ mod run;
++mod sd_notify;
+ mod tor_control;

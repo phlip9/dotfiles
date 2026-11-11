@@ -46,6 +46,14 @@ let
     craneLib = profilingCraneLib;
   };
 
+  # Our patches. They only touch workspace crate sources, not manifests, so
+  # the crane deps layers (built from a dummy source) stay valid w/o them.
+  patches = [
+    # Report readiness + phase to systemd (`Type=notify`). See
+    # nixos/mods/rbitcoin.nix.
+    ./sd-notify.patch
+  ];
+
   # Upstream's package skips tests. Run the product crates' tests in a
   # separate derivation, so package builds don't pay for a second compile.
   # Like upstream CI, use the `test` profile, since test-only helpers are gated
@@ -65,6 +73,7 @@ let
   cargo-test = craneLib.cargoTest (
     cargoTestArgs
     // {
+      inherit patches;
       cargoArtifacts = craneLib.buildDepsOnly (
         cargoTestArgs // { pname = "rbitcoin-test"; }
       );
@@ -75,7 +84,12 @@ let
   );
 in
 rbitcoin.overrideAttrs (prev: {
+  patches = (prev.patches or [ ]) ++ patches;
+
   passthru = (prev.passthru or { }) // {
+    # Sends `READY=1` to systemd. nixos/mods/rbitcoin.nix only sets
+    # `Type=notify` for packages w/ this flag.
+    sdNotify = true;
     tests = (prev.passthru.tests or { }) // {
       inherit cargo-test;
     };
