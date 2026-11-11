@@ -21,6 +21,121 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "purple",
+          "legacyOptions": {
+            "expr": "count_values(\"boot\", nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval))",
+            "textFormat": "boot {{boot}}",
+            "titleFormat": "Reboot"
+          },
+          "name": "reboots",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "blue",
+          "legacyOptions": {
+            "expr": "count_values(\"generation\", nixos_system_generation{job=\"nixos-exporter\", instance=~\"$instance\"} and (nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_system_switch_timestamp_seconds{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)) unless (nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"} \u003e last_over_time(nixos_boots_total{job=\"nixos-exporter\", instance=~\"$instance\"}[1d] offset $__interval)))",
+            "textFormat": "generation {{generation}}",
+            "titleFormat": "Deploy"
+          },
+          "name": "deploys",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "red",
+          "legacyOptions": {
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"page\"}",
+            "tagKeys": "severity,instance,name",
+            "titleFormat": "{{alertname}}"
+          },
+          "name": "page alerts",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": false,
+          "hide": false,
+          "iconColor": "orange",
+          "legacyOptions": {
+            "expr": "ALERTS{alertstate=\"firing\", severity=\"warn\"}",
+            "tagKeys": "severity,instance,name",
+            "titleFormat": "{{alertname}}"
+          },
+          "name": "warn alerts",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "enable": true,
+          "hide": false,
+          "iconColor": "dark-red",
+          "legacyOptions": {
+            "expr": "sum by (unit) (increase(nixos_cgroup_oom_kills_total{instance=~\"$instance\", slice=~\".+\", slice!=\"-.slice\"}[2m])) \u003e 0",
+            "textFormat": "{{unit}}",
+            "titleFormat": "OOM kill"
+          },
+          "name": "OOM kills",
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {},
+            "version": "v0"
+          }
+        }
       }
     ],
     "cursorSync": "Crosshair",
@@ -46,7 +161,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "groupBy": [],
-                        "labelSelector": "{service_name=~\"${service_name:raw}\"}",
+                        "labelSelector": "{service_name=~\"${service_name:raw}\", host=~\"$instance\"}",
                         "maxNodes": 16384,
                         "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
                         "queryType": "profile"
@@ -104,7 +219,7 @@
                       "kind": "DataQuery",
                       "spec": {
                         "groupBy": [],
-                        "labelSelector": "{service_name=~\"${service_name:raw}\"}",
+                        "labelSelector": "{service_name=~\"${service_name:raw}\", host=~\"$instance\"}",
                         "maxNodes": 16384,
                         "profileTypeId": "offcpu:offcpu:nanoseconds::",
                         "queryType": "profile"
@@ -161,7 +276,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max(pyroscope_data_bytes)",
+                        "expr": "max(pyroscope_data_bytes{instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -253,7 +368,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(increase({__name__=~\"pyroscope_write_dropped_profiles_total|pyroscope_ebpf_pprofs_dropped_total\"}[$__interval])) or vector(0)",
+                        "expr": "sum(increase({__name__=~\"pyroscope_write_dropped_profiles_total|pyroscope_ebpf_pprofs_dropped_total\", instance=~\"$instance\"}[$__interval])) or vector(0)",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -341,7 +456,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(pyroscope_ebpf_active_targets)",
+                        "expr": "sum(pyroscope_ebpf_active_targets{instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -425,7 +540,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(alloy_component_controller_running_components{job=\"alloy\",health_type!=\"healthy\"}) or vector(0)",
+                        "expr": "sum(alloy_component_controller_running_components{job=\"alloy\",health_type!=\"healthy\", instance=~\"$instance\"}) or vector(0)",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -513,7 +628,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "up{job=\"alloy\"}",
+                        "expr": "up{job=\"alloy\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -618,7 +733,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "up{job=\"pyroscope\"}",
+                        "expr": "up{job=\"pyroscope\", instance=~\"$instance\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -726,7 +841,7 @@
                         "groupBy": [
                           "exe"
                         ],
-                        "labelSelector": "{service_name=~\"${service_name:raw}\"}",
+                        "labelSelector": "{service_name=~\"${service_name:raw}\", host=~\"$instance\"}",
                         "limit": 10,
                         "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
                         "queryType": "metrics"
@@ -848,7 +963,7 @@
                         "groupBy": [
                           "service_name"
                         ],
-                        "labelSelector": "{}",
+                        "labelSelector": "{host=~\"$instance\"}",
                         "limit": 10,
                         "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
                         "queryType": "metrics"
@@ -974,7 +1089,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max(pyroscope_data_bytes)",
+                        "expr": "max(pyroscope_data_bytes{instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "data dir",
                         "range": true
@@ -1092,7 +1207,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_ebpf_pprofs_dropped_total[$__rate_interval]))",
+                        "expr": "sum(rate(pyroscope_ebpf_pprofs_dropped_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "ebpf dropped",
                         "range": true
@@ -1113,7 +1228,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_write_dropped_profiles_total[$__rate_interval])) or vector(0)",
+                        "expr": "sum(rate(pyroscope_write_dropped_profiles_total{instance=~\"$instance\"}[$__rate_interval])) or vector(0)",
                         "instant": false,
                         "legendFormat": "write dropped",
                         "range": true
@@ -1134,7 +1249,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_ebpf_profiling_sessions_failing_total[$__rate_interval]))",
+                        "expr": "sum(rate(pyroscope_ebpf_profiling_sessions_failing_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "ebpf sessions failing",
                         "range": true
@@ -1155,7 +1270,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (reason) (rate(pyroscope_distributor_rejected_requests_total[$__rate_interval]))",
+                        "expr": "sum by (reason) (rate(pyroscope_distributor_rejected_requests_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "rejected {{reason}}",
                         "range": true
@@ -1269,7 +1384,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (profile_name) (rate(pyroscope_segment_writer_head_ingested_sample_values_total[$__rate_interval]))",
+                        "expr": "sum by (profile_name) (rate(pyroscope_segment_writer_head_ingested_sample_values_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "{{profile_name}}",
                         "range": true
@@ -1383,7 +1498,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (job) (rate(process_cpu_seconds_total{job=~\"alloy|pyroscope\"}[$__rate_interval]))",
+                        "expr": "sum by (job) (rate(process_cpu_seconds_total{job=~\"alloy|pyroscope\", instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "{{job}}",
                         "range": true
@@ -1498,7 +1613,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (job) (process_resident_memory_bytes{job=~\"alloy|pyroscope\"})",
+                        "expr": "sum by (job) (process_resident_memory_bytes{job=~\"alloy|pyroscope\", instance=~\"$instance\"})",
                         "instant": false,
                         "legendFormat": "{{job}}",
                         "range": true
@@ -1613,7 +1728,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_write_sent_bytes_total[$__rate_interval]))",
+                        "expr": "sum(rate(pyroscope_write_sent_bytes_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "alloy sent",
                         "range": true
@@ -1634,7 +1749,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (type) (rate(pyroscope_distributor_received_compressed_bytes_sum[$__rate_interval]))",
+                        "expr": "sum by (type) (rate(pyroscope_distributor_received_compressed_bytes_sum{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "recv {{type}} compressed",
                         "range": true
@@ -1655,7 +1770,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (type) (rate(pyroscope_distributor_received_decompressed_bytes_sum[$__rate_interval]))",
+                        "expr": "sum by (type) (rate(pyroscope_distributor_received_decompressed_bytes_sum{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "recv {{type}} decompressed",
                         "range": true
@@ -1769,7 +1884,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "histogram_quantile(0.5, sum by (le) (rate(pyroscope_write_latency_bucket{type=\"push_endpoint\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.5, sum by (le) (rate(pyroscope_write_latency_bucket{type=\"push_endpoint\", instance=~\"$instance\"}[$__rate_interval])))",
                         "instant": false,
                         "legendFormat": "p50",
                         "range": true
@@ -1790,7 +1905,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "histogram_quantile(0.99, sum by (le) (rate(pyroscope_write_latency_bucket{type=\"push_endpoint\"}[$__rate_interval])))",
+                        "expr": "histogram_quantile(0.99, sum by (le) (rate(pyroscope_write_latency_bucket{type=\"push_endpoint\", instance=~\"$instance\"}[$__rate_interval])))",
                         "instant": false,
                         "legendFormat": "p99",
                         "range": true
@@ -1905,7 +2020,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_ebpf_pprofs_total[$__rate_interval]))",
+                        "expr": "sum(rate(pyroscope_ebpf_pprofs_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "collected",
                         "range": true
@@ -1926,7 +2041,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_write_sent_profiles_total[$__rate_interval]))",
+                        "expr": "sum(rate(pyroscope_write_sent_profiles_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "sent",
                         "range": true
@@ -1947,7 +2062,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_distributor_profiles_received_total[$__rate_interval]))",
+                        "expr": "sum(rate(pyroscope_distributor_profiles_received_total{instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "received",
                         "range": true
@@ -2061,7 +2176,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "topk_avg(10, sum by (service_name) (rate(pyroscope_ebpf_pprof_samples_total[$__rate_interval])))",
+                        "expr": "topk_avg(10, sum by (service_name) (rate(pyroscope_ebpf_pprof_samples_total{instance=~\"$instance\"}[$__rate_interval])))",
                         "instant": false,
                         "legendFormat": "{{service_name}}",
                         "range": true
@@ -2456,6 +2571,19 @@
     },
     "links": [
       {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "o11y"
+        ],
+        "targetBlank": false,
+        "title": "Dashboards",
+        "tooltip": "",
+        "type": "dashboards"
+      },
+      {
         "asDropdown": false,
         "icon": "external link",
         "includeVars": false,
@@ -2473,7 +2601,8 @@
     "tags": [
       "profiling",
       "pyroscope",
-      "alloy"
+      "alloy",
+      "o11y"
     ],
     "timeSettings": {
       "autoRefresh": "1m",
@@ -2511,6 +2640,39 @@
           "refresh": "onDashboardLoad",
           "regex": "",
           "skipUrlSync": false
+        }
+      },
+      {
+        "kind": "QueryVariable",
+        "spec": {
+          "allowCustomValue": true,
+          "current": {
+            "text": "sauna",
+            "value": "sauna"
+          },
+          "definition": "label_values(node_uname_info, instance)",
+          "hide": "dontHide",
+          "includeAll": false,
+          "label": "instance",
+          "multi": false,
+          "name": "instance",
+          "options": [],
+          "query": {
+            "datasource": {
+              "name": "${DS_PROMETHEUS}"
+            },
+            "group": "victoriametrics-metrics-datasource",
+            "kind": "DataQuery",
+            "spec": {
+              "__legacyStringValue": "label_values(node_uname_info, instance)"
+            },
+            "version": "v0"
+          },
+          "refresh": "onDashboardLoad",
+          "regex": "",
+          "regexApplyTo": "value",
+          "skipUrlSync": false,
+          "sort": "alphabeticalAsc"
         }
       },
       {
