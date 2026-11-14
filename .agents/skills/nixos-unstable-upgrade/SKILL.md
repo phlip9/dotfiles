@@ -47,10 +47,10 @@ migration when consumed by NixOS packages, including out-of-store symlinks.
 
 Check each on every upgrade; drop the pin (and its note here) once obsolete.
 
-- sauna `nix.package = pkgs.nixVersions.latest` (`nixos/sauna/default.nix`):
-  Nix <= 2.34 daemons answer substituter queries serially, which slowed
-  nixbot evals. Drop once the NEW pin's default nix is >= 2.35:
-  `nix eval --raw -f . nixosConfigs.sauna.pkgs.nix.version`.
+- `electron_43` in `nixos/pkgs/{awakened-poe-trade,exiled-exchange-2}.nix`:
+  upstream targets Electron 40 and calls main-process `clipboard.readText()`
+  synchronously; Electron 44 made it async. Drop once upstream's
+  `main/package.json` targets Electron >= 44.
 
 ## Version mentions
 
@@ -197,6 +197,11 @@ nix shell -f . pkgs.cpio pkgs.zstd pkgs.xz pkgs.gzip --command \
 - `diff-closures`: every package version change. Verify unexpected
   appearances/disappearances against the built artifact (e.g. `--version`,
   `-V`, generated config) before reporting.
+- Shared runtime major bumps (`electron`, `jdk`, ...): find every consumer
+  (`nix why-depends --all`). Prebuilt apps wrapped w/ nixpkgs' runtime
+  (`nixos/pkgs/*` AppImages) run on a version upstream never tested.
+  Compare upstream's target version against the runtime's breaking-changes
+  doc and grep upstream source for affected APIs; pin the old major if hit.
 - `system-diff.sh`: generated-config changes with store hashes and versions
   masked: `etc/` files, unit files, and small generated scripts they
   reference (`refs/`). `Only in` = file added/removed. Shows the concrete

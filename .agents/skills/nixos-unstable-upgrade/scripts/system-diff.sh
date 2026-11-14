@@ -122,9 +122,11 @@ dump_system() {
     -size -"$max_file_kib"k -not -regex '.*\.\(wants\|requires\|upholds\)/.*' \
     -printf '%P\0' 2>/dev/null | xargs -0r grep -IlZ '' --) >"$text"
 
-  # copy text files, preserving relative paths
+  # copy text files, preserving relative paths. `cp -L` warns when two paths
+  # resolve to the same file (ex: kbd keymap include symlinks); harmless.
   (cd "$etc" &&
-    xargs -0r cp -L --parents --no-preserve=mode -t "$out/etc" <"$text")
+    xargs -0r cp -L --parents --no-preserve=mode -t "$out/etc" <"$text") \
+    2> >(grep -v 'specified more than once' >&2)
   while IFS= read -r -d '' rel; do
     is_text[$rel]=1
     dumped+=("$etc/$rel")
