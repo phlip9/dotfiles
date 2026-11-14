@@ -102,7 +102,7 @@ fix (phlipPkgs: {
   terranix = callPackage ./terranix { };
 
   # tf - opentofu/terraform shortcut that wires in secrets
-  tf = callPackage ./tf.nix {
+  tf = callPackage ./tf {
     inherit (phlipPkgs) opentofu sops terranix;
   };
 
