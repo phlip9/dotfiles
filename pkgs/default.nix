@@ -75,6 +75,9 @@ fix (phlipPkgs: {
   # nethack - roguelike game
   nethack = callPackage ./nethack { };
 
+  # updateScript helper for npins pinned package sources
+  npins-update-script = callPackage ./npins-update-script.nix { };
+
   # neovim - wrapped neovim with plugins and tools
   nvim = callPackage ./nvim { };
 
@@ -99,7 +102,10 @@ fix (phlipPkgs: {
   sops = callPackage ./sops.nix { };
 
   # terranix - config.nix -> config.tf.json, wrapped so it uses repo nixpkgs
-  terranix = callPackage ./terranix { inherit sources; };
+  terranix = callPackage ./terranix {
+    inherit sources;
+    inherit (phlipPkgs) npins-update-script;
+  };
 
   # tf - opentofu/terraform shortcut that wires in secrets
   tf = callPackage ./tf {

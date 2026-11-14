@@ -6,6 +6,7 @@
   callPackage,
   formats,
   lib,
+  npins-update-script,
   pkgs,
   sources,
   stdenvNoCC,
@@ -44,6 +45,8 @@ stdenvNoCC.mkDerivation {
 
   passthru = rec {
     inherit terranix-unwrapped;
+
+    updateScript = npins-update-script { names = [ "terranix" ]; };
 
     # our evaluated terraform config, used for validating in CI
     terranixCore = import (terranix-unwrapped + "/core/default.nix") {
