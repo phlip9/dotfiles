@@ -1,6 +1,6 @@
 {
   appimageTools,
-  electron,
+  electron_43,
   fetchurl,
   lib,
   libxt,
@@ -60,8 +60,12 @@ stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
+  # Pin Electron 43. Upstream targets Electron 40 and calls the main-process
+  # `clipboard.readText()`/`writeText()` synchronously. Electron 44 made these
+  # return Promises, which breaks the price-check clipboard round-trip.
+  # Bump once upstream targets Electron >= 44.
   postFixup = ''
-    makeWrapper ${lib.getExe electron} $out/bin/awakened-poe-trade \
+    makeWrapper ${lib.getExe electron_43} $out/bin/awakened-poe-trade \
       --add-flag "$out/share/awakened-poe-trade/resources/app.asar" \
       --add-flag '--ozone-platform=x11' \
       --add-flag '--no-overlay' \
