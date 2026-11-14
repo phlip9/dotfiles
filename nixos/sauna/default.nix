@@ -452,12 +452,6 @@
   };
   sops.secrets.ci-secrets-phlip9-notes-private = { };
 
-  # Nix <= 2.34 daemons answer `querySubstitutablePathInfos` one path and
-  # substituter at a time, so nixbot's `nix-eval-jobs --check-cache-status`
-  # spent minutes on serial narinfo lookups. Nix 2.35 probes concurrently.
-  # TODO(phlip9): drop once nixos-unstable's default `pkgs.nix` is >= 2.35.
-  nix.package = pkgs.nixVersions.latest;
-
   # =========================================================================
   # rbitcoin - Bitcoin full node (mainnet)
   # =========================================================================
