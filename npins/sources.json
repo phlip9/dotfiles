@@ -131,6 +131,19 @@
       "revision": "2bd00bd9bb35fe6d114888c8f1c2e946c541dd8f",
       "url": "https://github.com/Mic92/sops-nix/archive/2bd00bd9bb35fe6d114888c8f1c2e946c541dd8f.tar.gz",
       "hash": "sha256-TNfgoHsqsYYvaJImlWctfRkh4PseTagzegU1Dgdbehw="
+    },
+    "terranix": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "terranix",
+        "repo": "terranix"
+      },
+      "branch": "main",
+      "submodules": false,
+      "revision": "b6c05a45b2435cb3471d6f135ddb0b3c2934cc45",
+      "url": "https://github.com/terranix/terranix/archive/b6c05a45b2435cb3471d6f135ddb0b3c2934cc45.tar.gz",
+      "hash": "sha256-ejdemeNa8TK1dcep3oMHmTvfEp+D7D6bnnE2tS59baM="
     }
   },
   "version": 7

@@ -99,7 +99,7 @@ fix (phlipPkgs: {
   sops = callPackage ./sops.nix { };
 
   # terranix - config.nix -> config.tf.json, wrapped so it uses repo nixpkgs
-  terranix = callPackage ./terranix { };
+  terranix = callPackage ./terranix { inherit sources; };
 
   # tf - opentofu/terraform shortcut that wires in secrets
   tf = callPackage ./tf {
