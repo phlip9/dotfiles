@@ -48,8 +48,9 @@ stdenvNoCC.mkDerivation {
 
     updateScript = npins-update-script { names = [ "terranix" ]; };
 
-    # our evaluated terraform config, used for validating in CI
-    terranixCore = import (terranix-unwrapped + "/core/default.nix") {
+    # Import source directly to avoid building a target-platform package
+    # during CI evaluation (e.g. Darwin on a Linux evaluator).
+    terranixCore = import (sources.terranix + "/core/default.nix") {
       inherit pkgs;
       modules = [ ../../config.nix ];
       strip_nulls = true;
