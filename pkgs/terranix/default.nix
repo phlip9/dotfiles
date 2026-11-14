@@ -4,7 +4,9 @@
 # terranix use the local nixpkgs from the current directory.
 {
   callPackage,
+  formats,
   lib,
+  pkgs,
   sources,
   stdenvNoCC,
 }:
@@ -40,7 +42,20 @@ stdenvNoCC.mkDerivation {
   preferLocalBuild = true;
   allowSubstitutes = false;
 
-  passthru.terranix-unwrapped = terranix-unwrapped;
+  passthru = rec {
+    inherit terranix-unwrapped;
+
+    # our evaluated terraform config, used for validating in CI
+    terranixCore = import (terranix-unwrapped + "/core/default.nix") {
+      inherit pkgs;
+      modules = [ ../../config.nix ];
+      strip_nulls = true;
+    };
+
+    # our terraform config rendered to the standard json file
+    configTfJson = (formats.json { }).generate "config.tf.json" terranixCore.config;
+  };
+
   meta = {
     mainProgram = "terranix";
   };

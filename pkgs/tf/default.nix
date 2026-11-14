@@ -1,6 +1,7 @@
 {
   opentofu,
   sops,
+  runCommand,
   terranix,
   writeShellApplication,
 }:
@@ -25,4 +26,19 @@ writeShellApplication {
 
     exec sops exec-env ops/secrets.yaml "tofu $args"
   '';
+
+  # validate our terraform config in CI
+  passthru.tests.tf-validate-config =
+    runCommand "tf-validate-config"
+      {
+        nativeBuildInputs = [ opentofu ];
+      }
+      ''
+        ln -s "${terranix.passthru.configTfJson}" config.tf.json
+
+        tofu init -backend=false -input=false -no-color
+        tofu validate -no-color
+
+        touch $out
+      '';
 }
