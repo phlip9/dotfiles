@@ -1,6 +1,6 @@
 ---
 name: nixos-unstable-upgrade
-description: Use to upgrade nixos-unstable to the latest version
+description: Use to upgrade nixos-unstable to the latest version, plus its lockstep npins (nixbot, niks3, disko)
 ---
 
 # nixos-unstable upgrade
@@ -11,7 +11,8 @@ channel release). Flow:
 1. research -> gate: report breaking/non-trivial changes and STOP
 2. apply: final commit structure
 3. verify: machines, NixOS tests, CI job set
-4. final report, then improve this skill
+4. lockstep pins: bump nixbot, niks3, disko on top of NEW, same flow
+5. final report, then improve this skill
 
 Work in the current workspace (the worktree you start in). Rename its
 branch in place: `git branch -m agent/nixos-unstable-<yyyy-mm-dd>` (add a
@@ -43,6 +44,9 @@ package + release notes scanning and summarization.
   They can break against new nixpkgs (removed options, removed toolchain
   builders like `buildGo1XXModule`). So can packages built from them, e.g.
   `phlipPkgsNixos.nixbot-cli` and `nixbot-eval-jobs` (patched nix).
+  - lockstep (Phase 4, every upgrade): nixbot, niks3, disko.
+  - out of scope, own upgrade process: rbitcoin + crane, paseo. sops-nix
+    only when broken (1d).
 
 Package evaluation is unaffected for `homeConfigs` and top-level
 `phlipPkgs` (stable `nixpkgs` pin). Their runtime configs can still need
@@ -185,6 +189,7 @@ test "$failed" -eq 0
 - External pin failures: `npins update <pin>`, then review upstream commits
   in range for behavior changes and check each against our config, e.g.
   `curl -s https://api.github.com/repos/<owner>/<repo>/compare/<old>...<new>`.
+  Lockstep pins wait for Phase 4 unless they block eval/build here.
 
 ### 1e. New builds + diffs
 
@@ -268,10 +273,11 @@ Report (dense, per AGENTS.md style):
 
 Final history, in order, per AGENTS.md conventions:
 
-1. One commit per external pin bump: `sops-nix: a8627b2 -> 2bd00bd` (7-char
-   revs). Verify it evals/builds against the OLD nixos-unstable so the commit
-   stands alone; otherwise bundle it into (2). Use a temp worktree w/ only
-   that pin: `git worktree add --detach "$art/wt-<pin>" HEAD`, then
+1. One commit per external pin bump, w/ upstream committer dates and 7-char
+   revs: `sops-nix: 2026-10-15 a8627b2 -> 2026-11-14 2bd00bd`. Verify it
+   evals/builds against the OLD nixos-unstable so the commit stands alone;
+   otherwise bundle it into (2). Use a temp worktree w/ only that pin:
+   `git worktree add --detach "$art/wt-<pin>" HEAD`, then
    `jq --slurpfile new npins/sources.json '.pins.<pin> = $new[0].pins.<pin>'`.
 2. `nixos-unstable: ec2d622de077 (2026-08-17) -> e94cb152ed51 (2026-09-25)`
    (12-char revs, committer dates). Include config migrations required to
@@ -306,14 +312,37 @@ just nix-fmt && just nix-lint && git status --short
 Done when: both logs `exit=0`, all tests passed, no eval warnings, fmt/lint
 clean, re-run of 1e diffs shows nothing unexplained.
 
+## Phase 4: lockstep pins
+
+After the nixos-unstable commits, bump the pins that track nixos-unstable:
+
+```bash
+nix build -f . nixosConfigs.sauna.config.system.build.toplevel \
+  -o "$art/pre-sauna"   # baseline
+npins update nixbot niks3 disko
+```
+
+- Review each range (`/compare/<old>...<new>`) against
+  `nixos/mods/nixbot-ci.nix`. Watch for new module defaults, and nixbot DB
+  migrations (`nixbot/nixbot/migrations/`): a `DROP` blocks rollback ->
+  Runtime risk.
+- Build `phlipPkgsNixos.{nixbot,nixbot-eval-jobs,niks3,niks3-server}` and
+  `nixosTests.nixbot`. Rebase local patches (`nixos/pkgs/{nixbot,niks3,...}`)
+  whose hunks fail; drop upstreamed ones.
+- `system-diff.sh "$art/pre-sauna" <new sauna>`.
+- One commit per pin, upstream committer dates + 7-char revs:
+  `niks3: 2026-09-22 1c74f96 -> 2026-11-12 73468ec`. Patch rebases go in
+  the pin's commit.
+
 ## Final report
 
 Commits, what was verified (commands + results), deviations from plan, and a
 post-deploy checklist per machine:
 
 - sauna (remote): `systemctl --failed`; journals of services with stateful
-  migrations (e.g. `acme-*` renewals, postgresql); Hetzner rescue ready
-  before rebooting if bootloader/kernel/initrd changed.
+  migrations (e.g. `acme-*` renewals, postgresql, nixbot DB migrations);
+  `journalctl -u niks3 -u nixbot` for new startup warnings; Hetzner rescue
+  ready before rebooting if bootloader/kernel/initrd changed.
 - phlipdesk: reboot if kernel, nvidia, bootloader, or initrd changed.
 
 ## Improve this skill
