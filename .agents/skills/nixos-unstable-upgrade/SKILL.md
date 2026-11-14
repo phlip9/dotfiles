@@ -13,8 +13,13 @@ channel release). Flow:
 3. verify: machines, NixOS tests, CI job set
 4. final report, then improve this skill
 
-Work happens in a dedicated worktree on an `agent/**` branch: edit, bump
-pins, and commit freely at any point. Only the final history matters.
+Work in the current workspace (the worktree you start in). Rename its
+branch in place: `git branch -m agent/nixos-unstable-<yyyy-mm-dd>` (add a
+suffix if taken). Don't switch to another branch or create other
+worktrees, except short-lived detached verify worktrees under `$art`.
+Edit, bump pins, and commit freely at any point. Only the final history
+matters. After reordering commits (`git reset` + `git cherry-pick`), check
+`git branch --show-current`: a detached HEAD leaves the branch behind.
 
 Release notes are incomplete: option removals and default changes often
 land without an entry. Module diffs, the eval probe, and system diffs are
