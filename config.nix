@@ -110,10 +110,17 @@ in
 
   # R2 buckets
   resource.cloudflare_r2_bucket = {
+    # Random dumping ground for backups or other misc files
+    phlip9_dump = {
+      inherit account_id;
+      name = "phlip9-dump";
+    };
+    # Nix CI cache (see: doc/nixbot-ci.md)
     phlip9_nix_cache = {
       inherit account_id;
       name = "phlip9-nix-cache";
     };
+    # OpenTofu state store
     phlip9_terraform_backend = {
       inherit account_id;
       name = "phlip9-terraform-backend";
