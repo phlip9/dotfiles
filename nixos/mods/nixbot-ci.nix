@@ -182,6 +182,12 @@ in
       apiTokenFile = config.sops.secrets.niks3-api-token.path;
       signKeyFiles = [ config.sops.secrets.niks3-signing-key.path ];
 
+      # Don't install an S3 lifecycle rule aborting incomplete multipart NAR
+      # uploads. Our bucket-scoped R2 token can't read or write lifecycle
+      # config, so niks3 would just warn on every start. niks3 gc still
+      # aborts the uploads it tracks.
+      abortIncompleteUploadsDays = 0;
+
       # Garbage collection
       gc = {
         enable = true;
