@@ -305,6 +305,11 @@
   programs.firefox = {
     enable = true;
 
+    preferences = {
+      # limit fullscreen to OS window
+      "full-screen-api.ignore-widgets" = true;
+    };
+
     # set firefox default config json ("organisation policy")
     # <https://mozilla.github.io/policy-templates/>
     policies = {
