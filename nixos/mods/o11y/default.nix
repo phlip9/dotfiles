@@ -698,7 +698,8 @@ in
       listenAddress = "127.0.0.1";
       port = 9113;
     };
-    # nginx-exporter needs stub_status exposed on localhost.
+    # nginx-exporter needs stub_status exposed on localhost. Its vhost is
+    # bound to loopback in the nginx section below.
     services.nginx.statusPage = lib.mkIf config.services.nginx.enable true;
 
     # ===================================================================
@@ -1021,24 +1022,37 @@ in
     };
 
     # ===================================================================
-    # nginx - TLS termination + reverse proxy to Grafana
+    # nginx - stub_status vhost, TLS termination + reverse proxy to Grafana
     # ===================================================================
-    services.nginx.virtualHosts = lib.mkIf (cfg.grafana.domain != null) {
-      ${cfg.grafana.domain} = {
-        forceSSL = true;
-        enableACME = true;
+    services.nginx.virtualHosts = lib.mkMerge [
+      # The upstream stub_status vhost listens on all addresses. Only the local
+      # exporter needs it. Upstream default causes lots of spam logs from bots.
+      # NOTE(phlip9): upstream already has an ip whitelist for
+      # `virtualHosts.localhost`, this is just for cleaning up our logs.
+      (lib.mkIf config.services.nginx.enable {
+        localhost.listenAddresses = [
+          "127.0.0.1"
+          "[::1]"
+        ];
+      })
 
-        # Advertise HTTPS-only access for Grafana without committing all
-        # subdomains to HSTS or browser preload lists.
-        extraConfig = ''
-          add_header Strict-Transport-Security "max-age=31536000" always;
-        '';
+      (lib.mkIf (cfg.grafana.domain != null) {
+        ${cfg.grafana.domain} = {
+          forceSSL = true;
+          enableACME = true;
 
-        locations."/" = {
-          proxyPass = "http://${gfAddr}";
-          proxyWebsockets = true;
+          # Advertise HTTPS-only access for Grafana without committing all
+          # subdomains to HSTS or browser preload lists.
+          extraConfig = ''
+            add_header Strict-Transport-Security "max-age=31536000" always;
+          '';
+
+          locations."/" = {
+            proxyPass = "http://${gfAddr}";
+            proxyWebsockets = true;
+          };
         };
-      };
-    };
+      })
+    ];
   };
 }
