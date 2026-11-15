@@ -13,6 +13,18 @@
       # silence a random warning
       # TODO(phlip9): periodically remove this and see if the issue persists
       boot.zfs.forceImportRoot = false;
+
+      # systemd 262 `user@.service` only skips the memory pressure watch, so
+      # PID 1 hands the user manager a locked CPU/IO pressure watch via env.
+      # The user manager then can't apply its own default threshold and warns
+      # "Failed to adjust io pressure threshold" on every start/reexec.
+      # TODO(phlip9): drop once nixpkgs' systemd includes upstream b6cdaf4a3d
+      # ("units: let systemd user/capsule manage its own CPU/I/O pressure
+      # handling").
+      systemd.services."user@".serviceConfig = {
+        CPUPressureWatch = "skip";
+        IOPressureWatch = "skip";
+      };
     }
   )
 
