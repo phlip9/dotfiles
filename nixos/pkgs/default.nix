@@ -37,6 +37,9 @@ fix (phlipPkgsNixos: {
   # Grafana Alloy 1.22 pre-release: Go 1.27 symbolization in pyroscope.ebpf
   grafana-alloy = callPackage ./grafana-alloy { };
 
+  # Grafana Canvas panel plugin, no longer in Grafana core
+  grafana-canvas-panel = callPackage ./grafana-canvas-panel { };
+
   # Grafana Pyroscope datasource plugin, no longer in Grafana core
   grafana-pyroscope-datasource = callPackage ./grafana-pyroscope-datasource { };
 
