@@ -110,6 +110,29 @@ let
           description = "Service down or wedged? journalctl -u <its unit>";
         };
       }
+      # vmagent writes no stale markers when it stops (or the host dies),
+      # and a dead scraper writes no `up == 0`: the host's series just stop,
+      # so TargetDown can't see it. Fires per alerted host w/o a single
+      # node-exporter `up` sample (0 or 1) for 3m, + 2m `for`. Deploys
+      # restart vmagent in seconds (<= 1 missed 1m scrape); at boot, `for`
+      # covers the time to vmagent's first scrape. Never fires for a host
+      # that isn't in `alerting.instances`. Nothing to inhibit: the host's
+      # other alerts have no data while it fires.
+      {
+        alert = "HostNotReporting";
+        expr = lib.concatMapStringsSep " or " (
+          host: ''absent_over_time(up{job="node-exporter", instance="${host}"}[3m])''
+        ) alertedInstances;
+        for = "2m";
+        labels.severity = "page";
+        annotations = {
+          summary = "{{ $labels.instance }} stopped reporting metrics";
+          description = lib.concatStringsSep " " [
+            "Host down, or vmagent / node-exporter dead?"
+            "systemctl status vmagent prometheus-node-exporter"
+          ];
+        };
+      }
     ];
   };
 

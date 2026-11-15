@@ -288,7 +288,7 @@ in
       ];
       description = ''
         Hosts (`instance` labels) that get host-level alerts: CPU, memory,
-        disks, units, timers, scrape targets, ... Other
+        disks, units, timers, scrape targets, stopped reporting, ... Other
         hosts' series (ex: a desktop's collector) never fire or affect an
         alert. See ./rules.nix.
       '';

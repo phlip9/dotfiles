@@ -381,3 +381,61 @@ tests:
               summary: load5 at 2.5x the CPU threads
               description: Runaway CI build or agent? systemd-cgtop
 
+  # Both hosts' node-exporter `up` stops after 10m, like a dead vmagent or
+  # a powered-off host. Only sauna's fires: 3m w/o a sample, then the 2m
+  # `for`.
+  - name: HostNotReporting fires only for an alerted host
+    interval: 1m
+    input_series:
+      - series: 'up{job="node-exporter", instance="sauna"}'
+        values: 1x10
+      - series: 'up{job="node-exporter", instance="phlipdesk"}'
+        values: 1x10
+    alert_rule_test:
+      - eval_time: 12m
+        groupname: targets
+        alertname: HostNotReporting
+        exp_alerts: []
+      - eval_time: 14m
+        groupname: targets
+        alertname: HostNotReporting
+        exp_alerts: []
+      - eval_time: 15m
+        groupname: targets
+        alertname: HostNotReporting
+        exp_alerts: &host_not_reporting
+          - exp_labels:
+              severity: page
+              job: node-exporter
+              instance: sauna
+            exp_annotations:
+              summary: sauna stopped reporting metrics
+              description: >-
+                Host down, or vmagent / node-exporter dead? systemctl status
+                vmagent prometheus-node-exporter
+      - eval_time: 30m
+        groupname: targets
+        alertname: HostNotReporting
+        exp_alerts: *host_not_reporting
+
+  # A deploy restarts vmagent (or node-exporter) and misses a scrape or
+  # two, ex: 2 scrapes at 11m + 12m. Not a stopped host. Neither is a
+  # target that's down but still scraped (`up == 0`, see TargetDown).
+  - name: HostNotReporting ignores short scrape gaps + down targets
+    interval: 1m
+    input_series:
+      - series: 'up{job="node-exporter", instance="sauna"}'
+        values: 1x10 _x2 1x5 0x20
+    alert_rule_test:
+      - eval_time: 13m
+        groupname: targets
+        alertname: HostNotReporting
+        exp_alerts: []
+      - eval_time: 16m
+        groupname: targets
+        alertname: HostNotReporting
+        exp_alerts: []
+      - eval_time: 35m
+        groupname: targets
+        alertname: HostNotReporting
+        exp_alerts: []
