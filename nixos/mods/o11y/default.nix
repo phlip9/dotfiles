@@ -20,6 +20,7 @@
 {
   config,
   lib,
+  phlipPkgs,
   phlipPkgsNixos,
   pkgs,
   ...
@@ -34,6 +35,22 @@ let
   cfgGf = config.services.grafana;
   cfgGfSrv = cfgGf.settings.server;
   gfAddr = "${cfgGfSrv.http_addr}:${toString cfgGfSrv.http_port}";
+
+  # Fail build if plugin's `grafanaDependency` excludes our Grafana version.
+  gfPluginsCheck =
+    let
+      check = phlipPkgs.writeTypedPython3Bin "grafana-plugins-check" { } (
+        builtins.readFile ./grafana-plugins-check.py
+      );
+    in
+    pkgs.runCommand "grafana-plugins-check" { } ''
+      ${lib.getExe check} ${
+        lib.escapeShellArgs (
+          [ cfgGf.package.version ] ++ map toString cfgGf.declarativePlugins
+        )
+      }
+      touch $out
+    '';
 
   cfgNixbot = config.services.nixbot;
 
@@ -748,6 +765,8 @@ in
       # Silence these warnings
       "search-manifest-watcher:error"
     ];
+
+    system.checks = [ gfPluginsCheck ];
 
     services.grafana = {
       enable = true;
