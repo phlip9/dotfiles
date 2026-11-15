@@ -211,6 +211,8 @@ in
         # Only allow CORS origins passed via env (webUi.publicBaseUrl).
         # Upstream seeds new configs w/ the hosted https://app.paseo.sh.
         daemon.cors.allowedOrigins = lib.mkDefault [ ];
+        # Reject legacy relay E2EE sessions, which have no replay protection
+        daemon.relay.requireProtectedSecurity = lib.mkDefault true;
         # Third-party plugins run unsandboxed in the daemon.
         pluginsEnabled = lib.mkDefault false;
         # Unused built-in plugin providers, enabled by default upstream.

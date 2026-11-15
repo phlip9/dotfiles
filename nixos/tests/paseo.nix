@@ -167,6 +167,8 @@
     };
 
   testScript = ''
+    import base64
+    import json
     from datetime import timedelta
 
     password_file = "/run/credentials/paseo.service/daemon-password"
@@ -285,6 +287,7 @@
             "and .pluginsEnabled == false "
             "and .agents.providers.antigravity.enabled == false "
             "and .agents.providers.muse.enabled == false "
+            "and .daemon.relay.requireProtectedSecurity == true "
             "and .agents.providers[\"env-probe\"].label == \"Env probe\" "
             f"and .daemon.serviceProxy.enabled == true' {config_file}"
         )
@@ -388,6 +391,11 @@
             "paseo daemon pair --host '[::1]:6767' --json | jq -r .url"
         ).strip()
         assert pairing_url.startswith("http://paseo.test/#offer="), pairing_url
+        # Offers pin clients to replay-protected (Noise NK) relay sessions.
+        offer_b64 = pairing_url.split("#offer=", 1)[1]
+        offer_b64 += "=" * (-len(offer_b64) % 4)
+        offer = json.loads(base64.urlsafe_b64decode(offer_b64))
+        assert offer.get("minimumSecurityMode") == "protected", offer
         relay_ls = f"timeout 30 paseo ls --host '{pairing_url}' --json"
         # Regression guard: before v0.15, upstream admitted credential-less
         # relay clients as owner.
