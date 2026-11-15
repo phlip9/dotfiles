@@ -63,6 +63,13 @@
   # use latest kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
+  # setup perf for convenient ad-hoc profiling with kernel symbols
+  programs.phlip9-perf = {
+    enable = true;
+    enableDebugInfo = true;
+    users = [ "phlip9" ];
+  };
+
   # use a better Linux scheduler for interactive desktop usage
   services.scx-loader = {
     enable = true;

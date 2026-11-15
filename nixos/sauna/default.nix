@@ -33,6 +33,13 @@
   # Use latest kernel
   boot.kernelPackages = pkgs.linuxPackages_latest;
 
+  # setup perf for convenient ad-hoc profiling with kernel symbols
+  programs.phlip9-perf = {
+    enable = true;
+    enableDebugInfo = true;
+    users = [ "phlip9" ];
+  };
+
   # Silence mdadm warning about missing MAILADDR or PROGRAM
   boot.swraid.mdadmConf = "PROGRAM ${pkgs.coreutils}/bin/true";
 

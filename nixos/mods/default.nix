@@ -25,6 +25,7 @@
   ./o11y
   (sources.paseo + "/nix/module.nix")
   ./paseo.nix
+  ./perf.nix
   ./phlippkgs.nix
   ./postgres.nix
 
