@@ -154,7 +154,7 @@ in
         evaluationInterval = "1s";
         "rule.evalDelay" = "0s";
       };
-      services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
+      services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
       systemd.services.alert-sink = {
         wantedBy = [ "multi-user.target" ];

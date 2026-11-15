@@ -167,7 +167,7 @@ in
       # Only VictoriaMetrics is under test. Grafana's first-boot migrations
       # would compete w/ nixbot's startup for the VM's CPU.
       services.grafana.enable = lib.mkForce false;
-      services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
+      services.vmagent.prometheusConfig.global.scrape_interval = "2s";
       # Serve fresh `nixbot_builds` counts, not ones cached for up to 15s.
       systemd.services.nixbot.environment.NIXBOT_METRICS_CACHE_TTL = "0";
 
@@ -578,8 +578,11 @@ in
             "| grep '^nixbot_queue_depth '"
         )
 
-    with subtest("metrics: VictoriaMetrics ingests nixbot and niks3 metrics"):
+    with subtest("metrics: vmagent scrapes nixbot + niks3 into VictoriaMetrics"):
         machine.wait_for_unit("victoriametrics.service")
+        # Scraped samples reach VM on vmagent's next flush, then turn
+        # searchable on VM's next pending rows flush, up to 2s later.
+        # `force_flush` runs VM's now.
         for query in (
             'up{job="nixbot"} == 1',
             'up{job="niks3"} == 1',
@@ -587,6 +590,7 @@ in
             'niks3_cache_objects{job="niks3"} >= 1',
         ):
             machine.wait_until_succeeds(
+                "curl -sf http://127.0.0.1:8428/internal/force_flush && "
                 "curl -sfG http://127.0.0.1:8428/api/v1/query "
                 f"--data-urlencode {shlex.quote('query=' + query)} "
                 "| jq -e '.data.result | length > 0'",

@@ -1,7 +1,7 @@
 # o11y server: metrics storage + query.
 #
 # Components:
-# - VictoriaMetrics (metrics storage + scraper)
+# - VictoriaMetrics (metrics storage + query, remote write ingest)
 # - prometheus-blackbox-exporter (HTTPS probes of `probes`, if any)
 # - Grafana (visualization + dashboards): see ./grafana.nix
 # - Alerting (vmalert + Alertmanager): see ./alerting.nix
@@ -73,15 +73,15 @@ in
 
   config = lib.mkIf cfg.enable {
     # ===================================================================
-    # VictoriaMetrics - metrics storage + scraper
+    # VictoriaMetrics - metrics storage + query
     # ===================================================================
-    # Scrapes `collector.scrapeConfigs`, see ../collector/default.nix
+    # No `prometheusConfig`: its built-in scraper stays off. The collector's
+    # vmagent scrapes + remote-writes to `/api/v1/write`, see
+    # ../collector/default.nix.
     services.victoriametrics = {
       enable = true;
       listenAddress = "127.0.0.1:8428";
       retentionPeriod = cfg.retentionPeriod;
-      # niks3 listens on IPv6 loopback; VM defaults to IPv4-only dialing.
-      extraOptions = [ "-enableTCP6" ];
     };
 
     # ===================================================================

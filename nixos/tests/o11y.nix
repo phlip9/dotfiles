@@ -1,7 +1,8 @@
 # NixOS container test for the phlip9-o11y module.
 #
-# Single container with VictoriaMetrics + node-exporter + nixos-exporter +
-# Grafana. Verifies scraping, querying, nixos-exporter's boot counting +
+# Single container with VictoriaMetrics + vmagent + node-exporter +
+# nixos-exporter + Grafana. Verifies scraping (vmagent -> remote write, VM's
+# built-in scraper off), querying, nixos-exporter's boot counting +
 # reboot check + cgroup metrics, Grafana datasource provisioning, that
 # Grafana's secrets manager encrypts with our key, a Git Sync round trip
 # (file -> dashboard -> API save -> file) w/ a `local` repository, and the
@@ -90,7 +91,7 @@
       };
 
       # Use a fast scrape interval for tests.
-      services.victoriametrics.prometheusConfig.global.scrape_interval = "2s";
+      services.vmagent.prometheusConfig.global.scrape_interval = "2s";
 
       # Override admin user for test assertions.
       services.grafana.settings.security.admin_user = "testadmin";
@@ -130,6 +131,11 @@
     machine.start()
     machine.wait_for_unit("multi-user.target")
 
+    # Scraped samples reach VictoriaMetrics on vmagent's next flush, then
+    # turn searchable on VM's next pending rows flush, up to 2s later.
+    # `force_flush` runs VM's now: prefix VM queries that wait for a scrape.
+    VM_FLUSH = "curl -sf http://127.0.0.1:8428/internal/force_flush && "
+
     # VictoriaMetrics starts and responds to health check.
     with subtest("VictoriaMetrics health"):
         machine.wait_for_unit("victoriametrics.service")
@@ -145,10 +151,10 @@
             "http://127.0.0.1:9100/metrics"
         )
 
-    # VictoriaMetrics scrapes node-exporter metrics.
-    with subtest("VictoriaMetrics scrapes node-exporter"):
+    # vmagent scrapes node-exporter into VictoriaMetrics.
+    with subtest("vmagent scrapes node-exporter"):
         machine.wait_until_succeeds(
-            "curl -sf "
+            VM_FLUSH + "curl -sf "
             "'http://127.0.0.1:8428/api/v1/query"
             "?query=up%7Bjob%3D%22node-exporter%22%7D' "
             "| jq -e '.data.result[0].value[1] == \"1\"'",
@@ -246,19 +252,19 @@
             name = f"nixos_cgroup_cpu_seconds_total{{{labels}}}"
             assert float(metrics.get(name, "0")) > 0, (name, metrics)
 
-        # VictoriaMetrics scrapes it.
+        # vmagent scrapes it.
         machine.wait_until_succeeds(
-            "curl -sf "
+            VM_FLUSH + "curl -sf "
             "'http://127.0.0.1:8428/api/v1/query"
             "?query=nixos_boots_total%7Bjob%3D%22nixos-exporter%22%7D' "
             "| jq -e '.data.result[0].value[1] == \"2\"'",
             timeout=dt.timedelta(seconds=30),
         )
 
-    # VictoriaMetrics scrapes itself.
+    # vmagent scrapes VictoriaMetrics.
     with subtest("VictoriaMetrics self-scrape"):
         machine.wait_until_succeeds(
-            "curl -sf "
+            VM_FLUSH + "curl -sf "
             "'http://127.0.0.1:8428/api/v1/query"
             "?query=up%7Bjob%3D%22victoriametrics%22%7D' "
             "| jq -e '.data.result[0].value[1] == \"1\"'",
@@ -266,8 +272,8 @@
         )
 
     # Every host-local target is `instance=<hostname>`, not `<addr>:<port>`,
-    # so all jobs on a host share one `instance`. VM has loaded every target
-    # by now: it already scraped nixos-exporter above.
+    # so all jobs on a host share one `instance`. vmagent has loaded every
+    # target by now: it already scraped nixos-exporter above.
     with subtest("Scrape targets are labeled instance=<hostname>"):
         up = json.loads(
             machine.succeed(
@@ -276,11 +282,39 @@
             )
         )["data"]["result"]
         instances = {r["metric"]["job"]: r["metric"]["instance"] for r in up}
-        jobs = {"victoriametrics", "node-exporter", "nixos-exporter", "grafana"}
+        jobs = {
+            "victoriametrics",
+            "vmagent",
+            "node-exporter",
+            "nixos-exporter",
+            "grafana",
+        }
         assert set(instances) == jobs, instances
         assert all(
             instance == "machine" for instance in instances.values()
         ), instances
+
+    # vmagent scrapes, VictoriaMetrics only stores: VM's built-in scraper
+    # has no targets, and every sample above came in through remote write.
+    with subtest("VictoriaMetrics ingests via remote write, scraper off"):
+        targets = json.loads(
+            machine.succeed(
+                "curl -sf --max-time 5 http://127.0.0.1:8428/api/v1/targets"
+            )
+        )["data"]
+        assert targets["activeTargets"] == [], targets
+        vm_metrics = machine.succeed(
+            "curl -sf --max-time 5 http://127.0.0.1:8428/metrics"
+        )
+        rows = dict(
+            line.rsplit(" ", 1)
+            for line in vm_metrics.splitlines()
+            if line.startswith("vm_rows_inserted_total{")
+        )
+        assert float(rows['vm_rows_inserted_total{type="promscrape"}']) == 0, rows
+        assert (
+            float(rows['vm_rows_inserted_total{type="promremotewrite"}']) > 0
+        ), rows
 
     # Grafana credentials directory exists with secrets.
     with subtest("Grafana LoadCredential"):

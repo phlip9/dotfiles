@@ -87,7 +87,11 @@
       # Only VictoriaMetrics is under test.
       services.grafana.enable = lib.mkForce false;
       # The VM check waits for a scrape after node2's last new tip.
-      services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
+      services.vmagent.prometheusConfig.global.scrape_interval = "1s";
+      # ... and for vmagent's next flush, once per wall clock second. A
+      # short rbitcoin interval puts a scrape just before each flush, so a
+      # new tip reaches VM w/in ~1s.
+      services.phlip9-o11y.collector.scrapeConfigs.rbitcoin.scrape_interval = "200ms";
     };
 
   testScript = ''
@@ -271,7 +275,7 @@
         wait_for_tip(node2, tip)
         assert rpc(node2, "getblockcount") == str(ibd_blocks + 5)
 
-    with subtest("VictoriaMetrics scrapes node2's metrics"):
+    with subtest("vmagent scrapes node2's metrics into VictoriaMetrics"):
         # o11y turns on `/metrics`. node1 has no o11y, so it 404s there.
         node1.fail(f"curl -sf {health_url}/metrics")
         node2.succeed(
@@ -279,32 +283,33 @@
             f"| grep -Fx 'rbitcoin_blocks {ibd_blocks + 5}'"
         )
         vm_url = "http://127.0.0.1:8428"
+        vmagent_url = "http://127.0.0.1:8429"
         node2.wait_for_unit("victoriametrics.service")
-        try:
-            node2.wait_until_succeeds(
-                f"curl -sf {vm_url}/api/v1/targets "
-                "| jq -e '.data.activeTargets[] "
-                "| select(.labels.job == \"rbitcoin\") | .health == \"up\"'",
-                timeout=timedelta(seconds=60),
-            )
-        except Exception:
-            node2.log(node2.succeed(f"curl -s {vm_url}/api/v1/targets"))
-            raise
-        # Scraped samples become searchable on VM's next pending rows
-        # flush, up to 2s later. `force_flush` runs it now.
-        for query in (
+        node2.wait_for_unit("vmagent.service")
+        # Scraped samples reach VM on vmagent's next flush (test knob: the
+        # next second), then become searchable on VM's next pending rows
+        # flush, up to 2s later. `force_flush` runs that one now. One wait
+        # for all queries: `up == 1` also means vmagent's target is healthy.
+        queries = [
             'up{job="rbitcoin"} == 1',
             'rbitcoin_build_info{job="rbitcoin",network="regtest"} == 1',
             f'rbitcoin_blocks{{job="rbitcoin"}} == {ibd_blocks + 5}',
             'rbitcoin_connections{job="rbitcoin",direction="out"} >= 1',
-        ):
+        ]
+        try:
             node2.wait_until_succeeds(
-                f"curl -sf {vm_url}/internal/force_flush && "
-                f"curl -sfG {vm_url}/api/v1/query "
-                f"--data-urlencode {shlex.quote('query=' + query)} "
-                "| jq -e '.data.result | length > 0'",
+                f"curl -sf {vm_url}/internal/force_flush"
+                + "".join(
+                    f" && curl -sfG {vm_url}/api/v1/query "
+                    f"--data-urlencode {shlex.quote('query=' + query)} "
+                    "| jq -e '.data.result | length > 0'"
+                    for query in queries
+                ),
                 timeout=timedelta(seconds=60),
             )
+        except Exception:
+            node2.log(node2.succeed(f"curl -s {vmagent_url}/api/v1/targets"))
+            raise
 
     with subtest("node2 serves Esplora w/ the scripthash index"):
         esplora_url = "http://127.0.0.1:3000"

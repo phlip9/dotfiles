@@ -24,7 +24,7 @@
 # - many short-lived pids: one profile per labels, not per pid
 #   (regression: per-pid fan-out missed the push deadline under load)
 # - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
-#   VictoriaMetrics scrapes it
+#   scraped into VictoriaMetrics
 # - `pyroscope_data_bytes` (pyroscope-du timer -> node-exporter)
 #
 # Mirrors sauna: latest kernel + its BPF/perf/ptrace sysctls.
@@ -134,7 +134,7 @@ in
       services.grafana.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
 
-      services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
+      services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
       systemd.services.${unit} = {
         wantedBy = [ "multi-user.target" ];
@@ -785,9 +785,13 @@ in
         # `up` + Pyroscope's disk usage via node-exporter's textfile
         # collector, for the alert rules
         with subtest("VictoriaMetrics: Alloy up, Pyroscope disk usage"):
+            # Scraped samples reach VM on vmagent's next flush, then turn
+            # searchable on VM's next pending rows flush, up to 2s later.
+            # `force_flush` runs VM's now.
             def wait_for_query(promql: str, jq_check: str) -> None:
                 query = shlex.quote(promql)
                 machine.wait_until_succeeds(
+                    f"{CURL} -f {VM_URL}/internal/force_flush && "
                     f"{CURL} -f {VM_URL}/api/v1/query "
                     f"--data-urlencode query={query} | jq -e {jq_check}",
                     timeout=dt.timedelta(seconds=30),

@@ -7,7 +7,7 @@
 # Verifies:
 # - Pyroscope starts (v2 storage, loopback-only rings) + turns ready
 # - the effective config: v2 storage, default retention
-# - VictoriaMetrics scrapes Pyroscope
+# - vmagent scrapes Pyroscope into VictoriaMetrics
 # - Grafana's Pyroscope datasource: provisioned, plugin backend healthy
 # - a pushed profile reads back through the datasource proxy (Drilldown,
 #   mcp-grafana, profilecli) and `/api/ds/query` (panels, Explore)
@@ -64,7 +64,7 @@ in
       services.prometheus.exporters.node.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
 
-      services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
+      services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
       # Grafana's startup chatter. Keep warnings + errors only.
       services.phlip9-o11y.server.grafana.logFilters = [
@@ -122,6 +122,7 @@ in
         for cmd in [
             "journalctl --no-pager -o cat -u pyroscope | tail -n 100",
             "journalctl --no-pager -o cat -u victoriametrics | tail -n 30",
+            "journalctl --no-pager -o cat -u vmagent | tail -n 30",
             "journalctl --no-pager -o cat -u grafana | tail -n 50",
             f"{CURL} {PYRO_URL}/ready",
             f"{CURL} {PYRO_URL}/api/v1/status/config/diff",
@@ -181,9 +182,13 @@ in
             start_ms = push_ms - 60_000
             end_ms = push_ms + 600_000
 
-        with subtest("VictoriaMetrics scrapes Pyroscope"):
+        with subtest("vmagent scrapes Pyroscope into VictoriaMetrics"):
             query = shlex.quote('up{job="pyroscope"}')
+            # Scraped samples reach VM on vmagent's next flush, then turn
+            # searchable on VM's next pending rows flush, up to 2s later.
+            # `force_flush` runs VM's now.
             machine.wait_until_succeeds(
+                f"{CURL} -f {VM_URL}/internal/force_flush && "
                 f"{CURL} -f {VM_URL}/api/v1/query --data-urlencode query={query} "
                 "| jq -e '.data.result[0].value[1] == \"1\"'",
                 timeout=dt.timedelta(seconds=30),
