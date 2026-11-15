@@ -21,6 +21,8 @@
 #   Alloy applied its removal (regression: they went to
 #   `ebpf/unspecified`), w/ Alloy's test hooks: flush on demand, applied
 #   targets, pending samples
+# - a flush w/ many label sets: one push request reaches Pyroscope, w/ a
+#   series per profile, all queryable
 # - many short-lived pids: one profile per labels, not per pid
 #   (regression: per-pid fan-out missed the push deadline under load)
 # - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
@@ -40,8 +42,8 @@ let
   # Blocks in nanosleep(2): off-CPU
   coldFn = "cold_block_wait";
   # Alloy's pprof flush period, see `collector.profiling.collectInterval`.
-  # Most waits below are a few flushes long. Also the push deadline: one
-  # round of pushes acks in ~0.5s (Pyroscope's segment flush). Alloy keeps
+  # Most waits below are a few flushes long. Also the push deadline: a
+  # flush's push acks in ~0.5s (Pyroscope's segment flush). Alloy keeps
   # an exited pid's target for 2 intervals: the exited-process subtest's
   # removal -> flush steps must fit, also under host load.
   collectIntervalS = 3;
@@ -360,12 +362,13 @@ in
             raise
         return seen
 
-    # One scrape of Alloy's Prometheus metrics: its sample lines
-    def alloy_scrape() -> list[str]:
-        out = machine.succeed(
-            f"{CURL} -f {ALLOY_URL}/metrics", timeout=CMD_TIMEOUT
-        )
+    # One scrape of a server's Prometheus metrics: its sample lines
+    def metrics_scrape(url: str) -> list[str]:
+        out = machine.succeed(f"{CURL} -f {url}/metrics", timeout=CMD_TIMEOUT)
         return [line for line in out.splitlines() if not line.startswith("#")]
+
+    def alloy_scrape() -> list[str]:
+        return metrics_scrape(ALLOY_URL)
 
     # Metric `name` in `scrape`, summed over series w/ `match` in their
     # labels
@@ -422,6 +425,24 @@ in
             if entry["pid"] == pid and entry["type"] == "process_cpu"
         )
 
+    # (service_name, exe, profile type) of the samples that await the
+    # next flush, by the targets Alloy applied: ~ the next flush's series
+    def pending_series() -> set[tuple]:
+        targets = ebpf_hook("targets")
+        labels_by_pid = {
+            target["pid"]: target["labels"]
+            for target in targets["exited"] + targets["live"]
+        }
+        series = set()
+        for entry in ebpf_hook("pending")["pending"]:
+            labels = labels_by_pid.get(
+                entry["pid"], {"service_name": UNSPECIFIED}
+            )
+            series.add(
+                (labels["service_name"], labels.get("exe"), entry["type"])
+            )
+        return series
+
     # Alloy's per-service pprof counter `name`, summed over the forker's
     # pids: undiscovered (most) + discovered ones
     def fanout_metric(scrape: list[str], name: str) -> float:
@@ -458,6 +479,9 @@ in
             "journalctl --no-pager -o cat -u pyroscope | tail -n 50",
             f"{CURL} {ALLOY_URL}/metrics "
             "| grep -E '^(pyroscope_(ebpf|write)|alloy_component_controller)'",
+            f"{CURL} {PYRO_URL}/metrics "
+            "| grep -E '^pyroscope_(distributor_push_batch_series|request_"
+            "duration_seconds_count.*push)'",
             f"{CURL} {ALLOY_URL}/api/v0/web/components "
             "| jq -c '.[] | {id: .localID, health: .health}'",
             f"{CURL} {PYRO_URL}/ready",
@@ -635,6 +659,81 @@ in
                     )
                     assert not WORKLOAD_FNS & names, (name, names)
 
+        # Batched pushes (nixos/pkgs/grafana-alloy): a flush's profiles
+        # reach Pyroscope in one push request, a series per profile, not a
+        # request each. Pyroscope's distributor counts the requests it
+        # handles + their series, Alloy its push attempts, all before the
+        # flush returns. Nothing else pushes, and the held flushes keep
+        # Alloy's periodic ones out of the window.
+        with subtest("one push request per flush, all series queryable"):
+            # Label sets (+ profile types) in the flush: VM services,
+            # kernel threads, the workload, unspecified
+            min_series = 8
+            ebpf_flush(hold=True)
+            wait_fast(
+                lambda: len(pending_series()) >= min_series,
+                f"samples of {min_series} series",
+                EVENT_TIMEOUT_S,
+            )
+            pyro0, alloy0 = metrics_scrape(PYRO_URL), alloy_scrape()
+            flush_t0 = time.monotonic()
+            flush = ebpf_flush(hold=True)
+            flush_s = time.monotonic() - flush_t0
+            pyro1, alloy1 = metrics_scrape(PYRO_URL), alloy_scrape()
+
+            def delta(
+                scrape0: list[str], scrape1: list[str], name: str,
+                match: str = "",
+            ) -> float:
+                return metric(scrape1, name, match) - metric(scrape0, name, match)
+
+            requests = delta(
+                pyro0, pyro1, "pyroscope_distributor_push_batch_series_count"
+            )
+            series = delta(
+                pyro0, pyro1, "pyroscope_distributor_push_batch_series_sum"
+            )
+            attempts, push_s = (
+                delta(alloy0, alloy1, f"pyroscope_write_latency_{stat}",
+                      'type="push_downstream"')
+                for stat in ["count", "sum"]
+            )
+            sent_bytes = delta(
+                alloy0, alloy1, "pyroscope_write_sent_bytes_total"
+            )
+            profiles = flush["profiles"]
+            # Not an assertion: ack latency + size of one batch
+            print(
+                f"batch: {len(profiles)} profiles -> {requests:.0f} "
+                f"requests, {series:.0f} series, {sent_bytes:.0f} B; push "
+                f"{push_s:.3f}s, flush {flush_s:.3f}s"
+            )
+            assert len(profiles) >= min_series, profiles
+            assert requests == 1, requests
+            assert attempts == 1, attempts
+            assert series == len(profiles), (series, len(profiles))
+
+            # Every series, by all its labels, w/ data in the flush's window
+            ptypes = {"process_cpu": CPU_TYPE, "offcpu": OFFCPU_TYPE}
+            keys = {
+                (
+                    prof["labels"]["__name__"],
+                    prof["labels"]["service_name"],
+                    prof["labels"].get("exe", ""),
+                )
+                for prof in profiles
+            }
+            for name, service, exe in sorted(keys):
+                selector = (
+                    f"{{service_name={json.dumps(service)}, "
+                    f"exe={json.dumps(exe)}}}"
+                )
+                wait_for_profile(
+                    ptypes[name], selector, bool, f"{name} {selector}",
+                    start_ms=flush["start_ms"], end_ms=flush["end_ms"],
+                )
+            ebpf_flush(hold=False)
+
         with subtest("off-CPU profiling survives the GC"):
             wait_for_profile(
                 OFFCPU_TYPE, TARGET_SEL,
@@ -658,8 +757,8 @@ in
         #
         # The window ends at a pid count, not a flush count: a starved VM
         # makes fewer pids per flush. Alloy's counters can't mark flushes
-        # either: it bumps them as it queues pushes, 32 at once, so one
-        # flush's bumps can straddle a scrape.
+        # either: it bumps them per profile, so one flush's bumps can
+        # straddle a scrape.
         with subtest("short-lived pids: one profile per labels"):
             fanout_pids = 300
             start_ms = vm_now_ms()
