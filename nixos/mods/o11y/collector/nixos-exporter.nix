@@ -4,7 +4,7 @@
 #
 # Socket-activated: systemd owns the loopback listener and passes it in, so
 # the service itself runs w/o any network access (`PrivateNetwork`).
-# VictoriaMetrics scrapes it (see ./default.nix).
+# VictoriaMetrics scrapes it (see ../server/default.nix).
 #
 # The service also starts at boot, not just on the first scrape, so it
 # counts boots that never got scraped.

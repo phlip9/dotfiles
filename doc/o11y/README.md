@@ -55,12 +55,17 @@ DNS: `grafana.phlip9.com`
 
 | File | Purpose |
 |------|---------|
-| `nixos/mods/o11y/default.nix` | NixOS module: VM + Grafana + exporters |
-| `nixos/mods/o11y/alerting.nix` | Alerting: vmalert, Alertmanager, host ping |
-| `nixos/mods/o11y/rules.nix` | Alert rules + inhibitions |
-| `nixos/mods/o11y/alertmanager.tmpl` | Discord message templates |
-| `nixos/mods/o11y/tests/rules.yml` | Rule unit tests (vmalert-tool) |
-| `nixos/mods/o11y/profiling.nix` | Profiling: Pyroscope, Alloy eBPF collector |
+| `nixos/mods/o11y/default.nix` | NixOS module: imports server + collector |
+| `nixos/mods/o11y/server/default.nix` | Server: VM, blackbox probes |
+| `nixos/mods/o11y/server/grafana.nix` | Server: Grafana, Git Sync, nginx vhost |
+| `nixos/mods/o11y/server/alerting.nix` | Server: vmalert, Alertmanager, host ping |
+| `nixos/mods/o11y/server/rules.nix` | Alert rules + inhibitions |
+| `nixos/mods/o11y/server/alertmanager.tmpl` | Discord message templates |
+| `nixos/mods/o11y/server/tests/rules.yml` | Rule unit tests (vmalert-tool) |
+| `nixos/mods/o11y/server/pyroscope.nix` | Server: Pyroscope |
+| `nixos/mods/o11y/collector/default.nix` | Collector: node, nginx, postgres exporters |
+| `nixos/mods/o11y/collector/nixos-exporter.nix` | Collector: nixos-exporter |
+| `nixos/mods/o11y/collector/alloy.nix` | Collector: Alloy eBPF profiler |
 | `nixos/pkgs/grafana-alloy/` | Alloy (ahead of nixpkgs) |
 | `nixos/pkgs/grafana-pyroscope-datasource/` | Grafana Pyroscope datasource |
 | `nixos/tests/o11y.nix` | NixOS container test |
@@ -256,15 +261,15 @@ hc (healthchecks.io), on missed pings --> #watchdog
        http://127.0.0.1:8428/api/v1/query
    ```
 
-2. Add it to a group in `nixos/mods/o11y/rules.nix`: `alert`, `expr`,
-   `for`, `labels.severity`, and `annotations` w/ `summary` (what) and
-   `description` (where to look). Other modules can append groups to
+2. Add it to a group in `nixos/mods/o11y/server/rules.nix`: `alert`,
+   `expr`, `for`, `labels.severity`, and `annotations` w/ `summary` (what)
+   and `description` (where to look). Other modules can append groups to
    `services.vmalert.instances."".rules.groups`.
 
 3. `just alerting-test`: `vmalert -dryRun`, the unit tests, and `amtool`
    config + routing checks against sauna's rendered config. Non-obvious
-   expr: add a case to `nixos/mods/o11y/tests/rules.yml` (annotations must
-   match exactly). Routing or template changes: also
+   expr: add a case to `nixos/mods/o11y/server/tests/rules.yml`
+   (annotations must match exactly). Routing or template changes: also
    `nix build -f . nixosTests.o11y-alerting -L`.
 
 ### Silence
@@ -293,7 +298,8 @@ every process, symbolizes them on the host, labels them w/ their systemd
 unit, and pushes one pprof per (labels, profile type) every 15s to Pyroscope
 (127.0.0.1:4040, 30d retention). Grafana: datasource `pyroscope`, Profiles
 Drilldown, `profiling` dashboard. Config + the why of every knob, cap, and
-hardening flag: `nixos/mods/o11y/profiling.nix`.
+hardening flag: `nixos/mods/o11y/server/pyroscope.nix`,
+`nixos/mods/o11y/collector/alloy.nix`.
 
 - Profile types: `process_cpu:cpu:nanoseconds:cpu:nanoseconds`,
   `offcpu:offcpu:nanoseconds::` (blocked time, sampled at p=0.02).

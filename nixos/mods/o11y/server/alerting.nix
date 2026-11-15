@@ -16,7 +16,7 @@
 #   - everything else -> Discord, no mention.
 # - healthchecks-host-ping.timer pings a second healthchecks.io check every
 #   5 min, if the local health checks pass.
-# - Grafana gets an Alertmanager datasource (see ./default.nix) to browse
+# - Grafana gets an Alertmanager datasource (see ./grafana.nix) to browse
 #   alerts and manage silences.
 #
 # Secrets (Discord webhook URL, healthchecks.io ping URLs, the Discord user

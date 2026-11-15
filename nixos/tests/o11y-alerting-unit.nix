@@ -1,7 +1,7 @@
 # Offline unit check of sauna's alert rules + Alertmanager routing, in the
 # nix sandbox. Checks exactly what sauna deploys:
 # - vmalert rules: syntax + templates, then the vmalert-tool unit tests in
-#   nixos/mods/o11y/tests against the rendered rules file.
+#   nixos/mods/o11y/server/tests against the rendered rules file.
 # - Alertmanager: config + templates, then which receivers each kind of
 #   alert routes to. `routes test` ignores time intervals: a page goes to
 #   discord-quiet always, and to discord-page (the @mention) by day.
@@ -32,7 +32,7 @@ pkgs.runCommand "o11y-alerting-unit"
   ''
     # tests/*.yml load `../rules.yml`
     cp ${rulesFile} rules.yml
-    cp -r ${../mods/o11y/tests} tests
+    cp -r ${../mods/o11y/server/tests} tests
 
     vmalert -dryRun -rule=rules.yml -loggerLevel=ERROR
     vmalert-tool unittest -loggerLevel=ERROR --files='tests/*.yml'

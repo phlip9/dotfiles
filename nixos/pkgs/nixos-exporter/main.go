@@ -49,7 +49,7 @@
 // SIGTERM (systemd stop) just exits: systemd counts it as a clean stop.
 //
 // See also:
-//   - nixos/mods/o11y/nixos-exporter.nix
+//   - nixos/mods/o11y/collector/nixos-exporter.nix
 //   - nixos/tests/o11y.nix
 package main
 

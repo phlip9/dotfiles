@@ -636,7 +636,7 @@ let
         };
       }
       # Retention is time-based only, no size cap. From the pyroscope-du
-      # timer (./profiling.nix).
+      # timer (./pyroscope.nix).
       {
         alert = "PyroscopeDiskHigh";
         # TODO(phlip9): provisional. Pick in M3 from measured bytes/day x

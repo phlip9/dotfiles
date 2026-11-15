@@ -1,21 +1,13 @@
-# Continuous profiling for the phlip9-o11y stack.
+# o11y collector: Alloy eBPF profiler for every process on the host.
 #
-# Pipeline:
+#   Alloy pyroscope.ebpf --push--> Pyroscope (see ../server/pyroscope.nix)
+#   (every process)
 #
-#   Alloy pyroscope.ebpf --push--> Pyroscope --query--> Grafana (datasource +
-#   (every process)                127.0.0.1:4040       Profiles Drilldown app)
-#
-# - Alloy (`collector`) samples on-CPU + off-CPU stacks of every process on
-#   the host w/ eBPF, symbolizes them on the host, labels them w/ their
-#   systemd unit (kernel threads: `kernel`), and pushes them to Pyroscope.
-#   Runs as the non-root `alloy` user w/ a few ambient caps.
-# - Pyroscope (127.0.0.1:4040) stores profiles on local disk and serves
-#   queries. Single-node monolith (`-target=all`) w/ v2 storage.
-# - Grafana gets a Pyroscope datasource, VictoriaMetrics scrapes Pyroscope's
-#   + Alloy's `/metrics` (see ./default.nix).
-#
-# Pyroscope has no authn, so it only listens on loopback. Grafana is the
-# authz boundary.
+# Alloy samples on-CPU + off-CPU stacks of every process on the
+# host w/ eBPF, symbolizes them on the host, labels them w/ their systemd
+# unit (kernel threads: `kernel`), and pushes them to Pyroscope. Runs as the
+# non-root `alloy` user w/ a few ambient caps. VictoriaMetrics scrapes
+# Alloy's `/metrics` (see ../server/default.nix).
 #
 # See: doc/o11y/README.md
 {
@@ -30,26 +22,8 @@ let
   cfg = config.services.phlip9-o11y;
   cfgP = cfg.profiling;
   cfgC = cfgP.collector;
-  cfgPyro = config.services.pyroscope;
-  cfgPyroSrv = cfgPyro.settings.server;
+  cfgPyroSrv = config.services.pyroscope.settings.server;
   cfgAlloy = config.services.alloy;
-
-  # Generate the YAML exactly like the nixpkgs module does.
-  settingsFormat = pkgs.formats.yaml { };
-
-  # Pyroscope's config parser rejects unknown keys, but only at startup. Parse
-  # the generated config at build time instead. `-modules` loads the config,
-  # lists the available modules, then exits, w/o starting anything.
-  pyroscopeConfigCheck =
-    pkgs.runCommand "pyroscope-config-check"
-      {
-        nativeBuildInputs = [ cfgPyro.package ];
-        configFile = settingsFormat.generate "config.yaml" cfgPyro.settings;
-      }
-      ''
-        pyroscope -config.file="$configFile" -modules > /dev/null
-        touch $out
-      '';
 
   # Alloy literals: strings, numbers. Alloy strings take JSON's escapes.
   alloyLit = builtins.toJSON;
@@ -76,7 +50,7 @@ let
   # /etc/alloy/config.alloy, for whoever reads it there.
   alloyConfig = ''
     // Continuous profiling of every process on this host, see
-    // nixos/mods/o11y/profiling.nix.
+    // nixos/mods/o11y/collector/alloy.nix.
     //
     //   discovery.process -> discovery.relabel -> pyroscope.ebpf
     //   -> pyroscope.write -> Pyroscope
@@ -253,25 +227,6 @@ let
         alloy validate $out
       '';
 
-  # Pyroscope's on-disk size, for node-exporter's textfile collector. All
-  # Pyroscope state is under its StateDirectory (DynamicUser: really
-  # /var/lib/private/pyroscope).
-  pyroscopeDu = pkgs.writeShellApplication {
-    name = "pyroscope-du";
-    runtimeInputs = [ pkgs.coreutils ];
-    text = ''
-      bytes=$(du -sB1 /var/lib/pyroscope/ | cut -f1)
-      # Write + rename: node-exporter never reads a partial file
-      cat > "$RUNTIME_DIRECTORY/pyroscope.prom.tmp" <<EOF
-      # HELP pyroscope_data_bytes Disk usage of Pyroscope's data dir.
-      # TYPE pyroscope_data_bytes gauge
-      pyroscope_data_bytes $bytes
-      EOF
-      mv "$RUNTIME_DIRECTORY/pyroscope.prom.tmp" \
-        "$RUNTIME_DIRECTORY/pyroscope.prom"
-    '';
-  };
-
   pyroscopeAddr =
     "${cfgPyroSrv.http_listen_address}:" + toString cfgPyroSrv.http_listen_port;
 
@@ -303,24 +258,6 @@ let
 in
 {
   options.services.phlip9-o11y.profiling = {
-    enable = lib.mkEnableOption "continuous profiling (Pyroscope)";
-
-    retentionPeriod = lib.mkOption {
-      type = lib.types.str;
-      default = "30d";
-      example = "90d";
-      description = ''
-        Pyroscope profile retention period. Pyroscope's v2 storage only
-        supports time-based retention, no size cap, so pick this from the
-        measured bytes/day. "0" = forever.
-
-        Deletion lags behind: nominally a 6h index partition + 6h grace + the
-        15min cleanup cadence, after which compaction workers physically
-        delete the data. A cleanup or compaction backlog keeps data longer.
-        Not a disk-usage bound.
-      '';
-    };
-
     collector = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -428,177 +365,11 @@ in
     };
   };
 
-  config = lib.mkIf (cfg.enable && cfgP.enable) {
-    # ===================================================================
-    # Pyroscope - profile storage + queries
-    # ===================================================================
-    services.pyroscope = {
-      enable = true;
-      settings = {
-        # Default `v1-v2-dual` also loads every v1 module (ingester,
-        # compactor, store-gateway, querier, ...) to read old v1 data. We
-        # have none.
-        architecture_storage = "v2";
-
-        server = {
-          http_listen_address = "127.0.0.1";
-          http_listen_port = 4040;
-          # Default "" listens on all interfaces. Pyroscope's internal
-          # metastore + query-backend clients dial `localhost:9095`.
-          grpc_listen_address = "127.0.0.1";
-          grpc_listen_port = 9095;
-        };
-
-        # Local disk. Every default data dir is relative (`./data/...`) and
-        # the nixpkgs unit's WorkingDirectory is its StateDirectory, so all
-        # state lands in /var/lib/pyroscope/data.
-        storage.backend = "filesystem";
-
-        limits.retention_period = cfgP.retentionPeriod;
-        # The ingestion rate limiter (default 4 MiB/s, 2 MiB burst) counts
-        # uncompressed bytes. Alloy pushes a collect interval's profiles
-        # at once: ~1.2 MB (~2.4 MB w/ a 2x estimate error) per 15s at a CI
-        # peak on sauna, w/ one merged profile per labels. A rejected push
-        # retries w/ backoff, but within the same deadline. Burst headroom
-        # for a whole interval; Alloy is the only client.
-        # = `-distributor.ingestion-burst-size-mb`
-        limits.ingestion_burst_size_mb = 8;
-
-        # Each ring member advertises an IP that it picks from a list of
-        # private interfaces, w/ a fallback to `eth0,en0`. sauna has only
-        # `eno1` w/ a public IP, so these components fail at startup w/ "no
-        # useable address found for interfaces [eth0 en0]". Pin them all to
-        # loopback; there are no other members to reach us.
-        distributor.ring.instance_addr = "127.0.0.1";
-        frontend.instance_addr = "127.0.0.1";
-        overrides_exporter.ring.instance_addr = "127.0.0.1";
-        segment_writer.lifecycler.address = "127.0.0.1";
-        # Rings gossip over memberlist, which defaults to 0.0.0.0:7946.
-        memberlist.bind_addr = [ "127.0.0.1" ];
-
-        # `/ready` waits this long after the metastore (15s) and segment
-        # writer (30s) are up, so rolling updates give other cluster members
-        # time to see them. A single node has no one to wait for.
-        metastore.min_ready_duration = "0s";
-        segment_writer.lifecycler.min_ready_duration = "0s";
-
-        # Compaction runs up to #CPUs jobs at once by default. sauna's 12
-        # threads are shared w/ CI, and a single node's few blocks/min don't
-        # need more.
-        # = `-compaction-worker.job-concurrency`
-        compaction_worker.job_capacity = 2;
-
-        # `info` logs 4 lines per query (query start/finish, params, weight)
-        # + compaction polls every few seconds.
-        server.log_level = "warn";
-
-        # The monolith otherwise pushes profiles of itself to itself.
-        self_profiling.disable_push = true;
-        # No anonymous usage stats to grafana.com
-        analytics.reporting_enabled = false;
-      };
-    };
-
-    system.checks = [ pyroscopeConfigCheck ];
-
-    # Pyroscope has no metric for its on-disk size, so export `du` of its
-    # data dir via node-exporter's textfile collector. For the
-    # PyroscopeDiskHigh alert (./rules.nix).
-    systemd.services.pyroscope-du = {
-      description = "Export Pyroscope's disk usage to node-exporter";
-      after = [ "pyroscope.service" ];
-      wantedBy = [ "multi-user.target" ];
-      startAt = "*:0/15";
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = lib.getExe pyroscopeDu;
-        # root, but only to read Pyroscope's 0700 dirs. Not DynamicUser: it
-        # moves a preserved RuntimeDirectory to 0700 /run/private.
-        CapabilityBoundingSet = [ "CAP_DAC_READ_SEARCH" ];
-        # = node-exporter's `--collector.textfile.directory`
-        RuntimeDirectory = "pyroscope-du";
-        RuntimeDirectoryMode = "0755";
-        RuntimeDirectoryPreserve = true;
-        UMask = "0022";
-        IPAddressDeny = [ "any" ];
-        LockPersonality = true;
-        MemoryDenyWriteExecute = true;
-        NoNewPrivileges = true;
-        PrivateDevices = true;
-        PrivateNetwork = true;
-        ProtectClock = true;
-        ProtectControlGroups = true;
-        ProtectHome = true;
-        ProtectHostname = true;
-        ProtectKernelLogs = true;
-        ProtectKernelModules = true;
-        ProtectKernelTunables = true;
-        ProtectProc = "invisible";
-        ProtectSystem = "strict";
-        RestrictAddressFamilies = [ "none" ];
-        RestrictNamespaces = true;
-        RestrictRealtime = true;
-        RestrictSUIDSGID = true;
-        SystemCallArchitectures = "native";
-        SystemCallFilter = [
-          "@system-service"
-          "~@privileged"
-        ];
-      };
-    };
-    services.prometheus.exporters.node.extraFlags = [
-      "--collector.textfile.directory=/run/pyroscope-du"
-    ];
-
-    # TODO(phlip9): MemoryMax for pyroscope + alloy once measured on sauna.
-    # VM test (2 vCPU, 1 busy unit): pyroscope ~100 MB RSS idle; alloy ~255
-    # MB RSS steady at 97 Hz + off-CPU 0.5, startup peak (BPF load + first
-    # symbolization) up to 455 MB.
-
-    # Hardening. Only talks to itself + its clients on loopback. The nixpkgs
-    # module already sets DynamicUser, DevicePolicy=closed, StateDirectory,
-    # and ProtectSystem=full (tightened below).
-    systemd.services.pyroscope.serviceConfig = {
-      CapabilityBoundingSet = [ "" ];
-      IPAddressAllow = [ "localhost" ];
-      IPAddressDeny = [ "any" ];
-      LockPersonality = true;
-      MemoryDenyWriteExecute = true;
-      NoNewPrivileges = true;
-      PrivateDevices = true;
-      PrivateTmp = true;
-      PrivateUsers = true;
-      ProtectClock = true;
-      ProtectControlGroups = true;
-      ProtectHome = true;
-      ProtectHostname = true;
-      ProtectKernelLogs = true;
-      ProtectKernelModules = true;
-      ProtectKernelTunables = true;
-      ProtectProc = "invisible";
-      ProtectSystem = lib.mkForce "strict";
-      RestrictAddressFamilies = [
-        "AF_INET"
-        "AF_INET6"
-        # Every ring config lists the network interfaces for its default
-        # instance address, even when pinned, and logs a warning on failure.
-        "AF_NETLINK"
-      ];
-      RestrictNamespaces = true;
-      RestrictRealtime = true;
-      RestrictSUIDSGID = true;
-      SystemCallArchitectures = "native";
-      SystemCallFilter = [
-        "@system-service"
-        "~@privileged"
-      ];
-      UMask = "0077";
-    };
-
+  config = lib.mkIf (cfg.enable && cfgP.enable && cfgC.enable) {
     # ===================================================================
     # Alloy - eBPF profiler for every process on the host
     # ===================================================================
-    services.alloy = lib.mkIf cfgC.enable {
+    services.alloy = {
       enable = true;
       package = phlipPkgsNixos.grafana-alloy;
       extraFlags = [
@@ -609,19 +380,19 @@ in
     };
 
     # The module's default `configPath` loads every /etc/alloy/*.alloy.
-    environment.etc."alloy/config.alloy" = lib.mkIf cfgC.enable {
+    environment.etc."alloy/config.alloy" = {
       source = alloyConfigFile;
     };
 
     # Static user instead of the module's DynamicUser: stable owner for the
     # symbol cache across restarts, and an explicit identity to audit.
-    users.users.alloy = lib.mkIf cfgC.enable {
+    users.users.alloy = {
       isSystemUser = true;
       group = "alloy";
     };
-    users.groups.alloy = lib.mkIf cfgC.enable { };
+    users.groups.alloy = { };
 
-    systemd.services.alloy = lib.mkIf cfgC.enable {
+    systemd.services.alloy = {
       # Restart, not reload (SIGHUP, the module's default), when the config
       # changes: `pyroscope.ebpf` only applies `targets` + `forward_to` on a
       # reload. Every other arg (sample rate, intervals, off-CPU threshold,

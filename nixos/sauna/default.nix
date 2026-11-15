@@ -550,7 +550,7 @@
 
     # vmalert + Alertmanager -> Discord, healthchecks.io dead man's switch
     # see: doc/o11y/README.md > "Alerting setup"
-    # see: nixos/mods/o11y/alerting.nix
+    # see: nixos/mods/o11y/server/alerting.nix
     alerting = {
       enable = true;
       discordWebhookUrlFile =
@@ -565,7 +565,8 @@
     # Pyroscope + Alloy eBPF, whole host: on-CPU at 49 Hz, off-CPU at 0.02,
     # 30d retention (module defaults). Measure first, then tune retention,
     # MemoryMax, and the PyroscopeDiskHigh threshold.
-    # see: nixos/mods/o11y/profiling.nix
+    # see: nixos/mods/o11y/server/pyroscope.nix
+    # see: nixos/mods/o11y/collector/alloy.nix
     profiling.enable = true;
   };
   # node-exporter collectors w/o data on sauna, else each reports
