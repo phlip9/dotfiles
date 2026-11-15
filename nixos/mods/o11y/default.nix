@@ -905,9 +905,10 @@ in
           grafana-metricsdrilldown-app
           grafana-pyroscope-app
           victoriametrics-metrics-datasource
+          # Grafana 13 dropped this from core
+          phlipPkgsNixos.grafana-canvas-panel
         ]
-        # Grafana 13.2 dropped it from core. Grafana would preinstall it from
-        # grafana.com, but not w/ `declarativePlugins` set.
+        # Grafana 13.2 dropped this from core
         ++ lib.optionals cfgProfiling.enable [
           phlipPkgsNixos.grafana-pyroscope-datasource
         ];
