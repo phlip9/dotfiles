@@ -22,6 +22,10 @@ in
 # the read-only nixpkgs source. Wrap it so it updates our ./sources.toml.
 plugin.overrideAttrs (prev: {
   passthru = prev.passthru // {
-    updateScript = [ ./update.sh ] ++ prev.passthru.updateScript;
+    updateScript = [
+      ../grafana-plugin-update.sh
+      ./.
+    ]
+    ++ prev.passthru.updateScript;
   };
 })
