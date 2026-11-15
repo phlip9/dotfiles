@@ -30,9 +30,14 @@ grafana (127.0.0.1:3000)
     | MetricsQL queries                 | profile queries
     v                                   v
 victoriametrics (127.0.0.1:8428)    pyroscope (127.0.0.1:4040)
-    | <-- vmalert rules,                ^ push, see Profiling
+    ^ <-- vmalert rules,                ^ push, see Profiling
     |     see Alerting                  |
-    | promscrape (1m interval)          alloy (127.0.0.1:12345, eBPF)
+    | remote write                      alloy (127.0.0.1:12345, eBPF)
+    | (/api/v1/write)
+    |
+vmagent (127.0.0.1:8429)
+    | scrape (1m interval)
+    +-- vmagent           localhost:8429/metrics
     +-- victoriametrics   localhost:8428/metrics
     +-- grafana           localhost:3000/metrics
     +-- node-exporter     localhost:9100/metrics
@@ -63,7 +68,8 @@ DNS: `grafana.phlip9.com`
 | `nixos/mods/o11y/server/alertmanager.tmpl` | Discord message templates |
 | `nixos/mods/o11y/server/tests/rules.yml` | Rule unit tests (vmalert-tool) |
 | `nixos/mods/o11y/server/pyroscope.nix` | Server: Pyroscope |
-| `nixos/mods/o11y/collector/default.nix` | Collector: node, nginx, postgres exporters |
+| `nixos/mods/o11y/collector/default.nix` | Collector: vmagent, node/nginx/postgres exporters |
+| `nixos/mods/o11y/collector/lib.nix` | Scrape target helpers (`instance=<hostname>`) |
 | `nixos/mods/o11y/collector/nixos-exporter.nix` | Collector: nixos-exporter |
 | `nixos/mods/o11y/collector/alloy.nix` | Collector: Alloy eBPF profiler |
 | `nixos/pkgs/grafana-alloy/` | Alloy (ahead of nixpkgs) |
@@ -85,11 +91,29 @@ NixOS module `services.phlip9-o11y`, two roles:
 
 - `server`: VictoriaMetrics, Grafana, vmalert + Alertmanager, Pyroscope,
   blackbox probes.
-- `collector`: exporters, the scrape job list (`collector.scrapeConfigs`),
-  Alloy. Feeds the server on the same host (VM's scraper, local Pyroscope),
-  so it needs `server.enable`. sauna enables both.
+- `collector`: exporters, vmagent + its scrape job list
+  (`collector.scrapeConfigs`), Alloy. Feeds the server on the same host
+  (loopback remote write, local Pyroscope), so it needs `server.enable`.
+  sauna enables both.
 
-### VictoriaMetrics (metrics storage + scraper)
+### vmagent (scraper)
+
+Scrapes every job in `phlip9-o11y.collector.scrapeConfigs` and
+remote-writes the samples to VM's `/api/v1/write`. Host-local targets are
+labeled `instance=<hostname>`; blackbox probes keep `instance=<url>`. Same
+`up` + `scrape_*` series as a Prometheus scraper.
+
+NixOS module: `services.vmagent`, same package as VictoriaMetrics.
+
+- Listen: `127.0.0.1:8429` (`/metrics`, `/targets`)
+- Best-effort delivery: in-memory queue capped at 100 blocks (~1 per
+  non-empty 1s flush; time covered depends on load), no disk spool while
+  running. While VM is down, scrapes go on, then new samples are dropped
+  (`vmagent_remotewrite_samples_dropped_total`). A clean stop writes the
+  queue to disk and sends it after the restart.
+- Hardened unit: loopback-only network, no caps, read-only FS.
+
+### VictoriaMetrics (metrics storage)
 
 Single-node binary that handles ingestion, storage, and querying.
 Prometheus-compatible API.
@@ -99,8 +123,7 @@ NixOS module: `services.victoriametrics`
 Config:
 - `listenAddress`: `127.0.0.1:8428`
 - `retentionPeriod`: `3` (3 months)
-- `prometheusConfig`: scrape configs for all local targets, from
-  `phlip9-o11y.collector.scrapeConfigs`
+- No `prometheusConfig`: the built-in scraper is off, vmagent writes
 - Systemd hardening: DynamicUser, ProtectSystem, MemoryDeny, etc.
 
 Storage sizing: with ~4 exporters at 15s scrape interval, expect
@@ -111,7 +134,7 @@ Key endpoints:
 - `/ping` — health check
 - `/api/v1/query` — instant query (PromQL/MetricsQL)
 - `/api/v1/query_range` — range query
-- `/api/v1/write` — Prometheus remote write
+- `/api/v1/write` — Prometheus remote write (vmagent)
 - `/metrics` — self-metrics
 - `/vmui` — built-in query UI
 
@@ -257,7 +280,11 @@ hc (healthchecks.io), on missed pings --> #watchdog
   - `info` (context)
 - Discord message per (severity, alertname) group, pages repeat x1h else x12h.
 - `page`s get not @mention at Night (23:00-09:00 America/Los_Angeles)
-- Alerts for root causes hide symptom alerts via inhibitions.
+- Alerts for root causes hide symptom alerts via inhibitions, per host.
+- Host-level alerts only for `server.alerting.instances` (default: the
+  server's hostname). Other hosts' series never fire or affect an alert.
+- `HostNotReporting` pages when an alerted host's node-exporter `up` is
+  missing for 3m (+2m): host down, or its vmagent dead.
 - See alert history with `ALERTS{alertstate="firing"}` in Grafana. Active
   alerts + silences: Grafana > Alerting, `Alertmanager` datasource.
 
