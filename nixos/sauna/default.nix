@@ -120,6 +120,12 @@
     '';
     appendHttpConfig = ''
       access_log syslog:server=unix:/dev/log,nohostname,tag=nginx,severity=info main;
+
+      # Keep request bodies in memory up to 1 MiB, not the 8k default.
+      # Grafana queries (~12k), GitHub webhooks (~35k), and dashboard saves
+      # (~800k) otherwise spill to a temp file and warn on every request.
+      # nginx only allocates min(body size, this), so small requests don't pay.
+      client_body_buffer_size 1m;
     '';
 
     virtualHosts."sauna.phlip9.com" = {
