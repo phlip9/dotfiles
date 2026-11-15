@@ -743,6 +743,12 @@ in
     #
     # Secrets loaded via systemd LoadCredential, referenced with
     # Grafana's $__file{path} provider.
+
+    services.phlip9-o11y.grafana.logFilters = [
+      # Silence these warnings
+      "search-manifest-watcher:error"
+    ];
+
     services.grafana = {
       enable = true;
       # patched so Git Sync isn't blocked by GitHub
