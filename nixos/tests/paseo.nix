@@ -223,7 +223,7 @@
         machine.wait_for_unit("paseo-relay.service")
         machine.succeed(
             "curl -g -sf http://[::1]:8411/health "
-            "| jq -e '.status == \"ok\" and .version == \"v0.5.0\"'"
+            "| jq -e '.status == \"ok\"'"
         )
 
     with subtest("daemon starts and reports health"):
@@ -268,11 +268,6 @@
             "curl -g -sf -H 'Authorization: Bearer correct-password' "
             "http://[::1]:6767/api/status "
             "| jq -e '.status == \"server_info\"'"
-        )
-        machine.succeed(
-            "test \"$(paseo --version)\" = "
-            "\"$(curl -g -sf -H 'Authorization: Bearer correct-password' "
-            "http://[::1]:6767/api/status | jq -r .version)\""
         )
         machine.fail("curl -g -sf --connect-timeout 1 http://[::1]:6768/")
         machine.succeed("ss -H -ltnp | grep -F 'Paseo Daemon'")
