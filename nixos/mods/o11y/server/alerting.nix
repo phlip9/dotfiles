@@ -278,6 +278,22 @@ in
       '';
     };
 
+    instances = lib.mkOption {
+      type = lib.types.nonEmptyListOf (lib.types.strMatching "[A-Za-z0-9_-]+");
+      default = [ config.networking.hostName ];
+      defaultText = lib.literalExpression "[ config.networking.hostName ]";
+      example = [
+        "sauna"
+        "other-server"
+      ];
+      description = ''
+        Hosts (`instance` labels) that get host-level alerts: CPU, memory,
+        disks, units, timers, scrape targets, ... Other
+        hosts' series (ex: a desktop's collector) never fire or affect an
+        alert. See ./rules.nix.
+      '';
+    };
+
     groupWait = lib.mkOption {
       type = lib.types.str;
       default = "30s";

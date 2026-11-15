@@ -10,6 +10,15 @@
 # 1m), `summary` says what, `description` says where to look. Thresholds
 # were back-tested over 90d of sauna data.
 #
+# Host scoping: only hosts in `server.alerting.instances` get alerts. Every
+# selector on series a collector scrapes (exporters, Alloy, `up`) carries
+# the `inst` matcher, so another host's series (ex: a desktop) can't fire,
+# resolve, or change the result of any rule. Aggregates over these series
+# are `by (instance)`: each alerted host is judged alone, and its alerts
+# keep `instance` for host-correct inhibitions. Not scoped: server-only
+# self metrics (vmalert, Alertmanager, Grafana) and blackbox probes, which
+# are labeled `instance=<url>`.
+#
 # Keep in sync: nixos/sauna/grafana/overview.json mirrors some rules in its
 # tiles, thresholds, and descriptions; each such rule says so. Its alert
 # table, counts, and annotations use the `severity` values above.
@@ -24,6 +33,18 @@ let
   cfg = config.services.phlip9-o11y.server;
   cfgExporters = config.services.prometheus.exporters;
   cfgRbitcoin = config.services.rbitcoin;
+
+  # Hosts that get host-level alerts, see `server.alerting.instances`. Their
+  # names are plain `[A-Za-z0-9_-]+` (option type): no regex escaping.
+  alertedInstances = cfg.alerting.instances;
+  instRegex = lib.concatStringsSep "|" alertedInstances;
+  # Label matcher for alerted hosts' series. Goes into every selector of a
+  # collector's series: `node_load5{${inst}}`, `up{job="x", ${inst}}`.
+  # Also an Alertmanager matcher.
+  inst = ''instance=~"${instRegex}"'';
+  # Alertmanager matcher for alerts that aren't about an alerted host: no
+  # `instance` label (aggregates), or a probe URL.
+  notInst = ''instance!~"${instRegex}"'';
 
   # Units that must stay active. `github-agent-authd.service` is socket
   # activated and idles inactive, so watch its socket. Units that don't
@@ -72,11 +93,16 @@ let
   targetsGroup = {
     name = "targets";
     rules = [
-      # rbitcoin restarts slowly, see its own group. Keep in sync:
-      # nixos/sauna/grafana/overview.json "Failed scrapes" description (5m).
+      # rbitcoin restarts slowly, see its own group. Blackbox's `up` is
+      # labeled w/ the probe URL, like its probes: not host-scoped. Keep in
+      # sync: nixos/sauna/grafana/overview.json "Failed scrapes" description
+      # (5m).
       {
         alert = "TargetDown";
-        expr = ''up{job!="rbitcoin"} == 0'';
+        expr = lib.concatStringsSep " " [
+          ''up{job!~"rbitcoin|blackbox", ${inst}} == 0''
+          ''or up{job="blackbox"} == 0''
+        ];
         for = "5m";
         labels.severity = "warn";
         annotations = {
@@ -101,8 +127,8 @@ let
       {
         alert = "HostRebooted";
         expr = lib.concatStringsSep " " [
-          "nixos_boots_total"
-          "> last_over_time(nixos_boots_total[1d] offset 15m)"
+          "nixos_boots_total{${inst}}"
+          "> last_over_time(nixos_boots_total{${inst}}[1d] offset 15m)"
         ];
         labels.severity = "info";
         annotations = {
@@ -115,8 +141,8 @@ let
       {
         alert = "MemLow";
         expr = lib.concatStringsSep " " [
-          "node_memory_MemAvailable_bytes"
-          "/ node_memory_MemTotal_bytes < 0.10"
+          "node_memory_MemAvailable_bytes{${inst}}"
+          "/ node_memory_MemTotal_bytes{${inst}} < 0.10"
         ];
         for = "1m";
         labels.severity = "page";
@@ -128,7 +154,7 @@ let
       # systemd-oomd kills don't count, only the kernel OOM killer.
       {
         alert = "OOMKill";
-        expr = "increase(node_vmstat_oom_kill[15m]) > 0";
+        expr = "increase(node_vmstat_oom_kill{${inst}}[15m]) > 0";
         labels.severity = "warn";
         annotations = {
           summary = "Kernel OOM killer ran";
@@ -136,11 +162,14 @@ let
         };
       }
       # CI saturating the CPU is by design; only long stretches count.
+      # Per host: its load / its CPU threads (1 `idle` series each).
       {
         alert = "LoadHigh";
         expr = lib.concatStringsSep " " [
-          "node_load5"
-          "/ scalar(count(count by (cpu) (node_cpu_seconds_total))) > 2"
+          "node_load5{${inst}}"
+          "/ on (instance) group_left ()"
+          ''count by (instance) (node_cpu_seconds_total{mode="idle", ${inst}})''
+          "> 2"
         ];
         for = "30m";
         labels.severity = "info";
@@ -154,8 +183,8 @@ let
       {
         alert = "ClockBad";
         expr = lib.concatStringsSep " " [
-          "abs(node_timex_offset_seconds) > 0.1"
-          "or node_timex_sync_status == 0"
+          "abs(node_timex_offset_seconds{${inst}}) > 0.1"
+          "or node_timex_sync_status{${inst}} == 0"
         ];
         for = "15m";
         labels.severity = "warn";
@@ -175,8 +204,8 @@ let
       {
         alert = "RootDiskFull";
         expr = lib.concatStringsSep " " [
-          ''node_filesystem_avail_bytes{mountpoint="/"}''
-          ''/ node_filesystem_size_bytes{mountpoint="/"} < 0.05''
+          ''node_filesystem_avail_bytes{mountpoint="/", ${inst}}''
+          ''/ node_filesystem_size_bytes{mountpoint="/", ${inst}} < 0.05''
         ];
         for = "5m";
         labels.severity = "page";
@@ -188,8 +217,8 @@ let
       {
         alert = "RootDiskLow";
         expr = lib.concatStringsSep " " [
-          ''node_filesystem_avail_bytes{mountpoint="/"}''
-          ''/ node_filesystem_size_bytes{mountpoint="/"} < 0.15''
+          ''node_filesystem_avail_bytes{mountpoint="/", ${inst}}''
+          ''/ node_filesystem_size_bytes{mountpoint="/", ${inst}} < 0.15''
         ];
         for = "15m";
         labels.severity = "warn";
@@ -201,9 +230,9 @@ let
       # 6h trend smooths out CI build churn.
       {
         alert = "RootDiskFill24h";
-        expr = lib.concatStringsSep " " [
-          ''predict_linear(node_filesystem_avail_bytes{mountpoint="/"}[6h],''
-          "24*3600) < 0"
+        expr = lib.concatStrings [
+          "predict_linear(node_filesystem_avail_bytes"
+          ''{mountpoint="/", ${inst}}[6h], 24*3600) < 0''
         ];
         for = "30m";
         labels.severity = "warn";
@@ -215,7 +244,10 @@ let
       # A full ESP breaks `nixos-rebuild switch`.
       {
         alert = "BootLow";
-        expr = ''node_filesystem_avail_bytes{mountpoint="/boot"} < 200e6'';
+        expr = lib.concatStringsSep " " [
+          ''node_filesystem_avail_bytes{mountpoint="/boot", ${inst}}''
+          "< 200e6"
+        ];
         for = "10m";
         labels.severity = "warn";
         annotations = {
@@ -226,8 +258,8 @@ let
       {
         alert = "InodesLow";
         expr = lib.concatStringsSep " " [
-          ''node_filesystem_files_free{mountpoint="/"}''
-          ''/ node_filesystem_files{mountpoint="/"} < 0.10''
+          ''node_filesystem_files_free{mountpoint="/", ${inst}}''
+          ''/ node_filesystem_files{mountpoint="/", ${inst}} < 0.10''
         ];
         for = "15m";
         labels.severity = "warn";
@@ -240,8 +272,9 @@ let
       {
         alert = "FsBroken";
         expr = lib.concatStringsSep " " [
-          ''node_filesystem_readonly{mountpoint=~"/|/boot"} == 1''
-          ''or node_filesystem_device_error{mountpoint=~"/|/boot"} == 1''
+          ''node_filesystem_readonly{mountpoint=~"/|/boot", ${inst}} == 1''
+          ''or node_filesystem_device_error{mountpoint=~"/|/boot", ${inst}}''
+          "== 1"
         ];
         for = "1m";
         labels.severity = "page";
@@ -256,8 +289,8 @@ let
       {
         alert = "MdFailed";
         expr = lib.concatStringsSep " " [
-          ''node_md_disks{state="failed"} > 0''
-          ''or node_md_state{state="inactive"} == 1''
+          ''node_md_disks{state="failed", ${inst}} > 0''
+          ''or node_md_state{state="inactive", ${inst}} == 1''
         ];
         for = "2m";
         labels.severity = "page";
@@ -277,7 +310,7 @@ let
       # until their next success.
       {
         alert = "UnitFailed";
-        expr = ''node_systemd_unit_state{state="failed"} == 1'';
+        expr = ''node_systemd_unit_state{state="failed", ${inst}} == 1'';
         for = "2m";
         labels.severity = "warn";
         annotations = {
@@ -288,7 +321,7 @@ let
       {
         alert = "UnitNotActive";
         expr = lib.concatStrings [
-          ''node_systemd_unit_state{state="active", name=~"''
+          ''node_systemd_unit_state{state="active", ${inst}, name=~"''
           (lib.concatStringsSep "|" watchedUnits)
           ''"} == 0''
         ];
@@ -306,7 +339,7 @@ let
         expr =
           let
             last = "node_systemd_timer_last_trigger_seconds";
-            age = timers: ''time() - (${last}{name=~"${timers}"} > 0)'';
+            age = timers: ''time() - (${last}{name=~"${timers}", ${inst}} > 0)'';
           in
           lib.concatStringsSep " or " [
             "(${age "niks3-gc.timer|nix-optimise.timer"} > 36*3600)"
@@ -439,7 +472,10 @@ let
       # Also catches exporter query errors.
       {
         alert = "PgDown";
-        expr = "pg_up == 0 or pg_exporter_last_scrape_error > 0";
+        expr = lib.concatStringsSep " " [
+          "pg_up{${inst}} == 0"
+          "or pg_exporter_last_scrape_error{${inst}} > 0"
+        ];
         for = "2m";
         labels.severity = "warn";
         annotations = {
@@ -451,9 +487,11 @@ let
       {
         alert = "PgConnections";
         expr = lib.concatStringsSep " " [
-          "sum(pg_stat_activity_count)"
-          "/ (max(pg_settings_max_connections)"
-          "- max(pg_settings_superuser_reserved_connections)) > 0.8"
+          "sum by (instance) (pg_stat_activity_count{${inst}})"
+          "/ (max by (instance) (pg_settings_max_connections{${inst}})"
+          "- max by (instance)"
+          "(pg_settings_superuser_reserved_connections{${inst}}))"
+          "> 0.8"
         ];
         for = "5m";
         labels.severity = "warn";
@@ -465,8 +503,9 @@ let
       {
         alert = "PgLongTx";
         expr = lib.concatStrings [
-          "max by (datname) (pg_stat_activity_max_tx_duration"
-          ''{datname!~"template.*", state=~"active|idle in transaction.*"})''
+          "max by (instance, datname) (pg_stat_activity_max_tx_duration"
+          ''{datname!~"template.*", state=~"active|idle in transaction.*",''
+          " ${inst}})"
           " > 600"
         ];
         for = "5m";
@@ -525,7 +564,7 @@ let
     rules = [
       {
         alert = "NginxDown";
-        expr = "nginx_up == 0";
+        expr = "nginx_up{${inst}} == 0";
         for = "3m";
         labels.severity = "warn";
         annotations = {
@@ -543,7 +582,10 @@ let
       # The series exists only while the queue is non-empty.
       {
         alert = "NixbotWorkStuck";
-        expr = "max(nixbot_work_queue_oldest_age_seconds) > 1800";
+        expr = lib.concatStringsSep " " [
+          "max by (instance)"
+          "(nixbot_work_queue_oldest_age_seconds{${inst}}) > 1800"
+        ];
         for = "10m";
         labels.severity = "warn";
         annotations = {
@@ -557,8 +599,9 @@ let
       {
         alert = "NixbotUploadStuck";
         expr = lib.concatStringsSep " " [
-          "max(nixbot_upload_queue_oldest_age_seconds) > 1800"
-          "or sum(nixbot_upload_queue_retrying) > 0"
+          "max by (instance)"
+          "(nixbot_upload_queue_oldest_age_seconds{${inst}}) > 1800"
+          "or sum by (instance) (nixbot_upload_queue_retrying{${inst}}) > 0"
         ];
         for = "15m";
         labels.severity = "warn";
@@ -577,8 +620,8 @@ let
             builds =
               status:
               lib.concatStrings [
-                "sum(clamp_min(delta("
-                ''nixbot_builds{status=~"${status}"}[1h]), 0))''
+                "sum by (instance) (clamp_min(delta("
+                ''nixbot_builds{status=~"${status}", ${inst}}[1h]), 0))''
               ];
             failed = builds "failed";
           in
@@ -606,9 +649,9 @@ let
       {
         alert = "ProfilesDropped";
         expr = lib.concatStrings [
-          "sum(increase({__name__=~"
+          "sum by (instance) (increase({__name__=~"
           ''"pyroscope_write_dropped_profiles_total''
-          ''|pyroscope_ebpf_pprofs_dropped_total"}[5m])) > 0''
+          ''|pyroscope_ebpf_pprofs_dropped_total", ${inst}}[5m])) > 0''
         ];
         for = "15m";
         labels.severity = "warn";
@@ -622,8 +665,8 @@ let
       {
         alert = "AlloyUnhealthy";
         expr = lib.concatStrings [
-          "sum(alloy_component_controller_running_components"
-          ''{health_type!="healthy"}) > 0''
+          "sum by (instance) (alloy_component_controller_running_components"
+          ''{health_type!="healthy", ${inst}}) > 0''
         ];
         for = "10m";
         labels.severity = "warn";
@@ -641,7 +684,7 @@ let
         alert = "PyroscopeDiskHigh";
         # TODO(phlip9): provisional. Pick in M3 from measured bytes/day x
         # 30d retention + ~12h+ deletion lag, w/ headroom on `/`.
-        expr = "pyroscope_data_bytes > 50e9";
+        expr = "pyroscope_data_bytes{${inst}} > 50e9";
         for = "1h";
         labels.severity = "warn";
         annotations = {
@@ -659,7 +702,7 @@ let
       # TargetDown for rbitcoin: slow starts, so a longer `for`.
       {
         alert = "RbitcoinDown";
-        expr = ''up{job="rbitcoin"} == 0'';
+        expr = ''up{job="rbitcoin", ${inst}} == 0'';
         for = "10m";
         labels.severity = "warn";
         annotations = {
@@ -671,8 +714,8 @@ let
       {
         alert = "RbitcoinTipStale";
         expr = lib.concatStringsSep " " [
-          "rbitcoin_tip_age_seconds > 7200"
-          "and rbitcoin_initial_block_download == 0"
+          "rbitcoin_tip_age_seconds{${inst}} > 7200"
+          "and rbitcoin_initial_block_download{${inst}} == 0"
         ];
         for = "10m";
         labels.severity = "warn";
@@ -683,7 +726,10 @@ let
       }
       {
         alert = "RbitcoinPeers";
-        expr = ''sum(rbitcoin_connections{direction="out"}) < 3'';
+        expr = lib.concatStringsSep " " [
+          "sum by (instance)"
+          ''(rbitcoin_connections{direction="out", ${inst}}) < 3''
+        ];
         for = "10m";
         labels.severity = "warn";
         annotations = {
@@ -714,9 +760,36 @@ in
 
   # Alertmanager `inhibit_rules`. While a source alert fires, matching target
   # alerts are not sent.
-  inhibitRules = [
+  #
+  # Every source is a host alert w/ `instance=<host>`. Targets are either:
+  # - host alerts (`instance=<host>`, incl. per-host service aggregates):
+  #   only muted by the same host's source, `equal = [ "instance" ]`.
+  #   Alertmanager compares a label missing on one side as "", so this
+  #   rule never matches the targets below.
+  # - server-level alerts: no `instance` (vmalert, Alertmanager, Grafana
+  #   aggregates) or a probe URL. Only muted by a source on the server's
+  #   own host: they're about its services, which its trouble explains.
+  inhibitRules =
+    let
+      serverInst = ''instance="${config.networking.hostName}"'';
+      inhibit =
+        {
+          source_matchers,
+          target_matchers,
+        }:
+        [
+          {
+            inherit source_matchers target_matchers;
+            equal = [ "instance" ];
+          }
+          {
+            source_matchers = source_matchers ++ [ serverInst ];
+            target_matchers = target_matchers ++ [ notInst ];
+          }
+        ];
+    in
     # If the box is fucked only alert the cause
-    {
+    inhibit {
       source_matchers = [
         (alertnameIn [
           "MemLow"
@@ -727,7 +800,7 @@ in
       target_matchers = [ ''severity="warn"'' ];
     }
     # After boot (15m) let things settle out a bit
-    {
+    ++ inhibit {
       source_matchers = [ ''alertname="HostRebooted"'' ];
       target_matchers = [
         (alertnameIn [
@@ -737,10 +810,12 @@ in
         ])
       ];
     }
-    # nixbot keeps its state in Postgres
-    {
-      source_matchers = [ ''alertname="PgDown"'' ];
-      target_matchers = [ ''alertname=~"Nixbot.+"'' ];
-    }
-  ];
+    ++ [
+      # nixbot keeps its state in Postgres, on the same host
+      {
+        source_matchers = [ ''alertname="PgDown"'' ];
+        target_matchers = [ ''alertname=~"Nixbot.+"'' ];
+        equal = [ "instance" ];
+      }
+    ];
 }

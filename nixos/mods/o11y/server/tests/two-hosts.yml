@@ -1,0 +1,94 @@
+# vmalert-tool unit tests w/ two alerted hosts: sauna's rules, rendered w/
+# `server.alerting.instances = [ "sauna" "other" ]` into
+# `../rules-two-hosts.yml` by nixos/tests/o11y-alerting-unit.nix. Each host
+# is judged alone: one host's series can't mask or add to the other's.
+rule_files: [../rules-two-hosts.yml]
+evaluation_interval: 1m
+
+tests:
+  # A healthy peer count on other must not mask sauna's low one.
+  - name: RbitcoinPeers counts each host's peers
+    interval: 1m
+    input_series:
+      - series: 'rbitcoin_connections{instance="sauna", direction="out"}'
+        values: 1x20
+      - series: 'rbitcoin_connections{instance="other", direction="out"}'
+        values: 10x20
+    alert_rule_test:
+      - eval_time: 15m
+        groupname: rbitcoin
+        alertname: RbitcoinPeers
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              instance: sauna
+            exp_annotations:
+              summary: rbitcoin has 1 outbound peers
+              description: Network trouble? Eclipse risk.
+
+  # Each DB uses 60 of 97 conns (62%). Summed across hosts: 124%.
+  - name: PgConnections doesn't add up two healthy hosts
+    interval: 1m
+    input_series:
+      - series: 'pg_stat_activity_count{instance="sauna", datname="a"}'
+        values: 60x20
+      - series: 'pg_stat_activity_count{instance="other", datname="a"}'
+        values: 60x20
+      - series: 'pg_settings_max_connections{instance="sauna"}'
+        values: 100x20
+      - series: 'pg_settings_max_connections{instance="other"}'
+        values: 100x20
+      - series: 'pg_settings_superuser_reserved_connections{instance="sauna"}'
+        values: 3x20
+      - series: 'pg_settings_superuser_reserved_connections{instance="other"}'
+        values: 3x20
+    alert_rule_test:
+      - eval_time: 15m
+        groupname: postgres
+        alertname: PgConnections
+        exp_alerts: []
+
+  # The same database name on two hosts: one alert per host.
+  - name: PgLongTx is per host + database
+    interval: 1m
+    input_series:
+      - series: >-
+          pg_stat_activity_max_tx_duration{instance="sauna", datname="db",
+          state="active"}
+        values: 700x20
+      - series: >-
+          pg_stat_activity_max_tx_duration{instance="other", datname="db",
+          state="active"}
+        values: 10x20
+    alert_rule_test:
+      - eval_time: 10m
+        groupname: postgres
+        alertname: PgLongTx
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              instance: sauna
+              datname: db
+            exp_annotations:
+              summary: db transaction open for 11m 40s
+              description: Blocks vacuum. select * from pg_stat_activity
+
+  # other's stuck queue alerts as other, not as a fleet-wide max.
+  - name: NixbotWorkStuck is per host
+    interval: 1m
+    input_series:
+      - series: 'nixbot_work_queue_oldest_age_seconds{instance="other"}'
+        values: 3600x20
+      - series: 'nixbot_work_queue_oldest_age_seconds{instance="sauna"}'
+        values: 60x20
+    alert_rule_test:
+      - eval_time: 15m
+        groupname: nixbot
+        alertname: NixbotWorkStuck
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              instance: other
+            exp_annotations:
+              summary: nixbot work pending for 1h 0m 0s
+              description: Dispatcher stuck? journalctl -u nixbot
