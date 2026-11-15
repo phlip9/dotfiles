@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/server/websocket-server.ts b/packages/server/src/server/websocket-server.ts
-index 4f82b938a..fd33068fc 100644
+index 997c3ce42..1e5745215 100644
 --- a/packages/server/src/server/websocket-server.ts
 +++ b/packages/server/src/server/websocket-server.ts
-@@ -2559,7 +2559,9 @@ export class VoiceAssistantWebSocketServer {
+@@ -2839,7 +2839,9 @@ export class VoiceAssistantWebSocketServer {
        collectedAt: new Date().toISOString(),
        ...loggedMetrics,
      };
@@ -14,10 +14,10 @@ index 4f82b938a..fd33068fc 100644
  
    private getClientActivityState(session: Session, source: object): ClientPresenceState {
 diff --git a/packages/server/src/server/workspace-git-service.ts b/packages/server/src/server/workspace-git-service.ts
-index a2b89bed3..bb9dbbb5d 100644
+index b5672846b..aa7795dff 100644
 --- a/packages/server/src/server/workspace-git-service.ts
 +++ b/packages/server/src/server/workspace-git-service.ts
-@@ -2831,7 +2831,9 @@ export class WorkspaceGitServiceImpl implements WorkspaceGitService {
+@@ -2840,7 +2840,9 @@ export class WorkspaceGitServiceImpl implements WorkspaceGitService {
            );
          },
          onError: (error) => {
@@ -28,7 +28,7 @@ index a2b89bed3..bb9dbbb5d 100644
              {
                err: error,
                cwd: target.cwd,
-@@ -2908,7 +2910,8 @@ export class WorkspaceGitServiceImpl implements WorkspaceGitService {
+@@ -2915,7 +2917,8 @@ export class WorkspaceGitServiceImpl implements WorkspaceGitService {
          }
        } catch (error) {
          consecutiveErrors += 1;

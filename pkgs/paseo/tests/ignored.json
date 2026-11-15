@@ -6,18 +6,6 @@
     "reason": "fake timers fire a git timeout, which now rejects only after a real process-tree kill"
   },
   {
-    "patch": "paseo-require-relay-password",
-    "file": "packages/server/src/server/auth.test.ts",
-    "test": "hello admission > accepts a password and current local credential, but rejects old and wrong credentials",
-    "reason": "asserts a relay hello w/o credentials is admitted as owner"
-  },
-  {
-    "patch": "paseo-require-relay-password",
-    "file": "packages/server/src/server/websocket-server.relay-reconnect.test.ts",
-    "test": "relay external socket reconnect behavior > admits a hello password and an old relay hello, but rejects a wrong password",
-    "reason": "asserts a relay hello w/o credentials is admitted as owner"
-  },
-  {
     "patch": "paseo-disable-hub",
     "file": "packages/server/src/server/hub/daemon-executions.test.ts",
     "reason": "Hub is disabled"

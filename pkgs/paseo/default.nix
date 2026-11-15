@@ -12,26 +12,17 @@ let
   # fetchNpmDeps output differs across nixpkgs revisions. Keep the hash for
   # this repo's pinned nixpkgs while upstream maintains the package logic.
   upstreamPaseo = callPackage (sources.paseo + "/nix/package.nix") {
-    npmDepsHash = "sha256-ObBdUmNSW+vDjzA7EbCDfZrB0nYDmcWmWe+UCoTMh/M=";
+    npmDepsHash = "sha256-hx0ojqxSDeQekUU+qSTqDenPEHzu59bjABpBb5NeANM=";
   };
 in
 
 upstreamPaseo.overrideAttrs (prevAttrs: {
-  # Upstream changed to Apache-2.0 in v0.7.0 but has not updated
-  # nix/package.nix.
-  meta = prevAttrs.meta // {
-    license = lib.licenses.asl20;
-  };
-
   patches = (prevAttrs.patches or [ ]) ++ [
     # Kill full git process tree after timeout so ssh-askpass prompts don't
     # persist and stack up.
     ./paseo-kill-git-process-tree.patch
     # Add support for setting password via more secure PASEO_PASSWORD_FILE env.
     ./paseo-password-file.patch
-    # Require the daemon password on relay connections. Upstream admits relay
-    # clients w/o a credential, so the daemon public key alone grants owner.
-    ./paseo-require-relay-password.patch
     # Hard-disable the Paseo Cloud hub control channel, which attaches
     # pre-admitted sockets that bypass the daemon password.
     ./paseo-disable-hub.patch
@@ -60,11 +51,12 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
   '';
 
   # Keep upstream's sources and build scripts intact. Specialize only the
-  # packaged compiler module after all build-time compilation has finished.
+  # packaged esbuild-backed compiler module after all build-time compilation
+  # has finished. Upstream's compiler worker then loads artifacts instead.
   postBuild = (prevAttrs.postBuild or "") + ''
     node packages/server/scripts/precompile-builtin-plugins.mjs
     cp packages/server/scripts/plugin-compiler-runtime.mjs \
-      packages/server/dist/server/server/plugins/compiler.js
+      packages/server/dist/server/server/plugins/compiler-build.js
   '';
 
   # nft follows OpenCode's source-only compiler fallback, although packaged

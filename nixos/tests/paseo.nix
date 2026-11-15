@@ -389,7 +389,8 @@
         ).strip()
         assert pairing_url.startswith("http://paseo.test/#offer="), pairing_url
         relay_ls = f"timeout 30 paseo ls --host '{pairing_url}' --json"
-        # Upstream admits credential-less relay clients as owner.
+        # Regression guard: before v0.15, upstream admitted credential-less
+        # relay clients as owner.
         status, output = machine.execute(f"{relay_ls} 2>&1")
         assert status != 0, f"relay w/o password admitted: {output}"
         assert "password" in output.lower(), output
