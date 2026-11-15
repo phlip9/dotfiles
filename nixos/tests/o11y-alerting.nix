@@ -167,7 +167,7 @@ in
       };
 
       # Grafana's startup chatter. Keep warnings + errors only.
-      services.grafana.settings.log.filters = lib.concatStringsSep " " [
+      services.phlip9-o11y.grafana.logFilters = [
         "migrator:warn"
         "resource-migrator:warn"
         "secret-migrator:warn"

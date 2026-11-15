@@ -94,7 +94,7 @@
 
       # Grafana's startup chatter is most of this test's log. Keep only
       # warnings + errors from its noisiest loggers.
-      services.grafana.settings.log.filters = lib.concatStringsSep " " [
+      services.phlip9-o11y.grafana.logFilters = [
         # db + unified storage migrations. ~800 on a fresh db, each logged
         # twice, and a no-op re-check on every start.
         "migrator:warn"

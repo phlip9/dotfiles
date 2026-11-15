@@ -372,6 +372,16 @@ in
         '';
       };
 
+      logFilters = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        example = [ "sqlstore:debug" ];
+        description = ''
+          Per-logger levels (`<logger>:<level>`), joined into Grafana's
+          `[log] filters`. A list so the module and tests can both add some.
+        '';
+      };
+
       adminPasswordFile = lib.mkOption {
         type = lib.types.path;
         description = ''
@@ -814,6 +824,8 @@ in
         # which we don't use. It needs the core `prometheus` plugin and logs
         # an error on every start w/o it.
         feature_toggles.prometheusTypeMigration = false;
+
+        log.filters = lib.concatStringsSep " " cfg.grafana.logFilters;
       };
 
       # Provision VictoriaMetrics as a datasource using their Grafana plugin.
