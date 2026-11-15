@@ -18,8 +18,8 @@ phlip9. We run a hardened build w/ non-essential features disabled. Treat
 every new listener, transport, auth path, outbound call, or default-on
 feature as a finding.
 
-Use subagents for independent research (release notes, security surface,
-patch review) to save context. Give them the file pointers below.
+Use cheaper Sonnet subagents for independent research (release notes, security
+surface, patch review) to save context. Give them the file pointers below.
 
 ## Files
 
@@ -41,8 +41,7 @@ Ours (read before starting; the docs for each piece live in these files):
   merge, lifecycle)
 - `home/mods/paseo.nix`: home-manager daemon (`phliptop-mbp`, `lexe-dev`)
 - `nixos/sauna/default.nix`: `services.paseo` deployment
-- `nixos/pkgs/paseo-relay.nix`: third-party self-hosted relay (separate
-  upstream, not bumped by this pin)
+- `nixos/pkgs/paseo-relay.nix`: third-party self-hosted relay
 
 Upstream (`~/dev/paseo`, clone `https://github.com/getpaseo/paseo` if
 missing), security-relevant paths under `packages/server/src/server/`:
@@ -65,8 +64,9 @@ missing), security-relevant paths under `packages/server/src/server/`:
 pa=~/dev/paseo
 jq -r '.pins.paseo.version' npins/sources.json        # OLD, e.g. v0.12.0
 git -C "$pa" fetch --tags origin
-npins update paseo                                     # latest stable
+npins update paseo                                    # latest stable
 jq -r '.pins.paseo.version' npins/sources.json        # NEW
+just phlippkgs-update paseo-relay                     # relay main HEAD
 
 # patch branch: reuse phlip9/<OLD> if present, else rebuild it from our
 # patch files (commit subject == patch file stem)
@@ -103,11 +103,16 @@ Run in parallel subagents:
 4. **Patch review**: per patch in `pkgs/paseo/default.nix`, fixed upstream
    (drop), still applies, or needs a rebase? Grep for the patch's
    functions/keys in `<OLD>..<NEW>` history.
+   - A clean apply proves nothing for patches that replace a built module
+     (`postBuild` `cp ... dist/...` in `default.nix`, e.g.
+     `paseo-precompile-plugins`): diff the replaced module's exports and
+     importers OLD..NEW. A missing export only fails at daemon startup.
    - TEMPORARY: our `preBuild = "npm run postinstall"` works around
      getpaseo/paseo#7673 (upstream skips `patches/*.patch`). Drop it if
      the issue is closed or upstream `nix/package.nix` now runs
      `postinstall`/`patch-package`; double-applying fails the build. Remove
-     this note once the workaround is gone.
+     this note once the workaround is gone. Your `gh` can't read getpaseo repos;
+     use `curl -s https://api.github.com/repos/getpaseo/paseo/issues/7673 | jq .state`.
 
 ## Gate: report
 
@@ -140,6 +145,9 @@ grep -E 'error TS|FAILED|^error' "$art/build.log"
 
 - The package build takes 5-10 min (tsc + Expo web UI bundle), and longer
   when builds run concurrently. Run it in the background, one at a time.
+- `-f . paseo` (stable nixpkgs) and `nixosTests.paseo` (`pkgsNixos`) are
+  separate package builds. While iterating on patches, skip this one and
+  let the VM test build its own.
 - Patched TS must typecheck (`noUnusedLocals`, control-flow narrowing).
   Failures surface only minutes into the build as `error TS`; fix them on
   the patch branch, then re-export.
@@ -164,6 +172,7 @@ $P reset --force     # fresh tmp/paseo at NEW from pkgs/paseo
 $P check --all       # fmt/lint/typecheck + related tests for every patch
 ```
 
+- Timing tests flake under load: don't run `check` next to a nix build.
 - Failing test: `$P baseline <pkg> <file>` to split upstream failures
   from ours. An upstream test that conflicts w/ a patch goes in
   `pkgs/paseo/tests/ignored.json` per `paseo-dev` "5. Check"; never weaken
@@ -183,8 +192,8 @@ $P check --all       # fmt/lint/typecheck + related tests for every patch
   `PASEO_PASSWORD_FILE` falls out of `DAEMON_SETTING_ENV_KEYS`, auth is
   silently disabled and only these catch it.
 - `paseo-relay` (`nixos/pkgs/paseo-relay.nix`): if upstream
-  `packages/relay/src` wire protocol changed, check its upstream for a
-  compatible release; the test asserts its version string.
+  `packages/relay/src` wire protocol or `MAX_RELAY_WEBSOCKET_MESSAGE_BYTES`
+  changed, check the relay supports it (its `maxMessageBytes`).
 - On sauna (`hostname`), dry-run the config merge against live state:
 
   ```bash

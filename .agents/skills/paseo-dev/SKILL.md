@@ -113,6 +113,9 @@ $P fixup paseo-<feature>    # fold further edits into it (autosquash)
 
 ## 5. Check
 
+`check` runs fmt + lint + typecheck + related unit tests, scoped to changes
+since setup/export (--all: whole patch stack).
+
 ```bash
 $P check            # scope: changes since setup/last export
 $P check --all      # whole patch stack (before export, after upgrades)
