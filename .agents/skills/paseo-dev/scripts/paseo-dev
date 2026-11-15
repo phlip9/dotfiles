@@ -17,7 +17,8 @@ usage: paseo-dev <cmd> [args]
   reset [--force]    delete tmp/paseo and set up again from pkgs/paseo
   status             branch, commits, dirty files, sync vs pkgs/paseo
   run <cmd...>       run cmd w/ node in tmp/paseo (cwd: repo root)
-  check [--all]      fmt + lint + typecheck + related unit tests, scoped to
+  check [--all] [vitest args...]
+                     fmt + lint + typecheck + related unit tests, scoped to
                      changes since setup/export (--all: whole patch stack)
   test <pkg> [vitest args...]
                      vitest run in packages/<pkg> w/ the CI-like test env
@@ -302,8 +303,14 @@ packages_of() {
 cmd_check() {
   require_wt
   ensure_deps
-  local base=$exported_ref changed=() existing=() status=0 file
-  if [[ ${1:-} == --all ]] \
+  local base=$exported_ref changed=() existing=() status=0 file all=
+  if [[ ${1:-} == --all ]]; then
+    all=yes
+    shift
+  fi
+  # Remaining args go to vitest, e.g. --bail=1 for fast feedback.
+  local vitest_args=("$@")
+  if [[ -n $all ]] \
     || ! git -C "$wt" rev-parse -q --verify "$base" > /dev/null; then
     base=$tag
   fi
@@ -380,8 +387,9 @@ cmd_check() {
     local config
     config=$(vitest_config_arg "$package")
     test_at "$wt/packages/$package" \
-      npx vitest related --run --bail=1 --exclude '**/*.e2e.test.ts' \
-      "${scope[@]}" ${config:+"$config"} "${related[@]}" || status=1
+      npx vitest related --run --exclude '**/*.e2e.test.ts' \
+      "${scope[@]}" ${config:+"$config"} "${vitest_args[@]}" \
+      "${related[@]}" || status=1
   done
 
   ((status == 0)) || die "check failed"

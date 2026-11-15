@@ -116,6 +116,7 @@ $P fixup paseo-<feature>    # fold further edits into it (autosquash)
 ```bash
 $P check            # scope: changes since setup/last export
 $P check --all      # whole patch stack (before export, after upgrades)
+$P check --all --bail=1          # extra args go to vitest
 $P test <pkg> <file> [-t name]   # one test file, same env as check
 ```
 
