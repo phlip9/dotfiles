@@ -206,9 +206,34 @@ let
       obi_process_context_enabled = false
     }
 
+    // Pushes each collect interval's profiles in one request, one series
+    // per profile (our patch, see nixos/pkgs/grafana-alloy; a few above
+    // ~4 MiB), w/in that interval, incl. retries. No queue: the profiler's
+    // next flush waits for it, so slow pushes never stack up. Pyroscope
+    // can store part of a request and still fail it (ex: some series rate
+    // limited), and a retry resends all of it: the stored series twice.
+    // So only retry errors that likely stored nothing.
     pyroscope.write "local" {
       endpoint {
         url = ${alloyLit "http://${pyroscopeAddr}"}
+
+        // A timed-out push may still get stored: give the first attempt
+        // the whole interval, so hitting our own deadline is never
+        // retried. A deadline error from the server side (ex: a proxy
+        // timeout) still is, below. Pyroscope acks after its next segment
+        // flush (~0.5s).
+        remote_timeout = ${alloyLit cfgP.collectInterval}
+        // Pyroscope's own rate limit (Connect ResourceExhausted): the
+        // other series are stored, and a resend draws on the same
+        // exhausted token bucket. Only covers Connect errors: a proxy's
+        // plain HTTP 429/413/400 maps to a retried code, below.
+        retry_on_http_429 = false
+        // Else (connection refused, 5xx, ...): ex: Pyroscope restarting.
+        // 3 attempts, ~1-2s + ~2-4s apart (default: 10 attempts, but all
+        // w/in the interval anyway). A series is stored at most 3x.
+        max_backoff_retries = 3
+        min_backoff_period  = "1s"
+        max_backoff_period  = "4s"
       }
       external_labels = {
         host = ${alloyLit cfgP.hostLabel},
@@ -291,7 +316,8 @@ in
       default = "15s";
       description = ''
         How often Alloy builds + pushes its profiles, see
-        `perPidProfile`. Also the deadline for each round of pushes.
+        `perPidProfile`. Also the deadline for each interval's push, incl.
+        retries.
       '';
     };
 
@@ -304,12 +330,10 @@ in
         samples. Pyroscope merges them per labels anyway (no `pid`
         label).
 
-        Alloy pushes 32 profiles at once, ~0.45s each (Pyroscope acks
-        after its next 500ms segment flush), all w/in one collect
-        interval. Nix builds' short-lived pids fan out to ~600-850
-        per-pid profiles per 15s on sauna; under load the tail misses
-        the deadline and is dropped. Per labels: ~1 push per (unit, exe)
-        + profile type.
+        Nix builds' short-lived pids fan out to ~600-850 per-pid profiles
+        per 15s on sauna: that many series for Pyroscope to validate +
+        ingest, each w/ its own copy of the symbols. Per labels: ~1
+        profile per (unit, exe) + profile type.
       '';
     };
 
