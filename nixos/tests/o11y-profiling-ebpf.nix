@@ -39,14 +39,14 @@ let
   hotFn = "hot_loop_spin";
   # Blocks in nanosleep(2): off-CPU
   coldFn = "cold_block_wait";
-  # Alloy's pprof flush period, see `collector.collectInterval`. Most
-  # waits below are a few flushes long. Also the push deadline: one round
-  # of pushes acks in ~0.5s (Pyroscope's segment flush). Alloy keeps an
-  # exited pid's target for 2 intervals: the exited-process subtest's
+  # Alloy's pprof flush period, see `collector.profiling.collectInterval`.
+  # Most waits below are a few flushes long. Also the push deadline: one
+  # round of pushes acks in ~0.5s (Pyroscope's segment flush). Alloy keeps
+  # an exited pid's target for 2 intervals: the exited-process subtest's
   # removal -> flush steps must fit, also under host load.
   collectIntervalS = 3;
-  # /proc rescan period, see `collector.refreshInterval`. Short: the
-  # exited-process subtest waits for Alloy to apply a start + a stop.
+  # /proc rescan period, see `collector.profiling.refreshInterval`. Short:
+  # the exited-process subtest waits for Alloy to apply a start + a stop.
   refreshIntervalMs = 500;
 in
 {
@@ -106,21 +106,27 @@ in
       ];
 
       services.phlip9-o11y = {
-        enable = true;
-        retentionPeriod = "1d";
-        grafana = {
-          adminPasswordFile = secret "gf-admin-pwd" "gf-admin-testpwd";
-          secretKeyFile = secret "gf-secret-key" "test-secret-key-0123456789";
-          secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
-        };
-        profiling = {
+        server = {
           enable = true;
-          # Faster first profile + the exited-pid timeline. Everything
-          # else: prod defaults.
-          collector.collectInterval = "${toString collectIntervalS}s";
-          collector.refreshInterval = "${toString refreshIntervalMs}ms";
-          # Flush on demand, applied targets: the exited-process subtest
-          collector.testHooks = true;
+          retentionPeriod = "1d";
+          grafana = {
+            adminPasswordFile = secret "gf-admin-pwd" "gf-admin-testpwd";
+            secretKeyFile = secret "gf-secret-key" "test-secret-key-0123456789";
+            secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
+          };
+          profiling.enable = true;
+        };
+        collector = {
+          enable = true;
+          profiling = {
+            enable = true;
+            # Faster first profile + the exited-pid timeline. Everything
+            # else: prod defaults.
+            collectInterval = "${toString collectIntervalS}s";
+            refreshInterval = "${toString refreshIntervalMs}ms";
+            # Flush on demand, applied targets: the exited-process subtest
+            testHooks = true;
+          };
         };
       };
 
@@ -370,7 +376,7 @@ in
                 total += float(line.rsplit(" ", 1)[1])
         return total
 
-    # One of `pyroscope.ebpf`'s test hooks (`collector.testHooks`, see
+    # One of `pyroscope.ebpf`'s test hooks (`collector.profiling.testHooks`, see
     # nixos/pkgs/grafana-alloy): its JSON resp
     def ebpf_hook(path: str, method: str = "GET") -> dict:
         out = machine.succeed(

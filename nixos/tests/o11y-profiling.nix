@@ -45,18 +45,19 @@ in
           '';
 
       services.phlip9-o11y = {
-        enable = true;
-        retentionPeriod = "1d";
-        grafana = {
-          adminPasswordFile = secret "gf-admin-pwd" "gf-admin-testpwd";
-          secretKeyFile = secret "gf-secret-key" "test-secret-key-0123456789";
-          secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
-        };
-        profiling = {
+        server = {
           enable = true;
-          # eBPF needs a VM, see ./o11y-profiling-ebpf.nix
-          collector.enable = false;
+          retentionPeriod = "1d";
+          grafana = {
+            adminPasswordFile = secret "gf-admin-pwd" "gf-admin-testpwd";
+            secretKeyFile = secret "gf-secret-key" "test-secret-key-0123456789";
+            secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
+          };
+          profiling.enable = true;
         };
+        # No Alloy (`collector.profiling`): eBPF needs a VM, see
+        # ./o11y-profiling-ebpf.nix
+        collector.enable = true;
       };
 
       # Unused here: node metrics, ssh
@@ -66,7 +67,7 @@ in
       services.victoriametrics.prometheusConfig.global.scrape_interval = "1s";
 
       # Grafana's startup chatter. Keep warnings + errors only.
-      services.phlip9-o11y.grafana.logFilters = [
+      services.phlip9-o11y.server.grafana.logFilters = [
         "migrator:warn"
         "resource-migrator:warn"
         "secret-migrator:warn"

@@ -99,27 +99,30 @@ in
       ];
 
       services.phlip9-o11y = {
-        enable = true;
-        retentionPeriod = "1d";
-        grafana = {
-          # Links in notifications. Inert w/o nginx.
-          domain = "grafana.test";
-          adminPasswordFile = secret "gf-admin-pwd" "gf-admin-testpwd";
-          secretKeyFile = secret "gf-secret-key" "test-secret-key-0123456789";
-          secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
-        };
-
-        alerting = {
+        server = {
           enable = true;
-          discordWebhookUrlFile = sinkUrlFile "discord";
-          environmentFile = secret "am-env" "DISCORD_USER_ID=12345";
-          healthchecksWatchdogPingUrlFile = sinkUrlFile "watchdog";
-          healthchecksHostPingUrlFile = sinkUrlFile "host";
+          retentionPeriod = "1d";
+          grafana = {
+            # Links in notifications. Inert w/o nginx.
+            domain = "grafana.test";
+            adminPasswordFile = secret "gf-admin-pwd" "gf-admin-testpwd";
+            secretKeyFile = secret "gf-secret-key" "test-secret-key-0123456789";
+            secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
+          };
 
-          # Test knobs: notify right away.
-          groupWait = "0s";
-          groupInterval = "1s";
+          alerting = {
+            enable = true;
+            discordWebhookUrlFile = sinkUrlFile "discord";
+            environmentFile = secret "am-env" "DISCORD_USER_ID=12345";
+            healthchecksWatchdogPingUrlFile = sinkUrlFile "watchdog";
+            healthchecksHostPingUrlFile = sinkUrlFile "host";
+
+            # Test knobs: notify right away.
+            groupWait = "0s";
+            groupInterval = "1s";
+          };
         };
+        collector.enable = true;
       };
 
       services.vmalert.instances."".rules.groups = [
@@ -167,7 +170,7 @@ in
       };
 
       # Grafana's startup chatter. Keep warnings + errors only.
-      services.phlip9-o11y.grafana.logFilters = [
+      services.phlip9-o11y.server.grafana.logFilters = [
         "migrator:warn"
         "resource-migrator:warn"
         "secret-migrator:warn"

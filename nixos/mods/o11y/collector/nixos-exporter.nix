@@ -1,10 +1,10 @@
-# nixos-exporter for the phlip9-o11y stack: NixOS boots, system profile
-# generation, last activation, pending reboot, per-unit cgroup usage. See
+# o11y collector: nixos-exporter. NixOS boots, system profile generation,
+# last activation, pending reboot, per-unit cgroup usage. See
 # nixos/pkgs/nixos-exporter/main.go.
 #
 # Socket-activated: systemd owns the loopback listener and passes it in, so
 # the service itself runs w/o any network access (`PrivateNetwork`).
-# VictoriaMetrics scrapes it (see ../server/default.nix).
+# Scraped as job `nixos-exporter`.
 #
 # The service also starts at boot, not just on the first scrape, so it
 # counts boots that never got scraped.
@@ -16,11 +16,13 @@
 }:
 
 let
-  cfg = config.services.phlip9-o11y;
-  cfgE = cfg.nixosExporter;
+  cfgC = config.services.phlip9-o11y.collector;
+  cfgE = cfgC.nixosExporter;
+
+  inherit (import ./lib.nix { inherit config; }) hostTargets;
 in
 {
-  options.services.phlip9-o11y.nixosExporter = {
+  options.services.phlip9-o11y.collector.nixosExporter = {
     listenAddress = lib.mkOption {
       type = lib.types.str;
       default = "127.0.0.1:9101";
@@ -28,7 +30,11 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfgC.enable {
+    services.phlip9-o11y.collector.scrapeConfigs.nixos-exporter = {
+      static_configs = hostTargets cfgE.listenAddress;
+    };
+
     systemd.sockets.nixos-exporter = {
       description = "nixos-exporter metrics socket";
       wantedBy = [ "sockets.target" ];

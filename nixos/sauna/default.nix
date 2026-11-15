@@ -510,64 +510,74 @@
   # see: nixos/mods/o11y/default.nix
   # see: nixos/tests/o11y.nix
   services.phlip9-o11y = {
-    enable = true;
-    retentionPeriod = "3"; # months
-
-    # HTTPS probes + cert expiry of the public vhosts + R2 cache. Keep in
-    # sync: nixos/sauna/grafana/overview.json "Services" tiles + "Status
-    # timeline" match these URLs per service.
-    probes = [
-      "https://cache.phlip9.com/nix-cache-info"
-      "https://ci.phlip9.com/"
-      "https://grafana.phlip9.com/api/health"
-      "https://paseo.phlip9.com/"
-      "https://relay.paseo.phlip9.com/"
-      "https://sauna.phlip9.com/healthz"
-    ];
-    grafana = {
-      domain = "grafana.phlip9.com";
-      adminPasswordFile = config.sops.secrets.grafana-admin-password.path;
-      secretKeyFile = config.sops.secrets.grafana-secret-key.path;
-      secretsManagerKeyFile = config.sops.secrets.grafana-secrets-manager-key.path;
-
-      # sync dashboards w/ this repo. saving in UI will commit to master or
-      # open a PR.
-      # see: doc/o11y/README.md
-      gitSync = {
-        enable = true;
-        # Grafana folder that holds the synced dashboards.
-        title = "sauna";
-        type = "github";
-        github.url = "https://github.com/phlip9/dotfiles";
-        github.branch = "master";
-        github.path = "nixos/sauna/grafana";
-        tokenFile = config.sops.secrets.grafana-git-sync-token.path;
-        # Grafana home page: the incident overview,
-        # nixos/sauna/grafana/overview.json.
-        homeDashboard = "overview";
-      };
-    };
-
-    # vmalert + Alertmanager -> Discord, healthchecks.io dead man's switch
-    # see: doc/o11y/README.md > "Alerting setup"
-    # see: nixos/mods/o11y/server/alerting.nix
-    alerting = {
+    # storage, query, dashboards, alerting
+    server = {
       enable = true;
-      discordWebhookUrlFile =
-        config.sops.secrets.alertmanager-discord-webhook-url.path;
-      environmentFile = config.sops.secrets.alertmanager-env.path;
-      healthchecksWatchdogPingUrlFile =
-        config.sops.secrets.healthchecks-watchdog-ping-url.path;
-      healthchecksHostPingUrlFile =
-        config.sops.secrets.healthchecks-host-ping-url.path;
+      retentionPeriod = "3"; # months
+
+      # HTTPS probes + cert expiry of the public vhosts + R2 cache. Keep in
+      # sync: nixos/sauna/grafana/overview.json "Services" tiles + "Status
+      # timeline" match these URLs per service.
+      probes = [
+        "https://cache.phlip9.com/nix-cache-info"
+        "https://ci.phlip9.com/"
+        "https://grafana.phlip9.com/api/health"
+        "https://paseo.phlip9.com/"
+        "https://relay.paseo.phlip9.com/"
+        "https://sauna.phlip9.com/healthz"
+      ];
+      grafana = {
+        domain = "grafana.phlip9.com";
+        adminPasswordFile = config.sops.secrets.grafana-admin-password.path;
+        secretKeyFile = config.sops.secrets.grafana-secret-key.path;
+        secretsManagerKeyFile = config.sops.secrets.grafana-secrets-manager-key.path;
+
+        # sync dashboards w/ this repo. saving in UI will commit to master or
+        # open a PR.
+        # see: doc/o11y/README.md
+        gitSync = {
+          enable = true;
+          # Grafana folder that holds the synced dashboards.
+          title = "sauna";
+          type = "github";
+          github.url = "https://github.com/phlip9/dotfiles";
+          github.branch = "master";
+          github.path = "nixos/sauna/grafana";
+          tokenFile = config.sops.secrets.grafana-git-sync-token.path;
+          # Grafana home page: the incident overview,
+          # nixos/sauna/grafana/overview.json.
+          homeDashboard = "overview";
+        };
+      };
+
+      # vmalert + Alertmanager -> Discord, healthchecks.io dead man's switch
+      # see: doc/o11y/README.md > "Alerting setup"
+      # see: nixos/mods/o11y/server/alerting.nix
+      alerting = {
+        enable = true;
+        discordWebhookUrlFile =
+          config.sops.secrets.alertmanager-discord-webhook-url.path;
+        environmentFile = config.sops.secrets.alertmanager-env.path;
+        healthchecksWatchdogPingUrlFile =
+          config.sops.secrets.healthchecks-watchdog-ping-url.path;
+        healthchecksHostPingUrlFile =
+          config.sops.secrets.healthchecks-host-ping-url.path;
+      };
+
+      # Pyroscope, 30d retention (module default). Measure first, then tune
+      # retention, MemoryMax, and the PyroscopeDiskHigh threshold.
+      # see: nixos/mods/o11y/server/pyroscope.nix
+      profiling.enable = true;
     };
 
-    # Pyroscope + Alloy eBPF, whole host: on-CPU at 49 Hz, off-CPU at 0.02,
-    # 30d retention (module defaults). Measure first, then tune retention,
-    # MemoryMax, and the PyroscopeDiskHigh threshold.
-    # see: nixos/mods/o11y/server/pyroscope.nix
-    # see: nixos/mods/o11y/collector/alloy.nix
-    profiling.enable = true;
+    # this host's exporters + scrape jobs + Alloy eBPF profiler
+    collector = {
+      enable = true;
+      # Alloy eBPF, whole host: on-CPU at 49 Hz, off-CPU at 0.02 (module
+      # defaults).
+      # see: nixos/mods/o11y/collector/alloy.nix
+      profiling.enable = true;
+    };
   };
   # node-exporter collectors w/o data on sauna, else each reports
   # node_scrape_collector_success=0 (a failed row in Node Exporter Full's

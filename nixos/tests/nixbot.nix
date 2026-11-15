@@ -155,11 +155,14 @@ in
       virtualisation.cores = 2;
 
       services.phlip9-o11y = {
-        enable = true;
-        retentionPeriod = "1d";
-        grafana.adminPasswordFile = pkgs.writeText "gf-admin-pwd" "test-password";
-        grafana.secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
-        grafana.secretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key";
+        server = {
+          enable = true;
+          retentionPeriod = "1d";
+          grafana.adminPasswordFile = pkgs.writeText "gf-admin-pwd" "test-password";
+          grafana.secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
+          grafana.secretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key";
+        };
+        collector.enable = true;
       };
       # Only VictoriaMetrics is under test. Grafana's first-boot migrations
       # would compete w/ nixbot's startup for the VM's CPU.

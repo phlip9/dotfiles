@@ -21,7 +21,7 @@
 }:
 
 let
-  cfg = config.services.phlip9-o11y;
+  cfg = config.services.phlip9-o11y.server;
   cfgExporters = config.services.prometheus.exporters;
   cfgRbitcoin = config.services.rbitcoin;
 
@@ -482,7 +482,7 @@ let
     ];
   };
 
-  # HTTPS probes of `phlip9-o11y.probes` through blackbox_exporter.
+  # HTTPS probes of `phlip9-o11y.server.probes` through blackbox_exporter.
   probesGroup = {
     name = "probes";
     rules = [
@@ -646,7 +646,7 @@ let
         labels.severity = "warn";
         annotations = {
           summary = "Pyroscope uses {{ $value | humanize1024 }}B on disk";
-          description = "Lower profiling.retentionPeriod or sample rate.";
+          description = "Lower server.profiling.retentionPeriod or collector.profiling.sampleRate.";
         };
       }
     ];

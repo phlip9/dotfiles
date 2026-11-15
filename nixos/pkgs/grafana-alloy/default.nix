@@ -103,11 +103,12 @@
     # must order their steps w/ the reporter's flushes + the targets the
     # reporter actually applied (args updates are async), not race timers.
     # Off by default: no HTTP handler, no behavior change. W/ `test_hooks =
-    # true` (`collector.testHooks`), `/api/v0/component/<id>/` serves
-    # `POST flush[?hold=true]` (flush now, return after the pushes; hold
-    # the periodic flushes until the next flush w/o hold), `GET targets`
-    # (applied live + retained exited pids), `GET pending` (samples per pid
-    # awaiting the next flush). Not for upstream. Unit tests in the patch.
+    # true` (`collector.profiling.testHooks`), `/api/v0/component/<id>/`
+    # serves `POST flush[?hold=true]` (flush now, return after the pushes;
+    # hold the periodic flushes until the next flush w/o hold), `GET
+    # targets` (applied live + retained exited pids), `GET pending` (samples
+    # per pid awaiting the next flush). Not for upstream. Unit tests in the
+    # patch.
     #
     # (nixpkgs' custom patchPhase ignores `patches`)
     patchPhase = ''

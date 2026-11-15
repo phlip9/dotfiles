@@ -66,24 +66,27 @@
       ];
 
       services.phlip9-o11y = {
-        enable = true;
-        retentionPeriod = "1d";
-        grafana.adminPasswordFile = grafanaAdminPasswordFile;
-        grafana.secretKeyFile = grafanaSecretKeyFile;
-        grafana.secretsManagerKeyFile = grafanaSecretsManagerKeyFile;
-
-        # A `local` repository needs no network or token. Poll at the floor.
-        # Default `target = "folder"`: dashboards land in a root folder titled
-        # `title`, like `sauna` in prod.
-        grafana.gitSync = {
+        server = {
           enable = true;
-          title = "machine";
-          type = "local";
-          local.path = "/var/lib/grafana-git-sync";
-          intervalSeconds = 10;
-          # Synced later, by "Git Sync pulls dashboard into its root folder".
-          homeDashboard = "test-sync";
+          retentionPeriod = "1d";
+          grafana.adminPasswordFile = grafanaAdminPasswordFile;
+          grafana.secretKeyFile = grafanaSecretKeyFile;
+          grafana.secretsManagerKeyFile = grafanaSecretsManagerKeyFile;
+
+          # A `local` repository needs no network or token. Poll at the floor.
+          # Default `target = "folder"`: dashboards land in a root folder titled
+          # `title`, like `sauna` in prod.
+          grafana.gitSync = {
+            enable = true;
+            title = "machine";
+            type = "local";
+            local.path = "/var/lib/grafana-git-sync";
+            intervalSeconds = 10;
+            # Synced later, by "Git Sync pulls dashboard into its root folder".
+            homeDashboard = "test-sync";
+          };
         };
+        collector.enable = true;
       };
 
       # Use a fast scrape interval for tests.
@@ -94,7 +97,7 @@
 
       # Grafana's startup chatter is most of this test's log. Keep only
       # warnings + errors from its noisiest loggers.
-      services.phlip9-o11y.grafana.logFilters = [
+      services.phlip9-o11y.server.grafana.logFilters = [
         # db + unified storage migrations. ~800 on a fresh db, each logged
         # twice, and a no-op re-check on every start.
         "migrator:warn"

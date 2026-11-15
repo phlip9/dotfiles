@@ -1,4 +1,4 @@
-# Alerting for the phlip9-o11y metrics stack.
+# o11y server: alerting for the metrics stack.
 #
 # Pipeline:
 #
@@ -32,13 +32,15 @@
 }:
 
 let
-  cfg = config.services.phlip9-o11y;
+  cfg = config.services.phlip9-o11y.server;
   cfgA = cfg.alerting;
   cfgVm = config.services.victoriametrics;
   cfgAm = config.services.prometheus.alertmanager;
 
   # Alert rule groups + Alertmanager inhibit rules
   alertRules = import ./rules.nix { inherit config lib; };
+
+  inherit (import ../collector/lib.nix { inherit config; }) hostTargets;
 
   vmalertAddr = "127.0.0.1:8880";
   amAddr = "${cfgAm.listenAddress}:${toString cfgAm.port}";
@@ -237,7 +239,7 @@ let
   };
 in
 {
-  options.services.phlip9-o11y.alerting = {
+  options.services.phlip9-o11y.server.alerting = {
     enable = lib.mkEnableOption "alerting (vmalert + Alertmanager)";
 
     discordWebhookUrlFile = lib.mkOption {
@@ -296,6 +298,14 @@ in
   };
 
   config = lib.mkIf (cfg.enable && cfgA.enable) {
+    services.phlip9-o11y.collector.scrapeConfigs = {
+      # The merged setting, so the job follows a listener override.
+      vmalert.static_configs =
+        hostTargets
+          config.services.vmalert.instances."".settings.httpListenAddr;
+      alertmanager.static_configs = hostTargets amAddr;
+    };
+
     # ===================================================================
     # vmalert - rule evaluation
     # ===================================================================
@@ -447,7 +457,7 @@ in
       {
         # Notifications link to Grafana.
         assertion = cfg.grafana.domain != null;
-        message = "phlip9-o11y: alerting needs grafana.domain";
+        message = "phlip9-o11y: server.alerting needs server.grafana.domain";
       }
       {
         # envsubst would eat any other `$`, ex: a `$labels` template.

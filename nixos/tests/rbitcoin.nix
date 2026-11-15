@@ -73,13 +73,16 @@
 
       # Scrape node2's metrics into VictoriaMetrics, like on sauna.
       services.phlip9-o11y = {
-        enable = true;
-        retentionPeriod = "1d";
-        grafana = {
-          adminPasswordFile = pkgs.writeText "gf-admin-pwd" "test-password";
-          secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
-          secretsManagerKeyFile = pkgs.writeText "gf-sm-key" "test-sm-key";
+        server = {
+          enable = true;
+          retentionPeriod = "1d";
+          grafana = {
+            adminPasswordFile = pkgs.writeText "gf-admin-pwd" "test-password";
+            secretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key";
+            secretsManagerKeyFile = pkgs.writeText "gf-sm-key" "test-sm-key";
+          };
         };
+        collector.enable = true;
       };
       # Only VictoriaMetrics is under test.
       services.grafana.enable = lib.mkForce false;

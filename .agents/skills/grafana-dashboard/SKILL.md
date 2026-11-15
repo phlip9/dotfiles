@@ -71,8 +71,8 @@ grafana-*`: `~/.config/grafana/mcp-sa-token` (Editor service account).
 ## 1. Discover
 
 - List the job's metrics: `count by (__name__) ({job="<job>"})`, instant.
-  Scrape config: `nixos/mods/o11y/server/default.nix` (`scrape_configs`, 1m
-  interval).
+  Scrape jobs: `phlip9-o11y.collector.scrapeConfigs.<job>`, defined in
+  `nixos/mods/o11y/{collector,server}/*.nix` (1m interval).
 - Check TYPE/HELP w/ `list_prometheus_metric_metadata`. Don't trust names:
   read the exporter source when semantics matter. Pinned sources:
   `nix eval --raw -f . sources.<name>.outPath`, then grep for the metric.

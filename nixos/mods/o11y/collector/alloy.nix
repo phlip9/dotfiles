@@ -3,11 +3,11 @@
 #   Alloy pyroscope.ebpf --push--> Pyroscope (see ../server/pyroscope.nix)
 #   (every process)
 #
-# Alloy samples on-CPU + off-CPU stacks of every process on the
-# host w/ eBPF, symbolizes them on the host, labels them w/ their systemd
-# unit (kernel threads: `kernel`), and pushes them to Pyroscope. Runs as the
-# non-root `alloy` user w/ a few ambient caps. VictoriaMetrics scrapes
-# Alloy's `/metrics` (see ../server/default.nix).
+# Alloy samples on-CPU + off-CPU stacks of every process on the host w/
+# eBPF, symbolizes them on the host, labels them w/ their systemd unit
+# (kernel threads: `kernel`), and pushes them to the local Pyroscope. Runs
+# as the non-root `alloy` user w/ a few ambient caps. Its `/metrics` are
+# scraped as job `alloy`.
 #
 # See: doc/o11y/README.md
 {
@@ -20,10 +20,13 @@
 
 let
   cfg = config.services.phlip9-o11y;
-  cfgP = cfg.profiling;
-  cfgC = cfgP.collector;
+  cfgC = cfg.collector;
+  cfgP = cfgC.profiling;
+
   cfgPyroSrv = config.services.pyroscope.settings.server;
   cfgAlloy = config.services.alloy;
+
+  inherit (import ./lib.nix { inherit config; }) hostTargets;
 
   # Alloy literals: strings, numbers. Alloy strings take JSON's escapes.
   alloyLit = builtins.toJSON;
@@ -46,7 +49,7 @@ let
     "\\.service(?:/.*)?"
   ];
 
-  # The collector's config, see `collector` options. `//` comments end up in
+  # Alloy's config, see `collector.profiling` options. `//` comments end up in
   # /etc/alloy/config.alloy, for whoever reads it there.
   alloyConfig = ''
     // Continuous profiling of every process on this host, see
@@ -58,7 +61,7 @@ let
     // Every process w/ its exe + cgroup. Each refresh is a full /proc scan.
     // Skips kernel threads: they have no exe.
     discovery.process "all" {
-      refresh_interval = ${alloyLit cfgC.refreshInterval}
+      refresh_interval = ${alloyLit cfgP.refreshInterval}
 
       discover_config {
         cgroup_path = true
@@ -134,7 +137,7 @@ let
     // `discovery.process "all"` skips them. Only kernel threads live in
     // the root cgroup. Another /proc scan, but only reads the cgroup.
     discovery.process "kernel" {
-      refresh_interval = ${alloyLit cfgC.refreshInterval}
+      refresh_interval = ${alloyLit cfgP.refreshInterval}
 
       discover_config {
         cgroup_path  = true
@@ -178,21 +181,21 @@ let
       // patch), so their last samples still get their unit.
       targets_only = false
 
-      sample_rate       = ${toString cfgC.sampleRate}
-      collect_interval  = ${alloyLit cfgC.collectInterval}
-      off_cpu_threshold = ${alloyLit cfgC.offCpuThreshold}
+      sample_rate       = ${toString cfgP.sampleRate}
+      collect_interval  = ${alloyLit cfgP.collectInterval}
+      off_cpu_threshold = ${alloyLit cfgP.offCpuThreshold}
 
       // A `pid` label per sample: high cardinality (nix builds), bigger
       // profiles. Labels stay per unit + exe.
       pid_label = false
       // Our patch, see nixos/pkgs/grafana-alloy
-      per_pid_profile = ${lib.boolToString cfgC.perPidProfile}
+      per_pid_profile = ${lib.boolToString cfgP.perPidProfile}
       // C++/Rust names w/o params or template args: short flame graph
       // frames. Overloads merge.
       demangle = "simplified"
 
-      ${lib.optionalString cfgC.testHooks ''
-        // Our patch: test-only endpoints, see `collector.testHooks`
+      ${lib.optionalString cfgP.testHooks ''
+        // Our patch: test-only endpoints, see `collector.profiling.testHooks`
         test_hooks = true
       ''}
 
@@ -208,7 +211,7 @@ let
         url = ${alloyLit "http://${pyroscopeAddr}"}
       }
       external_labels = {
-        host = ${alloyLit cfgC.hostLabel},
+        host = ${alloyLit cfgP.hostLabel},
       }
     }
   '';
@@ -257,115 +260,127 @@ let
   ];
 in
 {
-  options.services.phlip9-o11y.profiling = {
-    collector = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = ''
-          Profile every process on this host w/ Alloy's `pyroscope.ebpf`
-          and push the profiles to the local Pyroscope.
-        '';
-      };
+  options.services.phlip9-o11y.collector.profiling = {
+    enable = lib.mkEnableOption ''
+      whole-host continuous profiling: profile every process on this host
+      w/ Alloy's `pyroscope.ebpf` and push the profiles to the local
+      Pyroscope (needs `server.profiling.enable`)
+    '';
 
-      sampleRate = lib.mkOption {
-        type = lib.types.ints.positive;
-        default = 49;
-        description = ''
-          On-CPU stack samples per second, per CPU. Odd, so sampling
-          doesn't run in lockstep w/ periodic work.
-        '';
-      };
+    sampleRate = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 49;
+      description = ''
+        On-CPU stack samples per second, per CPU. Odd, so sampling
+        doesn't run in lockstep w/ periodic work.
+      '';
+    };
 
-      offCpuThreshold = lib.mkOption {
-        type = lib.types.numbers.between 0 1;
-        default = 0.02;
-        description = ''
-          Probability to record the stack of a thread that blocks (context
-          switch), weighted by time blocked, as the `offcpu` profile type.
-          0 = off. CPU cost scales w/ the host's context switch rate x this.
-        '';
-      };
+    offCpuThreshold = lib.mkOption {
+      type = lib.types.numbers.between 0 1;
+      default = 0.02;
+      description = ''
+        Probability to record the stack of a thread that blocks (context
+        switch), weighted by time blocked, as the `offcpu` profile type.
+        0 = off. CPU cost scales w/ the host's context switch rate x this.
+      '';
+    };
 
-      collectInterval = lib.mkOption {
-        type = lib.types.str;
-        default = "15s";
-        description = ''
-          How often Alloy builds + pushes its profiles, see
-          `perPidProfile`. Also the deadline for each round of pushes.
-        '';
-      };
+    collectInterval = lib.mkOption {
+      type = lib.types.str;
+      default = "15s";
+      description = ''
+        How often Alloy builds + pushes its profiles, see
+        `perPidProfile`. Also the deadline for each round of pushes.
+      '';
+    };
 
-      perPidProfile = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = ''
-          Per collect interval, push one profile per (labels, pid), like
-          upstream Alloy, instead of one per labels w/ all its pids'
-          samples. Pyroscope merges them per labels anyway (no `pid`
-          label).
+    perPidProfile = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Per collect interval, push one profile per (labels, pid), like
+        upstream Alloy, instead of one per labels w/ all its pids'
+        samples. Pyroscope merges them per labels anyway (no `pid`
+        label).
 
-          Alloy pushes 32 profiles at once, ~0.45s each (Pyroscope acks
-          after its next 500ms segment flush), all w/in one collect
-          interval. Nix builds' short-lived pids fan out to ~600-850
-          per-pid profiles per 15s on sauna; under load the tail misses
-          the deadline and is dropped. Per labels: ~1 push per (unit, exe)
-          + profile type.
-        '';
-      };
+        Alloy pushes 32 profiles at once, ~0.45s each (Pyroscope acks
+        after its next 500ms segment flush), all w/in one collect
+        interval. Nix builds' short-lived pids fan out to ~600-850
+        per-pid profiles per 15s on sauna; under load the tail misses
+        the deadline and is dropped. Per labels: ~1 push per (unit, exe)
+        + profile type.
+      '';
+    };
 
-      refreshInterval = lib.mkOption {
-        type = lib.types.str;
-        default = "2s";
-        description = ''
-          How often Alloy rescans /proc for processes to label w/ their
-          unit. Processes younger than one scan are still profiled, but as
-          `service_name="ebpf/unspecified"`, so shorter = better attribution
-          of short-lived processes (ex: nix builds: rustc, cc1, node).
+    refreshInterval = lib.mkOption {
+      type = lib.types.str;
+      default = "2s";
+      description = ''
+        How often Alloy rescans /proc for processes to label w/ their
+        unit. Processes younger than one scan are still profiled, but as
+        `service_name="ebpf/unspecified"`, so shorter = better attribution
+        of short-lived processes (ex: nix builds: rustc, cc1, node).
 
-          Each scan reads 2 /proc files per process (~1.5ms CPU for ~300
-          processes on sauna), then relabels every process. Share of CPU
-          in unspecified, modeled on a /proc trace of nix builds on sauna,
-          w/ the exited-pid patch (see nixos/pkgs/grafana-alloy): ~28% at
-          "10s", ~13% at "5s", ~5% at "2s", ~2.5% at "1s". W/o the patch:
-          ~40% at "10s", and worse when shorter.
-        '';
-      };
+        Each scan reads 2 /proc files per process (~1.5ms CPU for ~300
+        processes on sauna), then relabels every process. Share of CPU
+        in unspecified, modeled on a /proc trace of nix builds on sauna,
+        w/ the exited-pid patch (see nixos/pkgs/grafana-alloy): ~28% at
+        "10s", ~13% at "5s", ~5% at "2s", ~2.5% at "1s". W/o the patch:
+        ~40% at "10s", and worse when shorter.
+      '';
+    };
 
-      # Keep in sync: nixos/sauna/grafana/profiling.json profile queries
-      # match `host=~"$instance"` (the scrape targets' `instance` label).
-      hostLabel = lib.mkOption {
-        type = lib.types.str;
-        default = config.networking.hostName;
-        defaultText = lib.literalExpression "config.networking.hostName";
-        description = "`host` label on every profile.";
-      };
+    # Keep in sync: nixos/sauna/grafana/profiling.json profile queries
+    # match `host=~"$instance"` (the scrape targets' `instance` label).
+    hostLabel = lib.mkOption {
+      type = lib.types.str;
+      default = config.networking.hostName;
+      defaultText = lib.literalExpression "config.networking.hostName";
+      description = "`host` label on every profile.";
+    };
 
-      listenAddress = lib.mkOption {
-        type = lib.types.str;
-        default = "127.0.0.1:12345";
-        description = ''
-          Alloy HTTP server: `/metrics`, `/-/ready`, debug UI. No authn,
-          keep it on loopback.
-        '';
-      };
+    listenAddress = lib.mkOption {
+      type = lib.types.str;
+      default = "127.0.0.1:12345";
+      description = ''
+        Alloy HTTP server: `/metrics`, `/-/ready`, debug UI. No authn,
+        keep it on loopback.
+      '';
+    };
 
-      testHooks = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        internal = true;
-        description = ''
-          Tests only. Serve `pyroscope.ebpf`'s test endpoints (our patch,
-          see nixos/pkgs/grafana-alloy) under
-          `/api/v0/component/pyroscope.ebpf.host/`: flush on demand + hold
-          the periodic flushes, show the applied targets + pending samples.
-          No authn; a held flush stalls profiling.
-        '';
-      };
+    testHooks = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      internal = true;
+      description = ''
+        Tests only. Serve `pyroscope.ebpf`'s test endpoints (our patch,
+        see nixos/pkgs/grafana-alloy) under
+        `/api/v0/component/pyroscope.ebpf.host/`: flush on demand + hold
+        the periodic flushes, show the applied targets + pending samples.
+        No authn; a held flush stalls profiling.
+      '';
     };
   };
 
-  config = lib.mkIf (cfg.enable && cfgP.enable && cfgC.enable) {
+  config = lib.mkIf (cfgC.enable && cfgP.enable) {
+    # Alloy pushes to the local Pyroscope.
+    # TODO(phlip9): drop once the collector can push to a remote server.
+    assertions = [
+      {
+        assertion = cfg.server.profiling.enable;
+        message = ''
+          phlip9-o11y: collector.profiling.enable needs
+          server.profiling.enable on the same host (Alloy's only sink is
+          the local Pyroscope).
+        '';
+      }
+    ];
+
+    services.phlip9-o11y.collector.scrapeConfigs.alloy = {
+      static_configs = hostTargets cfgP.listenAddress;
+    };
+
     # ===================================================================
     # Alloy - eBPF profiler for every process on the host
     # ===================================================================
@@ -373,7 +388,7 @@ in
       enable = true;
       package = phlipPkgsNixos.grafana-alloy;
       extraFlags = [
-        "--server.http.listen-addr=${cfgC.listenAddress}"
+        "--server.http.listen-addr=${cfgP.listenAddress}"
         # No anonymous usage stats to grafana.com
         "--disable-reporting"
       ];

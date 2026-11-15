@@ -20,12 +20,14 @@
 let
   inherit (builtins) toString;
 
-  cfg = config.services.phlip9-o11y;
+  cfg = config.services.phlip9-o11y.server;
 
   cfgVm = config.services.victoriametrics;
   cfgGf = config.services.grafana;
   cfgGfSrv = cfgGf.settings.server;
   gfAddr = "${cfgGfSrv.http_addr}:${toString cfgGfSrv.http_port}";
+
+  inherit (import ../collector/lib.nix { inherit config; }) hostTargets;
 
   # Fail build if plugin's `grafanaDependency` excludes our Grafana version.
   gfPluginsCheck =
@@ -302,7 +304,7 @@ let
   };
 in
 {
-  options.services.phlip9-o11y = {
+  options.services.phlip9-o11y.server = {
     grafana = {
       domain = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -511,6 +513,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    services.phlip9-o11y.collector.scrapeConfigs.grafana = lib.mkIf cfgGf.enable {
+      static_configs = hostTargets gfAddr;
+    };
+
     # ===================================================================
     # Grafana - visualization + dashboards
     # ===================================================================
@@ -518,7 +524,7 @@ in
     # Secrets loaded via systemd LoadCredential, referenced with
     # Grafana's $__file{path} provider.
 
-    services.phlip9-o11y.grafana.logFilters = [
+    services.phlip9-o11y.server.grafana.logFilters = [
       # Silence these warnings
       "search-manifest-watcher:error"
     ];

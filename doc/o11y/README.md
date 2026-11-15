@@ -81,6 +81,14 @@ DNS: `grafana.phlip9.com`
 
 ## Components
 
+NixOS module `services.phlip9-o11y`, two roles:
+
+- `server`: VictoriaMetrics, Grafana, vmalert + Alertmanager, Pyroscope,
+  blackbox probes.
+- `collector`: exporters, the scrape job list (`collector.scrapeConfigs`),
+  Alloy. Feeds the server on the same host (VM's scraper, local Pyroscope),
+  so it needs `server.enable`. sauna enables both.
+
 ### VictoriaMetrics (metrics storage + scraper)
 
 Single-node binary that handles ingestion, storage, and querying.
@@ -91,7 +99,8 @@ NixOS module: `services.victoriametrics`
 Config:
 - `listenAddress`: `127.0.0.1:8428`
 - `retentionPeriod`: `3` (3 months)
-- `prometheusConfig`: scrape configs for all local targets
+- `prometheusConfig`: scrape configs for all local targets, from
+  `phlip9-o11y.collector.scrapeConfigs`
 - Systemd hardening: DynamicUser, ProtectSystem, MemoryDeny, etc.
 
 Storage sizing: with ~4 exporters at 15s scrape interval, expect
@@ -176,12 +185,13 @@ Grafana Git Sync to sync updates between Grafana and GitHub.
   `mcp-grafana`) gets pushed as a commit on `master`.
 - Only dashboards originally provisioned by Git Sync are updated by Git Sync.
   Unmanaged folders and dashboards (ex: `Scratch`) are ignored.
-- Config: `services.phlip9-o11y.grafana.gitSync` in `nixos/sauna/default.nix`.
-  `grafana-git-sync-setup.service` creates/updates the Grafana `Repository`
-  resource, re-sends the PAT, and triggers a pull on every Grafana start
-  (Grafana itself doesn't sync on startup). It also sets the org home
-  dashboard (`gitSync.homeDashboard`): `overview`. A user's own home
-  dashboard preference (Profile -> Preferences) overrides it.
+- Config: `services.phlip9-o11y.server.grafana.gitSync` in
+  `nixos/sauna/default.nix`. `grafana-git-sync-setup.service`
+  creates/updates the Grafana `Repository` resource, re-sends the PAT, and
+  triggers a pull on every Grafana start (Grafana itself doesn't sync on
+  startup). It also sets the org home dashboard (`gitSync.homeDashboard`):
+  `overview`. A user's own home dashboard preference (Profile ->
+  Preferences) overrides it.
 
 ### Agent Workflows
 
@@ -348,7 +358,7 @@ $ nix shell -f ~/dev/dotfiles pkgs.go -c \
 
 ### Setup
 
-1. Add the `phlip9-o11y` service
+1. Enable `services.phlip9-o11y.server` + `services.phlip9-o11y.collector`
 
 2. Re-deploy: (ex: `just deploy sauna`)
 

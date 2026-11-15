@@ -8,8 +8,8 @@
 # - Alloy (see ../collector/alloy.nix) pushes profiles of every process.
 # - Pyroscope (127.0.0.1:4040) stores profiles on local disk and serves
 #   queries. Single-node monolith (`-target=all`) w/ v2 storage.
-# - Grafana gets a Pyroscope datasource (see ./grafana.nix),
-#   VictoriaMetrics scrapes Pyroscope's `/metrics` (see ./default.nix).
+# - Grafana gets a Pyroscope datasource (see ./grafana.nix).
+# - Pyroscope's own `/metrics` are scraped as job `pyroscope`.
 #
 # Pyroscope has no authn, so it only listens on loopback. Grafana is the
 # authz boundary.
@@ -23,9 +23,14 @@
 }:
 
 let
-  cfg = config.services.phlip9-o11y;
+  cfg = config.services.phlip9-o11y.server;
   cfgP = cfg.profiling;
   cfgPyro = config.services.pyroscope;
+  cfgPyroSrv = cfgPyro.settings.server;
+  pyroscopeAddr =
+    "${cfgPyroSrv.http_listen_address}:" + toString cfgPyroSrv.http_listen_port;
+
+  inherit (import ../collector/lib.nix { inherit config; }) hostTargets;
 
   # Generate the YAML exactly like the nixpkgs module does.
   settingsFormat = pkgs.formats.yaml { };
@@ -65,7 +70,7 @@ let
 
 in
 {
-  options.services.phlip9-o11y.profiling = {
+  options.services.phlip9-o11y.server.profiling = {
     enable = lib.mkEnableOption "continuous profiling (Pyroscope)";
 
     retentionPeriod = lib.mkOption {
@@ -86,6 +91,10 @@ in
   };
 
   config = lib.mkIf (cfg.enable && cfgP.enable) {
+    services.phlip9-o11y.collector.scrapeConfigs.pyroscope = {
+      static_configs = hostTargets pyroscopeAddr;
+    };
+
     # ===================================================================
     # Pyroscope - profile storage + queries
     # ===================================================================
