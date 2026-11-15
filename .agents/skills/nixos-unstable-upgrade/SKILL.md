@@ -52,14 +52,24 @@ Package evaluation is unaffected for `homeConfigs` and top-level
 `phlipPkgs` (stable `nixpkgs` pin). Their runtime configs can still need
 migration when consumed by NixOS packages, including out-of-store symlinks.
 
-## Temporary pins
+## Temporary pins + workarounds
 
-Check each on every upgrade; drop the pin (and its note here) once obsolete.
+Check each on every upgrade. Drop once obsolete.
 
 - `electron_43` in `nixos/pkgs/{awakened-poe-trade,exiled-exchange-2}.nix`:
   upstream targets Electron 40 and calls main-process `clipboard.readText()`
   synchronously; Electron 44 made it async. Drop once upstream's
   `main/package.json` targets Electron >= 44.
+- `systemd.services."user@"` `{CPU,IO}PressureWatch = "skip"`
+  (`nixos/mods/default.nix`): systemd 262's `user@.service` only skips
+  the memory watch, so the user manager warns "Failed to adjust io
+  pressure threshold". Drop once NEW's systemd has upstream b6cdaf4a3d,
+  i.e. its `user@.service` skips them too:
+
+  ```bash
+  sd=$(nix eval --raw -f . nixosConfigs.sauna.pkgs.systemd.outPath)
+  grep PressureWatch "$sd/example/systemd/system/user@.service"
+  ```
 
 ## Version mentions
 
