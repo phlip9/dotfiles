@@ -306,6 +306,9 @@ hardening flag: `nixos/mods/o11y/profiling.nix`.
 - Alloy is non-root but near root-equivalent (reads any process memory).
 - Sadly pyroscope has no storage cap, only a max retention period.
 
+For ad-hoc profiling, see our
+[perf profiling skill](../../.agents/skills/perf-profile/SKILL.md).
+
 ### Query profiles from the CLI
 
 ```bash
