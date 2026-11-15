@@ -8,13 +8,13 @@
 
 buildGoModule rec {
   pname = "paseo-relay";
-  version = "0.5.0";
+  version = "0.5.0-unstable-2026-08-08";
 
   src = fetchFromGitHub {
     owner = "zenghongtu";
     repo = "paseo-relay";
-    rev = "v${version}";
-    hash = "sha256-nu7SkS5DpGQSM+qm/KAEzeX+SqUOsYBdwDZpzG+YJF4=";
+    rev = "327b7d5f508d920d980c019e0f3e59205ee6052d";
+    hash = "sha256-eUhF6mJMbwTxZwEXlqDqMkUEqu1f3j9o7cAg1M6qQbQ=";
   };
 
   vendorHash = "sha256-0Qxw+MUYVgzgWB8vi3HBYtVXSq/btfh4ZfV/m1chNrA=";
@@ -25,7 +25,9 @@ buildGoModule rec {
     "-X main.version=v${version}"
   ];
 
-  passthru.updateScript = nix-update-script { };
+  passthru.updateScript = nix-update-script {
+    extraArgs = [ "--version=branch" ];
+  };
 
   meta = {
     description = "Zero-knowledge WebSocket relay server for Paseo";
