@@ -1,0 +1,661 @@
+diff -ruN a/internal/component/pyroscope/appender.go b/internal/component/pyroscope/appender.go
+--- a/internal/component/pyroscope/appender.go
++++ b/internal/component/pyroscope/appender.go
+@@ -30,6 +30,18 @@
+ 	AppendIngest(ctx context.Context, profile *IncomingProfile) error
+ }
+ 
++// BatchAppender is an optional interface of an Appender that can write
++// several series at once, ex: in a single push request.
++type BatchAppender interface {
++	AppendBatch(ctx context.Context, series []Series) error
++}
++
++// Series is one labeled series of a batch, see BatchAppender.
++type Series struct {
++	Labels  labels.Labels
++	Samples []*RawSample
++}
++
+ type RawSample struct {
+ 	ID string
+ 	// raw_profile is the set of bytes of the pprof profile
+@@ -98,7 +110,8 @@
+ 	return f.children
+ }
+ 
+-// Appender satisfies the Appendable interface.
++// Appender satisfies the Appendable interface. The appender is also a
++// BatchAppender if every child's appender is one.
+ func (f *Fanout) Appender() Appender {
+ 	f.mut.RLock()
+ 	defer f.mut.RUnlock()
+@@ -109,11 +122,18 @@
+ 		writeLatency:   f.writeLatency,
+ 		samplesCounter: f.samplesCounter,
+ 	}
++	batch := true
+ 	for _, x := range f.children {
+ 		if x == nil {
+ 			continue
+ 		}
+-		app.children = append(app.children, x.Appender())
++		child := x.Appender()
++		_, ok := child.(BatchAppender)
++		batch = batch && ok
++		app.children = append(app.children, child)
++	}
++	if batch {
++		return &batchAppender{app}
+ 	}
+ 	return app
+ }
+@@ -151,6 +171,39 @@
+ 	}
+ 
+ 	return multiErr
++}
++
++var _ BatchAppender = (*batchAppender)(nil)
++
++// batchAppender is an appender whose children are all BatchAppenders.
++type batchAppender struct {
++	*appender
++}
++
++// AppendBatch satisfies the BatchAppender interface.
++func (a *batchAppender) AppendBatch(ctx context.Context, series []Series) error {
++	now := time.Now()
++	defer func() {
++		a.writeLatency.Observe(time.Since(now).Seconds())
++	}()
++
++	var multiErr error
++	for _, x := range a.children {
++		err := x.(BatchAppender).AppendBatch(ctx, series)
++		if err != nil {
++			multiErr = multierror.Append(multiErr, err)
++		}
++	}
++
++	if multiErr == nil {
++		samples := 0
++		for _, s := range series {
++			samples += len(s.Samples)
++		}
++		a.samplesCounter.Add(float64(samples))
++	}
++
++	return multiErr
+ }
+ 
+ // AppendIngest satisfies the AppenderIngest interface.
+diff -ruN a/internal/component/pyroscope/appender_mock.go b/internal/component/pyroscope/appender_mock.go
+--- a/internal/component/pyroscope/appender_mock.go
++++ b/internal/component/pyroscope/appender_mock.go
+@@ -31,6 +31,28 @@
+ 	}
+ }
+ 
++var _ BatchAppender = BatchAppenderMock{}
++
++// BatchAppenderMock is an AppenderMock that also takes batches.
++type BatchAppenderMock struct {
++	AppenderMock
++	AppendBatchFunc func(ctx context.Context, series []Series) error
++}
++
++func (a BatchAppenderMock) AppendBatch(ctx context.Context, series []Series) error {
++	return a.AppendBatchFunc(ctx, series)
++}
++
++func (a BatchAppenderMock) Appender() Appender {
++	return a
++}
++
++func AppendableBatchFunc(f func(ctx context.Context, series []Series) error) BatchAppenderMock {
++	return BatchAppenderMock{
++		AppendBatchFunc: f,
++	}
++}
++
+ func AppendableIngestFunc(f func(ctx context.Context, profile *IncomingProfile) error) AppenderMock {
+ 	return AppenderMock{
+ 		AppendIngestFunc: f,
+diff -ruN a/internal/component/pyroscope/appender_test.go b/internal/component/pyroscope/appender_test.go
+--- a/internal/component/pyroscope/appender_test.go
++++ b/internal/component/pyroscope/appender_test.go
+@@ -100,3 +100,48 @@
+ 	require.Error(t, f.Appender().AppendIngest(t.Context(), profile))
+ 	require.Equal(t, int32(2), totalAppend.Load())
+ }
++
++func Test_FanOut_AppendBatch(t *testing.T) {
++	totalBatches := atomic.NewInt32(0)
++	series := []Series{
++		{Labels: labels.FromStrings("foo", "a")},
++		{Labels: labels.FromStrings("foo", "b")},
++	}
++	batchFunc := func(err error) BatchAppenderMock {
++		return AppendableBatchFunc(func(_ context.Context, s []Series) error {
++			require.Equal(t, series, s)
++			totalBatches.Inc()
++			return err
++		})
++	}
++
++	// Every child takes batches: so does the fanout
++	f := NewFanout([]Appendable{
++		batchFunc(nil),
++		batchFunc(nil),
++	}, "foo", prometheus.NewRegistry())
++	app, ok := f.Appender().(BatchAppender)
++	require.True(t, ok)
++	require.NoError(t, app.AppendBatch(t.Context(), series))
++	require.Equal(t, int32(2), totalBatches.Load())
++
++	f.UpdateChildren([]Appendable{
++		batchFunc(errors.New("foo")),
++		batchFunc(nil),
++	})
++	totalBatches.Store(0)
++	app, ok = f.Appender().(BatchAppender)
++	require.True(t, ok)
++	require.Error(t, app.AppendBatch(t.Context(), series))
++	require.Equal(t, int32(2), totalBatches.Load())
++
++	// One child without batches: the fanout takes none
++	f.UpdateChildren([]Appendable{
++		batchFunc(nil),
++		AppendableFunc(func(_ context.Context, _ labels.Labels, _ []*RawSample) error {
++			return nil
++		}),
++	})
++	_, ok = f.Appender().(BatchAppender)
++	require.False(t, ok)
++}
+diff -ruN a/internal/component/pyroscope/ebpf/send.go b/internal/component/pyroscope/ebpf/send.go
+--- a/internal/component/pyroscope/ebpf/send.go
++++ b/internal/component/pyroscope/ebpf/send.go
+@@ -12,7 +12,15 @@
+ 
+ const maxSendConcurrency = 32
+ 
++// sendProfiles sends a collect interval's profiles, within one collect
++// interval: in one batch if every receiver takes batches (ex:
++// pyroscope.write: one push request), else one Append per profile.
+ func (c *Component) sendProfiles(ctx context.Context, ps []reporter.PPROF) {
++	if appender, ok := c.appendable.Appender().(pyroscope.BatchAppender); ok {
++		c.sendBatch(ctx, appender, ps)
++		return
++	}
++
+ 	start := time.Now()
+ 	pool := workerPool{}
+ 	n := len(ps)
+@@ -26,14 +34,11 @@
+ 	}()
+ 	j := 0
+ 	for _, p := range ps {
+-		serviceName := p.Labels.Get("service_name")
+-		c.metrics.pprofsTotal.WithLabelValues(serviceName).Inc()
+-		c.metrics.pprofSamplesTotal.WithLabelValues(serviceName).Add(float64(p.Samples))
++		c.observeProfile(p)
+ 
+ 		rawProfile := p.Raw
+ 
+ 		appender := c.appendable.Appender()
+-		c.metrics.pprofBytesTotal.WithLabelValues(serviceName).Add(float64(len(rawProfile)))
+ 
+ 		job := func() {
+ 			samples := []*pyroscope.RawSample{{RawProfile: rawProfile}}
+@@ -54,3 +59,30 @@
+ 		j++
+ 	}
+ }
++
++// sendBatch sends all profiles in one AppendBatch.
++func (c *Component) sendBatch(ctx context.Context, appender pyroscope.BatchAppender, ps []reporter.PPROF) {
++	start := time.Now()
++	ctx, cancel := context.WithTimeout(ctx, c.args.CollectInterval)
++	defer cancel()
++
++	series := make([]pyroscope.Series, 0, len(ps))
++	for _, p := range ps {
++		c.observeProfile(p)
++		series = append(series, pyroscope.Series{
++			Labels:  p.Labels,
++			Samples: []*pyroscope.RawSample{{RawProfile: p.Raw}},
++		})
++	}
++	if err := appender.AppendBatch(ctx, series); err != nil {
++		c.logger.Error("ebpf pprof write", "err", err)
++	}
++	c.logger.Debug("sent profiles", "duration", time.Since(start), "count", len(ps))
++}
++
++func (c *Component) observeProfile(p reporter.PPROF) {
++	serviceName := p.Labels.Get("service_name")
++	c.metrics.pprofsTotal.WithLabelValues(serviceName).Inc()
++	c.metrics.pprofSamplesTotal.WithLabelValues(serviceName).Add(float64(p.Samples))
++	c.metrics.pprofBytesTotal.WithLabelValues(serviceName).Add(float64(len(p.Raw)))
++}
+diff -ruN a/internal/component/pyroscope/ebpf/send_test.go b/internal/component/pyroscope/ebpf/send_test.go
+--- a/internal/component/pyroscope/ebpf/send_test.go
++++ b/internal/component/pyroscope/ebpf/send_test.go
+@@ -124,6 +124,44 @@
+ 	assert.Equal(t, float64(len("short")+len("a longer profile")), gatherCounter(t, reg, "pyroscope_ebpf_pprof_bytes_total", serviceLabels))
+ }
+ 
++func TestSendProfilesBatch(t *testing.T) {
++	reg := prometheus.NewRegistry()
++	c := new(Component)
++	c.metrics = newMetrics(reg)
++	c.logger = util.TestAlloyLogger(t).Slog()
++	c.args.CollectInterval = time.Second
++	var batches [][]pyroscope.Series
++	c.appendable = pyroscope.NewFanout([]pyroscope.Appendable{
++		pyroscope.AppendableBatchFunc(func(ctx context.Context, series []pyroscope.Series) error {
++			_, ok := ctx.Deadline()
++			require.True(t, ok, "batch without a deadline")
++			batches = append(batches, series)
++			return nil
++		}),
++	}, "", reg)
++
++	serviceLabels := labels.FromMap(map[string]string{"service_name": "service_a"})
++	profiles := []reporter.PPROF{}
++	for i := range 100 {
++		profiles = append(profiles, reporter.PPROF{
++			Raw:     []byte(fmt.Sprintf("profile_%d", i)),
++			Samples: 1,
++			Labels:  serviceLabels,
++		})
++	}
++	c.sendProfiles(t.Context(), profiles)
++
++	// One batch with every profile, in order
++	require.Len(t, batches, 1)
++	require.Len(t, batches[0], len(profiles))
++	for i, s := range batches[0] {
++		require.Equal(t, profiles[i].Labels, s.Labels)
++		require.Equal(t, []*pyroscope.RawSample{{RawProfile: profiles[i].Raw}}, s.Samples)
++	}
++	assert.Equal(t, float64(len(profiles)), gatherCounter(t, reg, "pyroscope_ebpf_pprofs_total", serviceLabels))
++	assert.Equal(t, float64(len(profiles)), gatherCounter(t, reg, "pyroscope_ebpf_pprof_samples_total", serviceLabels))
++}
++
+ func gatherDrops(t *testing.T, reg *prometheus.Registry) float64 {
+ 	gather, err := reg.Gather()
+ 	require.NoError(t, err)
+diff -ruN a/internal/component/pyroscope/write/write.go b/internal/component/pyroscope/write/write.go
+--- a/internal/component/pyroscope/write/write.go
++++ b/internal/component/pyroscope/write/write.go
+@@ -358,9 +358,113 @@
+ 
+ // Append implements the Appender interface.
+ func (f *fanOutClient) Append(ctx context.Context, lbs labels.Labels, samples []*pyroscope.RawSample) error {
++	series, err := f.protoSeries(lbs, samples)
++	if err != nil {
++		return err
++	}
++	// push to all clients
++	_, err = f.Push(ctx, connect.NewRequest(&pushv1.PushRequest{
++		Series: []*pushv1.RawProfileSeries{series},
++	}))
++	return err
++}
++
++const (
++	// maxBatchBytes is a soft target for the raw profile bytes per push
++	// request of AppendBatch: a batch is split before a series that would
++	// exceed it. Labels and protobuf framing aren't counted, and a single
++	// series above it still goes in a request of its own, so it doesn't
++	// bound the request size.
++	maxBatchBytes = 4 << 20
++	// maxBatchConcurrency bounds the requests of one AppendBatch in
++	// flight, like the per-profile senders bound theirs.
++	maxBatchConcurrency = 4
++)
++
++// AppendBatch implements the pyroscope.BatchAppender interface: it pushes
++// all series in one request, or in a few above maxBatchBytes, at most
++// maxBatchConcurrency at once. Series with invalid labels are skipped, the
++// rest are still pushed. Each request fails or retries as a whole.
++// Requests not started before ctx is done are dropped.
++func (f *fanOutClient) AppendBatch(ctx context.Context, series []pyroscope.Series) error {
++	var (
++		errs     error
++		errorMut sync.Mutex
++		reqs     []*pushv1.PushRequest
++		reqBytes int
++	)
++	for _, s := range series {
++		protoSeries, err := f.protoSeries(s.Labels, s.Samples)
++		if err != nil {
++			errs = errors.Join(errs, err)
++			continue
++		}
++		size := 0
++		for _, sample := range protoSeries.Samples {
++			size += len(sample.RawProfile)
++		}
++		// Start a new request if this series would overflow the current one
++		if len(reqs) == 0 || reqBytes+size > maxBatchBytes {
++			reqs = append(reqs, &pushv1.PushRequest{})
++			reqBytes = 0
++		}
++		req := reqs[len(reqs)-1]
++		req.Series = append(req.Series, protoSeries)
++		reqBytes += size
++	}
++
++	var (
++		wg      sync.WaitGroup
++		sem     = make(chan struct{}, maxBatchConcurrency)
++		skipped = 0
++	)
++	for _, req := range reqs {
++		// Once ctx is done, drop the requests not started yet
++		if ctx.Err() == nil {
++			select {
++			case sem <- struct{}{}:
++			case <-ctx.Done():
++			}
++		}
++		if ctx.Err() != nil {
++			f.dropRequest(connect.NewRequest(req))
++			skipped++
++			continue
++		}
++		wg.Add(1)
++		go func() {
++			defer func() {
++				<-sem
++				wg.Done()
++			}()
++			if _, err := f.Push(ctx, connect.NewRequest(req)); err != nil {
++				util.ErrorsJoinConcurrent(&errs, err, &errorMut)
++			}
++		}()
++	}
++	wg.Wait()
++	if skipped > 0 {
++		errs = errors.Join(errs, fmt.Errorf("dropped %d of %d batch requests: %w", skipped, len(reqs), context.Cause(ctx)))
++	}
++	return errs
++}
++
++// dropRequest counts a request that was never sent as dropped, for every
++// endpoint, like Push does for a failed one.
++func (f *fanOutClient) dropRequest(req *connect.Request[pushv1.PushRequest]) {
++	size, profiles := requestSize(req)
++	for _, ec := range f.endpoints {
++		f.metrics.droppedBytes.WithLabelValues(ec.options.URL).Add(float64(size))
++		f.metrics.droppedProfiles.WithLabelValues(ec.options.URL).Add(float64(profiles))
++	}
++}
++
++// protoSeries validates a series' labels, then converts it to its push
++// API form, with the external labels.
++func (f *fanOutClient) protoSeries(lbs labels.Labels, samples []*pyroscope.RawSample) (*pushv1.RawProfileSeries, error) {
+ 	// Validate labels first
+ 	if err := validateLabels(lbs); err != nil {
+-		return fmt.Errorf("invalid labels in profile: %w", err)
++		return nil, fmt.Errorf("invalid labels in profile: %w", err)
+ 	}
+ 
+ 	// todo(ctovena): we should probably pool the label pair arrays and label builder to avoid allocs.
+@@ -395,13 +499,7 @@
+ 			RawProfile: sample.RawProfile,
+ 		})
+ 	}
+-	// push to all clients
+-	_, err := f.Push(ctx, connect.NewRequest(&pushv1.PushRequest{
+-		Series: []*pushv1.RawProfileSeries{
+-			{Labels: protoLabels, Samples: protoSamples},
+-		},
+-	}))
+-	return err
++	return &pushv1.RawProfileSeries{Labels: protoLabels, Samples: protoSamples}, nil
+ }
+ 
+ type PyroscopeWriteError struct {
+diff -ruN a/internal/component/pyroscope/write/write_test.go b/internal/component/pyroscope/write/write_test.go
+--- a/internal/component/pyroscope/write/write_test.go
++++ b/internal/component/pyroscope/write/write_test.go
+@@ -8,7 +8,9 @@
+ 	"net/http"
+ 	"net/http/httptest"
+ 	"net/url"
++	"slices"
+ 	"strconv"
++	"strings"
+ 	"sync"
+ 	"testing"
+ 	"time"
+@@ -22,6 +24,7 @@
+ 	typesv1 "github.com/grafana/pyroscope/api/gen/proto/go/types/v1"
+ 	"github.com/grafana/pyroscope/api/model/labelset"
+ 	"github.com/prometheus/client_golang/prometheus"
++	promtestutil "github.com/prometheus/client_golang/prometheus/testutil"
+ 	"github.com/prometheus/prometheus/model/labels"
+ 	"github.com/stretchr/testify/require"
+ 	"github.com/stretchr/testify/suite"
+@@ -869,3 +872,216 @@
+ 		})
+ 	}
+ }
++
++func Test_Write_AppendBatch(t *testing.T) {
++	var (
++		mut sync.Mutex
++		// The series of each push request received
++		requests [][]*pushv1.RawProfileSeries
++		// Requests in flight, and the most at once
++		inFlight, maxInFlight int
++		// If set, requests block until it's closed
++		gate chan struct{}
++	)
++	_, handler := pushv1connect.NewPusherServiceHandler(PushFunc(
++		func(ctx context.Context, req *connect.Request[pushv1.PushRequest]) (*connect.Response[pushv1.PushResponse], error) {
++			mut.Lock()
++			requests = append(requests, req.Msg.Series)
++			inFlight++
++			maxInFlight = max(maxInFlight, inFlight)
++			reqGate := gate
++			mut.Unlock()
++			defer func() {
++				mut.Lock()
++				inFlight--
++				mut.Unlock()
++			}()
++			if reqGate != nil {
++				select {
++				case <-reqGate:
++				case <-ctx.Done():
++					return nil, ctx.Err()
++				}
++			}
++			return &connect.Response[pushv1.PushResponse]{}, nil
++		},
++	))
++	server := httptest.NewServer(handler)
++	defer server.Close()
++
++	argument := DefaultArguments()
++	argument.ExternalLabels = map[string]string{"host": "test-host"}
++	argument.Endpoints = []*EndpointOptions{{
++		URL:           server.URL,
++		RemoteTimeout: GetDefaultEndpointOptions().RemoteTimeout,
++	}}
++
++	var wg sync.WaitGroup
++	var export Exports
++	wg.Add(1)
++	c, err := New(
++		pyrotestlogger.TestLogger(t),
++		noop.Tracer{},
++		prometheus.NewRegistry(),
++		func(e Exports) {
++			defer wg.Done()
++			export = e
++		},
++		"Alloy/239",
++		"",
++		argument,
++	)
++	require.NoError(t, err)
++	ctx, cancel := context.WithCancel(t.Context())
++	defer cancel()
++	go c.Run(ctx)
++	wg.Wait()
++	require.NotNil(t, export.Receiver)
++
++	appender, ok := export.Receiver.Appender().(pyroscope.BatchAppender)
++	require.True(t, ok, "appender should be a BatchAppender")
++
++	series := func(name string, size int) pyroscope.Series {
++		return pyroscope.Series{
++			Labels:  labels.FromStrings("service_name", name),
++			Samples: []*pyroscope.RawSample{{RawProfile: make([]byte, size)}},
++		}
++	}
++	// Takes the service names of each request received so far, ordered by
++	// their first one: the requests of a batch run concurrently.
++	takeRequests := func() [][]string {
++		mut.Lock()
++		defer mut.Unlock()
++		var names [][]string
++		for _, req := range requests {
++			var reqNames []string
++			for _, s := range req {
++				lbs := map[string]string{}
++				for _, l := range s.Labels {
++					lbs[l.Name] = l.Value
++				}
++				require.Equal(t, "test-host", lbs["host"])
++				reqNames = append(reqNames, lbs["service_name"])
++			}
++			names = append(names, reqNames)
++		}
++		slices.SortFunc(names, func(a, b []string) int {
++			return strings.Compare(a[0], b[0])
++		})
++		requests = nil
++		return names
++	}
++
++	t.Run("one request", func(t *testing.T) {
++		invalid := pyroscope.Series{
++			Labels:  labels.FromStrings("service_name", "x", "dup", "1", "dup", "2"),
++			Samples: []*pyroscope.RawSample{{RawProfile: []byte("pprofraw")}},
++		}
++		err := appender.AppendBatch(t.Context(), []pyroscope.Series{
++			series("a", 1), series("b", 1), invalid, series("c", 1),
++		})
++		// The invalid series fails, the rest is pushed
++		require.ErrorContains(t, err, "duplicate label name")
++		require.Equal(t, [][]string{{"a", "b", "c"}}, takeRequests())
++	})
++
++	t.Run("split above maxBatchBytes", func(t *testing.T) {
++		half := maxBatchBytes / 2
++		err := appender.AppendBatch(t.Context(), []pyroscope.Series{
++			series("a", half), series("b", half), series("c", half),
++			series("d", 1), series("e", maxBatchBytes+1), series("f", 1),
++		})
++		require.NoError(t, err)
++		require.Equal(t, [][]string{
++			{"a", "b"}, {"c", "d"}, {"e"}, {"f"},
++		}, takeRequests())
++	})
++
++	t.Run("empty", func(t *testing.T) {
++		require.NoError(t, appender.AppendBatch(t.Context(), nil))
++		require.Empty(t, takeRequests())
++	})
++
++	// A request each, 2 more than may run at once
++	manyRequests := func() []pyroscope.Series {
++		var batch []pyroscope.Series
++		for i := range maxBatchConcurrency + 2 {
++			batch = append(batch, series(strconv.Itoa(i), maxBatchBytes))
++		}
++		return batch
++	}
++	received := func() int {
++		mut.Lock()
++		defer mut.Unlock()
++		return len(requests)
++	}
++	// Blocks requests until the returned func is called, at most once
++	closeGate := func() func() {
++		mut.Lock()
++		defer mut.Unlock()
++		maxInFlight = 0
++		gate = make(chan struct{})
++		g := gate
++		var once sync.Once
++		return func() {
++			once.Do(func() {
++				mut.Lock()
++				defer mut.Unlock()
++				close(g)
++				gate = nil
++			})
++		}
++	}
++	// AppendBatch's result, or a test failure if it hangs
++	waitDone := func(t *testing.T, done <-chan error) error {
++		t.Helper()
++		select {
++		case err := <-done:
++			return err
++		case <-time.After(5 * time.Second):
++			require.FailNow(t, "AppendBatch didn't return within 5s")
++			return nil
++		}
++	}
++
++	t.Run("bounded concurrency", func(t *testing.T) {
++		openGate := closeGate()
++		defer openGate()
++		done := make(chan error, 1)
++		go func() {
++			done <- appender.AppendBatch(t.Context(), manyRequests())
++		}()
++		require.Eventually(t, func() bool {
++			return received() == maxBatchConcurrency
++		}, 5*time.Second, 5*time.Millisecond)
++		openGate()
++		require.NoError(t, waitDone(t, done))
++		require.Len(t, takeRequests(), maxBatchConcurrency+2)
++		mut.Lock()
++		defer mut.Unlock()
++		require.Equal(t, maxBatchConcurrency, maxInFlight)
++	})
++
++	t.Run("cancel drops the rest", func(t *testing.T) {
++		openGate := closeGate()
++		defer openGate()
++		dropped0 := promtestutil.ToFloat64(c.metrics.droppedProfiles.WithLabelValues(server.URL))
++		ctx, cancel := context.WithCancel(t.Context())
++		defer cancel()
++		done := make(chan error, 1)
++		go func() {
++			done <- appender.AppendBatch(ctx, manyRequests())
++		}()
++		require.Eventually(t, func() bool {
++			return received() == maxBatchConcurrency
++		}, 5*time.Second, 5*time.Millisecond)
++		cancel()
++		err := waitDone(t, done)
++		require.ErrorIs(t, err, context.Canceled)
++		require.ErrorContains(t, err, "dropped 2 of 6 batch requests")
++		// The requests in flight fail, the rest is never sent: all dropped
++		require.Len(t, takeRequests(), maxBatchConcurrency)
++		dropped := promtestutil.ToFloat64(c.metrics.droppedProfiles.WithLabelValues(server.URL)) - dropped0
++		require.Equal(t, float64(maxBatchConcurrency+2), dropped)
++	})
++}

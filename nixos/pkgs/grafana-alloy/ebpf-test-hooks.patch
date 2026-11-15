@@ -157,7 +157,7 @@ diff -ruN a/internal/component/pyroscope/ebpf/ebpf_linux.go b/internal/component
 +	// Test hooks, see Arguments.TestHooks. Fixed at New.
 +	testHooks bool
 +	reporter  *reporter.PPROFReporter
-+	// Pushes that failed or were dropped, see the flush hook
++	// Profiles whose push failed or was dropped, see the flush hook
 +	pushFailures atomic.Int64
  }
  
@@ -499,7 +499,7 @@ diff -ruN a/internal/component/pyroscope/ebpf/reporter/pprof.go b/internal/compo
 diff -ruN a/internal/component/pyroscope/ebpf/send.go b/internal/component/pyroscope/ebpf/send.go
 --- a/internal/component/pyroscope/ebpf/send.go
 +++ b/internal/component/pyroscope/ebpf/send.go
-@@ -39,6 +39,7 @@
+@@ -44,6 +44,7 @@
  			samples := []*pyroscope.RawSample{{RawProfile: rawProfile}}
  			err := appender.Append(ctx, p.Labels, samples)
  			if err != nil {
@@ -507,7 +507,7 @@ diff -ruN a/internal/component/pyroscope/ebpf/send.go b/internal/component/pyros
  				c.logger.Error("ebpf pprof write", "err", err)
  			}
  		}
-@@ -48,6 +49,7 @@
+@@ -53,6 +54,7 @@
  		case <-ctx.Done():
  			dropped := n - j
  			c.metrics.pprofsDroppedTotal.Add(float64(dropped))
@@ -515,10 +515,18 @@ diff -ruN a/internal/component/pyroscope/ebpf/send.go b/internal/component/pyros
  			c.logger.Debug("dropped profiles", "count", dropped)
  			return
  		}
+@@ -75,6 +77,7 @@
+ 		})
+ 	}
+ 	if err := appender.AppendBatch(ctx, series); err != nil {
++		c.pushFailures.Add(int64(len(series)))
+ 		c.logger.Error("ebpf pprof write", "err", err)
+ 	}
+ 	c.logger.Debug("sent profiles", "duration", time.Since(start), "count", len(ps))
 diff -ruN a/internal/component/pyroscope/ebpf/testhooks_linux.go b/internal/component/pyroscope/ebpf/testhooks_linux.go
 --- a/internal/component/pyroscope/ebpf/testhooks_linux.go
 +++ b/internal/component/pyroscope/ebpf/testhooks_linux.go
-@@ -0,0 +1,152 @@
+@@ -0,0 +1,153 @@
 +//go:build linux && (arm64 || amd64)
 +
 +package ebpf
@@ -554,8 +562,9 @@ diff -ruN a/internal/component/pyroscope/ebpf/testhooks_linux.go b/internal/comp
 +	StartMs int64 `json:"start_ms"`
 +	EndMs   int64 `json:"end_ms"`
 +	Held    bool  `json:"held"`
-+	// Failed + dropped pushes while the request ran, incl. a periodic
-+	// flush it waited for: 0 = every profile below was pushed.
++	// Profiles whose push failed or was dropped while the request ran,
++	// incl. a periodic flush it waited for: 0 = every profile below was
++	// pushed.
 +	FailedPushes int64            `json:"failed_pushes"`
 +	Profiles     []flushedProfile `json:"profiles"`
 +}
@@ -674,7 +683,7 @@ diff -ruN a/internal/component/pyroscope/ebpf/testhooks_linux.go b/internal/comp
 diff -ruN a/internal/component/pyroscope/ebpf/testhooks_test.go b/internal/component/pyroscope/ebpf/testhooks_test.go
 --- a/internal/component/pyroscope/ebpf/testhooks_test.go
 +++ b/internal/component/pyroscope/ebpf/testhooks_test.go
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,183 @@
 +//go:build (linux && arm64) || (linux && amd64)
 +
 +package ebpf
@@ -812,6 +821,17 @@ diff -ruN a/internal/component/pyroscope/ebpf/testhooks_test.go b/internal/compo
 +	})
 +	addTestHooksSample(t, c)
 +	resp := testHooksJSON[flushResp](t, c, "POST", "/flush")
++	require.EqualValues(t, 1, resp.FailedPushes)
++	require.Len(t, resp.Profiles, 1)
++
++	// Same w/ a receiver that takes batches, ex: pyroscope.write
++	c.appendable.UpdateChildren([]pyroscope.Appendable{
++		pyroscope.AppendableBatchFunc(func(context.Context, []pyroscope.Series) error {
++			return errors.New("batch push failed")
++		}),
++	})
++	addTestHooksSample(t, c)
++	resp = testHooksJSON[flushResp](t, c, "POST", "/flush")
 +	require.EqualValues(t, 1, resp.FailedPushes)
 +	require.Len(t, resp.Profiles, 1)
 +}

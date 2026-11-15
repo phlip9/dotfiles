@@ -95,9 +95,21 @@
     # profile: rows of different pids/tids/cpus are otherwise separate, and
     # Pyroscope validates before it merges them; (2) splits any profile
     # over `max_profile_samples` (default 8000) or `max_profile_bytes`
-    # (default 1 MiB, uncompressed) into several pushes. sauna's largest
+    # (default 1 MiB, uncompressed) into several profiles. sauna's largest
     # merged profile at a CI peak: ~6.1k samples, ~0.58 MB (estimated from
     # Pyroscope's merged 15s windows). Not upstream. Unit tests in the patch.
+    #
+    # `pyroscope.ebpf` pushes each of a collect interval's profiles in its
+    # own request, 32 at once: ~40-75 requests per 15s on sauna, each
+    # acked after Pyroscope's next segment flush. The patch sends the
+    # whole interval as one `PushRequest` w/ a series per profile, when
+    # every `forward_to` receiver takes batches (`pyroscope.write`; else
+    # one push per profile, as before). Splits into a few requests, <= 4
+    # at once, at a soft target of 4 MiB of profile bytes each (a bigger
+    # profile goes alone). A request fails + retries as a whole, see
+    # nixos/mods/o11y/collector/alloy.nix. Not upstream as of main
+    # c3e1ae8. Unit tests in the patch; regression test:
+    # nixos/tests/o11y-profiling-ebpf.nix
     #
     # Test-only hooks, for nixos/tests/o11y-profiling-ebpf.nix: its checks
     # must order their steps w/ the reporter's flushes + the targets the
@@ -117,6 +129,7 @@
       patch -p1 < ${./ebpf-per-pid-profile.patch}
       patch -p1 < ${./ebpf-location-source-file.patch}
       patch -p1 < ${./ebpf-bound-profiles.patch}
+      patch -p1 < ${./pyroscope-batch-push.patch}
       patch -p1 < ${./ebpf-test-hooks.patch}
     ''
     + prev.patchPhase;
