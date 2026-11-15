@@ -1,6 +1,6 @@
 ---
 name: nixos-unstable-upgrade
-description: Use to upgrade nixos-unstable to the latest version, plus its lockstep npins (nixbot, niks3, disko)
+description: Use to upgrade nixos-unstable to latest
 ---
 
 # nixos-unstable upgrade
@@ -11,7 +11,7 @@ channel release). Flow:
 1. research -> gate: report breaking/non-trivial changes and STOP
 2. apply: final commit structure
 3. verify: machines, NixOS tests, CI job set
-4. lockstep pins: bump nixbot, niks3, disko on top of NEW, same flow
+4. lockstep: bump nixbot, niks3, disko, Grafana plugins on top of NEW
 5. final report, then improve this skill
 
 Work in the current workspace (the worktree you start in). Rename its
@@ -37,16 +37,18 @@ package + release notes scanning and summarization.
   `nixos-iso`, `nixos-iso-headless`
 - `nixosTests` (`nixos/tests/default.nix`), built from `pkgsUnstable`
 - `phlipPkgsNixos` (`nixos/pkgs/`), built from `pkgsUnstable`
-- `config.phlipPkgs` inside NixOS (`nixos/mods/phlippkgs.nix`) rebuilds
-  `pkgs/` against unstable, e.g. `phlipPkgs.paseo` on sauna
+- `config.phlipPkgs` inside NixOS (`nixos/mods/phlippkgs.nix`) rebuilds `pkgs/`
+  against unstable, e.g. `phlipPkgs.paseo` on sauna
 - external NixOS modules pinned separately in npins, imported in
   `nixos/mods/default.nix`: sops-nix, disko, nixbot, niks3, paseo, rbitcoin.
   They can break against new nixpkgs (removed options, removed toolchain
   builders like `buildGo1XXModule`). So can packages built from them, e.g.
   `phlipPkgsNixos.nixbot-cli` and `nixbot-eval-jobs` (patched nix).
   - lockstep (Phase 4, every upgrade): nixbot, niks3, disko.
-  - out of scope, own upgrade process: rbitcoin + crane, paseo. sops-nix
-    only when broken (1d).
+  - out of scope, own upgrade process: rbitcoin + crane, paseo. sops-nix only
+    when broken (1d).
+- `phlipPkgsNixos.{grafana-canvas-panel,grafana-pyroscope-datasource}`: Grafana
+  plugins. Lockstep (Phase 4).
 
 Package evaluation is unaffected for `homeConfigs` and top-level
 `phlipPkgs` (stable `nixpkgs` pin). Their runtime configs can still need
@@ -322,9 +324,9 @@ just nix-fmt && just nix-lint && git status --short
 Done when: both logs `exit=0`, all tests passed, no eval warnings, fmt/lint
 clean, re-run of 1e diffs shows nothing unexplained.
 
-## Phase 4: lockstep pins
+## Phase 4: lockstep updates
 
-After the nixos-unstable commits, bump the pins that track nixos-unstable:
+After the nixos-unstable commits, bump npins that track nixos-unstable:
 
 ```bash
 nix build -f . nixosConfigs.sauna.config.system.build.toplevel \
@@ -343,6 +345,15 @@ npins update nixbot niks3 disko
 - One commit per pin, upstream committer dates + 7-char revs:
   `niks3: 2026-09-22 1c74f96 -> 2026-11-12 73468ec`. Patch rebases go in
   the pin's commit.
+
+Then the Grafana plugins, one commit each
+(`grafana-canvas-panel: 13.4.0 -> 13.5.0`). A plugin that needs a newer
+Grafana fails the sauna build (`gfPluginsCheck`); `nixosTests.o11y` loads
+both.
+
+```bash
+just phlippkgs-update grafana-canvas-panel grafana-pyroscope-datasource
+```
 
 ## Final report
 
