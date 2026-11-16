@@ -568,6 +568,16 @@
       # retention, MemoryMax, and the PyroscopeDiskHigh threshold.
       # see: nixos/mods/o11y/server/pyroscope.nix
       profiling.enable = true;
+
+      # Write-only metrics + profiles ingest for remote collectors, ex:
+      # phlipdesk. One htpasswd line per host.
+      # see: doc/o11y/README.md > "Add a collector host"
+      # see: nixos/mods/o11y/server/ingest.nix
+      ingest = {
+        enable = true;
+        vhost = "sauna.phlip9.com";
+        htpasswdFile = config.sops.secrets.o11y-ingest-htpasswd.path;
+      };
     };
 
     # this host's exporters + scrape jobs + Alloy eBPF profiler
@@ -597,6 +607,8 @@
     "zfs"
   ];
   sops.secrets.grafana-admin-password = { };
+  # nginx reads it on every request
+  sops.secrets.o11y-ingest-htpasswd.owner = config.services.nginx.user;
   sops.secrets.grafana-secret-key = { };
   sops.secrets.grafana-secrets-manager-key.restartUnits = [ "grafana.service" ];
   sops.secrets.grafana-git-sync-token.restartUnits = [
