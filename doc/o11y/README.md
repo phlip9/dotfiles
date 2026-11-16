@@ -56,8 +56,10 @@ vmagent (127.0.0.1:8429)
     +-- blackbox          localhost:9115/probe?target=<https url>
 ```
 
-Target machine: `sauna` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0)
-DNS: `grafana.phlip9.com`
+Server: `sauna` (Hetzner 6c/12t, 2x894 GiB NVMe RAID 0), also its own
+collector (loopback).
+Remote collectors: `phlipdesk` (desktop, behind NAT; no alerts).
+DNS: `grafana.phlip9.com`, ingest on `sauna.phlip9.com`
 
 ## Files
 
@@ -174,8 +176,8 @@ Config:
 `server.ingest = { enable; vhost; htpasswdFile; }` adds write-only
 locations under `/o11y/` to an existing nginx vhost (`forceSSL` or
 `onlySSL`). Remote collectors set `collector.remote.url =
-"https://<vhost>/o11y"`. Implemented, but not enabled on sauna yet, and no
-host runs a remote collector yet.
+"https://<vhost>/o11y"`. Enabled on `sauna.phlip9.com`; `phlipdesk` pushes
+to it. To add a host, see Runbooks > "Add a collector host".
 
 - `POST /o11y/metrics/api/v1/write` -> VictoriaMetrics
   `/api/v1/write?extra_label=instance=<username>`. The client's query
@@ -208,11 +210,14 @@ host runs a remote collector yet.
 | `alertmanager-env` | `alertmanager` | `DISCORD_USER_ID` for mentions |
 | `healthchecks-watchdog-ping-url` | `alertmanager` | hc-ping, Watchdog alert |
 | `healthchecks-host-ping-url` | `healthchecks-host-ping` | hc-ping, host timer |
+| `o11y-ingest-htpasswd` | `nginx` | Ingest credentials, one line per collector host |
+| `o11y-ingest-password` (collector hosts) | `vmagent`, `alloy` | That host's ingest password |
 
 All stay root-owned sops files. Units read them through systemd
 `LoadCredential` (`/run/credentials/<unit>/...`), except
 `alertmanager-env`, an `EnvironmentFile` that Alertmanager's config gets
-envsubst'ed with.
+envsubst'ed with, and `o11y-ingest-htpasswd`, owned by nginx, which reads
+it on every request.
 
 Loaded into Grafana via the `$__file{path}` provider pattern,
 which reads the secret from disk at runtime without leaking into
@@ -418,8 +423,7 @@ $ nix shell -f ~/dev/dotfiles pkgs.go -c \
   per-vhost status codes + latency (access log or VTS module).
 - **Log aggregation**: Loki + promtail, separate from metrics.
 - **Profiling**: size retention, `MemoryMax`, and `PyroscopeDiskHigh` from
-  measured data; DWARF inline frames; phlipdesk push; app-side memory/mutex
-  pprof.
+  measured data; DWARF inline frames; app-side memory/mutex pprof.
 
 ## Runbooks
 

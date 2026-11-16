@@ -70,6 +70,40 @@
     users = [ "phlip9" ];
   };
 
+  # =========================================================================
+  # Observability (o11y)
+  # =========================================================================
+  # Collector only: exporters + vmagent + Alloy eBPF profiler, pushed to
+  # sauna's ingest endpoint (this host is behind NAT). Dashboards live on
+  # sauna, pick `phlipdesk` in the `instance` variable. No alerts for this
+  # host: it's not in sauna's `server.alerting.instances`.
+  # see: doc/o11y/README.md
+  # see: nixos/mods/o11y/collector/default.nix
+  services.phlip9-o11y.collector = {
+    enable = true;
+    # Alloy eBPF, whole host: on-CPU at 49 Hz, off-CPU at 0.02 (module
+    # defaults).
+    profiling.enable = true;
+    remote = {
+      url = "https://sauna.phlip9.com/o11y";
+      passwordFile = config.sops.secrets.o11y-ingest-password.path;
+    };
+  };
+  # The units copy the password at start.
+  sops.secrets.o11y-ingest-password.restartUnits = [
+    "vmagent.service"
+    "alloy.service"
+  ];
+
+  # Secrets. No sshd host key here to derive an age key from (unlike
+  # ../profiles/server.nix), so this host has a dedicated age key.
+  # see: doc/SECRETS.md > "runbook: new desktop machine"
+  sops = {
+    defaultSopsFile = ./secrets.yaml;
+    age.keyFile = "/var/lib/sops-nix/key.txt";
+    age.generateKey = true;
+  };
+
   # use a better Linux scheduler for interactive desktop usage
   services.scx-loader = {
     enable = true;
