@@ -59,6 +59,51 @@ $ just sops-updatekeys
 ```
 
 
+## runbook: new desktop machine
+
+Desktop machines have no sshd host key, so they get a dedicated age key.
+They only get access to their own secrets.
+
+Generate the host key, on the machine:
+
+```bash
+$ sudo mkdir -p /var/lib/sops-nix
+$ sudo rage-keygen -o /var/lib/sops-nix/key.txt
+Public key: age1...
+```
+
+Add this age pubkey to `.sops.yaml`, w/ a rule for the host's secrets:
+
+```yaml
+keys:
+  - &phlipdesk age1...
+
+creation_rules:
+  - path_regex: nixos/phlipdesk/secrets.yaml$
+    key_groups:
+      - age:
+        - *phlipdesk
+        - *phlipnixos
+        - *phliptop-mbp
+        - *phliptop-nitro
+```
+
+Point sops-nix at the key and the secrets file in the host config:
+
+```nix
+sops = {
+  defaultSopsFile = ./secrets.yaml;
+  age.keyFile = "/var/lib/sops-nix/key.txt";
+  age.generateKey = true;
+};
+```
+
+Create the secrets file:
+
+```bash
+$ sops nixos/phlipdesk/secrets.yaml
+```
+
 ## runbook: new server machine
 
 Server machines only get access to their own secrets.

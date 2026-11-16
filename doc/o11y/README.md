@@ -459,6 +459,93 @@ $ nix shell -f ~/dev/dotfiles pkgs.go -c \
    * Interface theme: Gilded grove
 
 
+### Add a collector host
+
+For a NixOS host `<host>` that pushes metrics + profiles to sauna. Needs
+sops-nix on `<host>` (see doc/SECRETS.md).
+
+1. Generate the host's ingest password + its htpasswd line:
+
+   ```bash
+   $ umask 077
+   $ openssl rand -base64 32 > /tmp/o11y-password
+   $ echo "<host>:$(openssl passwd -6 -stdin < /tmp/o11y-password)"
+   <host>:$6$...
+   ```
+
+2. Add the password to the host's secrets as `o11y-ingest-password`:
+
+   ```bash
+   $ sops nixos/<host>/secrets.yaml
+   ```
+
+   ```yaml
+   o11y-ingest-password: <contents of /tmp/o11y-password>
+   ```
+
+3. Add the htpasswd line to sauna's `o11y-ingest-htpasswd`, one line per
+   host:
+
+   ```bash
+   $ sops nixos/sauna/secrets.yaml
+   ```
+
+   ```yaml
+   o11y-ingest-htpasswd: |
+     phlipdesk:$6$...
+     <host>:$6$...
+   ```
+
+4. Delete the plaintext password:
+
+   ```bash
+   $ rm /tmp/o11y-password
+   ```
+
+5. Enable the collector in `nixos/<host>/default.nix`:
+
+   ```nix
+   services.phlip9-o11y.collector = {
+     enable = true;
+     profiling.enable = true;
+     remote = {
+       url = "https://sauna.phlip9.com/o11y";
+       passwordFile = config.sops.secrets.o11y-ingest-password.path;
+     };
+   };
+   sops.secrets.o11y-ingest-password.restartUnits = [
+     "vmagent.service"
+     "alloy.service"
+   ];
+   ```
+
+6. Deploy sauna, then `<host>`:
+
+   ```bash
+   $ just deploy sauna
+   # on <host>
+   $ nor switch
+   ```
+
+7. Check on `<host>`:
+
+   ```bash
+   $ systemctl status vmagent alloy
+   $ curl -s http://127.0.0.1:8429/metrics \
+       | grep -E '^vmagent_remotewrite_(requests_total|samples_dropped_total)'
+   $ curl -s http://127.0.0.1:12345/metrics \
+       | grep -E '^pyroscope_write_(sent|dropped)_profiles_total'
+   ```
+
+   Expect `requests_total` w/ `status_code="2XX"` growing, and the dropped
+   counters at 0.
+
+8. Check in Grafana: pick `<host>` in the `instance` variable of "Node
+   Exporter Full" and "Profiling".
+
+9. To also alert on `<host>` (always-on hosts only), add it to
+   `services.phlip9-o11y.server.alerting.instances` on sauna.
+
 ### Git Sync setup
 
 1. Create a fine-grained PAT:
