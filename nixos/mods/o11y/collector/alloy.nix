@@ -1,13 +1,13 @@
 # o11y collector: Alloy eBPF profiler for every process on the host.
 #
 #   Alloy pyroscope.ebpf --push--> Pyroscope (see ../server/pyroscope.nix)
-#   (every process)
+#   (every process)                local, or remote via its ingest endpoint
 #
 # Alloy samples on-CPU + off-CPU stacks of every process on the host w/
 # eBPF, symbolizes them on the host, labels them w/ their systemd unit
-# (kernel threads: `kernel`), and pushes them to the local Pyroscope. Runs
-# as the non-root `alloy` user w/ a few ambient caps. Its `/metrics` are
-# scraped as job `alloy`.
+# (kernel threads: `kernel`), and pushes them to the local Pyroscope, or
+# the `collector.remote` server's. Runs as the non-root `alloy` user w/ a
+# few ambient caps. Its `/metrics` are scraped as job `alloy`.
 #
 # See: doc/o11y/README.md
 {
@@ -26,7 +26,24 @@ let
   cfgPyroSrv = config.services.pyroscope.settings.server;
   cfgAlloy = config.services.alloy;
 
-  inherit (import ./lib.nix { inherit config; }) hostTargets;
+  inherit (import ./lib.nix { inherit config; }) hostTargets ingest;
+
+  # `collector.remote` sink, or null: the local Pyroscope
+  cfgRemote = cfgC.remote;
+  isLocal = cfgRemote == null;
+
+  # `pyroscope.write` component: label + Pyroscope base URL
+  writeLabel = if isLocal then "local" else "remote";
+  writeUrl =
+    if isLocal then
+      "http://${pyroscopeAddr}"
+    else
+      "${cfgRemote.url}${ingest.profilesPath}";
+
+  # systemd credential w/ the remote's basic auth password
+  passwordCredential = "o11y-remote-password";
+  # Its path in the config, under $CREDENTIALS_DIRECTORY
+  passwordPath = alloyLit "/${passwordCredential}";
 
   # Alloy literals: strings, numbers. Alloy strings take JSON's escapes.
   alloyLit = builtins.toJSON;
@@ -172,7 +189,7 @@ let
         discovery.relabel.kernel.output,
         discovery.relabel.units.output,
       )
-      forward_to = [pyroscope.write.local.receiver]
+      forward_to = [pyroscope.write.${writeLabel}.receiver]
 
       // Undocumented. `true` (default) only profiles processes in `targets`.
       // `false` profiles every process; ones w/o a target (not yet
@@ -213,10 +230,20 @@ let
     // can store part of a request and still fail it (ex: some series rate
     // limited), and a retry resends all of it: the stored series twice.
     // So only retry errors that likely stored nothing.
-    pyroscope.write "local" {
+    pyroscope.write ${alloyLit writeLabel} {
       endpoint {
-        url = ${alloyLit "http://${pyroscopeAddr}"}
-
+        url = ${alloyLit writeUrl}
+    ${lib.optionalString (!isLocal) ''
+      // The remote's ingest endpoint (../server/ingest.nix). Alloy
+      // appends `${ingest.pushProcedure}`. Password: a systemd
+      // credential, re-read per request, whitespace trimmed. A wrong one
+      // (nginx 401) isn't retried: the interval's profiles are dropped
+      // w/ one error log line.
+      basic_auth {
+        username      = ${alloyLit cfgRemote.username}
+        password_file = sys.env("CREDENTIALS_DIRECTORY") + ${passwordPath}
+      }
+    ''}
         // A timed-out push may still get stored: give the first attempt
         // the whole interval, so hitting our own deadline is never
         // retried. A deadline error from the server side (ex: a proxy
@@ -289,7 +316,8 @@ in
     enable = lib.mkEnableOption ''
       whole-host continuous profiling: profile every process on this host
       w/ Alloy's `pyroscope.ebpf` and push the profiles to the local
-      Pyroscope (needs `server.profiling.enable`)
+      Pyroscope (needs `server.profiling.enable`), or to
+      `collector.remote`'s (needs `server.profiling.enable` there)
     '';
 
     sampleRate = lib.mkOption {
@@ -388,15 +416,12 @@ in
   };
 
   config = lib.mkIf (cfgC.enable && cfgP.enable) {
-    # Alloy pushes to the local Pyroscope.
-    # TODO(phlip9): drop once the collector can push to a remote server.
     assertions = [
       {
-        assertion = cfg.server.profiling.enable;
+        assertion = cfg.server.profiling.enable || !isLocal;
         message = ''
-          phlip9-o11y: collector.profiling.enable needs
-          server.profiling.enable on the same host (Alloy's only sink is
-          the local Pyroscope).
+          phlip9-o11y: collector.profiling.enable needs a sink:
+          server.profiling.enable on the same host, or collector.remote.
         '';
       }
     ];
@@ -459,11 +484,21 @@ in
         CacheDirectory = "alloy";
         CacheDirectoryMode = "0700";
 
+        # Remote's password, see `basic_auth` in the config. The source can
+        # stay root-only. `toString`: a path literal must not get copied
+        # into the store.
+        LoadCredential = lib.mkIf (!isLocal) [
+          "${passwordCredential}:${toString cfgRemote.passwordFile}"
+        ];
+
         # Hardening. Each setting below was tested w/ eBPF profiling in a VM.
         DevicePolicy = "closed";
-        # Only pushes to Pyroscope + serves /metrics on loopback
-        IPAddressAllow = [ "localhost" ];
-        IPAddressDeny = [ "any" ];
+        # Only pushes to Pyroscope + serves /metrics on loopback. Remote:
+        # any address, the server's IPs come from DNS. No
+        # `network-online.target` either: a push w/o network fails like any
+        # other, and the next interval tries again.
+        IPAddressAllow = lib.mkIf isLocal [ "localhost" ];
+        IPAddressDeny = lib.mkIf isLocal [ "any" ];
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         # Ambient caps still apply after exec

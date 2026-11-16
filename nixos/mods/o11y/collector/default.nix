@@ -11,8 +11,11 @@
 #   samples to VictoriaMetrics. Jobs for this host's exporters + services;
 #   server components add their own self-scrape jobs.
 #
-# Sink: the local VictoriaMetrics over loopback, so the collector needs
-# `server.enable` on the same host.
+# Sinks, see `remote`:
+# - local (default): this host's server, over loopback, w/o auth. Needs
+#   `server.enable` on the same host.
+# - remote: another host's server, over HTTPS w/ basic auth, through its
+#   nginx ingest endpoint (../server/ingest.nix).
 #
 # See: doc/o11y/README.md
 {
@@ -29,6 +32,7 @@ let
   inherit (import ./lib.nix { inherit config; })
     exporterTargets
     hostTargets
+    ingest
     ;
 
   cfgVm = config.services.victoriametrics;
@@ -48,9 +52,17 @@ let
   # keep it on loopback.
   vmagentAddr = "127.0.0.1:8429";
 
+  # `remote` sink, or null: local
+  cfgRemote = cfgC.remote;
+  isLocal = cfgRemote == null;
+
   # Where vmagent sends this host's samples: the local VictoriaMetrics over
-  # loopback, no auth.
-  remoteWriteUrl = "http://${cfgVm.listenAddress}/api/v1/write";
+  # loopback, no auth, or the remote server's ingest endpoint.
+  remoteWriteUrl =
+    if isLocal then
+      "http://${cfgVm.listenAddress}/api/v1/write"
+    else
+      "${cfgRemote.url}${ingest.metricsPath}";
 in
 {
   imports = [
@@ -61,8 +73,70 @@ in
   options.services.phlip9-o11y.collector = {
     enable = lib.mkEnableOption ''
       the o11y collector: exporters + scrape jobs for this host's services.
-      Needs `server.enable` on this host (local sink)
+      Pushes to the server on this host (needs `server.enable`), or to
+      `remote`
     '';
+
+    remote = lib.mkOption {
+      default = null;
+      description = ''
+        Push metrics + profiles to a remote server's ingest endpoint
+        (`server.ingest` there) instead of the server on this host. If set,
+        it wins, even if `server.enable` is on here too.
+
+        Best-effort: nothing spools to disk while running (a clean stop
+        persists vmagent's queue). vmagent retries most failed writes
+        (401, 5xx, network errors) until they succeed, while new samples
+        fill an in-memory queue, then drops new samples; Alloy drops a
+        collect interval's profiles after <= 3 attempts w/in that interval
+        (one attempt, no retries on a 401/403). Neither needs the network
+        at startup.
+      '';
+      type = lib.types.nullOr (
+        lib.types.submodule {
+          options = {
+            url = lib.mkOption {
+              # HTTPS only: basic auth sends the password w/ every request.
+              type = lib.types.strMatching "^https://[^?#]*[^/?#]$";
+              example = "https://sauna.phlip9.com/o11y";
+              description = ''
+                The server's ingest base URL,
+                `https://<server.ingest.vhost>/o11y`, w/o a trailing slash.
+                vmagent writes to
+                `<url>${ingest.metricsPath}`, Alloy pushes to
+                `<url>${ingest.profilesPath}${ingest.pushProcedure}`.
+              '';
+            };
+
+            username = lib.mkOption {
+              type = lib.types.strMatching ingest.usernameRegex;
+              default = config.networking.hostName;
+              defaultText = lib.literalExpression "config.networking.hostName";
+              description = ''
+                Basic auth username: this host's entry in the server's
+                `server.ingest.htpasswdFile`. The server stores this host's
+                samples as `instance=<username>`, whatever the scrape
+                targets say. Profiles keep `collector.profiling.hostLabel`
+                (default: hostname): keep them equal.
+              '';
+            };
+
+            passwordFile = lib.mkOption {
+              type = lib.types.path;
+              example = lib.literalExpression (
+                "config.sops.secrets.o11y-ingest-password.path"
+              );
+              description = ''
+                File w/ this host's basic auth password; trailing whitespace
+                is trimmed. Can stay root-only: vmagent + Alloy get a copy
+                as a systemd credential at (re)start, so restart them after
+                a change (sops `restartUnits`).
+              '';
+            };
+          };
+        }
+      );
+    };
 
     # Keep in sync: nixos/sauna/grafana/*.json select by these `job_name`s,
     # ex: overview "Services" tiles (`up{job=...}`), probes (`blackbox`),
@@ -82,14 +156,12 @@ in
   };
 
   config = lib.mkIf cfgC.enable {
-    # vmagent's only sink is the local VictoriaMetrics, see `remoteWriteUrl`.
-    # TODO(phlip9): drop once the collector can push to a remote server.
     assertions = [
       {
-        assertion = cfg.server.enable;
+        assertion = cfg.server.enable || !isLocal;
         message = ''
-          phlip9-o11y: collector.enable needs server.enable on the same host
-          (the collector's only sink is the local VictoriaMetrics).
+          phlip9-o11y: collector.enable needs a sink: server.enable on the
+          same host, or collector.remote.
         '';
       }
     ];
@@ -101,7 +173,17 @@ in
       enable = true;
       # Same binary as the server's VictoriaMetrics, not `pkgs.vmagent`
       package = cfgVm.package;
-      remoteWrite.url = remoteWriteUrl;
+      remoteWrite = {
+        url = remoteWriteUrl;
+      }
+      # Password: `-remoteWrite.basicAuth.passwordFile` on a systemd
+      # credential (the module's LoadCredential). vmagent re-reads it at
+      # most once per second, trims trailing whitespace.
+      // lib.optionalAttrs (!isLocal) {
+        basicAuthUsername = cfgRemote.username;
+        # `toString`: a path literal must not get copied into the store
+        basicAuthPasswordFile = toString cfgRemote.passwordFile;
+      };
       prometheusConfig.scrape_configs = lib.mapAttrsToList (
         job_name: job: { inherit job_name; } // job
       ) cfgC.scrapeConfigs;
@@ -110,11 +192,17 @@ in
         # niks3 listens on IPv6 loopback; vmagent dials IPv4 only by default.
         "-enableTCP6"
         # Best-effort delivery: no on-disk spool while running. While the
-        # remote is down or slow, blocks wait in an in-memory queue
-        # (retried w/ backoff, 1s..1m). Once it's full, the scrapers drop
-        # new samples (`vmagent_remotewrite_samples_dropped_total`) and
-        # keep scraping: scrapes go through `PushDropSamplesOnFailure`, so
-        # they never block and memory stays bounded.
+        # remote is down, slow, or refuses writes, the oldest block is
+        # retried w/ backoff (1s..1m, or Retry-After) and the rest wait in
+        # an in-memory queue. Retried: any status but 2xx/400/409/415 (ex:
+        # 401, 403, 413, 5xx), a log line per attempt; connect, DNS, TLS
+        # errors + the 1m send timeout, logged <= 1 per 5s. Dropped: 409,
+        # and 400 once a 400/415 to VictoriaMetrics' zstd protocol
+        # downgraded the client to Prometheus' snappy for good. Once the
+        # queue is full, the scrapers drop new samples
+        # (`vmagent_remotewrite_samples_dropped_total`) and keep scraping:
+        # scrapes go through `PushDropSamplesOnFailure`, so they never
+        # block and memory stays bounded.
         # `-remoteWrite.dropSamplesOnOverload` only applies to clients
         # pushing to vmagent: we have none. A clean stop still writes the
         # in-memory queue to `-remoteWrite.tmpDataPath` (CacheDirectory)
@@ -132,17 +220,20 @@ in
     };
 
     systemd.services.vmagent = {
-      # Its remote write target is local: start (+ restart) after it's up,
-      # not into a retry backoff.
-      after = [ "victoriametrics.service" ];
+      # A local remote write target: start (+ restart) after it's up, not
+      # into a retry backoff. A remote one: no `network-online.target`,
+      # vmagent retries until the network + server are there (<= 1m
+      # backoff).
+      after = lib.mkIf isLocal [ "victoriametrics.service" ];
 
-      # Hardening. Only scrapes + writes on loopback. The nixpkgs module
-      # only sets DynamicUser.
+      # Hardening. Scrapes on loopback, writes on loopback or to the
+      # remote server. The nixpkgs module only sets DynamicUser.
       serviceConfig = {
         CapabilityBoundingSet = [ "" ];
         DevicePolicy = "closed";
-        IPAddressAllow = [ "localhost" ];
-        IPAddressDeny = [ "any" ];
+        # Remote: any address, the server's IPs come from DNS.
+        IPAddressAllow = lib.mkIf isLocal [ "localhost" ];
+        IPAddressDeny = lib.mkIf isLocal [ "any" ];
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         NoNewPrivileges = true;
@@ -161,7 +252,11 @@ in
         RestrictAddressFamilies = [
           "AF_INET"
           "AF_INET6"
-        ];
+        ]
+        # Remote: name lookups. vmagent is a cgo build, so w/ NSS modules
+        # in nsswitch.conf (ex: `mymachines`) Go resolves via glibc, which
+        # asks nscd over its unix socket.
+        ++ lib.optional (!isLocal) "AF_UNIX";
         RestrictNamespaces = true;
         RestrictRealtime = true;
         RestrictSUIDSGID = true;

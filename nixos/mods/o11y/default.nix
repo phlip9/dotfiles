@@ -8,7 +8,8 @@
 #   - vmalert + Alertmanager: ./server/alerting.nix
 #   - Pyroscope (profile storage): ./server/pyroscope.nix
 #   - nginx ingest endpoints for remote collectors: ./server/ingest.nix
-# - `collector` (./collector): this host's metrics + profiles
+# - `collector` (./collector): this host's metrics + profiles, pushed to
+#   this host's server or `collector.remote`
 #   - prometheus-{node,nginx,postgres}-exporter: ./collector/default.nix
 #   - vmagent: scrapes `collector.scrapeConfigs`: ./collector/default.nix
 #   - nixos-exporter: ./collector/nixos-exporter.nix
