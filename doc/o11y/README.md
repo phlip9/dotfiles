@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Single-node metrics collection, storage, and visualization
+- Single-node metrics storage + visualization; other hosts push to it
 - Continuous profiling of every process: on-CPU + off-CPU, symbolized, flame
   graphs in Grafana. < 5% CPU
 - Up to 1 TiB storage, 1-3 months retention
@@ -20,11 +20,14 @@
 ## Architecture
 
 ```
-internet
+internet: users, remote collectors (vmagent + alloy, `collector.remote`)
     |
     v
 nginx (443, TLS/ACME)
-    |
+    |  ingest, write-only, basic auth (see Ingest):
+    |    POST /o11y/metrics/api/v1/write
+    |      -> victoriametrics /api/v1/write?extra_label=instance=<user>
+    |    POST /o11y/profiles/push.v1.PusherService/Push -> pyroscope
     v
 grafana (127.0.0.1:3000)
     | MetricsQL queries                 | profile queries
@@ -68,8 +71,9 @@ DNS: `grafana.phlip9.com`
 | `nixos/mods/o11y/server/alertmanager.tmpl` | Discord message templates |
 | `nixos/mods/o11y/server/tests/rules.yml` | Rule unit tests (vmalert-tool) |
 | `nixos/mods/o11y/server/pyroscope.nix` | Server: Pyroscope |
+| `nixos/mods/o11y/server/ingest.nix` | Server: nginx ingest for remote collectors |
 | `nixos/mods/o11y/collector/default.nix` | Collector: vmagent, node/nginx/postgres exporters |
-| `nixos/mods/o11y/collector/lib.nix` | Scrape target helpers (`instance=<hostname>`) |
+| `nixos/mods/o11y/collector/lib.nix` | Scrape target helpers, ingest URL layout |
 | `nixos/mods/o11y/collector/nixos-exporter.nix` | Collector: nixos-exporter |
 | `nixos/mods/o11y/collector/alloy.nix` | Collector: Alloy eBPF profiler |
 | `nixos/pkgs/grafana-alloy/` | Alloy (ahead of nixpkgs) |
@@ -79,6 +83,8 @@ DNS: `grafana.phlip9.com`
 | `nixos/tests/o11y-alerting-unit.nix` | Offline check: rules + routing |
 | `nixos/tests/o11y-profiling.nix` | NixOS container test: Pyroscope |
 | `nixos/tests/o11y-profiling-ebpf.nix` | NixOS VM test: Alloy eBPF end to end |
+| `nixos/tests/o11y-ingest.nix` | NixOS container test: ingest + remote collector |
+| `nixos/tests/lib/o11y-ingest.nix` | Test fixtures: self-signed cert, htpasswd |
 | `nixos/sauna/default.nix` | NixOS machine config |
 | `nixos/sauna/grafana/` | Dashboards (Git Sync manifests) |
 | `.mcp.json` | `mcp-grafana` config for agents (points them at the skill) |
@@ -90,11 +96,13 @@ DNS: `grafana.phlip9.com`
 NixOS module `services.phlip9-o11y`, two roles:
 
 - `server`: VictoriaMetrics, Grafana, vmalert + Alertmanager, Pyroscope,
-  blackbox probes.
+  blackbox probes, ingest endpoint for remote collectors (`server.ingest`).
 - `collector`: exporters, vmagent + its scrape job list
-  (`collector.scrapeConfigs`), Alloy. Feeds the server on the same host
-  (loopback remote write, local Pyroscope), so it needs `server.enable`.
-  sauna enables both.
+  (`collector.scrapeConfigs`), Alloy. Feeds either the server on the same
+  host (default: loopback remote write + local Pyroscope, no auth; needs
+  `server.enable`), or `collector.remote`: another server's ingest
+  endpoint over HTTPS w/ basic auth (remote wins if both). sauna enables
+  both roles, local.
 
 ### vmagent (scraper)
 
@@ -111,7 +119,13 @@ NixOS module: `services.vmagent`, same package as VictoriaMetrics.
   running. While VM is down, scrapes go on, then new samples are dropped
   (`vmagent_remotewrite_samples_dropped_total`). A clean stop writes the
   queue to disk and sends it after the restart.
-- Hardened unit: loopback-only network, no caps, read-only FS.
+- Hardened unit: loopback-only network (any address w/ `remote`), no
+  caps, read-only FS.
+- `remote`: basic auth, password via systemd credential. Most failed
+  writes (401, 5xx, DNS, timeout, ...) are retried w/ backoff (1s..1m)
+  while the queue fills; then new samples are dropped. Except: a 400/415
+  downgrades from VM's zstd protocol to Prometheus' snappy once, then a
+  400 or 409 drops the block. No `network-online` dependency.
 
 ### VictoriaMetrics (metrics storage)
 
@@ -152,10 +166,35 @@ Config:
 
 ### nginx (TLS termination + reverse proxy)
 
-Already running on sauna for nixbot CI. Add a new virtualHost
-for `grafana.phlip9.com` with:
-- `forceSSL = true`, `enableACME = true`
-- Proxy to `http://127.0.0.1:3000`
+- `grafana.phlip9.com` vhost (`forceSSL`, ACME) -> Grafana
+- ingest locations on an existing HTTPS-only vhost, see below
+
+### Ingest (remote collectors)
+
+`server.ingest = { enable; vhost; htpasswdFile; }` adds write-only
+locations under `/o11y/` to an existing nginx vhost (`forceSSL` or
+`onlySSL`). Remote collectors set `collector.remote.url =
+"https://<vhost>/o11y"`. Implemented, but not enabled on sauna yet, and no
+host runs a remote collector yet.
+
+- `POST /o11y/metrics/api/v1/write` -> VictoriaMetrics
+  `/api/v1/write?extra_label=instance=<username>`. The client's query
+  string is dropped; VictoriaMetrics' last-duplicate-label-wins makes the
+  pinned `instance` override any in the body. Pins samples only: metric
+  metadata (HELP, TYPE, UNIT) is global, any credential can replace it
+  (accepted: cosmetic).
+- `POST /o11y/profiles/push.v1.PusherService/Push` -> Pyroscope (if
+  `server.profiling.enable`). The `host` label is client-asserted
+  (accepted: any credential can write profiles as any host).
+- Anything else under `/o11y/` -> 404; other methods -> 403. Exact
+  locations only, each w/ a fixed upstream path.
+- Auth: nginx basic auth, one htpasswd line per host, username = hostname
+  (`[A-Za-z0-9_-]+`, else 403), sha512-crypt (`$6$`) hashes, checked on
+  every request (~3ms CPU). The file must be readable by nginx; read per
+  request, no reload on change.
+- 16 MiB body limit, 60s proxy timeouts (> Alloy's 15s push deadline),
+  requests buffered in nginx, HTTP/2 to clients.
+- This host's own collector stays on loopback, w/o auth.
 
 ## Secrets
 
@@ -333,10 +372,11 @@ hc (healthchecks.io), on missed pings --> #watchdog
 Alloy (`pyroscope.ebpf`, 127.0.0.1:12345) samples on-CPU + off-CPU stacks of
 every process, symbolizes them on the host, labels them w/ their systemd
 unit, and pushes one pprof per (labels, profile type) every 15s to Pyroscope
-(127.0.0.1:4040, 30d retention). Grafana: datasource `pyroscope`, Profiles
-Drilldown, `profiling` dashboard. Config + the why of every knob, cap, and
-hardening flag: `nixos/mods/o11y/server/pyroscope.nix`,
-`nixos/mods/o11y/collector/alloy.nix`.
+(127.0.0.1:4040, 30d retention), in one request per interval. Remote
+collectors push through the ingest endpoint (HTTPS, basic auth). Grafana:
+datasource `pyroscope`, Profiles Drilldown, `profiling` dashboard. Config +
+the why of every knob, cap, and hardening flag:
+`nixos/mods/o11y/server/pyroscope.nix`, `nixos/mods/o11y/collector/alloy.nix`.
 
 - Profile types: `process_cpu:cpu:nanoseconds:cpu:nanoseconds`,
   `offcpu:offcpu:nanoseconds::` (blocked time, sampled at p=0.02).
