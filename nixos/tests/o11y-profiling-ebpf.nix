@@ -6,8 +6,16 @@
 # hot/cold fns that runs as another (dynamic) user. Needs a VM, not a
 # container: eBPF + perf events need the (guest) kernel.
 #
+# The collector pushes like a remote one (`collector.remote`), to this VM's
+# own ingest endpoint: Alloy + vmagent -> nginx (HTTPS, self-signed cert,
+# basic auth) -> Pyroscope + VictoriaMetrics. sauna's loopback push w/o
+# auth only differs in Alloy's endpoint block + IP allow-list. See
+# ./o11y-ingest.nix for the endpoint itself.
+#
 # Verifies:
 # - Alloy runs as uid `alloy` w/ exactly its ambient caps
+# - Alloy pushes through the ingest endpoint: HTTP/2, basic auth w/ a
+#   systemd credential, a base URL w/ a path prefix
 # - a CPU profile for `service_name="ebpf-target"` (in `workload.slice`)
 #   w/ the user hot fn name
 #   (NOT just any profile: missing caps fail silently as `[unknown]`
@@ -50,6 +58,8 @@ let
   # /proc rescan period, see `collector.profiling.refreshInterval`. Short:
   # the exited-process subtest waits for Alloy to apply a start + a stop.
   refreshIntervalMs = 500;
+  # Ingest password of the VM's collector, username = hostname
+  ingestPassword = "machine-test-password-0123456789";
 in
 {
   name = "o11y-profiling-ebpf";
@@ -60,6 +70,9 @@ in
     { lib, pkgs, ... }:
     let
       secret = name: text: pkgs.writeText name "${text}\n";
+
+      ingestLib = import ./lib/o11y-ingest.nix { inherit pkgs; };
+      tls = ingestLib.tlsCert "machine";
 
       # stdenv build, so fixup strips debug info (`strip -S`) but keeps
       # `.symtab`, like most nixpkgs C/C++ binaries.
@@ -117,9 +130,18 @@ in
             secretsManagerKeyFile = secret "gf-sm-key" "test-sm-key-0123456789";
           };
           profiling.enable = true;
+          ingest = {
+            enable = true;
+            vhost = "machine";
+            htpasswdFile = ingestLib.htpasswd { machine = ingestPassword; };
+          };
         };
         collector = {
           enable = true;
+          remote = {
+            url = "https://machine/o11y";
+            passwordFile = secret "o11y-ingest-password" ingestPassword;
+          };
           profiling = {
             enable = true;
             # Faster first profile + the exited-pid timeline. Everything
@@ -135,6 +157,18 @@ in
       # Unused here: Grafana (covered by o11y-profiling), ssh
       services.grafana.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
+
+      # The ingest endpoint's vhost, HTTPS-only like sauna's
+      services.nginx = {
+        enable = true;
+        recommendedProxySettings = true;
+        virtualHosts.machine = {
+          onlySSL = true;
+          sslCertificate = "${tls}/cert.pem";
+          sslCertificateKey = "${tls}/key.pem";
+        };
+      };
+      security.pki.certificateFiles = [ "${tls}/cert.pem" ];
 
       services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
@@ -485,6 +519,8 @@ in
             f"{CURL} {ALLOY_URL}/api/v0/web/components "
             "| jq -c '.[] | {id: .localID, health: .health}'",
             f"{CURL} {PYRO_URL}/ready",
+            "tail -n 20 /var/log/nginx/access.log",
+            "journalctl --no-pager -o cat -u nginx | tail -n 20",
         ]:
             _, out = machine.execute(cmd, timeout=CMD_TIMEOUT)
             print(f"$ {cmd}\n{out}")
@@ -533,6 +569,17 @@ in
             print(f"kernel frames: {sorted(KERNEL_FNS & names)}")
             cpu_t0 = time.monotonic()
             cpu_ns0 = unit_cpu_ns("alloy")
+
+        # Alloy's base URL has a path prefix, `pyroscope.write` appends
+        # the Connect procedure. HTTP/2: one connection for all pushes.
+        with subtest("Alloy pushes through the ingest endpoint"):
+            machine.succeed(
+                "grep -qE ' machine \\[.*\\] \"POST "
+                "/o11y/profiles/push.v1.PusherService/Push HTTP/2.0\" 200 ' "
+                "/var/log/nginx/access.log",
+                "test -s /run/credentials/alloy.service/o11y-remote-password",
+                timeout=CMD_TIMEOUT,
+            )
 
         with subtest("off-CPU profile: blocking fn"):
             wait_for_profile(
