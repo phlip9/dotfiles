@@ -6,6 +6,7 @@
 # - Grafana (visualization + dashboards): see ./grafana.nix
 # - Alerting (vmalert + Alertmanager): see ./alerting.nix
 # - Profiling (Pyroscope): see ./pyroscope.nix
+# - Ingest for remote collectors (nginx): see ./ingest.nix
 #
 # Each component adds its own self-scrape job to `collector.scrapeConfigs`.
 #
@@ -44,6 +45,7 @@ in
     ./grafana.nix
     ./alerting.nix
     ./pyroscope.nix
+    ./ingest.nix
   ];
 
   options.services.phlip9-o11y.server = {

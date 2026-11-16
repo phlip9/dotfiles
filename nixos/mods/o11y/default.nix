@@ -7,6 +7,7 @@
 #   - Grafana + Git Sync + nginx vhost: ./server/grafana.nix
 #   - vmalert + Alertmanager: ./server/alerting.nix
 #   - Pyroscope (profile storage): ./server/pyroscope.nix
+#   - nginx ingest endpoints for remote collectors: ./server/ingest.nix
 # - `collector` (./collector): this host's metrics + profiles
 #   - prometheus-{node,nginx,postgres}-exporter: ./collector/default.nix
 #   - vmagent: scrapes `collector.scrapeConfigs`: ./collector/default.nix
