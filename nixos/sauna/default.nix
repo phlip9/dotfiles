@@ -103,6 +103,17 @@
   # TLS terminates here; proxy to local dotfiles-webhook service.
   services.nginx = {
     enable = true;
+    # nginx 1.30.7 fixes 5 CVEs, incl. remote HTTP/2 worker crashes
+    # (CVE-2026-123007, CVE-2026-123633). <https://nginx.org/en/CHANGES-1.30>
+    # TODO(phlip9): drop once nixos-unstable ships nginx >= 1.30.7
+    # (nixpkgs#589961, 203fe58447406f).
+    package = pkgs.nginxStable.overrideAttrs (_old: {
+      version = "1.30.7";
+      src = pkgs.fetchurl {
+        url = "https://nginx.org/download/nginx-1.30.7.tar.gz";
+        hash = "sha256-JWW1yDcFDpWPcPsPc8SOK8pFQq00n9NW9G+wxyYQvG4=";
+      };
+    });
     recommendedProxySettings = true;
     recommendedBrotliSettings = true;
     recommendedGzipSettings = true;
