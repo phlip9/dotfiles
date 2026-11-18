@@ -2,7 +2,6 @@
   hm,
   phlipPkgs,
   pkgs,
-  pkgsYubikey,
   sources,
 }:
 {
@@ -13,7 +12,6 @@
       inherit phlipPkgs pkgs;
       inherit sources;
       pkgsUnfree = pkgs;
-      pkgsYubikey = pkgs;
     };
   };
 
@@ -25,7 +23,6 @@
       inherit phlipPkgs pkgs;
       inherit sources;
       pkgsUnfree = pkgs;
-      pkgsYubikey = pkgs;
     };
   };
 
@@ -34,7 +31,7 @@
     modules = [ ./phliptop-nitro.nix ];
     extraSpecialArgs = {
       # force hm to use one pkgs eval to reduce eval time by 600ms
-      inherit phlipPkgs pkgs pkgsYubikey;
+      inherit phlipPkgs pkgs;
       inherit sources;
       pkgsUnfree = pkgs;
     };
@@ -48,7 +45,6 @@
       inherit phlipPkgs pkgs;
       inherit sources;
       pkgsUnfree = pkgs;
-      pkgsYubikey = pkgs;
     };
   };
 
@@ -59,7 +55,6 @@
       inherit phlipPkgs pkgs;
       inherit sources;
       pkgsUnfree = pkgs;
-      pkgsYubikey = pkgs;
     };
   };
 }

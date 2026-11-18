@@ -90,13 +90,6 @@
       "hash": "sha256-Obi0Kr71SBfU9aaDxSncVRT4wYTjLzjMyCmmuC2XGd0=",
       "frozen": true
     },
-    "nixpkgs-yubikey": {
-      "type": "Channel",
-      "name": "nixos-24.05",
-      "url": "https://releases.nixos.org/nixos/24.05/nixos-24.05.7376.b134951a4c9f/nixexprs.tar.xz",
-      "hash": "sha256-m6KS4Y44VAxk5ZnELE2dzLbjPtKRGtsprphQC6A7Erk=",
-      "frozen": true
-    },
     "paseo": {
       "type": "GitRelease",
       "repository": {

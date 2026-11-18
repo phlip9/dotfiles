@@ -18,8 +18,6 @@
   sources ? import ./npins,
   # pinned nixpkgs source path
   nixpkgs ? sources.nixpkgs,
-  # pinned old nixpkgs for age-plugin-yubikey that works with older pcscd
-  nixpkgs-yubikey ? sources.nixpkgs-yubikey,
   # pinned nixpkgs unstable source path
   nixos-unstable ? sources.nixos-unstable,
   # pinned home-manager source path
@@ -44,7 +42,6 @@
     )
   ),
   pkgs ? import nixpkgs args,
-  pkgsYubikey ? import nixpkgs-yubikey args,
   pkgsUnstable ? import nixos-unstable args,
   hm ? import home-manager { inherit pkgs; },
 }:
@@ -77,7 +74,6 @@ rec {
       hm
       phlipPkgs
       pkgs
-      pkgsYubikey
       sources
       ;
   };
