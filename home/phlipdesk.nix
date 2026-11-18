@@ -71,9 +71,6 @@
     # # aider-chat - AI developer agent cli
     # phlipPkgs.aider-chat
 
-    # # cargo-release - release a Rust package
-    # phlipPkgs.cargo-release
-
     # claude - AI cli
     phlipPkgs.claude-code
 

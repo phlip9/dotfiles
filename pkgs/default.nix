@@ -21,9 +21,6 @@ in
 fix (phlipPkgs: {
   _type = "pkgs";
 
-  # cargo-release - release a Rust package
-  cargo-release = pkgs.cargo-release;
-
   # cataclysm-dda - Cataclysm: Dark Days Ahead (game)
   cataclysm-dda = callPackage ./cataclysm-dda.nix { };
 

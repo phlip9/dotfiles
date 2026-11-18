@@ -77,10 +77,17 @@
       "frozen": true
     },
     "nixpkgs": {
-      "type": "Channel",
-      "name": "nixos-26.05",
-      "url": "https://releases.nixos.org/nixos/26.05/nixos-26.05.13164.6f06d204d8f2/nixexprs.tar.xz",
-      "hash": "sha256-X+Mp4wtwS+b17lw2puLuzn9e63ZrMKFucvlIUG7xf8I=",
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "NixOS",
+        "repo": "nixpkgs"
+      },
+      "branch": "release-26.05",
+      "submodules": false,
+      "revision": "3457b69ac4aba6d9ea9a743370af160fb502db29",
+      "url": "https://github.com/NixOS/nixpkgs/archive/3457b69ac4aba6d9ea9a743370af160fb502db29.tar.gz",
+      "hash": "sha256-Obi0Kr71SBfU9aaDxSncVRT4wYTjLzjMyCmmuC2XGd0=",
       "frozen": true
     },
     "nixpkgs-yubikey": {
