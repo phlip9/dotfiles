@@ -73,6 +73,10 @@ Check each on every upgrade. Drop once obsolete.
   grep PressureWatch "$sd/example/systemd/system/user@.service"
   ```
 
+- sauna `services.nginx.package` 1.30.7 override (`nixos/sauna/default.nix`):
+  CVE fixes, ahead of nixos-unstable. Drop once NEW ships >= 1.30.7:
+  `nix eval --raw -f . nixosConfigs.sauna.pkgs.nginxStable.version`.
+
 ## Version mentions
 
 Update in the `nixos-unstable` commit when NEW changes the version.
