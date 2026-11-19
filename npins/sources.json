@@ -141,9 +141,9 @@
       },
       "branch": "main",
       "submodules": false,
-      "revision": "b6c05a45b2435cb3471d6f135ddb0b3c2934cc45",
-      "url": "https://github.com/terranix/terranix/archive/b6c05a45b2435cb3471d6f135ddb0b3c2934cc45.tar.gz",
-      "hash": "sha256-ejdemeNa8TK1dcep3oMHmTvfEp+D7D6bnnE2tS59baM="
+      "revision": "163b78792792fcdf24571856028997d0dd5b2e9a",
+      "url": "https://github.com/terranix/terranix/archive/163b78792792fcdf24571856028997d0dd5b2e9a.tar.gz",
+      "hash": "sha256-EGpG3et0sMZEVYBV5fsH3zHp40mjPm6xxsTUOhxJKbc="
     }
   },
   "version": 7
