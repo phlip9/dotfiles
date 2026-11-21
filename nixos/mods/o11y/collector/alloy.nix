@@ -467,6 +467,17 @@ in
       restartTriggers = [ alloyConfigFile ];
       reloadTriggers = lib.mkForce [ ];
 
+      # Memory cap, a runaway guard: Alloy runs in system.slice, which has no
+      # cap of its own and isn't watched by oomd. Hitting MemoryMax OOM-kills
+      # it and systemd restarts it: <= 1 collect interval of profiles + the
+      # BPF load. Measured (2026-11): sauna daily max RSS 240-540 MB, worst
+      # 1.4 GB (CI burst); phlipdesk ~355 MB. BPF maps count too.
+      # No MemoryHigh: it throttles a runaway into a slow crawl instead of a
+      # prompt kill. Small swap cap for the same reason.
+      # GOMEMLIMIT, Go's soft limit, at 75% of the cap: GC harder before the
+      # kill. Explicit, else Alloy sets it to 90% of the cgroup limit.
+      environment.GOMEMLIMIT = "1500MiB";
+
       serviceConfig = {
         DynamicUser = lib.mkForce false;
         User = "alloy";
@@ -502,6 +513,9 @@ in
         IPAddressDeny = lib.mkIf isLocal [ "any" ];
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
+        # Memory cap, see above
+        MemoryMax = "2G";
+        MemorySwapMax = "512M";
         # Ambient caps still apply after exec
         NoNewPrivileges = true;
         PrivateDevices = true;

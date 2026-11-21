@@ -217,10 +217,17 @@ in
       "--collector.textfile.directory=/run/pyroscope-du"
     ];
 
-    # TODO(phlip9): MemoryMax for pyroscope + alloy once measured on sauna.
-    # VM test (2 vCPU, 1 busy unit): pyroscope ~100 MB RSS idle; alloy ~255
-    # MB RSS steady at 97 Hz + off-CPU 0.5, startup peak (BPF load + first
-    # symbolization) up to 455 MB.
+    # Memory cap, a runaway guard: Pyroscope runs in system.slice, which has
+    # no cap of its own and isn't watched by oomd. Hitting MemoryMax
+    # OOM-kills it and systemd restarts it: a few seconds w/o ingest.
+    # Measured on sauna (2026-11, 2 hosts): daily max RSS 180-380 MB, worst
+    # 0.9 GB, cgroup peak 1.5 GB incl. page cache (counted, but reclaimed
+    # before a kill). A big flame graph query adds 1-2 GB.
+    # No MemoryHigh: it throttles a runaway into a slow crawl instead of a
+    # prompt kill. Small swap cap for the same reason.
+    # GOMEMLIMIT, Go's soft limit, at 75% of the cap: GC harder before the
+    # kill, so a legitimate burst is less likely to hit it.
+    systemd.services.pyroscope.environment.GOMEMLIMIT = "3GiB";
 
     # Hardening. Only talks to itself + its clients on loopback. The nixpkgs
     # module already sets DynamicUser, DevicePolicy=closed, StateDirectory,
@@ -231,6 +238,9 @@ in
       IPAddressDeny = [ "any" ];
       LockPersonality = true;
       MemoryDenyWriteExecute = true;
+      # Memory cap, see above
+      MemoryMax = "4G";
+      MemorySwapMax = "512M";
       NoNewPrivileges = true;
       PrivateDevices = true;
       PrivateTmp = true;
