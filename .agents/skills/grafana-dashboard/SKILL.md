@@ -141,6 +141,10 @@ Conventions (see `nixos/sauna/grafana/nix-ci.json` as the reference):
     or `yellow` fills: white text on them is unreadable.
   - No data is never healthy: an explicit UNKNOWN (purple) on tiles; on
     timelines, leave the step empty.
+  - Absent on the host = hidden, no data = UNKNOWN: drop a check whose
+    unit the host doesn't have, but only while its node-exporter is up
+    (overview's per-check `unless on()` gate on
+    `present_over_time(node_systemd_unit_state{name=...})`).
   - Status tiles: `graphMode: "none"`, history lives in a timeline.
   - Reference: `nixos/sauna/grafana/overview.json` (Services, Host health,
     Status timeline). `Dashboard.UP_MAP` follows this.

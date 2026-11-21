@@ -139,7 +139,8 @@ in
     };
 
     # Keep in sync: nixos/sauna/grafana/*.json select by these `job_name`s,
-    # ex: overview "Services" tiles (`up{job=...}`), probes (`blackbox`),
+    # ex: overview "Services" tiles (`up{job=...}`, hidden per host by
+    # `node-exporter`'s unit list), probes (`blackbox`),
     # annotations (`nixos-exporter`); nix-ci (`nixbot`, `niks3`);
     # victoriametrics + node-exporter-full pin their own job; profiling
     # selects the server's `pyroscope` job w/o `instance` (any host).

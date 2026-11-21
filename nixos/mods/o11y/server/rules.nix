@@ -51,7 +51,8 @@ let
   # Keep in sync: nixos/sauna/grafana/overview.json "Services" tiles +
   # "Status timeline" check most of these units by name, plus
   # paseo-relay, vmagent, vmalert, alertmanager, alloy, pyroscope,
-  # nix-daemon.socket.
+  # nix-daemon.socket. As w/ these rules, a unit missing on a host hides
+  # its checks there (incl. its service's scrapes + probes).
   watchedUnits = [
     "github-agent-authd.socket"
     "github-webhook.service"
