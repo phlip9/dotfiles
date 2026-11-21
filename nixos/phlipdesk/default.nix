@@ -96,6 +96,23 @@
     "vmagent.service"
     "alloy.service"
   ];
+  # node-exporter collectors w/o data here, else each reports
+  # node_scrape_collector_success=0: no bcachefs, bonding, Fibre Channel,
+  # InfiniBand, IPVS, md RAID, NFS client/server, tape, or ZFS. RAPL energy
+  # counters are root-only on purpose (CVE-2020-8694 power side channel).
+  services.prometheus.exporters.node.disabledCollectors = [
+    "bcachefs"
+    "bonding"
+    "fibrechannel"
+    "infiniband"
+    "ipvs"
+    "mdadm"
+    "nfs"
+    "nfsd"
+    "rapl"
+    "tapestats"
+    "zfs"
+  ];
 
   # use a better Linux scheduler for interactive desktop usage
   services.scx-loader = {
