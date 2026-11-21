@@ -50,7 +50,8 @@ let
   #
   # Keep in sync: nixos/sauna/grafana/overview.json "Services" tiles +
   # "Status timeline" check most of these units by name, plus
-  # paseo-relay, vmalert, alertmanager, alloy, pyroscope, nix-daemon.socket.
+  # paseo-relay, vmagent, vmalert, alertmanager, alloy, pyroscope,
+  # nix-daemon.socket.
   watchedUnits = [
     "github-agent-authd.socket"
     "github-webhook.service"

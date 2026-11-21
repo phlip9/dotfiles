@@ -1138,9 +1138,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "min((label_set(min(min_over_time(node_systemd_unit_state{instance=~\"$instance\", name=\"victoriametrics.service\", state=\"active\"}[2m])), \"check\", \"victoriametrics.service\") or label_set(vector(0.25), \"check\", \"victoriametrics.service\")) or (label_set(min(min_over_time(up{instance=~\"$instance\", job=\"victoriametrics\"}[2m])), \"check\", \"up victoriametrics\") or label_set(vector(0.25), \"check\", \"up victoriametrics\")))",
+                        "expr": "min((label_set(min(min_over_time(node_systemd_unit_state{instance=~\"$instance\", name=\"victoriametrics.service\", state=\"active\"}[2m])), \"check\", \"victoriametrics.service\") or label_set(vector(0.25), \"check\", \"victoriametrics.service\")) or (label_set(min(min_over_time(node_systemd_unit_state{instance=~\"$instance\", name=\"vmagent.service\", state=\"active\"}[2m])), \"check\", \"vmagent.service\") or label_set(vector(0.25), \"check\", \"vmagent.service\")) or (label_set(min(min_over_time(up{instance=~\"$instance\", job=\"victoriametrics\"}[2m])), \"check\", \"up victoriametrics\") or label_set(vector(0.25), \"check\", \"up victoriametrics\")) or (label_set(min(min_over_time(up{instance=~\"$instance\", job=\"vmagent\"}[2m])), \"check\", \"up vmagent\") or label_set(vector(0.25), \"check\", \"up vmagent\")))",
                         "instant": true,
-                        "legendFormat": "victoriametrics",
+                        "legendFormat": "metrics",
                         "range": false
                       },
                       "version": "v0"
@@ -1198,7 +1198,7 @@
               "transformations": []
             }
           },
-          "description": "Worst of each service's checks over the last 2m: DOWN, UNKNOWN (a check has no data), or UP. History: the status timeline. Click a tile: detail dashboard.\n\n- **nginx**: nginx.service active + stub_status (nginx_up)\n- **paseo**: paseo + paseo-relay units active + both HTTPS probes\n- **nixbot**: nixbot.service active + scrape up + ci.phlip9.com probe\n- **niks3**: niks3.service active + scrape up + cache.phlip9.com probe\n- **postgres**: postgresql.service active + exporter can query it (pg_up)\n- **nix-daemon**: nix-daemon.socket active + nix-daemon.service not failed (the service is socket activated, so inactive is ok)\n- **github-webhook**: github-webhook.service active + sauna.phlip9.com/healthz probe\n- **grafana**: grafana.service active + scrape up + HTTPS probe + Git Sync repository health checks pass (\u003c 2 failed in 15m)\n- **victoriametrics**: victoriametrics.service active + self-scrape up\n- **alerting**: vmalert + alertmanager units active + scrapes up + the Watchdog alert is being written (DOWN if not: the alert feed is stale). A dead pipeline also stops the healthchecks.io Watchdog pings\n- **profiling**: alloy + pyroscope units active + scrapes up",
+          "description": "Worst of each service's checks over the last 2m: DOWN, UNKNOWN (a check has no data), or UP. History: the status timeline. Click a tile: detail dashboard.\n\n- **nginx**: nginx.service active + stub_status (nginx_up)\n- **paseo**: paseo + paseo-relay units active + both HTTPS probes\n- **nixbot**: nixbot.service active + scrape up + ci.phlip9.com probe\n- **niks3**: niks3.service active + scrape up + cache.phlip9.com probe\n- **postgres**: postgresql.service active + exporter can query it (pg_up)\n- **nix-daemon**: nix-daemon.socket active + nix-daemon.service not failed (the service is socket activated, so inactive is ok)\n- **github-webhook**: github-webhook.service active + sauna.phlip9.com/healthz probe\n- **grafana**: grafana.service active + scrape up + HTTPS probe + Git Sync repository health checks pass (\u003c 2 failed in 15m)\n- **metrics**: victoriametrics + vmagent units active + scrapes up (vmagent scrapes this host's exporters and remote-writes to victoriametrics: vmagent down -\u003e every check UNKNOWN)\n- **alerting**: vmalert + alertmanager units active + scrapes up + the Watchdog alert is being written (DOWN if not: the alert feed is stale). A dead pipeline also stops the healthchecks.io Watchdog pings\n- **profiling**: alloy + pyroscope units active + scrapes up",
           "id": 1,
           "links": [],
           "title": "Services",
@@ -1334,7 +1334,7 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "victoriametrics"
+                      "options": "metrics"
                     },
                     "properties": [
                       {
@@ -1767,7 +1767,7 @@
               "transformations": []
             }
           },
-          "description": "Running versions, from each service's build info (postgres: server version; vmalert ships w/ victoriametrics).",
+          "description": "Running versions, from each service's build info (postgres: server version; vmalert + vmagent ship w/ victoriametrics).",
           "id": 8,
           "links": [],
           "title": "Versions",
@@ -2839,9 +2839,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "min((label_set(min(min_over_time(node_systemd_unit_state{instance=~\"$instance\", name=\"victoriametrics.service\", state=\"active\"}[2m])), \"check\", \"victoriametrics.service\") or label_set(vector(0.25), \"check\", \"victoriametrics.service\")) or (label_set(min(min_over_time(up{instance=~\"$instance\", job=\"victoriametrics\"}[2m])), \"check\", \"up victoriametrics\") or label_set(vector(0.25), \"check\", \"up victoriametrics\"))) != 0.25",
+                        "expr": "min((label_set(min(min_over_time(node_systemd_unit_state{instance=~\"$instance\", name=\"victoriametrics.service\", state=\"active\"}[2m])), \"check\", \"victoriametrics.service\") or label_set(vector(0.25), \"check\", \"victoriametrics.service\")) or (label_set(min(min_over_time(node_systemd_unit_state{instance=~\"$instance\", name=\"vmagent.service\", state=\"active\"}[2m])), \"check\", \"vmagent.service\") or label_set(vector(0.25), \"check\", \"vmagent.service\")) or (label_set(min(min_over_time(up{instance=~\"$instance\", job=\"victoriametrics\"}[2m])), \"check\", \"up victoriametrics\") or label_set(vector(0.25), \"check\", \"up victoriametrics\")) or (label_set(min(min_over_time(up{instance=~\"$instance\", job=\"vmagent\"}[2m])), \"check\", \"up vmagent\") or label_set(vector(0.25), \"check\", \"up vmagent\"))) != 0.25",
                         "instant": false,
-                        "legendFormat": "victoriametrics",
+                        "legendFormat": "metrics",
                         "range": true
                       },
                       "version": "v0"
@@ -3067,7 +3067,7 @@
                   {
                     "matcher": {
                       "id": "byName",
-                      "options": "victoriametrics"
+                      "options": "metrics"
                     },
                     "properties": [
                       {
