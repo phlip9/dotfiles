@@ -587,10 +587,10 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "1 - clamp_max(sum(node_md_disks{instance=~\"$instance\", state=\"failed\"}) + sum(node_md_state{instance=~\"$instance\", state=\"inactive\"}) + sum(node_md_degraded{instance=~\"$instance\"}), 1) or vector(-1)",
-                        "instant": false,
+                        "expr": "1 - clamp_max(sum(node_md_disks{instance=~\"$instance\", state=\"failed\"}) + sum(node_md_state{instance=~\"$instance\", state=\"inactive\"}) + sum(node_md_degraded{instance=~\"$instance\"}), 1) or (vector(-1) unless on() (max(up{instance=~\"$instance\", job=\"node-exporter\"}) == 1 unless on() node_scrape_collector_success{instance=~\"$instance\", collector=\"mdadm\"}))",
+                        "instant": true,
                         "legendFormat": "RAID",
-                        "range": true
+                        "range": false
                       },
                       "version": "v0"
                     },
@@ -605,7 +605,7 @@
               "transformations": []
             }
           },
-          "description": "Firing alerts by severity (? = alert feed stale: no Watchdog in 3m), failed systemd units, reboot required (booted kernel/initrd != current system), clock (ClockBad: synced, offset \u003c 100ms), md RAID (MdFailed: no failed/inactive member).",
+          "description": "Firing alerts by severity (? = alert feed stale: no Watchdog in 3m), failed systemd units, reboot required (booted kernel/initrd != current system), clock (ClockBad: synced, offset \u003c 100ms), md RAID (MdFailed: no failed/inactive member; ? = no md data or node-exporter down; hidden on hosts whose node-exporter runs w/o the mdadm collector).",
           "id": 4,
           "links": [],
           "title": "Host health",
@@ -3391,7 +3391,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(nixbot_upload_queue_depth{instance=~\"$instance\"}) or vector(0)",
+                        "expr": "sum(nixbot_upload_queue_depth{instance=~\"$instance\"}) or 0 * max(up{instance=~\"$instance\", job=\"nixbot\"})",
                         "instant": false,
                         "legendFormat": "queued",
                         "range": true
@@ -3412,7 +3412,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(nixbot_upload_queue_retrying{instance=~\"$instance\"}) or vector(0)",
+                        "expr": "sum(nixbot_upload_queue_retrying{instance=~\"$instance\"}) or 0 * max(up{instance=~\"$instance\", job=\"nixbot\"})",
                         "instant": false,
                         "legendFormat": "retrying",
                         "range": true

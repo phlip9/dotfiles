@@ -310,7 +310,7 @@ let
       }
       # RAID0: one lost member loses the array, so this fires late.
       # Keep in sync: nixos/sauna/grafana/overview.json "Host health" RAID
-      # tile (same checks).
+      # tile (same checks; hidden on hosts w/o the mdadm collector).
       {
         alert = "MdFailed";
         expr = lib.concatStringsSep " " [
