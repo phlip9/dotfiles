@@ -95,39 +95,27 @@ DNS: `grafana.phlip9.com`, ingest on `sauna.phlip9.com`
 
 ## Components
 
-NixOS module `services.phlip9-o11y`, two roles:
+NixOS module `services.phlip9-o11y`. Roles:
 
 - `server`: VictoriaMetrics, Grafana, vmalert + Alertmanager, Pyroscope,
   blackbox probes, ingest endpoint for remote collectors (`server.ingest`).
-- `collector`: exporters, vmagent + its scrape job list
-  (`collector.scrapeConfigs`), Alloy. Feeds either the server on the same
-  host (default: loopback remote write + local Pyroscope, no auth; needs
-  `server.enable`), or `collector.remote`: another server's ingest
-  endpoint over HTTPS w/ basic auth (remote wins if both). sauna enables
-  both roles, local.
+- `collector`: exporters, vmagent + scrape jobs (`collector.scrapeConfigs`),
+  Alloy. Pushes to either server on same host (default: loopback + no auth), or
+  `collector.remote` ingest endpoint over HTTPS w/ basic auth.
 
 ### vmagent (scraper)
 
-Scrapes every job in `phlip9-o11y.collector.scrapeConfigs` and
-remote-writes the samples to VM's `/api/v1/write`. Host-local targets are
-labeled `instance=<hostname>`; blackbox probes keep `instance=<url>`. Same
-`up` + `scrape_*` series as a Prometheus scraper.
+`phlip9-o11y.collector.scrapeConfigs` -> remote-write ingest `/api/v1/write`
 
-NixOS module: `services.vmagent`, same package as VictoriaMetrics.
+NixOS module: `services.vmagent`
 
 - Listen: `127.0.0.1:8429` (`/metrics`, `/targets`)
 - Best-effort delivery: in-memory queue capped at 100 blocks (~1 per
   non-empty 1s flush; time covered depends on load), no disk spool while
-  running. While VM is down, scrapes go on, then new samples are dropped
+  running. While VM is down, scraping continues, until new samples are dropped
   (`vmagent_remotewrite_samples_dropped_total`). A clean stop writes the
   queue to disk and sends it after the restart.
-- Hardened unit: loopback-only network (any address w/ `remote`), no
-  caps, read-only FS.
-- `remote`: basic auth, password via systemd credential. Most failed
-  writes (401, 5xx, DNS, timeout, ...) are retried w/ backoff (1s..1m)
-  while the queue fills; then new samples are dropped. Except: a 400/415
-  downgrades from VM's zstd protocol to Prometheus' snappy once, then a
-  400 or 409 drops the block. No `network-online` dependency.
+- `remote`: basic auth, password via systemd credential.
 
 ### VictoriaMetrics (metrics storage)
 
@@ -139,7 +127,6 @@ NixOS module: `services.victoriametrics`
 Config:
 - `listenAddress`: `127.0.0.1:8428`
 - `retentionPeriod`: `3` (3 months)
-- No `prometheusConfig`: the built-in scraper is off, vmagent writes
 - Systemd hardening: DynamicUser, ProtectSystem, MemoryDeny, etc.
 
 Storage sizing: with ~4 exporters at 15s scrape interval, expect
@@ -147,14 +134,14 @@ Storage sizing: with ~4 exporters at 15s scrape interval, expect
 for long-term growth as we add more services and exporters.
 
 Key endpoints:
-- `/ping` — health check
-- `/api/v1/query` — instant query (PromQL/MetricsQL)
-- `/api/v1/query_range` — range query
-- `/api/v1/write` — Prometheus remote write (vmagent)
-- `/metrics` — self-metrics
-- `/vmui` — built-in query UI
+- `/ping`: health check
+- `/api/v1/query`: instant query (PromQL/MetricsQL)
+- `/api/v1/query_range`: range query
+- `/api/v1/write`: Prometheus remote write (via vmagent)
+- `/metrics`: self-metrics
+- `/vmui`: built-in query UI
 
-### Grafana (visualization)
+### Grafana (dashboards)
 
 NixOS module: `services.grafana`
 
@@ -162,16 +149,15 @@ Config:
 - Listen: `127.0.0.1:3000`
 - Database: sqlite3 (single user, no need for postgres)
 - Provisioned datasources: VictoriaMetrics (default), Alertmanager, Pyroscope
-- Admin password: sops secret via `$__file{path}` provider
-- Secret key: sops secret via `$__file{path}` provider
+- Sops secrets via `$__file{path}` provider
 - Disable sign-up, disable gravatar, disable analytics
 
 ### nginx (TLS termination + reverse proxy)
 
-- `grafana.phlip9.com` vhost (`forceSSL`, ACME) -> Grafana
+- `grafana.phlip9.com` -> Grafana
 - ingest locations on an existing HTTPS-only vhost, see below
 
-### Ingest (remote collectors)
+### Ingest (from remote collectors)
 
 `server.ingest = { enable; vhost; htpasswdFile; }` adds write-only
 locations under `/o11y/` to an existing nginx vhost (`forceSSL` or
@@ -180,23 +166,11 @@ locations under `/o11y/` to an existing nginx vhost (`forceSSL` or
 to it. To add a host, see Runbooks > "Add a collector host".
 
 - `POST /o11y/metrics/api/v1/write` -> VictoriaMetrics
-  `/api/v1/write?extra_label=instance=<username>`. The client's query
-  string is dropped; VictoriaMetrics' last-duplicate-label-wins makes the
-  pinned `instance` override any in the body. Pins samples only: metric
-  metadata (HELP, TYPE, UNIT) is global, any credential can replace it
-  (accepted: cosmetic).
+  `/api/v1/write?extra_label=instance=<username>`
 - `POST /o11y/profiles/push.v1.PusherService/Push` -> Pyroscope (if
-  `server.profiling.enable`). The `host` label is client-asserted
-  (accepted: any credential can write profiles as any host).
-- Anything else under `/o11y/` -> 404; other methods -> 403. Exact
-  locations only, each w/ a fixed upstream path.
-- Auth: nginx basic auth, one htpasswd line per host, username = hostname
-  (`[A-Za-z0-9_-]+`, else 403), sha512-crypt (`$6$`) hashes, checked on
-  every request (~3ms CPU). The file must be readable by nginx; read per
-  request, no reload on change.
-- 16 MiB body limit, 60s proxy timeouts (> Alloy's 15s push deadline),
-  requests buffered in nginx, HTTP/2 to clients.
-- This host's own collector stays on loopback, w/o auth.
+  `server.profiling.enable`)
+- Auth: nginx basic auth (TODO(phlip9): mTLS)
+- o11y server's own collector stays on loopback, w/o auth
 
 ## Secrets
 
@@ -212,23 +186,6 @@ to it. To add a host, see Runbooks > "Add a collector host".
 | `healthchecks-host-ping-url` | `healthchecks-host-ping` | hc-ping, host timer |
 | `o11y-ingest-htpasswd` | `nginx` | Ingest credentials, one line per collector host |
 | `o11y-ingest-password` (collector hosts) | `vmagent`, `alloy` | That host's ingest password |
-
-All stay root-owned sops files. Units read them through systemd
-`LoadCredential` (`/run/credentials/<unit>/...`), except
-`alertmanager-env`, an `EnvironmentFile` that Alertmanager's config gets
-envsubst'ed with, and `o11y-ingest-htpasswd`, owned by nginx, which reads
-it on every request.
-
-Loaded into Grafana via the `$__file{path}` provider pattern,
-which reads the secret from disk at runtime without leaking into
-the Nix store. Example:
-
-```nix
-services.grafana.settings.security = {
-  admin_password = "$__file{${config.sops.secrets.grafana-admin-password.path}}";
-  secret_key = "$__file{${config.sops.secrets.grafana-secret-key.path}}";
-};
-```
 
 ## Dashboards
 
@@ -253,12 +210,11 @@ Grafana Git Sync to sync updates between Grafana and GitHub.
 - Only dashboards originally provisioned by Git Sync are updated by Git Sync.
   Unmanaged folders and dashboards (ex: `Scratch`) are ignored.
 - Config: `services.phlip9-o11y.server.grafana.gitSync` in
-  `nixos/sauna/default.nix`. `grafana-git-sync-setup.service`
-  creates/updates the Grafana `Repository` resource, re-sends the PAT, and
-  triggers a pull on every Grafana start (Grafana itself doesn't sync on
-  startup). It also sets the org home dashboard (`gitSync.homeDashboard`):
-  `overview`. A user's own home dashboard preference (Profile ->
-  Preferences) overrides it.
+  `nixos/sauna/default.nix`. `grafana-git-sync-setup.service` creates/updates
+  the Grafana `Repository` resource, re-sends the PAT, and triggers a pull on
+  every Grafana start (Grafana itself doesn't sync on startup). It also sets
+  the org home dashboard (`gitSync.homeDashboard`): `overview`. A user's own
+  home dashboard preference (Profile -> Preferences) overrides it.
 
 ### Agent Workflows
 
@@ -293,14 +249,6 @@ dry run never saves or commits, but open browser tabs of a checked dashboard
 reload once. Grafana has no image renderer plugin; `grafana-screenshot`
 renders the real UI w/ playwright instead.
 
-### Imported community dashboards
-
-| file | upstream |
-|------|----------|
-| `node-exporter-full.json` | [rfmoz/grafana-dashboards](https://github.com/rfmoz/grafana-dashboards/blob/master/prometheus/node-exporter-full.json) |
-| `nginx.json` | [nginx-prometheus-exporter](https://github.com/nginx/nginx-prometheus-exporter/blob/main/grafana/dashboard.json) |
-| `postgres-overview.json` | [postgres_exporter mixin](https://github.com/prometheus-community/postgres_exporter/blob/master/postgres_mixin/dashboards/postgres-overview.json) |
-| `victoriametrics-single-node.json` | [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/dashboards/vm/victoriametrics.json) |
 
 ## Alerting
 
@@ -379,8 +327,7 @@ every process, symbolizes them on the host, labels them w/ their systemd
 unit, and pushes one pprof per (labels, profile type) every 15s to Pyroscope
 (127.0.0.1:4040, 30d retention), in one request per interval. Remote
 collectors push through the ingest endpoint (HTTPS, basic auth). Grafana:
-datasource `pyroscope`, Profiles Drilldown, `profiling` dashboard. Config +
-the why of every knob, cap, and hardening flag:
+datasource `pyroscope`, Profiles Drilldown, `profiling` dashboard. Config:
 `nixos/mods/o11y/server/pyroscope.nix`, `nixos/mods/o11y/collector/alloy.nix`.
 
 - Profile types: `process_cpu:cpu:nanoseconds:cpu:nanoseconds`,
@@ -495,7 +442,6 @@ sops-nix on `<host>` (see doc/SECRETS.md).
 
    ```yaml
    o11y-ingest-htpasswd: |
-     phlipdesk:$6$...
      <host>:$6$...
    ```
 
