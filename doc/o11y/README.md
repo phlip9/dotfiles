@@ -471,8 +471,7 @@ sops-nix on `<host>` (see doc/SECRETS.md).
 1. Generate the host's ingest password + its htpasswd line:
 
    ```bash
-   $ umask 077
-   $ openssl rand -base64 32 > /tmp/o11y-password
+   $ (umask 077; openssl rand -base64 32 > /tmp/o11y-password)
    $ echo "<host>:$(openssl passwd -6 -stdin < /tmp/o11y-password)"
    <host>:$6$...
    ```

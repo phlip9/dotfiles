@@ -22,7 +22,7 @@ $ sops nixos/sauna/secrets.yaml
 ```
 
 
-## runbook: new dev machine
+## runbook: new dev machine master secret
 
 Generate a "master" key. Dev machines have access to all secrets.
 
@@ -31,25 +31,29 @@ $ mkdir -p ~/.config/sops/age
 $ rage-keygen -o ~/.config/sops/age/keys.txt
 ```
 
-Add the pubkey to `.sops.yaml` and all secrets `creation_rules`:
+Add the pubkey to `.sops.yaml` and all secrets' `creation_rules`:
 
 ```yaml
 keys:
-  - &phliptop-nitro age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
-  - &sauna age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
-  - &build01 age173xhxpc7n9vwp84hy3gulfnn0zm9vwn4xce5wrvrs4kx3k8lefxsyhh2pu
+  - &phliptop-nitro_age_master age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
+
+  - &sauna_ssh_system age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
+  - &build01_ssh_system age173xhxpc7n9vwp84hy3gulfnn0zm9vwn4xce5wrvrs4kx3k8lefxsyhh2pu
 
 creation_rules:
   - path_regex: nixos/sauna/secrets.yaml$
     key_groups:
       - age:
-        - *phliptop-nitro
-        - *sauna
+        - *phliptop-nitro_age_master
+
+        - *sauna_ssh_system
+
   - path_regex: nixos/build01/secrets.yaml$
     key_groups:
       - age:
-        - *phliptop-nitro
-        - *build01
+        - *phliptop-nitro_age_master
+
+        - *build01_ssh_system
 ```
 
 Encrypt all secrets to this new key:
@@ -59,7 +63,7 @@ $ just sops-updatekeys
 ```
 
 
-## runbook: new desktop machine
+## runbook: new desktop machine system secret
 
 Desktop machines have no sshd host key, so they get a dedicated age key.
 They only get access to their own secrets.
@@ -76,16 +80,15 @@ Add this age pubkey to `.sops.yaml`, w/ a rule for the host's secrets:
 
 ```yaml
 keys:
-  - &phlipdesk age1...
+  # ...
+  - &phlipdesk_age_system age1...
 
 creation_rules:
   - path_regex: nixos/phlipdesk/secrets.yaml$
     key_groups:
       - age:
-        - *phlipdesk
-        - *phlipnixos
-        - *phliptop-mbp
-        - *phliptop-nitro
+        # ...
+        - *phlipdesk_age_system
 ```
 
 Point sops-nix at the key and the secrets file in the host config:
@@ -104,7 +107,8 @@ Create the secrets file:
 $ sops nixos/phlipdesk/secrets.yaml
 ```
 
-## runbook: new server machine
+
+## runbook: new server machine system secret
 
 Server machines only get access to their own secrets.
 Get the ssh pubkey and convert it to an age pubkey:
@@ -118,15 +122,15 @@ Add this age pubkey to `.sops.yaml`:
 
 ```yaml
 keys:
-  - &phliptop-nitro age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
-  - &sauna age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
+  # ...
+  - &sauna_ssh_system age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
 
 creation_rules:
   - path_regex: nixos/sauna/secrets.yaml$
     key_groups:
       - age:
-        - *phliptop-nitro
-        - *sauna
+        # ...
+        - *sauna_ssh_system
 ```
 
 Encrypt all relevant secrets to this new key:

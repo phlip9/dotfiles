@@ -1,24 +1,36 @@
 # See: <./doc/SECRETS.md>
 
 keys:
-  - &phlipdesk age1dgacrt20yhg9dhc76ggq3s9l7x2nw2htaf3zqa9638elkvmkeqdqr2jzra
-  - &phliptop-mbp age1mvqd856lguk3n2qzs73q6xcj7etgx6le5zy0ceyd96s9xpd36pasfakgcy
-  - &phliptop-nitro age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
-  - &sauna age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
+  - &phlipdesk_age_master age1dgacrt20yhg9dhc76ggq3s9l7x2nw2htaf3zqa9638elkvmkeqdqr2jzra
+  - &phliptop-mbp_age_master age1mvqd856lguk3n2qzs73q6xcj7etgx6le5zy0ceyd96s9xpd36pasfakgcy
+  - &phliptop-nitro_age_master age1t29pqpyt5wryjrryrhc8pc98ft6k3yn7r6yzx44yrkjmnw6kc9uqn43xpw
+
+  - &phlipdesk_age_system age1czt9maw46cgm0mjyx0qe7vgysf8kvx9yln0ek9dz0t6ykhs3n99qgkmclq
+  - &sauna_ssh_system age1meufdn27h733757vg8swsfty5r2srghuxwerhkvm2swyr3ftrunqe7tqff
 
 creation_rules:
+  - path_regex: nixos/phlipdesk/secrets.yaml$
+    key_groups:
+      - age:
+        - *phlipdesk_age_master
+        - *phliptop-mbp_age_master
+        - *phliptop-nitro_age_master
+
+        - *phlipdesk_age_system
+        - *sauna_ssh_system
+
   - path_regex: nixos/sauna/secrets.yaml$
     key_groups:
       - age:
-        - *phlipdesk
-        - *phliptop-mbp
-        - *phliptop-nitro
-        - *sauna
+        - *phlipdesk_age_master
+        - *phliptop-mbp_age_master
+        - *phliptop-nitro_age_master
+
+        - *sauna_ssh_system
 
   - path_regex: ops/secrets.yaml$
     key_groups:
       - age:
-        - *phlipdesk
-        - *phliptop-mbp
-        - *phliptop-nitro
-        - *sauna
+        - *phlipdesk_age_master
+        - *phliptop-mbp_age_master
+        - *phliptop-nitro_age_master

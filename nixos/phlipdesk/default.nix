@@ -95,9 +95,7 @@
     "alloy.service"
   ];
 
-  # Secrets. No sshd host key here to derive an age key from (unlike
-  # ../profiles/server.nix), so this host has a dedicated age key.
-  # see: doc/SECRETS.md > "runbook: new desktop machine"
+  # see: doc/SECRETS.md > "runbook: new desktop machine system secret"
   sops = {
     defaultSopsFile = ./secrets.yaml;
     age.keyFile = "/var/lib/sops-nix/key.txt";
