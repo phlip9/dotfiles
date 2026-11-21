@@ -564,8 +564,7 @@
           config.sops.secrets.healthchecks-host-ping-url.path;
       };
 
-      # Pyroscope, 30d retention (module default). Measure first, then tune
-      # retention, MemoryMax, and the PyroscopeDiskHigh threshold.
+      # Pyroscope, 30d retention (module default).
       # see: nixos/mods/o11y/server/pyroscope.nix
       profiling.enable = true;
 

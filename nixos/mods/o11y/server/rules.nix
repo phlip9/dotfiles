@@ -707,8 +707,8 @@ let
       # timer (./pyroscope.nix).
       {
         alert = "PyroscopeDiskHigh";
-        # TODO(phlip9): provisional. Pick in M3 from measured bytes/day x
-        # 30d retention + ~12h+ deletion lag, w/ headroom on `/`.
+        # A runaway guard, far above normal use: ~80 MB/day on sauna
+        # (2026-11), so ~2.5 GB at 30d retention, plus remote hosts.
         expr = "pyroscope_data_bytes{${inst}} > 50e9";
         for = "1h";
         labels.severity = "warn";
