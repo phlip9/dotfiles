@@ -462,7 +462,7 @@ let
           summary = "Grafana Git Sync repository unhealthy";
           description = lib.concatStringsSep " " [
             "GitHub PAT `grafana-git-sync-token` expired? See"
-            "doc/o11y/README.md \"Rotate Git Sync secrets\"."
+            "doc/o11y/RUNBOOKS.md \"Git Sync setup\"."
           ];
         };
       }

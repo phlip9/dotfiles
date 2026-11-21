@@ -551,7 +551,7 @@
       };
 
       # vmalert + Alertmanager -> Discord, healthchecks.io dead man's switch
-      # see: doc/o11y/README.md > "Alerting setup"
+      # see: doc/o11y/RUNBOOKS.md > "Alerting setup"
       # see: nixos/mods/o11y/server/alerting.nix
       alerting = {
         enable = true;
@@ -571,7 +571,7 @@
 
       # Write-only metrics + profiles ingest for remote collectors, ex:
       # phlipdesk. One htpasswd line per host.
-      # see: doc/o11y/README.md > "Add a collector host"
+      # see: doc/o11y/RUNBOOKS.md > "Add a collector host"
       # see: nixos/mods/o11y/server/ingest.nix
       ingest = {
         enable = true;
