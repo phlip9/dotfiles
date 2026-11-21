@@ -105,6 +105,9 @@ Conventions (see `nixos/sauna/grafana/nix-ci.json` as the reference):
   refresh, shared crosshair. Every series selector filters
   `instance=~"$instance"` (`add_matcher(expr)` adds it). Pin a job w/
   `job="<name>"`, no job picker: `process_*`/`go_*` exist on every job.
+  Exception: server-only parts on a per-host dashboard (ex: Pyroscope on
+  profiling) select by `job` w/o `instance`, so they show the server for
+  any host; say so in the title/legend (`(server)`, `all hosts`).
   Overview's shared parts changed? Rerun `follow_overview()` on every
   dashboard: `just grafana-test` fails until they all match.
 - `RowsLayout`; each row a `GridLayout`, 24 columns. Overview row first:

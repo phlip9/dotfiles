@@ -141,7 +141,8 @@ in
     # Keep in sync: nixos/sauna/grafana/*.json select by these `job_name`s,
     # ex: overview "Services" tiles (`up{job=...}`), probes (`blackbox`),
     # annotations (`nixos-exporter`); nix-ci (`nixbot`, `niks3`);
-    # victoriametrics + node-exporter-full pin their own job.
+    # victoriametrics + node-exporter-full pin their own job; profiling
+    # selects the server's `pyroscope` job w/o `instance` (any host).
     scrapeConfigs = lib.mkOption {
       type = lib.types.attrsOf (pkgs.formats.yaml { }).type;
       default = { };

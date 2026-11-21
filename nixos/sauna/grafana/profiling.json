@@ -276,7 +276,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max(pyroscope_data_bytes{instance=~\"$instance\"})",
+                        "expr": "max(pyroscope_data_bytes)",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -294,10 +294,10 @@
               "transformations": []
             }
           },
-          "description": "Disk usage of /var/lib/pyroscope (du every 15m). PyroscopeDiskHigh fires above 50 GB.",
+          "description": "Disk usage of the server's /var/lib/pyroscope (du every 15m). PyroscopeDiskHigh fires above 50 GB. Pyroscope runs only on the server (sauna), so this ignores the instance picker.",
           "id": 10,
           "links": [],
-          "title": "Pyroscope disk",
+          "title": "Pyroscope disk (server)",
           "vizConfig": {
             "group": "stat",
             "kind": "VizConfig",
@@ -474,7 +474,7 @@
               "transformations": []
             }
           },
-          "description": "Processes the eBPF profiler currently tracks (discovery targets).",
+          "description": "Processes the eBPF profiler on the selected host currently tracks (discovery targets).",
           "id": 8,
           "links": [],
           "title": "eBPF targets",
@@ -558,7 +558,7 @@
               "transformations": []
             }
           },
-          "description": "Alloy components not healthy (AlloyUnhealthy alert \u003e 0 for 10m), ex: the eBPF profiler failed to load.",
+          "description": "Alloy components not healthy on the selected host (AlloyUnhealthy alert \u003e 0 for 10m, alerted hosts only), ex: the eBPF profiler failed to load.",
           "id": 7,
           "links": [],
           "title": "Unhealthy components",
@@ -646,7 +646,7 @@
               "transformations": []
             }
           },
-          "description": "Alloy scrape status.",
+          "description": "Scrape status of Alloy, the profile collector, on the selected host.",
           "id": 5,
           "links": [],
           "title": "Alloy",
@@ -744,7 +744,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "up{job=\"pyroscope\", instance=~\"$instance\"}",
+                        "expr": "up{job=\"pyroscope\"}",
                         "instant": false,
                         "legendFormat": "",
                         "range": true
@@ -762,10 +762,10 @@
               "transformations": []
             }
           },
-          "description": "Pyroscope scrape status.",
+          "description": "Pyroscope scrape status. Pyroscope runs only on the server (sauna), so this ignores the instance picker.",
           "id": 6,
           "links": [],
-          "title": "Pyroscope",
+          "title": "Pyroscope (server)",
           "vizConfig": {
             "group": "stat",
             "kind": "VizConfig",
@@ -1003,7 +1003,7 @@
               "transformations": []
             }
           },
-          "description": "Profiled on-CPU time per systemd unit, in cores (CPU s/s), whole host, top 10; stacked. Gaps = no samples (idle). Click a series to open that unit in Profiles Drilldown.",
+          "description": "Profiled on-CPU time per systemd unit on the selected host, in cores (CPU s/s), top 10; stacked. Gaps = no samples (idle). Click a series to open that unit in Profiles Drilldown.",
           "id": 1,
           "links": [],
           "title": "CPU by unit (top 10)",
@@ -1111,7 +1111,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "max(pyroscope_data_bytes{instance=~\"$instance\"})",
+                        "expr": "max(pyroscope_data_bytes)",
                         "instant": false,
                         "legendFormat": "data dir",
                         "range": true
@@ -1126,10 +1126,10 @@
               "transformations": []
             }
           },
-          "description": "Disk usage of /var/lib/pyroscope (du every 15m). Dashed red line = PyroscopeDiskHigh threshold (50 GB), visible once usage nears it.",
+          "description": "Disk usage of the server's /var/lib/pyroscope (du every 15m). Dashed red line = PyroscopeDiskHigh threshold (50 GB), visible once usage nears it. Pyroscope runs only on the server (sauna), so this ignores the instance picker.",
           "id": 19,
           "links": [],
-          "title": "Pyroscope disk",
+          "title": "Pyroscope disk (server)",
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -1292,9 +1292,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (reason) (rate(pyroscope_distributor_rejected_requests_total{instance=~\"$instance\"}[$__rate_interval]))",
+                        "expr": "sum by (reason) (rate(pyroscope_distributor_rejected_requests_total{job=\"pyroscope\"}[$__rate_interval]))",
                         "instant": false,
-                        "legendFormat": "rejected {{reason}}",
+                        "legendFormat": "rejected {{reason}}, all hosts",
                         "range": true
                       },
                       "version": "v0"
@@ -1406,7 +1406,7 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (profile_name) (rate(pyroscope_segment_writer_head_ingested_sample_values_total{instance=~\"$instance\"}[$__rate_interval]))",
+                        "expr": "sum by (profile_name) (rate(pyroscope_segment_writer_head_ingested_sample_values_total{job=\"pyroscope\"}[$__rate_interval]))",
                         "instant": false,
                         "legendFormat": "{{profile_name}}",
                         "range": true
@@ -1421,10 +1421,10 @@
               "transformations": []
             }
           },
-          "description": "Sample values written by Pyroscope's segment writer, by profile type.",
+          "description": "Sample values written by Pyroscope's segment writer, by profile type, from all hosts. Pyroscope runs only on the server (sauna), so this ignores the instance picker.",
           "id": 16,
           "links": [],
-          "title": "Ingested samples/s",
+          "title": "Ingested samples/s (server, all hosts)",
           "vizConfig": {
             "group": "timeseries",
             "kind": "VizConfig",
@@ -1520,14 +1520,35 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (job) (rate(process_cpu_seconds_total{job=~\"alloy|pyroscope\", instance=~\"$instance\"}[$__rate_interval]))",
+                        "expr": "sum by (job) (rate(process_cpu_seconds_total{job=\"alloy\", instance=~\"$instance\"}[$__rate_interval]))",
                         "instant": false,
-                        "legendFormat": "{{job}}",
+                        "legendFormat": "alloy",
                         "range": true
                       },
                       "version": "v0"
                     },
                     "refId": "A"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "group": "victoriametrics-metrics-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "expr": "sum by (job) (rate(process_cpu_seconds_total{job=\"pyroscope\"}[$__rate_interval]))",
+                        "instant": false,
+                        "legendFormat": "pyroscope (server)",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "B"
                   }
                 }
               ],
@@ -1535,7 +1556,7 @@
               "transformations": []
             }
           },
-          "description": "CPU of the Alloy and Pyroscope processes; 100% = one core.",
+          "description": "CPU of the selected host's Alloy and the server's Pyroscope; 100% = one core.",
           "id": 17,
           "links": [],
           "title": "Process CPU",
@@ -1635,14 +1656,35 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (job) (process_resident_memory_bytes{job=~\"alloy|pyroscope\", instance=~\"$instance\"})",
+                        "expr": "sum by (job) (process_resident_memory_bytes{job=\"alloy\", instance=~\"$instance\"})",
                         "instant": false,
-                        "legendFormat": "{{job}}",
+                        "legendFormat": "alloy",
                         "range": true
                       },
                       "version": "v0"
                     },
                     "refId": "A"
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "hidden": false,
+                    "query": {
+                      "datasource": {
+                        "name": "${DS_PROMETHEUS}"
+                      },
+                      "group": "victoriametrics-metrics-datasource",
+                      "kind": "DataQuery",
+                      "spec": {
+                        "expr": "sum by (job) (process_resident_memory_bytes{job=\"pyroscope\"})",
+                        "instant": false,
+                        "legendFormat": "pyroscope (server)",
+                        "range": true
+                      },
+                      "version": "v0"
+                    },
+                    "refId": "B"
                   }
                 }
               ],
@@ -1650,7 +1692,7 @@
               "transformations": []
             }
           },
-          "description": "Resident memory of the Alloy and Pyroscope processes.",
+          "description": "Resident memory of the selected host's Alloy and the server's Pyroscope.",
           "id": 18,
           "links": [],
           "title": "Process RSS",
@@ -1771,9 +1813,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (type) (rate(pyroscope_distributor_received_compressed_bytes_sum{instance=~\"$instance\"}[$__rate_interval]))",
+                        "expr": "sum by (type) (rate(pyroscope_distributor_received_compressed_bytes_sum{job=\"pyroscope\"}[$__rate_interval]))",
                         "instant": false,
-                        "legendFormat": "recv {{type}} compressed",
+                        "legendFormat": "recv {{type}} compressed, all hosts",
                         "range": true
                       },
                       "version": "v0"
@@ -1792,9 +1834,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum by (type) (rate(pyroscope_distributor_received_decompressed_bytes_sum{instance=~\"$instance\"}[$__rate_interval]))",
+                        "expr": "sum by (type) (rate(pyroscope_distributor_received_decompressed_bytes_sum{job=\"pyroscope\"}[$__rate_interval]))",
                         "instant": false,
-                        "legendFormat": "recv {{type}} decompressed",
+                        "legendFormat": "recv {{type}} decompressed, all hosts",
                         "range": true
                       },
                       "version": "v0"
@@ -1807,7 +1849,7 @@
               "transformations": []
             }
           },
-          "description": "Compressed bytes Alloy sent vs. bytes Pyroscope received, by profile type (compressed + decompressed).",
+          "description": "Compressed bytes the selected host's Alloy sent vs. bytes Pyroscope received from all hosts, by profile type (compressed + decompressed).",
           "id": 12,
           "links": [],
           "title": "Ingest bytes/s",
@@ -2084,9 +2126,9 @@
                       "group": "victoriametrics-metrics-datasource",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "sum(rate(pyroscope_distributor_profiles_received_total{instance=~\"$instance\"}[$__rate_interval]))",
+                        "expr": "sum(rate(pyroscope_distributor_profiles_received_total{job=\"pyroscope\"}[$__rate_interval]))",
                         "instant": false,
-                        "legendFormat": "received",
+                        "legendFormat": "received (server, all hosts)",
                         "range": true
                       },
                       "version": "v0"
@@ -2099,7 +2141,7 @@
               "transformations": []
             }
           },
-          "description": "Profiles collected by eBPF, sent by pyroscope.write, and received by the Pyroscope distributor. All three should match.",
+          "description": "Profiles collected by eBPF and sent by pyroscope.write on the selected host, vs. received by the Pyroscope distributor from all hosts. collected = sent; received = sum of every host's sent.",
           "id": 11,
           "links": [],
           "title": "Profiles/s",
@@ -2213,7 +2255,7 @@
               "transformations": []
             }
           },
-          "description": "Stack samples per second in eBPF profiles (CPU + off-CPU), top 10 units. On-CPU: 49 Hz per busy core.",
+          "description": "Stack samples per second in the selected host's eBPF profiles (CPU + off-CPU), top 10 units. On-CPU: 49 Hz per busy core.",
           "id": 14,
           "links": [],
           "title": "eBPF samples/s by unit (top 10)",
