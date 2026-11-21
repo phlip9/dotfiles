@@ -386,7 +386,7 @@
               "transformations": []
             }
           },
-          "description": "Profiles dropped by Alloy (eBPF + write queue) over the range. ProfilesDropped alerts on \u003e 0 in 5m for 15m.",
+          "description": "Profiles the selected host's Alloy dropped over the range: pushes that failed after retries, or batch requests not started before the collect window's push deadline (pyroscope_write_dropped_profiles_total). eBPF drops (pyroscope_ebpf_pprofs_dropped_total) stay 0 since pushes are batched. ProfilesDropped (alerted hosts only) fires on \u003e 0 in 5m for 15m.",
           "id": 9,
           "links": [],
           "title": "Profiles dropped",
@@ -1307,7 +1307,7 @@
               "transformations": []
             }
           },
-          "description": "Dropped profiles (eBPF, write queue), failing eBPF sessions, and Pyroscope rejected pushes, per second. Should be flat 0.",
+          "description": "Per second, should be flat 0. Selected host's Alloy: write dropped = pushes that failed after retries, or batch requests not started before the collect window's push deadline (pyroscope_write_dropped_profiles_total); ebpf dropped stays 0 since pushes are batched; failing eBPF sessions. Server: pushes Pyroscope rejected, from all hosts.",
           "id": 13,
           "links": [],
           "title": "Drops + failures",
@@ -1984,7 +1984,7 @@
               "transformations": []
             }
           },
-          "description": "pyroscope.write push latency to the endpoint, p50/p99.",
+          "description": "Latency of the selected host's pyroscope.write push requests, p50/p99: one request per 15s collect window (batched; a few above ~4 MiB), incl. Pyroscope's ack after its next segment flush (~0.5s). Remote hosts push over the WAN (phlipdesk: ~0.7-1s). A push must finish w/in the window, else its profiles are dropped.",
           "id": 15,
           "links": [],
           "title": "Push latency",

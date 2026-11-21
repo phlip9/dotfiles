@@ -4698,7 +4698,7 @@
               "transformations": []
             }
           },
-          "description": "Alloy profiles lost: failed pushes to Pyroscope + missed push deadlines. Bursts during big nix builds are normal.",
+          "description": "Profiles lost by Alloy, all hosts: batched pushes to Pyroscope that failed after retries or missed the collect window's deadline. Bursts during big nix builds are normal.",
           "id": 29,
           "links": [
             {
