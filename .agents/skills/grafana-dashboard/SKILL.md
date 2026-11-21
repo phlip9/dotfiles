@@ -341,6 +341,14 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
   - Variables: label-values query variable, spec `{"type": "labelValue",
     "profileTypeId": "...", "labelName": "service_name"}` (also
     `profileType`, `label`).
+    The editor has no selector field. To scope it to a host, append a
+    matcher to the profile type: `"profileTypeId":
+    "process_cpu:cpu:nanoseconds:cpu:nanoseconds\", host=\"$instance"`
+    (profiling.json `service_name`). Works b/c the DS (plugin 13.0.10)
+    builds `{__profile_type__="<profileTypeId>"}` and runs
+    `templateSrv.replace` on it; the var refreshes on `$instance` change.
+    Plugin-internal: recheck on plugin upgrades (options must differ per
+    host). Re-picking the profile type in the editor drops the matcher.
   - The DS doesn't escape variables: use `service_name=~"${var:raw}"` w/
     `allValue: ".+"`. `:regex` breaks: the selector parser rejects its
     `\/` (`ebpf\/unspecified`).

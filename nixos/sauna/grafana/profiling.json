@@ -2749,7 +2749,7 @@
             "value": "$__all"
           },
           "definition": "",
-          "description": "systemd unit (Pyroscope service_name)",
+          "description": "systemd unit (Pyroscope service_name) on the selected host",
           "hide": "dontHide",
           "includeAll": true,
           "label": "unit",
@@ -2764,7 +2764,7 @@
             "kind": "DataQuery",
             "spec": {
               "labelName": "service_name",
-              "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds",
+              "profileTypeId": "process_cpu:cpu:nanoseconds:cpu:nanoseconds\", host=\"$instance",
               "refId": "PyroscopeVariableQueryEditor-VariableQuery",
               "type": "labelValue"
             },

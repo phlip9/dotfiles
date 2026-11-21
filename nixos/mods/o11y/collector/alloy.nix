@@ -384,7 +384,8 @@ in
     };
 
     # Keep in sync: nixos/sauna/grafana/profiling.json profile queries
-    # match `host=~"$instance"` (the scrape targets' `instance` label).
+    # match `host=~"$instance"` (the scrape targets' `instance` label),
+    # its unit var `host="$instance"`.
     hostLabel = lib.mkOption {
       type = lib.types.str;
       default = config.networking.hostName;
