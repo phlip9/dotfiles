@@ -12,12 +12,10 @@
 #
 # Host scoping: only hosts in `server.alerting.instances` get alerts. Every
 # selector on series a collector scrapes (exporters, Alloy, `up`) carries
-# the `inst` matcher, so another host's series (ex: a desktop) can't fire,
-# resolve, or change the result of any rule. Aggregates over these series
-# are `by (instance)`: each alerted host is judged alone, and its alerts
-# keep `instance` for host-correct inhibitions. Not scoped: server-only
-# self metrics (vmalert, Alertmanager, Grafana) and blackbox probes, which
-# are labeled `instance=<url>`.
+# the `inst` matcher. Aggregates over these series are `by (instance)`.
+#
+# Not scoped: server-only self metrics (vmalert, Alertmanager, Grafana) and
+# blackbox probes, which are labeled `instance=<url>`.
 #
 # Keep in sync: nixos/sauna/grafana/overview.json mirrors some rules in its
 # tiles, thresholds, and descriptions; each such rule says so. Its alert
@@ -111,13 +109,15 @@ let
         };
       }
       # vmagent writes no stale markers when it stops (or the host dies),
-      # and a dead scraper writes no `up == 0`: the host's series just stop,
-      # so TargetDown can't see it. Fires per alerted host w/o a single
-      # node-exporter `up` sample (0 or 1) for 3m, + 2m `for`. Deploys
-      # restart vmagent in seconds (<= 1 missed 1m scrape); at boot, `for`
-      # covers the time to vmagent's first scrape. Never fires for a host
-      # that isn't in `alerting.instances`. Nothing to inhibit: the host's
-      # other alerts have no data while it fires.
+      # and a dead scraper writes no `up == 0`; the host's series just stop,
+      # so TargetDown can't see it.
+      #
+      # Fires per alerted host w/o a single node-exporter `up` sample (0 or 1)
+      # for 3m, + 2m `for`. Deploys restart vmagent in seconds (<= 1 missed 1m
+      # scrape); at boot, `for` covers the time to vmagent's first scrape.
+      #
+      # Never fires for a host that isn't in `alerting.instances`. Nothing to
+      # inhibit: the host's other alerts have no data while it fires.
       {
         alert = "HostNotReporting";
         expr = lib.concatMapStringsSep " or " (

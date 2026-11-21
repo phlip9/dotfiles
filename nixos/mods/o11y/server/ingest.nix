@@ -9,27 +9,16 @@
 #
 # One htpasswd credential per collector host, username = its hostname,
 # for both endpoints. nginx pins the samples' `instance` label to the
-# username, so a host can only write samples as itself. Accepted risks, a
-# valid credential can still:
+# username, so a host can only write samples as itself.
+#
+# Accepted risks, a valid credential can still:
 # - write profiles under any `host` label: Pyroscope has no per-request
 #   label override w/o tenants
 # - replace any metric family's metadata (HELP, TYPE, UNIT), for all hosts:
 #   VictoriaMetrics stores remote write metadata w/o `extra_label`.
-#   Cosmetic, and Grafana uses it.
 #
-# This host's own collector writes over loopback, w/o auth, not through
-# here (see ../collector/default.nix).
-#
-# How each request trick is blocked:
-# - other paths, incl. `..`, `//`, `%2F`: nginx matches locations against
-#   the decoded + normalized path. Only two exact (`=`) locations proxy,
-#   each to a fixed upstream path. The rest of the prefix is a 404.
-# - client query string: replaced. A `proxy_pass` URL w/ variables is
-#   sent as is, w/o the client's args; else `$args` is cleared.
-# - spoofed `instance` in the body: VictoriaMetrics appends `extra_label`
-#   after the series' own labels, and the last duplicate label wins
-#   (lib/storage/metric_name.go `sortTags`).
-# - other methods: `limit_except POST`, 403.
+# o11y server host's own collector writes over loopback, w/o auth (see:
+# ../collector/default.nix).
 #
 # See: doc/o11y/README.md
 {

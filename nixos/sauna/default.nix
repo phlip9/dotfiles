@@ -607,7 +607,6 @@
     "zfs"
   ];
   sops.secrets.grafana-admin-password = { };
-  # nginx reads it on every request
   sops.secrets.o11y-ingest-htpasswd.owner = config.services.nginx.user;
   sops.secrets.grafana-secret-key = { };
   sops.secrets.grafana-secrets-manager-key.restartUnits = [ "grafana.service" ];
