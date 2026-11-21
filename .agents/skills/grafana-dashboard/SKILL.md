@@ -10,6 +10,16 @@ description: Use before any Grafana work on grafana.phlip9.com, incl. every mcp-
 `master`. Basics apply to any Grafana work; the rest is for building and
 changing dashboards.
 
+Hosts (`instance=<host>` on metrics, `host=<host>` on profiles):
+
+- `sauna`: the server (VictoriaMetrics, Pyroscope, Grafana, vmalert,
+  Alertmanager, blackbox, all services) + its own collector.
+- `phlipdesk`: NAT'd desktop, collector only (jobs `node-exporter`,
+  `nixos-exporter`, `vmagent`, `alloy`), no alerts, may be off/suspended:
+  gaps are normal. Data since 2026-11-21.
+- Collector: each host's `vmagent` scrapes its jobs and remote-writes to
+  VictoriaMetrics (no VM-side scraping); Alloy pushes profiles to Pyroscope.
+
 ## Basics
 
 - **Never write outside Scratch.** Every server-side save of a synced dashboard
@@ -302,7 +312,8 @@ Sync; old generator scripts are gone): edit it in place, never regenerate it.
 
 ## Profiles
 
-Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
+Continuous profiling: Alloy eBPF on every host samples all its processes
+-> one batched push per 15s collect window -> Pyroscope on sauna.
 
 - Datasource: `{"type": "grafana-pyroscope-datasource", "uid":
   "pyroscope"}`. `pyroscope` is the `data_source_uid` for the mcp tools.
@@ -312,7 +323,8 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
 - Labels: `service_name` = systemd unit (`nginx`, `nix-daemon`,
   `getty@` for templates, `user-<name>` for sessions, `systemd` = PID 1,
   `ebpf/unspecified` = kernel threads + procs younger than one discovery
-  scan), `exe` = exe basename (`.foo-wrapped` -> `foo`), `host`. No pid.
+  scan), `exe` = exe basename (`.foo-wrapped` -> `foo`), `host` = host
+  name (metrics' `instance`). No pid.
 - UI: Profiles Drilldown,
   `https://grafana.phlip9.com/a/grafana-pyroscope-app/explore?explorationType=flame-graph&var-dataSource=pyroscope&var-serviceName=<unit>&var-profileMetricId=<type id>`
   (+ `&from=..&to=..`; `explorationType=all` = service list). One unit
@@ -352,10 +364,14 @@ Continuous profiling: Alloy eBPF samples every process on sauna -> Pyroscope.
   - The DS doesn't escape variables: use `service_name=~"${var:raw}"` w/
     `allValue: ".+"`. `:regex` breaks: the selector parser rejects its
     `\/` (`ebpf\/unspecified`).
-- Health metrics (VictoriaMetrics): jobs `alloy` + `pyroscope`,
-  `pyroscope_write_*`, `pyroscope_ebpf_*`, `pyroscope_data_bytes`,
-  `pyroscope_distributor_*`. `pyroscope_write_dropped_profiles_total` only
-  exists after the first drop (`or vector(0)`).
+- Health metrics (VictoriaMetrics): per host, job `alloy`:
+  `pyroscope_write_*` (`pyroscope_write_latency` = one sample per batched
+  push), `pyroscope_ebpf_*`; server only: job `pyroscope`
+  (`pyroscope_distributor_*`, `pyroscope_segment_writer_*`),
+  `pyroscope_data_bytes` (node-exporter textfile). Drops:
+  `pyroscope_write_dropped_profiles_total` (only exists after the first
+  drop: `or vector(0)`); `pyroscope_ebpf_pprofs_dropped_total` stays 0
+  since batching.
 - Don't query huge `maxNodes` (>= 1e6) by hand: Pyroscope RSS jumps to
   ~1 GiB.
 
