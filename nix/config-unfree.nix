@@ -8,6 +8,7 @@ let
     android-sdk-platform-tools = null;
     android-sdk-platforms = null;
     android-sdk-tools = null;
+    antigravity-cli = null;
     build-tools = null;
     cmake = null;
     cmdline-tools = null;

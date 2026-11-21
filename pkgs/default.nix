@@ -21,6 +21,9 @@ in
 fix (phlipPkgs: {
   _type = "pkgs";
 
+  # antigravity-cli - Google Antigravity agent CLI (`agy`)
+  antigravity-cli = callPackage ./antigravity-cli { };
+
   # cataclysm-dda - Cataclysm: Dark Days Ahead (game)
   cataclysm-dda = callPackage ./cataclysm-dda.nix { };
 
