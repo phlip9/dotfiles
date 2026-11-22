@@ -10,12 +10,27 @@ let
   # Our extra NixOS modules that are always include
   extraModules = import ../mods { inherit sources; };
 
+  # Shared Python helpers for test scripts (`from testlib import ...`).
+  # Injected via `extraPythonPackages` so driver `ty`/`ruff` checks and
+  # runtime both resolve it.
+  testlib =
+    ps:
+    ps.toPythonModule (
+      pkgs.runCommand "nixos-testlib" { } ''
+        mkdir -p $out/${ps.python.sitePackages}
+        cp -r ${./lib/testlib} $out/${ps.python.sitePackages}/testlib
+      ''
+    );
+
   # Create a new NixOS test with our defaults
   runNixOSTest =
     testModule:
     pkgs.testers.runNixOSTest {
       # test module (NOT a NixOS module)
-      imports = [ testModule ];
+      imports = [
+        { extraPythonPackages = ps: [ (testlib ps) ]; }
+        testModule
+      ];
 
       # NixOS machine config defaults
       defaults = {
