@@ -198,6 +198,7 @@ ensure_excludes() {
     --git-common-dir)/info/exclude
   mkdir -p "$(dirname "$exclude")"
   for pattern in \
+    '.artifacts/' \
     'packages/app/e2e/browser/agent-*.spec.ts' \
     'packages/app/playwright.agent.config.ts' \
     'packages/*/vitest.paseo.*'; do
