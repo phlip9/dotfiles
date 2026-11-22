@@ -55,6 +55,7 @@ missing), security-relevant paths under `packages/server/src/server/`:
 - transports/control planes: `bootstrap.ts` (route mounting, relay, hub
   wiring), `hub/`, `../../../relay/src/` (E2EE handshake)
 - plugins: `plugins/builtin/index.ts`, `plugins/managed-source.ts`
+- providers: `agent/provider-installation/` (update checks, CLI self-updaters)
 - permissions: `authorization/operation-permissions.ts`
 - packaging: `nix/`, `scripts/trace-daemon.mjs`
 
@@ -217,8 +218,10 @@ Commits (AGENTS.md conventions; no `Co-Authored-By`):
 2. New hardening (patch, pin, test) as separate commits after, e.g.
    `paseo: disable <feature>`.
 
-Keep the `phlip9/<NEW>` branch in `~/dev/paseo` (one commit per patch).
-Don't push, open a PR, or deploy unless asked.
+Keep the `phlip9/<NEW>` branch in `~/dev/paseo` (one commit per patch). If
+patches were edited or added in `tmp/paseo`, fast-forward/reset `phlip9/<NEW>`
+to `tmp/paseo` HEAD before finishing. Don't push, open a PR, or deploy unless
+asked.
 
 ## Final report
 
