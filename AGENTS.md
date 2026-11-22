@@ -1,6 +1,6 @@
 # @phlip9's dotfiles
 
-- stack: lix, nixos, home-manager, niri, noctalia, neovim, tmux, bash,
+- stack is lix, nixos, home-manager, niri, noctalia, neovim, tmux, bash,
   alacritty.
 - nix based, non-flake default.nix.
 - home-manager manages non-GUI user dotfiles on all Linux and macOS machines.
@@ -59,9 +59,10 @@
 
 ## style
 
-- general: 80-column width, except for urls or similar.
-- nix: all external inputs pinned. all packages, home-manager configs, nixos
-  configs, etc accessible from top-level default.nix. avoid overlays.
+- in general, use 80-column width, except for urls or similar.
+- nix must have all external inputs pinned. all packages, home-manager configs,
+  nixos configs, etc are accessible from top-level default.nix. avoid overlays.
+- nix package names should be snake-case like nixpkgs. ex: `github-agent-authd`.
 - commits: use ':' namespace in commit titles, ex:
   - `nvim: add baleia.nvim to colorize ANSI escape sequences`
   - `nixos: manually add nautilus file chooser back into systemPackages`
@@ -70,16 +71,15 @@
   - `firefox: add BetterTTV extension`
   - updates use nixpkgs convention, ex: `codex: 0.13.4 -> 0.13.5` or `codex:
     init at 0.13.4`.
-- commits: rarely add a commit message body, unless the change is complex or
-  non-obvious.
-- commits: ABSOLUTELY NEVER add "Co-Authored-By: " trailer.
+- commits should rarely add a commit message body, unless the change is complex
+  or non-obvious.
+- commits MUST ABSOLUTELY NEVER add "Co-Authored-By: " trailers.
 - changes MUST fit coherently in the codebase. avoid unnecessary vendoring.
-- comments: every non-trivial function/struct/module/type needs at least a
-  short comment. include short "guide post" comments above logic blocks.
-  non-trivial items need longer comments; more complex or surprising, then
-  better documented. future readers should not need to guess why.
-- names: almost always avoid single-character variable names.
-- nix package names should be snake-case. ex: `github-agent-authd`.
+- every non-trivial function/struct/module/type/logical block should have at
+  least a short ~1 sentence guide-post comment.
+- highly non-trivial, non-obvious, and surprising code must document _why_, the
+  intent behind the change, and justify its existence.
+- almost always avoid single-character variable names.
 
 
 ## git workflow
@@ -89,18 +89,17 @@
   should be split out from primary changes into their own commit(s) for faster
   human review.
 - refactor until the change is easy, then make the easy change.
-- try to schedule pre-factors, renames, and code motion early in the commit
-  stack.
+- schedule pre-factors, renames, and code motion early in the commit stack.
 - work through changes step-by-step. break down the problem into parts that can
   be tackled independently.
 - create clean, atomic, readable, and easily-reviewable commits. after I review
   your work, structure new changes as either new commits or fixups into your
-  prior commits to maintain a clear linear history. sequence fixups immediately
-  after the commit that they modify. don't rebase or autosquash your changes
-  unless asked.
+  prior commits to maintain a clear linear history. don't rebase or autosquash
+  your changes unless asked.
 - aim for maintainability, clarity, and elegance first.
-- when I ask you to restack, I mean to rebuild the current messy commit stack
-  as if we had built it in its correct and final form from the beginning.
+- when I ask you to "restack", I mean for you to rebuild the current messy
+  commit stack as if we had built it in its correct and final form from the
+  beginning.
 
 ## workflow
 
@@ -111,13 +110,14 @@
 
 - machine: nixos/phlipdesk/default.nix - main desktop
 - machine: nixos/sauna/default.nix - Hetzner bare metal machine
-- priorities: reliable, beautiful, secure, performant, minimalist.
+- our ordered priorities are reliable, beautiful, secure, performant, and then
+  minimalist software.
 - full-disk encryption, single-user install, auto-login, secure boot.
 
 - server: nixos/profiles/server.nix
 - desktop: nixos/profiles/desktop.nix
-- niri: scrolling+tiling wayland compositor
-- noctalia: beautiful, minimal wayland desktop shell
+- I use niri, a scrolling+tiling wayland compositor, and noctalia, a beautiful,
+  minimal wayland desktop shell.
 
 ## just commands (non-exhaustive)
 
@@ -146,7 +146,7 @@ any issues.
 this repo does NOT use flakes. do not use e.g. `nix build .#samply` syntax, it
 will not work. use `-f .` to point to `default.nix` in this repo.
 
-to find store paths for our pinned `npins` nix inputs, use e.g.:
+to find store paths for our pinned `npins` nix inputs, use e.g.,
 `nix eval -f . sources.home-manager.outPath`.
 
 - ex: `nix build -f . samply` build `samply` (alias `phlipPkgs.samply`) package in `pkgs/samply.nix`
@@ -169,7 +169,7 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - `pkgs`: nixpkgs stable package set
 - `sources`: npins pinned external sources (nixpkgs, home-manager, ...)
 
-### packaging
+### nix packaging
 
 - a simple one-file package can go live in `pkgs/<name>.nix` or
   `nixos/pkgs/<name>.nix`. if a package requires more than one file, say for an
@@ -187,7 +187,8 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
   productivity.
 - make tests hermetic and event-driven, fast and deterministic.
   - trigger work directly instead of waiting for polling.
-  - disable services the test doesn't exercise.
+  - disable services the test doesn't exercise to reduce container or VM setup
+    time.
   - `sleep` is an anti-pattern. wait on the exact condition, not a timer.
     prefer test knobs over sleeps. patch upstream if needed.
   - prove an event happened before asserting that it did not.
@@ -196,7 +197,7 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
   average system load before and after; throw away test runs taken under load.
 - every wait needs a timeout. on failure, dump evidence (journal, API
   response).
-- look for hidden fixed waits; most test time is spent in retry backoffs,
+- look for hidden fixed waits. most test time is spent in retry backoffs,
   timers, and caches.
 - keep logs readable. fix services at the source to silence chatty and
   low-value logs.
@@ -220,18 +221,18 @@ to find store paths for our pinned `npins` nix inputs, use e.g.:
 - prefer stateless modules.
 - platform-specific code only handles Linux and macOS. never care about
   Windows.
-- if module not needed at startup, only `require` when actually used. make
+- if a module is not needed at startup, only `require` when actually used. make
   keymaps lazy. reduce startup time.
 - when wrapping a fn, preserve return contract. lua multi-return silently
   truncates, ex: `local x = f()` drops second value.
-- never use bare `pcall(fn)`. always capture and log: `local ok, err =
+- never use bare `pcall(fn)`. always capture and log like `local ok, err =
   pcall(fn); if not ok then vim.notify(...) end`.
 - error handling is not optional.
 - `vim.schedule_wrap` any `vim.system` callbacks touching nvim APIs
   (`vim.notify`, `nvim_*`, etc).
 - don't mutate caller's opts/config table. copy first then mutate.
-- 0-indexed APIs (extmarks, `nvim_win_set_cursor`, ...): if input can be 0,
-  avoid underflow when converting from 1-indexed w/ `math.max(0, idx-1)`.
+- these APIs are 0-indexed: extmarks, `nvim_win_set_cursor`, ...; if input can
+  be 0, avoid underflow when converting from 1-indexed w/ `math.max(0, idx-1)`.
 
 ### lua tests
 
@@ -264,12 +265,12 @@ EOF
 )
 ```
 
-- only allowed to create branches/PRs off `agent/**` branches.
+- you may only create branches/PRs off `agent/**` branches.
 - always use `--body-file` over `--body`.
 - always request review from `phlip9`.
 - never put raw markdown text in shell commands.
 - only use e.g. #5 in PR title or body if referring to another PR.
-- if PR already exists and body needs updating, use: `gh pr edit --repo
+- if the PR already exists and body needs updating, use: `gh pr edit --repo
   phlip9/dotfiles <pr-number> --body-file <(...)`.
 
 
