@@ -75,11 +75,30 @@
   or non-obvious.
 - commits MUST ABSOLUTELY NEVER add "Co-Authored-By: " trailers.
 - changes MUST fit coherently in the codebase. avoid unnecessary vendoring.
-- every non-trivial function/struct/module/type/logical block should have at
-  least a short ~1 sentence guide-post comment.
-- highly non-trivial, non-obvious, and surprising code must document _why_, the
-  intent behind the change, and justify its existence.
 - almost always avoid single-character variable names.
+
+
+## code comments
+
+- follow `## communication` prose style, ASCII-only, <= 80 columns (except for
+  links).
+- every non-trivial fn/struct/module/type/logical block gets at least a short
+  ~1 sentence guide-post comment.
+- module/file header comments should cover at least (1) 1 sentence on what the
+  module does, (2) high-level blackbox functionality provided by the module,
+  (3) relevant and important design decisions, requirements, and motivations
+  that are not restated in a `doc/` file, and (4) a compact component or
+  network diagram if relevant.
+- non-obvious or surprising code must document _why_: invariants, silent
+  failures, production measurements, cross-file sync points, and intention.
+- cut comments that restate code, recite upstream internals, or duplicate
+  sibling docs.
+- important non-local information or cross-file invariants should point to the
+  relevant files. put `see: <path>` references on their own lines.
+- use compact `# --- <section> --- #` headers to help readers quickly skim the
+  high-level file structure.
+- write direct statements/fragments. avoid overusing colon-delimited lead-ins
+  (`Lead in idea: adjacent sentence`).
 
 
 ## git workflow
