@@ -1,6 +1,6 @@
 ---
 name: paseo-upgrade
-description: Use to upgrade paseo (package, patches, NixOS/home-manager modules, tests, configs) to the latest release
+description: Use to upgrade paseo (package, patches, NixOS module, tests, configs) to the latest release
 ---
 
 # paseo upgrade
@@ -26,10 +26,10 @@ surface, patch review) to save context. Give them the file pointers below.
 Ours (read before starting; the docs for each piece live in these files):
 
 - `npins/sources.json` `paseo` pin (GitRelease, `pre_releases: false`)
-- `pkgs/paseo/default.nix`: wraps upstream `nix/package.nix`, our
+- `nixos/pkgs/paseo/default.nix`: wraps upstream `nix/package.nix`, our
   `npmDepsHash`, ordered `patches` list (one comment per patch), PATH fixup
-- `pkgs/paseo/*.patch`: downstream patches
-- `pkgs/paseo/tests/*.patch`: tests for the same-named patch (nix build
+- `nixos/pkgs/paseo/*.patch`: downstream patches
+- `nixos/pkgs/paseo/tests/*.patch`: tests for the same-named patch (nix build
   skips them; import/export scripts handle them)
 - `.agents/skills/paseo-dev/`: patch development workflow +
   `scripts/paseo-dev` (isolated worktree, check, baseline, browser e2e),
@@ -39,7 +39,6 @@ Ours (read before starting; the docs for each piece live in these files):
   server, nginx
 - `nixos/tests/paseo.nix`: VM test (auth, relay, env, terminals, config
   merge, lifecycle)
-- `home/mods/paseo.nix`: home-manager daemon (`phliptop-mbp`, `lexe-dev`)
 - `nixos/sauna/default.nix`: `services.paseo` deployment
 - `nixos/pkgs/paseo-relay.nix`: third-party self-hosted relay
 
@@ -101,7 +100,7 @@ Run in parallel subagents:
    - new builtin plugins, providers enabled by default, outbound
      `fetch(` targets, new control planes (hub-like features)
    - for each: default on/off, disable knob (env/config) or patch needed
-4. **Patch review**: per patch in `pkgs/paseo/default.nix`, fixed upstream
+4. **Patch review**: per patch in `nixos/pkgs/paseo/default.nix`, fixed upstream
    (drop), still applies, or needs a rebase? Grep for the patch's
    functions/keys in `<OLD>..<NEW>` history.
    - A clean apply proves nothing for patches that replace a built module
@@ -130,7 +129,7 @@ git -C "$pa" rebase --onto <NEW> <OLD>     # resolve conflicts per commit
 .agents/skills/paseo-upgrade/scripts/export-patches.sh "$pa" <NEW>
 ```
 
-`export-patches.sh` rewrites `pkgs/paseo/*.patch` (+ `tests/`) and reports
+`export-patches.sh` rewrites `nixos/pkgs/paseo/*.patch` (+ `tests/`) and reports
 where the shipped `patches` list (evaluated by `patch-list.sh` via nix, as
 import uses) differs from the branch: entries to add/remove, or order.
 Keep patches minimal and fail-closed.
@@ -146,9 +145,6 @@ grep -E 'error TS|FAILED|^error' "$art/build.log"
 
 - The package build takes 5-10 min (tsc + Expo web UI bundle), and longer
   when builds run concurrently. Run it in the background, one at a time.
-- `-f . paseo` (stable nixpkgs) and `nixosTests.paseo` (`pkgsNixos`) are
-  separate package builds. While iterating on patches, skip this one and
-  let the VM test build its own.
 - Patched TS must typecheck (`noUnusedLocals`, control-flow narrowing).
   Failures surface only minutes into the build as `error TS`; fix them on
   the patch branch, then re-export.
@@ -169,14 +165,14 @@ Patch-level checks once `npins` points at NEW and patches are exported
 (`P=.agents/skills/paseo-dev/scripts/paseo-dev`):
 
 ```bash
-$P reset --force     # fresh tmp/paseo at NEW from pkgs/paseo
+$P reset --force     # fresh tmp/paseo at NEW from nixos/pkgs/paseo
 $P check --all       # fmt/lint/typecheck + related tests for every patch
 ```
 
 - Timing tests flake under load: don't run `check` next to a nix build.
 - Failing test: `$P baseline <pkg> <file>` to split upstream failures
   from ours. An upstream test that conflicts w/ a patch goes in
-  `pkgs/paseo/tests/ignored.json` per `paseo-dev` "5. Check"; never weaken
+  `nixos/pkgs/paseo/tests/ignored.json` per `paseo-dev` "5. Check"; never weaken
   a patch or edit upstream tests. Stale `ignored.json` entries fail the
   run: drop or retitle them.
 - UI patches (`paseo-commit-message`, ...): for each one with a rebase
@@ -205,8 +201,6 @@ $P check --all       # fmt/lint/typecheck + related tests for every patch
 ## Phase 4: verify + commit
 
 ```bash
-nix build --no-link -f . homeConfigs.lexe-dev.activationPackage
-nix eval --raw -f . homeConfigs.phliptop-mbp.activationPackage.drvPath
 nix build --dry-run --no-link -f . nixosConfigs.sauna.config.system.build.toplevel
 just nix-ci
 ```

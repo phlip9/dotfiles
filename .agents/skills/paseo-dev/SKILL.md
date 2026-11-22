@@ -1,11 +1,11 @@
 ---
 name: paseo-dev
-description: Use to implement, fix, or maintain phlip9's downstream paseo patches in pkgs/paseo (UI features, daemon/CLI/protocol behavior, security hardening) and their tests
+description: Use to implement, fix, or maintain phlip9's downstream paseo patches in nixos/pkgs/paseo (UI features, daemon/CLI/protocol behavior, security hardening) and their tests
 ---
 
 # paseo patch development
 
-Change paseo through a downstream patch (`pkgs/paseo/*.patch`), prove it
+Change paseo through a downstream patch (`nixos/pkgs/paseo/*.patch`), prove it
 works (tests, plus a VM test or a real browser depending on the change),
 then ship it as a dotfiles commit. phlip9 deploys; you never push or
 deploy.
@@ -22,20 +22,20 @@ worktree, aliased as `P=.agents/skills/paseo-dev/scripts/paseo-dev`.
 
 ## Model
 
-- `pkgs/paseo/*.patch` is the source of truth, listed in order in
-  `pkgs/paseo/default.nix` w/ one comment each. Tests for a patch live in
-  `pkgs/paseo/tests/<name>.patch`. Upstream's nix src filter strips test
-  files, so the package build applies only the main patch. Upstream tests
-  that conflict w/ a patch are listed in `pkgs/paseo/tests/ignored.json`.
+- `nixos/pkgs/paseo/*.patch` is the source of truth, listed in order in
+  `nixos/pkgs/paseo/default.nix` w/ one comment each. Tests for a patch live
+  in `nixos/pkgs/paseo/tests/<name>.patch`. Upstream's nix src filter strips
+  test files, so the package build applies only the main patch. Upstream tests
+  that conflict w/ a patch are listed in `nixos/pkgs/paseo/tests/ignored.json`.
 - `paseo-dev setup` creates `tmp/paseo`, a git worktree of `~/dev/paseo` at
   the pinned tag (`npins/sources.json`) on branch `wt/<dotfiles-worktree>`,
   w/ one commit per patch (subject == patch stem). It has its own
   `node_modules`, so concurrent agents don't collide (~1.5 min).
 - Edit in `tmp/paseo`, fold edits into patch commits (`new` / `fixup`), then
-  `export` regenerates `pkgs/paseo`. Never hand-edit `.patch` files.
-- The daemon runs on sauna (`services.paseo`, `nixos/mods/paseo.nix`) and
-  on other hosts via home-manager (`home/mods/paseo.nix`). Daemon access ==
-  full control of the host as phlip9, so security patches fail closed.
+  `export` regenerates `nixos/pkgs/paseo`. Never hand-edit `.patch` files.
+- The daemon runs on NixOS (sauna, `services.paseo`, `nixos/mods/paseo.nix`).
+  Daemon access == full control of the host as phlip9, so security patches
+  fail closed.
 - Upgrades rebase every patch onto a new release (`paseo-upgrade` skill),
   so each patch's size and spread is an ongoing cost.
 
@@ -58,7 +58,7 @@ UI requests have their own question list in [UI work](#ui-work).
 
 ```bash
 P=.agents/skills/paseo-dev/scripts/paseo-dev
-$P setup     # or: status (already set up), reset (rebuild from pkgs/paseo)
+$P setup     # or: status (already set up), reset (rebuild from nixos/pkgs/paseo)
 ```
 
 If `status` says DIFFERS for a worktree you didn't touch, master moved:
@@ -149,7 +149,7 @@ Never edit upstream test files: every edit is a rebase conflict on the
 next upgrade.
 
 - Upstream test conflicts w/ our patch: add it to
-  `pkgs/paseo/tests/ignored.json` (`{patch, file, test, reason}`; omit
+  `nixos/pkgs/paseo/tests/ignored.json` (`{patch, file, test, reason}`; omit
   `test` to drop a whole file whose suite is all disabled-feature tests).
   `paseo-dev` runs vitest through a generated, git-excluded wrapper config
   that excludes/skips these. `test` is the full name: describe titles +
@@ -159,7 +159,7 @@ next upgrade.
 - Our behavior: test it only where it adds value, in a new file owned by
   the patch (`<area>.<feature>.test.ts`, top comment
   `// paseo-<name>: ...`). It folds into the patch's commit and exports to
-  `pkgs/paseo/tests/<name>.patch`. Skip it when `nixosTests.paseo` already
+  `nixos/pkgs/paseo/tests/<name>.patch`. Skip it when `nixosTests.paseo` already
   covers the behavior end to end (relay password, plugin installs,
   password file, env scrub) or the patch is a constant tweak.
 - Mutation-check new tests: revert the patch's code, the test must fail,
@@ -187,9 +187,9 @@ Pick by what the patch changes:
 ## 7. Export + build
 
 ```bash
-$P export            # writes pkgs/paseo/*.patch + tests/, reports drift
+$P export            # writes nixos/pkgs/paseo/*.patch + tests/, reports drift
 # new patch: add `./paseo-<feature>.patch` + a 1-2 line comment at the end
-# of `patches` in pkgs/paseo/default.nix
+# of `patches` in nixos/pkgs/paseo/default.nix
 $P build             # nix build -f . paseo (5-10 min; run in background)
 $P vmtest            # nixosTests.paseo (~2 min after build)
 just nix-ci
@@ -308,7 +308,7 @@ $P e2e e2e/browser/agent-<slug>.spec.ts
   regression fails the run instead of relying on eyeballing.
 - `agent-*.spec.ts` is git-excluded and never exported. If the flow is
   worth guarding long term, write a proper spec under a real name; it
-  exports to `pkgs/paseo/tests/`.
+  exports to `nixos/pkgs/paseo/tests/`.
 - Iterate: edit -> `fixup` -> `e2e` until the screenshots match the agreed
   design. Metro serves source, so no package build in the loop.
 - After `$P build`, confirm a distinctive identifier of the change is in

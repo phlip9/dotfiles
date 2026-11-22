@@ -38,7 +38,7 @@ package + release notes scanning and summarization.
 - `nixosTests` (`nixos/tests/default.nix`), built from `pkgsUnstable`
 - `phlipPkgsNixos` (`nixos/pkgs/`), built from `pkgsUnstable`
 - `config.phlipPkgs` inside NixOS (`nixos/mods/phlippkgs.nix`) rebuilds `pkgs/`
-  against unstable, e.g. `phlipPkgs.paseo` on sauna
+  against unstable, e.g. `phlipPkgs.writeTypedPython3Bin` in grafana and tests
 - external NixOS modules pinned separately in npins, imported in
   `nixos/mods/default.nix`: sops-nix, disko, nixbot, niks3, paseo, rbitcoin.
   They can break against new nixpkgs (removed options, removed toolchain

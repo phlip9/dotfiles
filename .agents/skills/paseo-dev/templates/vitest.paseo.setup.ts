@@ -1,6 +1,6 @@
 // Copied into packages/<pkg>/ by paseo-dev (git-excluded); see
 // .agents/skills/paseo-dev/templates/. Skips upstream tests that conflict w/
-// our patches, listed in dotfiles pkgs/paseo/tests/ignored.json. Fails any
+// our patches, listed in dotfiles nixos/pkgs/paseo/tests/ignored.json. Fails any
 // test file w/ an entry that matches no test (stale after an upgrade) or
 // more than one (ambiguous), so an entry never silently skips the wrong test.
 import path from "node:path";
@@ -71,7 +71,7 @@ beforeAll(({}, suite) => {
   });
   if (problems.length > 0) {
     throw new Error(
-      `bad pkgs/paseo/tests/ignored.json entries in ${relative}: ${problems.join(", ")}`,
+      `bad nixos/pkgs/paseo/tests/ignored.json entries in ${relative}: ${problems.join(", ")}`,
     );
   }
 });

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # Write each commit in <base-tag>..<rev> of a paseo patch branch to
-# pkgs/paseo/<commit subject>.patch, then list patch files to add to or
-# remove from pkgs/paseo/default.nix.
+# nixos/pkgs/paseo/<commit subject>.patch, then list patch files to add to or
+# remove from nixos/pkgs/paseo/default.nix.
 #
 # Test files (*.test.ts(x), *.spec.ts(x), e2e/, vitest.config.*) go to a
-# separate pkgs/paseo/tests/<name>.patch: upstream's nix src filter strips
+# separate nixos/pkgs/paseo/tests/<name>.patch: upstream's nix src filter strips
 # test files, so the package build can't apply them. import-patches.sh
 # re-applies both.
 #
 # Patches that differ only in `index <blob>..<blob>` lines are left alone, so
 # re-exporting an unchanged stack is a no-op.
 #
-# --check: write nothing; exit 1 if pkgs/paseo differs from the branch.
+# --check: write nothing; exit 1 if nixos/pkgs/paseo differs from the branch.
 #
 # usage: export-patches.sh [--check] <paseo-repo> <base-tag> [<rev>]
 set -euo pipefail
@@ -24,7 +24,7 @@ fi
 repo=$1
 base=$2
 rev=${3:-HEAD}
-pkg_dir="$(git rev-parse --show-toplevel)/pkgs/paseo"
+pkg_dir="$(git rev-parse --show-toplevel)/nixos/pkgs/paseo"
 
 out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT
@@ -71,7 +71,7 @@ same_patch() {
   diff -q <(grep -v '^index ' "$1") <(grep -v '^index ' "$2") > /dev/null
 }
 
-# Sync $out -> pkgs/paseo, reporting every difference.
+# Sync $out -> nixos/pkgs/paseo, reporting every difference.
 shopt -s nullglob
 changed=0
 for path in "$out"/*.patch "$out"/tests/*.patch; do

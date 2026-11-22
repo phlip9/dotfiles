@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Recreate a paseo patch branch from our patch files: one commit per patch,
-# applied in `patches` order from pkgs/paseo/default.nix, commit subject =
+# applied in `patches` order from nixos/pkgs/paseo/default.nix, commit subject =
 # patch file stem (export-patches.sh relies on this). A patch's tests, kept
-# in pkgs/paseo/tests/<name>.patch, go into the same commit.
+# in nixos/pkgs/paseo/tests/<name>.patch, go into the same commit.
 #
 # usage: import-patches.sh <paseo-repo> <base-tag> <new-branch>
 set -euo pipefail
@@ -10,7 +10,7 @@ set -euo pipefail
 repo=$1
 base=$2
 branch=$3
-pkg_dir="$(git rev-parse --show-toplevel)/pkgs/paseo"
+pkg_dir="$(git rev-parse --show-toplevel)/nixos/pkgs/paseo"
 
 # Capture first: a failed parse must abort, not yield an empty list.
 patches_list=$("$(dirname "$0")/patch-list.sh")
