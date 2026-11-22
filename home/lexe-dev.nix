@@ -55,7 +55,6 @@
     # ./mods/niri.nix
     # ./mods/noctalia.nix
     ./mods/nvim/default.nix
-    ./mods/paseo.nix
     # ./mods/postgres.nix
     ./mods/python.nix
     # ./mods/ssh.nix
@@ -85,7 +84,4 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
-
-  # paseo self-hosted agent interface
-  services.paseo.enable = true;
 }
