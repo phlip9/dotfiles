@@ -1,13 +1,8 @@
-# o11y collector: nixos-exporter. NixOS boots, system profile generation,
-# last activation, pending reboot, per-unit cgroup usage. See
-# nixos/pkgs/nixos-exporter/main.go.
+# o11y collector: nixos-exporter (nixos/pkgs/nixos-exporter/main.go).
 #
-# Socket-activated: systemd owns the loopback listener and passes it in, so
-# the service itself runs w/o any network access (`PrivateNetwork`).
-# Scraped as job `nixos-exporter`.
-#
-# The service also starts at boot, not just on the first scrape, so it
-# counts boots that never got scraped.
+# - Metrics: boots, system gen, activation, pending reboot, unit cgroups
+# - Socket-activated
+# - Starts at boot to count unscraped boots
 {
   config,
   lib,
@@ -26,7 +21,7 @@ in
     listenAddress = lib.mkOption {
       type = lib.types.str;
       default = "127.0.0.1:9101";
-      description = "nixos-exporter `/metrics` listener. Keep it on loopback.";
+      description = "Loopback `/metrics` listen addr.";
     };
   };
 
@@ -45,22 +40,18 @@ in
       description = "NixOS boot, generation + cgroup metrics exporter";
       requires = [ "nixos-exporter.socket" ];
       after = [ "nixos-exporter.socket" ];
-      # Count the boot at boot, not at the first scrape.
+      # Count unscraped boots.
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
         ExecStart = lib.getExe phlipPkgsNixos.nixos-exporter;
         DynamicUser = true;
-        # Boot count + last boot_id: /var/lib/private/nixos-exporter/boots
+        # Boot count + last boot_id.
         StateDirectory = "nixos-exporter";
         Restart = "on-failure";
         RestartSec = 5;
 
-        # Hardening. Only reads /proc/sys/kernel/random/boot_id, the system
-        # profile, /run/{current,booted}-system, /sys/fs/cgroup (read-only
-        # w/ `ProtectControlGroups`), /sys/dev/block, and its
-        # StateDirectory.
-        # NOTE: no `ProcSubset=pid`, it hides /proc/sys.
+        # Hardening. No ProcSubset=pid (hides /proc/sys/kernel/random/boot_id).
         CapabilityBoundingSet = [ "" ];
         DevicePolicy = "closed";
         IPAddressDeny = [ "any" ];
@@ -68,7 +59,7 @@ in
         MemoryDenyWriteExecute = true;
         NoNewPrivileges = true;
         PrivateDevices = true;
-        # The socket comes from systemd, so no network namespace access.
+        # Socket inherited from systemd.
         PrivateNetwork = true;
         PrivateTmp = true;
         PrivateUsers = true;
@@ -81,7 +72,7 @@ in
         ProtectKernelTunables = true;
         ProtectProc = "invisible";
         ProtectSystem = "strict";
-        # No new sockets; accept() on the inherited one still works.
+        # Inherited socket accept() still works.
         RestrictAddressFamilies = [ "none" ];
         RestrictNamespaces = true;
         RestrictRealtime = true;
