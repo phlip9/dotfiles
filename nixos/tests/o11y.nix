@@ -1,15 +1,11 @@
-# NixOS container test for the phlip9-o11y module.
+# Exercise the phlip9-o11y collector and server in one NixOS container.
 #
-# Single container with VictoriaMetrics + vmagent + node-exporter +
-# nixos-exporter + Grafana. Verifies scraping (vmagent -> remote write, VM's
-# built-in scraper off), querying, nixos-exporter's boot counting +
-# reboot check + cgroup metrics, Grafana datasource provisioning, that
-# Grafana's secrets manager encrypts with our key, a Git Sync round trip
-# (file -> dashboard -> API save -> file) w/ a `local` repository, and the
-# just/grafana-*.sh dashboard scripts.
+# - Metrics: exporters -> vmagent -> VictoriaMetrics <- Grafana queries.
+# - Grafana: secrets manager key, Git Sync setup and crash recovery.
+# - Dashboards: Git Sync file/API round trip and just/grafana-*.sh workflows.
 #
-# In production, sops-nix provides the secret file paths. Here we
-# pass writeText files directly to the module's *File options.
+# Use writeText secrets and a local Git Sync repo to keep the test offline.
+# see: nixos/mods/o11y/default.nix
 {
   name = "o11y";
 
@@ -23,7 +19,7 @@
       grafanaSecretKeyFile = pkgs.writeText "gf-secret-key" "test-secret-key-0123456789abcdef";
       grafanaSecretsManagerKeyFile = pkgs.writeText "gf-secrets-manager-key" "test-secrets-manager-key-0123456789";
 
-      # just/grafana-*.sh scripts
+      # Package the dashboard scripts and their shared jq library for the guest.
       grafanaScripts =
         pkgs.runCommand "grafana-scripts"
           {
@@ -74,36 +70,29 @@
           grafana.secretKeyFile = grafanaSecretKeyFile;
           grafana.secretsManagerKeyFile = grafanaSecretsManagerKeyFile;
 
-          # A `local` repository needs no network or token. Poll at the floor.
-          # Default `target = "folder"`: dashboards land in a root folder titled
-          # `title`, like `sauna` in prod.
           grafana.gitSync = {
             enable = true;
             title = "machine";
             type = "local";
             local.path = "/var/lib/grafana-git-sync";
+            # Minimum interval accepted by the module.
             intervalSeconds = 10;
-            # Synced later, by "Git Sync pulls dashboard into its root folder".
             homeDashboard = "test-sync";
           };
         };
         collector.enable = true;
       };
 
-      # Unused here: ssh (secrets are writeText, no sops).
+      # Fixture secrets skip sops, so the shared SSH host key is unused.
       services.openssh.enable = lib.mkForce false;
 
-      # Use a fast scrape interval for tests.
+      # Keep in sync w/ queryOptions.interval in the range query fixture below.
       services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
-      # Override admin user for test assertions.
       services.grafana.settings.security.admin_user = "testadmin";
 
-      # Grafana's startup chatter is most of this test's log. Keep only
-      # warnings + errors from its noisiest loggers.
+      # Suppress routine migration, startup, and index build logs.
       services.phlip9-o11y.server.grafana.logFilters = [
-        # db + unified storage migrations. ~800 on a fresh db, each logged
-        # twice, and a no-op re-check on every start.
         "migrator:warn"
         "resource-migrator:warn"
         "secret-migrator:warn"
@@ -113,16 +102,13 @@
         "storage.unified.migration_runner.playlists:warn"
         "storage.unified.migration_runner.shorturls:warn"
         "storage.unified.migrator:warn"
-        # One line per background module on every start and stop.
+
         "backgroundsvcs.managerAdapter:warn"
-        # One line per API group registered on every start.
         "grafana-apiserver:warn"
-        # Search index build progress.
         "bleve-backend:warn"
       ];
 
-      # The guest has no DNS. Let the throwaway github Repository below pass
-      # Git Sync's URL validator, which otherwise resolves the host.
+      # Bypass DNS validation for the GitHub repo used to store a dummy token.
       services.grafana.settings.provisioning.allowed_git_urls = "github.com";
     };
 
@@ -166,7 +152,7 @@
     DASH_URL = f"{DASHES_URL}/test-sync"
     GS_SETUP = "grafana-git-sync-setup.service"
 
-    # Scrape nixos-exporter, as `name -> value`. Fails w/ the error body.
+    # Scrape nixos-exporter into a map keyed by metric name and labels.
     def nixos_metrics() -> dict[str, str]:
         out = machine.succeed(
             f"{CURL} -w '\\n%{{http_code}}' http://127.0.0.1:9101/metrics",
@@ -180,7 +166,7 @@
             if not line.startswith("#")
         )
 
-    # Quiet instant PromQL query (uses `execute` so poll loops don't spam logs).
+    # Query instant PromQL results quietly for polling, flushing by default.
     def vm_query_quiet(
         promql: str, *, flush: bool = True
     ) -> list[dict[str, Any]]:
@@ -195,7 +181,7 @@
             return []
         return json.loads(out)["data"]["result"]
 
-    # Assert GET `url` returns HTTP 404 (bounded curl, fails fast on others).
+    # Check that the authenticated caller gets HTTP 404.
     def assert_http_404(url: str) -> None:
         out = machine.succeed(
             f"{CURL} {GF_AUTH} -o /dev/null -w '%{{http_code}}' "
@@ -204,11 +190,7 @@
         )
         assert out.strip() == "404", (url, out)
 
-    # Queue a full Git Sync pull, wait for it to finish, and check it
-    # succeeded. Every pull job is named `<repo>-sync`, so queueing fails w/
-    # 409 AlreadyExists while another sync (periodic, or the setup unit's) is
-    # queued or running. Retry only that, like the setup script.
-    # See: pkg/registry/apis/provisioning/jobs/persistentstore.go
+    # Trigger a full Git Sync pull so tests can skip the periodic sync interval.
     def git_sync_pull() -> None:
         pull = shlex.quote(
             json.dumps({"action": "pull", "pull": {"incremental": False}})
@@ -218,7 +200,7 @@
             f"-d {pull} {GS_REPO_URL}/jobs"
         )
 
-        # POST a pull job, retrying only 409 AlreadyExists while another runs.
+        # Pulls share the <repo>-sync name. Retry 409 while that job exists.
         def queue_pull() -> str | None:
             rc, out = machine.execute(post_pull, timeout=CMD_TIMEOUT)
             assert rc == 0, (rc, out)
@@ -231,8 +213,7 @@
 
         job_uid = wait_for_value(queue_pull, "queue Git Sync pull")
 
-        # GET .../jobs/<uid> returns 404 until the job finishes + archives.
-        # Retry only 404; fail fast on any other HTTP status.
+        # Job lookup by UID returns 404 until Grafana archives the finished job.
         def archived_job() -> dict[str, Any] | None:
             rc, out = machine.execute(
                 f"{CURL} {GF_AUTH} -w '\\n%{{http_code}}' "
@@ -247,12 +228,13 @@
             return json.loads(body)
 
         job = wait_for_value(
-            archived_job, f"Git Sync pull {job_uid}", timeout=UP_TIMEOUT
+            archived_job,
+            f"archived Git Sync pull {job_uid}",
+            timeout=UP_TIMEOUT,
         )
         assert job["status"]["state"] == "success", job["status"]
 
-    # Create a service account w/ `role`, write a new token for it to a file,
-    # and return the file path.
+    # Create a service account and return the path to its token file.
     def sa_token(name: str, role: str) -> str:
         sa = shlex.quote(json.dumps({"name": name, "role": role}))
         sa_id = machine.succeed(
@@ -269,8 +251,7 @@
         )
         return path
 
-    # `(InvocationID, ActiveState, Result)` for a systemd unit. Uses `execute`
-    # so poll loops don't spam the test log.
+    # Read unit state quietly so recovery polling stays out of the log.
     def unit_state(unit: str) -> tuple[str, str, str]:
         rc, out = machine.execute(
             f"systemctl show -p InvocationID -p ActiveState -p Result {unit}",
@@ -294,21 +275,17 @@
 
     machine.start()
     try:
-        # Number of setup runs that reached the startup pull: either queued one,
-        # or found the controller's sync job already queued (409), which covers
-        # it. The repository has a single sync job name, so which one happens
-        # depends on timing.
+        # Count a setup run if it queues a pull or finds one already queued.
+        # see: nixos/mods/o11y/server/grafana.nix
         gs_setup_pulls = (
             f"journalctl -o cat -u {GS_SETUP} "
             "| grep -cE '(triggered pull job|sync job already queued) "
             "for repository dotfiles'"
         )
 
-        # Verify initial Grafana health, secret_key.v2 encryption, Git Sync
-        # setup + unit wiring, then SIGKILL Grafana so its ~5s crash recovery
-        # + automatic setup re-run (PUT + second pull) overlaps w/ all
-        # nixos-exporter + VictoriaMetrics tests below.
-        with subtest("Grafana health, secrets manager, Git Sync setup + crash"):
+        # --- Startup and crash recovery --- #
+
+        with subtest("Grafana startup, secrets manager, and Git Sync setup"):
             machine.wait_for_unit("grafana.service", timeout=UP_TIMEOUT)
             machine.wait_for_unit(GS_SETUP, timeout=UP_TIMEOUT)
             wait_for_cmd(
@@ -317,9 +294,8 @@
                 timeout=UP_TIMEOUT,
             )
 
-            # Secure values (ex: Git Sync tokens) must get data keys from our
-            # secret_key.v2 provider, not the public default secret_key.v1 key.
-            # Store a dummy token on a throwaway, read-only github Repository.
+            # Store a dummy token to verify Grafana uses our secret_key.v2
+            # provider for data keys.
             repo = {
                 "apiVersion": "provisioning.grafana.app/v0alpha1",
                 "kind": "Repository",
@@ -343,7 +319,7 @@
                 timeout=CMD_TIMEOUT,
             )
             providers = machine.succeed(
-                # Grafana writes concurrently; wait out its locks.
+                # Wait for concurrent Grafana writes to release SQLite locks.
                 "sqlite3 -cmd '.timeout 10000' "
                 "/var/lib/grafana/data/grafana.db "
                 "'SELECT DISTINCT provider FROM secret_data_key'",
@@ -373,10 +349,7 @@
                 timeout=UP_TIMEOUT,
             )
 
-            # Verify systemd wiring (`WantedBy`/`PartOf`/`Requires`/`After`),
-            # then SIGKILL Grafana to exercise real crash recovery + automatic
-            # setup re-run (PUT update + second pull) while nixos-exporter + VM
-            # tests run in parallel.
+            # Check the setup unit's lifecycle dependencies on Grafana.
             wiring = machine.succeed(
                 f"systemctl show -p WantedBy -p PartOf -p Requires -p After "
                 f"{GS_SETUP}",
@@ -390,19 +363,18 @@
             for key in ("WantedBy", "PartOf", "Requires", "After"):
                 assert "grafana.service" in props[key].split(), (key, props)
 
+            # Start recovery now so it can overlap the nixos-exporter checks.
             gs_setup_inv = unit_state(GS_SETUP)[0]
             machine.succeed(
                 "systemctl kill --signal=KILL grafana.service",
                 timeout=CMD_TIMEOUT,
             )
 
-        # nixos-exporter: socket-activated w/ `PrivateNetwork`, counts each
-        # boot_id once, reports the system profile's generation + whether a
-        # reboot would change the kernel. Runs while Grafana recovers.
-        with subtest("nixos-exporter"):
+        with subtest("nixos-exporter boot, system, and cgroup metrics"):
             machine.wait_for_unit("nixos-exporter.service", timeout=UP_TIMEOUT)
-            # The test driver boots the toplevel w/o a system profile. Make
-            # generation 1 = the booted system.
+
+            # The test driver leaves the system profile unset. Seed it w/ the
+            # booted system as generation 1.
             profiles = "/nix/var/nix/profiles"
             boot_state = "/var/lib/private/nixos-exporter/boots"
             machine.succeed(
@@ -417,7 +389,8 @@
             assert metrics["nixos_boots_total"] == "1", metrics
             assert metrics["nixos_system_generation"] == "1", metrics
             assert metrics["nixos_reboot_required"] == "0", metrics
-            # Exported rounded to ms, so compare within 1ms, not by seconds.
+
+            # The exporter rounds switch timestamps to milliseconds.
             switch_ts = float(
                 machine.succeed(
                     "stat -c %.9Y /run/current-system", timeout=CMD_TIMEOUT
@@ -431,18 +404,15 @@
                 metrics,
             )
 
-            # Boot starts the exporter, not just the first scrape, so boots
-            # that never got scraped still count. (Same-boot restart idempotency
-            # is unit-tested in nixos/pkgs/nixos-exporter/main_test.go.)
+            # Start the exporter on boot so it counts even unscraped boots.
             wanted_by = machine.succeed(
                 "systemctl show -p WantedBy --value nixos-exporter.service",
                 timeout=CMD_TIMEOUT,
             )
             assert "multi-user.target" in wanted_by.split(), wanted_by
 
-            # Fake a reboot: the stored boot_id no longer matches the kernel's.
-            # Stopping the socket + service and starting the service exercises
-            # `StateDirectory` persistence and boot counting on startup.
+            # Simulate a new boot by replacing the saved boot ID between
+            # exporter runs. Stop the socket to prevent scrape activation.
             boot_id = machine.succeed(
                 "cat /proc/sys/kernel/random/boot_id", timeout=CMD_TIMEOUT
             ).strip()
@@ -458,9 +428,8 @@
                 timeout=dt.timedelta(seconds=10),
             )
 
-            # Deploy generation 2 w/ a different kernel: reboot required. The
-            # booted container system has no kernel at all. Not in /tmp, the
-            # service has a `PrivateTmp`.
+            # Point generation 2 at a fake kernel to trigger the reboot flag.
+            # Use /srv so the fixture is visible under PrivateTmp.
             machine.succeed(
                 "mkdir /srv/system-2",
                 "ln -s /nix/store/fake-linux/bzImage /srv/system-2/kernel",
@@ -473,11 +442,8 @@
             assert metrics["nixos_system_generation"] == "2", metrics
             assert metrics["nixos_reboot_required"] == "1", metrics
 
-            # Per-unit cgroup usage, read through the sandbox's read-only
-            # /sys/fs/cgroup. The build sandbox delegates no controllers to the
-            # container, so there are no memory.* or io.* files: check cpu.stat,
-            # which every cgroup has. The exporter's own cgroup exists while it
-            # serves.
+            # cpu.stat is available in the sandbox without delegated memory
+            # or I/O controllers.
             for slice_name, unit in [
                 ("-.slice", "system.slice"),
                 ("system.slice", "nixos-exporter.service"),
@@ -486,9 +452,8 @@
                 name = f"nixos_cgroup_cpu_seconds_total{{{labels}}}"
                 assert float(metrics.get(name, "0")) > 0, (name, metrics)
 
-        # Join Grafana crash recovery + idempotent setup re-run.
         with subtest("Grafana crash recovery re-runs Git Sync setup"):
-            # `(InvocationID, ActiveState, Result)` once recovery setup exits.
+            # Wait for the new invocation to finish before checking its result.
             def gs_setup_recovered() -> tuple[str, str, str] | None:
                 inv, state, result = unit_state(GS_SETUP)
                 if inv != gs_setup_inv and state not in (
@@ -519,9 +484,9 @@
                 f"{gs_setup_pulls} | grep -qx 2", timeout=CMD_TIMEOUT
             )
 
-        # VictoriaMetrics remote-write scraping, all 5 targets labeled
-        # `instance=machine`, and Grafana VM datasource queries.
-        with subtest("VictoriaMetrics scraping + Grafana VM datasource"):
+        # --- Metrics pipeline --- #
+
+        with subtest("vmagent remote write and Grafana datasource queries"):
             machine.wait_for_unit("victoriametrics.service", timeout=UP_TIMEOUT)
             wait_for_http(machine, f"{VM_URL}/ping", timeout=UP_TIMEOUT)
 
@@ -534,8 +499,7 @@
             }
             last_up: list[dict[str, Any]] = []
 
-            # All 5 jobs scraped once (exact set, no duplicates, all up == 1,
-            # `instance == "machine"`) and nixos_boots_total == 2 ingested.
+            # Wait for the new boot count and one healthy series per job.
             def all_targets_scraped() -> list[dict[str, Any]] | None:
                 boots = vm_query_quiet(
                     'nixos_boots_total{job="nixos-exporter"}', flush=True
@@ -564,13 +528,12 @@
 
             try:
                 wait_for_value(
-                    all_targets_scraped, "all 5 jobs up + boot 2 scraped"
+                    all_targets_scraped, "five healthy jobs and boot count 2"
                 )
             except TimeoutError as err:
                 raise TimeoutError(f"{err}\nlast up={last_up}") from err
 
-            # Confirmed scrapes landed: verify VM ingested via remote write
-            # with its built-in scraper disabled.
+            # Check the ingestion path after proving samples arrived.
             targets = json.loads(
                 machine.succeed(
                     f"{CURL} -f {VM_URL}/api/v1/targets", timeout=CMD_TIMEOUT
@@ -615,12 +578,15 @@
                 "| jq -e '.data | any(index(\"vm_app_version\"))'",
             )
 
+        # --- Git Sync dashboard lifecycle --- #
+
         gf_url_env = f"GRAFANA_URL={GF_URL}"
         gf_env = (
             f"{gf_url_env} GRAFANA_USER=testadmin "
             "GRAFANA_PASSWORD=gf-admin-testpwd"
         )
-        # Agents (mcp-grafana) act as an Editor service account.
+
+        # Match the Editor role used by mcp-grafana.
         editor_token = sa_token("editor", "Editor")
         editor_env = f"{gf_url_env} GRAFANA_TOKEN_FILE={editor_token}"
         machine.succeed(
@@ -630,7 +596,8 @@
         )
         editor_curl = f"{CURL} --fail-with-body -H @/tmp/editor-auth"
 
-        # A minimal v2 dashboard manifest, like nixos/sauna/grafana/*.json.
+        # Minimal v2 manifest in the same format as the deployed dashboards.
+        # see: nixos/sauna/grafana/
         dashboard = {
             "apiVersion": "dashboard.grafana.app/v2",
             "kind": "Dashboard",
@@ -644,12 +611,7 @@
             },
         }
 
-        # A dashboard manifest dropped into the repo dir gets synced in by a
-        # pull, inside the root folder Git Sync creates w/ uid = repo name,
-        # title = repo title. Pull directly, not on the poll interval, which is
-        # >= 10s and only checked every `resync_interval` (60s).
-        # See: pkg/registry/apis/provisioning/resources/id.go RootFolder
-        with subtest("Git Sync pulls dashboard into its root folder"):
+        with subtest("Git Sync provisions the root folder and home dashboard"):
             machine.succeed(
                 f"echo {shlex.quote(json.dumps(dashboard))} "
                 "> /tmp/test-sync.json",
@@ -673,18 +635,13 @@
                 f"{GF_CURL} {GF_API}/folders/{gs_folder} "
                 "| jq -e '.title == \"machine\" and .parentUid == null "
                 "and .managedBy == \"repo\"'",
-                # Synced, the home dashboard (setup's org preference) resolves.
                 f"{GF_CURL} {GF_API}/dashboards/home "
                 "| jq -e '.redirectUri | startswith(\"/d/test-sync/\")'",
                 timeout=CMD_TIMEOUT,
             )
 
-        # Saving a repo-managed dashboard through the dashboard API gets
-        # re-routed to the repository, i.e. it writes the file. GET + PUT keeps
-        # the manager annotations; dropping them would detach the dashboard from
-        # the repo instead.
-        # See: pkg/storage/unified/apistore/managed.go
         with subtest("Git Sync writes API saves to repository"):
+            # Keep the management annotations so the save routes to Git Sync.
             machine.succeed(
                 f"{GF_CURL} {DASH_URL} "
                 "| jq '.spec.title = \"Git Sync Test (edited)\"' "
@@ -704,10 +661,8 @@
                 timeout=CMD_TIMEOUT,
             )
 
-        # grafana-check dry-runs a save. The synced dashboard must keep its
-        # generation + resourceVersion and the repo file must not change: Git
-        # Sync re-routes real saves of repo-managed dashboards into the repo.
-        with subtest("grafana-check passes a valid manifest w/o saving"):
+        with subtest("grafana-check dry-runs updates"):
+            # Check both the API revision and the file where real saves land.
             dash_meta = (
                 f"{GF_CURL} {DASH_URL} "
                 "| jq -c '.metadata | [.generation, .resourceVersion]'"
@@ -725,9 +680,8 @@
             )
             assert before == after, (before, after)
 
-        # The server decodes + validates the spec: here a mistyped title, and an
-        # empty title on a new name, which dry-runs a create.
         with subtest("grafana-check rejects invalid manifests"):
+            # Exercise server validation on both the update and create paths.
             machine.succeed(
                 f"jq '.spec.title = 42' {GS_DASH_FILE} > /tmp/bad-title.json",
                 "jq '.metadata.name = \"no-title\" | .spec.title = \"\"' "
@@ -751,11 +705,7 @@
             assert "title cannot be empty" in lines[1], out
             assert lines[2] == f"ok   {GS_DASH_FILE}", out
 
-        # Git Sync gives its root folder default role permissions (only root
-        # folders get `grafana.app/grant-permissions`), which synced dashboards
-        # inherit. So the Editor service account can read + dry-run them.
-        # See: pkg/registry/apis/provisioning/resources/folders.go
-        with subtest("Editor can access synced dashboards"):
+        with subtest("Editors inherit access to Git Sync dashboards"):
             machine.succeed(
                 f"{editor_curl} {DASH_URL} "
                 "| jq -e '.spec.title == \"Git Sync Test (edited)\"'",
@@ -766,7 +716,8 @@
                 timeout=CMD_TIMEOUT,
             )
             assert out == f"ok   {GS_DASH_FILE}\n", out
-            # Explicit basic auth beats the token file: a bad password fails.
+
+            # Explicit basic auth takes precedence over the token file.
             status, out = machine.execute(
                 f"{gf_url_env} GRAFANA_USER=testadmin GRAFANA_PASSWORD=bad "
                 f"GRAFANA_TOKEN_FILE={editor_token} "
@@ -776,11 +727,10 @@
             assert status == 1, out
             assert out.startswith(f"FAIL {GS_DASH_FILE}: HTTP 401"), out
 
-        # The agent's live iteration loop, as the Editor service account:
-        # grafana-push creates the Scratch folder (via /api/folders, which
-        # grants default role permissions) and seeds an unmanaged copy in it,
-        # then the agent patches it (GET + PUT, like update_dashboard).
-        with subtest("Editor iterates on a Scratch copy"):
+        # --- Scratch dashboard workflow --- #
+
+        with subtest("Editor creates and edits a Scratch dashboard"):
+            # Prove grafana-push creates the folder on first use.
             assert_http_404(f"{GF_API}/folders/scratch")
             seed = dict(dashboard["spec"], title="Scratch Seed")
             out = machine.succeed(
@@ -803,9 +753,7 @@
                 timeout=CMD_TIMEOUT,
             )
 
-        # A full Git Sync pull must leave the Scratch folder + copy alone: Git
-        # Sync only manages what it provisioned.
-        with subtest("Git Sync pull keeps unmanaged Scratch dashboards"):
+        with subtest("Git Sync preserves unmanaged Scratch dashboards"):
             git_sync_pull()
             machine.succeed(
                 f"{GF_CURL} {DASHES_URL}/scratch-promote "
@@ -817,18 +765,16 @@
                 timeout=CMD_TIMEOUT,
             )
 
-        # grafana-promote writes a Scratch copy as a manifest w/ the uid minus
-        # its `scratch-` prefix, in Git Sync's on-disk format.
-        with subtest("grafana-promote writes a stable manifest"):
+        with subtest("grafana-promote produces stable Git Sync manifests"):
             promote = f"{editor_env} grafana-promote"
             promoted = "/tmp/promote/promote.json"
             machine.succeed(
                 f"{promote} scratch-promote {promoted}",
                 f"cp {promoted} /tmp/promote-first.json",
-                # Takes the uid from the existing file now. Same bytes.
+                # The second run reuses the UID from the existing file.
                 f"{promote} scratch-promote {promoted}",
                 f"cmp {promoted} /tmp/promote-first.json",
-                # Go-style escaping.
+                # Match Go's JSON escaping of <, &, and >.
                 f"grep -qF '\\u003c\\u0026\\u003e' {promoted}",
                 timeout=CMD_TIMEOUT,
             )
@@ -843,8 +789,7 @@
             assert manifest["spec"]["title"] == "Promote <&> Test", manifest
             assert "status" not in manifest, manifest
 
-            # Explicit uid + byte-identical to Git Sync's own write of the same
-            # dashboard (incl. no trailing newline).
+            # Check UID overrides and byte parity w/ Git Sync's serializer.
             machine.succeed(
                 f"{promote} scratch-promote /tmp/promote/other.json other",
                 "jq -e '.metadata.name == \"other\"' /tmp/promote/other.json",
@@ -858,7 +803,6 @@
             )
             assert status == 1 and "not found" in out, (status, out)
 
-        # The promoted manifest passes a dry-run save, which must not create it.
         with subtest("grafana-check dry-runs creates"):
             out = machine.succeed(
                 f"{gf_env} grafana-check {promoted}", timeout=CMD_TIMEOUT
@@ -866,23 +810,21 @@
             assert out == f"ok   {promoted}\n", out
             assert_http_404(f"{DASHES_URL}/promote")
 
-        # grafana-push replaces an existing copy's spec, enforces per-file
-        # baseline conflict checks, and refuses anything outside Scratch.
-        with subtest("grafana-push replaces Scratch copies, refuses others"):
+        with subtest("grafana-push enforces file baselines and Scratch scope"):
             push = f"{editor_env} grafana-push"
             title_is = (
                 f"{editor_curl} {DASHES_URL}/scratch-promote "
                 "| jq -e --arg t {} '.spec.title == $t'"
             ).format
 
-            # Push a refusal: exits 1 w/ `msg`.
+            # Assert the push fails for the expected reason.
             def refused(args: str, msg: str) -> None:
                 status, out = machine.execute(
                     f"{push} {args} 2>&1", timeout=CMD_TIMEOUT
                 )
                 assert status == 1 and msg in out, (args, status, out)
 
-            # The promoted file, edited in place: its baseline matches.
+            # Promotion records the baseline for this file.
             machine.succeed(
                 f"jq '.spec.title = \"Pushed\"' {promoted} > /tmp/edit.json",
                 f"mv /tmp/edit.json {promoted}",
@@ -890,7 +832,8 @@
                 title_is("Pushed"),
                 timeout=CMD_TIMEOUT,
             )
-            # Another file (a bare spec) has no baseline: only w/ --force.
+
+            # Pushing a file without a baseline requires --force.
             machine.succeed(
                 f"jq '.spec' {GS_DASH_FILE} > /tmp/bare.json",
                 timeout=CMD_TIMEOUT,
@@ -901,8 +844,9 @@
                 title_is("'Git Sync Test (edited)'"),
                 timeout=CMD_TIMEOUT,
             )
-            # Someone else saved the copy since: refused, also after pulling it
-            # into another file (proves baselines are per-file, not uid-only).
+
+            # A UI edit makes the baseline stale. Promoting to a second file
+            # must leave the first file's baseline stale.
             machine.succeed(
                 f"{GF_CURL} {DASHES_URL}/scratch-promote "
                 "| jq '.spec.title = \"UI Edit\"' > /tmp/ui-edit.json",
@@ -921,8 +865,8 @@
             refused(
                 "/tmp/bare.json scratch-promote", "changed since our last push"
             )
-            # Editing the pulled file in place + pushing it works; --force
-            # overrides a stale file's baseline.
+
+            # Push w/ the fresh baseline, then force the file w/ a stale one.
             machine.succeed(
                 "jq '.spec.title = \"Pulled\"' /tmp/pulled.json "
                 "> /tmp/edit.json",
@@ -933,9 +877,9 @@
                 title_is("'Git Sync Test (edited)'"),
                 timeout=CMD_TIMEOUT,
             )
-            # No `scratch-` prefix, ex: the synced dashboard's own uid.
+
+            # The UID prefix and folder are independent guards.
             refused(f"{GS_DASH_FILE} test-sync", "no scratch- prefix")
-            # `scratch-` uid outside Scratch folder: refused by folder guard.
             machine.succeed(
                 f"{GF_CURL} {JSON_HDR} "
                 "-d '{\"uid\": \"other\", \"title\": \"Other\"}' "
@@ -964,12 +908,10 @@
                 timeout=CMD_TIMEOUT,
             )
 
-        # grafana-queries runs each panel query through /api/ds/query w/ the
-        # datasource variable resolved + other variables substituted, and
-        # reports ok / EMPTY / FAIL / SKIP per query.
-        with subtest("grafana-queries + grafana-outline against live Grafana"):
+        # --- Dashboard queries and inspection --- #
 
-            # A v2 timeseries panel `key` w/ PromQL `exprs`.
+        with subtest("Grafana panel queries and dashboard lookup by UID"):
+            # Build a v2 time series panel w/ a datasource variable.
             def panel(key: str, exprs: list[str]) -> dict[str, Any]:
                 queries = [
                     {
@@ -996,10 +938,8 @@
                         "data": {
                             "kind": "QueryGroup",
                             "spec": {
-                                # Match 1s test scrape_interval so the range
-                                # grid lands on scraped samples (default 15s
-                                # step misses if no :00/:15/:30/:45 boundary
-                                # falls between first scrape and query).
+                                # Match the 1s scrape interval so the range
+                                # grid hits samples even on fast test runs.
                                 "queryOptions": {"interval": "1s"},
                                 "queries": queries,
                             },
@@ -1030,7 +970,7 @@
                             "current": {"value": ["$__all"]},
                         },
                     },
-                    # Custom All value: matches no job.
+                    # Test an All value that matches no job.
                     {
                         "kind": "QueryVariable",
                         "spec": {
@@ -1056,8 +996,8 @@
                 },
                 "layout": {"kind": "GridLayout", "spec": {"items": []}},
             }
-            # Wait for >= 2 samples of vm_http_requests_total so rate() always
-            # yields a point (VM needs >= 2 samples in the window).
+
+            # rate() needs at least two samples from the same series.
             def rate_ready() -> bool:
                 res = vm_query_quiet(
                     "count_over_time(vm_http_requests_total[5m])"
@@ -1083,9 +1023,9 @@
             assert lines["fmt"].startswith("SKIP "), out
             assert "unsupported variable format :json" in lines["fmt"], out
 
-            # Server uid fetch (exit 0) for both grafana-queries and
-            # grafana-outline (layout formatting itself is unit-tested in
-            # just/grafana.jq.test).
+            # Exercise both commands' live UID lookup. Layout formatting has
+            # its own tests.
+            # see: just/grafana.jq.test
             machine.succeed(f"{queries} scratch-promote", timeout=CMD_TIMEOUT)
             out = machine.succeed(
                 f"{editor_env} grafana-outline scratch-promote",
