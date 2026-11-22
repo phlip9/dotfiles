@@ -1,32 +1,14 @@
-#!/usr/bin/env nix-shell
-#!nix-shell -i bash -p bash nix-update common-updater-scripts nix jq
-
+#!/usr/bin/env bash
 set -euo pipefail
 
-packageFile=pkgs/by-name/an/antigravity-cli/package.nix
-baseUrl=https://storage.googleapis.com/antigravity-public/antigravity-cli
+BASE_URL="https://storage.googleapis.com/antigravity-public/antigravity-cli"
+VERSION="$(curl -fsSL "$BASE_URL/latest")"
 
-currentVersion=$(nix-instantiate --eval --raw -E "with import ./. {}; antigravity-cli.version or (lib.getVersion antigravity-cli)")
-latestVersion=$(curl $baseUrl/latest)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MANIFEST_FILE="$SCRIPT_DIR/manifest.json"
 
-if [[ "$currentVersion" == "$latestVersion" ]]; then
-    echo "package is up-to-date: $currentVersion"
-    exit 0
-fi
-
-# urls unfortunately include a weird buildid that make it hard to get
-latestWholeVersion=$(curl $baseUrl/$latestVersion/manifest.json | jq -r '.platforms."linux-x64".url' | cut -d/ -f6)
-latestBuildId=${latestWholeVersion#*-}
-currentBuildId=$(sed -n 's/.*buildId = "\([^"]*\)";.*/\1/p' "$packageFile")
-
-sed -i "s/buildId = \"$currentBuildId\";/buildId = \"$latestBuildId\";/" "$packageFile"
-update-source-version --version-key=version antigravity-cli $latestVersion || true
-
-for system in \
-    x86_64-linux \
-    aarch64-linux \
-    aarch64-darwin; do
-    hash=$(nix store prefetch-file --json --hash-type sha256 \
-      $(nix-instantiate --eval --raw -E "with import ./. {}; antigravity-cli.src.url" --system "$system") | jq -r '.hash')
-    update-source-version --version-key=version antigravity-cli $latestVersion $hash --system=$system --ignore-same-version
-done
+# Upstream's manifest pins each platform's tarball url + sha512, so no
+# prefetching. Reformat via jq, which also rejects a truncated or non-JSON
+# resp before it can clobber manifest.json.
+MANIFEST="$(curl -fsSL "$BASE_URL/$VERSION/manifest.json" | jq -e .)"
+printf '%s\n' "$MANIFEST" > "$MANIFEST_FILE"

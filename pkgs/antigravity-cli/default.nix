@@ -1,3 +1,4 @@
+# Update with `just phlippkgs-update antigravity-cli`
 {
   lib,
   stdenvNoCC,
@@ -6,42 +7,36 @@
   versionCheckHook,
 }:
 let
-  version = "1.5.13";
-  buildId = "5999302598852608";
-  wholeVersion = "${version}-${buildId}";
-
-  throwSystem = throw "Unsupported system: ${stdenvNoCC.hostPlatform.system}";
-
-  sourceData = {
-    x86_64-linux = fetchurl {
-      url = "https://storage.googleapis.com/antigravity-public/antigravity-cli/${wholeVersion}/linux-x64/cli_linux_x64.tar.gz";
-      hash = "sha256-f6nMbfDQlWJpPWN8QGqGwbD1KrM2RxSx/S15zGBg1LI=";
-    };
-    aarch64-linux = fetchurl {
-      url = "https://storage.googleapis.com/antigravity-public/antigravity-cli/${wholeVersion}/linux-arm/cli_linux_arm64.tar.gz";
-      hash = "sha256-Nllq2AOFMf118Ol7W6iWejDy/Wf42cYZWdLkdh17IV8=";
-    };
-    aarch64-darwin = fetchurl {
-      url = "https://storage.googleapis.com/antigravity-public/antigravity-cli/${wholeVersion}/darwin-arm/cli_mac_arm64.tar.gz";
-      hash = "sha256-HIPj6Ii1QQxEptilRn9+yg11xNVVHIAHa32o3Hc4vZw=";
-    };
-  };
+  stdenv = stdenvNoCC;
+  manifest = lib.importJSON ./manifest.json;
+  # nix system -> upstream manifest platform key
+  platformKey =
+    {
+      "aarch64-darwin" = "darwin-arm";
+      "x86_64-linux" = "linux-x64";
+    }
+    .${stdenv.hostPlatform.system};
+  platformManifestEntry = manifest.platforms.${platformKey};
 in
-stdenvNoCC.mkDerivation (finalAttrs: {
+stdenv.mkDerivation {
   pname = "antigravity-cli";
-  inherit version;
+  inherit (manifest) version;
 
-  strictDeps = true;
-  __structuredAttrs = true;
+  src = fetchurl {
+    inherit (platformManifestEntry) url sha512;
+  };
 
-  src = sourceData.${stdenvNoCC.hostPlatform.system} or throwSystem;
-
+  # tarball contains a single top-level `antigravity` binary
   sourceRoot = ".";
-
-  nativeBuildInputs = lib.optionals stdenvNoCC.hostPlatform.isElf [ autoPatchelfHook ];
 
   dontConfigure = true;
   dontBuild = true;
+
+  nativeBuildInputs = lib.optionals stdenv.hostPlatform.isElf [
+    autoPatchelfHook
+  ];
+
+  strictDeps = true;
 
   installPhase = ''
     runHook preInstall
@@ -51,26 +46,21 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  nativeInstallCheckInputs = [ versionCheckHook ];
   doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
 
-  passthru = {
-    inherit wholeVersion; # for the updateScript
-    updateScript = ./update.sh;
-  };
+  passthru.updateScript = ./update.sh;
 
   meta = {
-    description = "Google's Go-based terminal user interface (TUI) agent client";
+    description = "Google Antigravity terminal agent client";
     homepage = "https://antigravity.google";
     changelog = "https://antigravity.google/changelog";
     license = lib.licenses.unfree;
-    maintainers = with lib.maintainers; [
-      adrielvelazquez
-      kirillrdy
-      u3kkasha
-    ];
-    platforms = lib.attrNames sourceData;
-    mainProgram = "agy";
     sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
+    platforms = [
+      "aarch64-darwin"
+      "x86_64-linux"
+    ];
+    mainProgram = "agy";
   };
-})
+}
