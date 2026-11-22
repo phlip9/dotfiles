@@ -377,7 +377,6 @@
   #   - Password: <paseo-daemon-password>
   services.paseo = {
     enable = true;
-    package = config.phlipPkgs.paseo;
 
     user = "phlip9";
     group = "users";

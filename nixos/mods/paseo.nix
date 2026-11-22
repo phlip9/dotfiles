@@ -3,7 +3,6 @@
   config,
   lib,
   pkgs,
-  phlipPkgs,
   phlipPkgsNixos,
   ...
 }:
@@ -204,7 +203,7 @@ in
 
     services.paseo = {
       listenAddress = lib.mkDefault "::1";
-      package = lib.mkDefault phlipPkgs.paseo;
+      package = lib.mkDefault phlipPkgsNixos.paseo;
 
       # Hardening pins that runtime config edits can't keep across restarts.
       enforcedSettings = {
