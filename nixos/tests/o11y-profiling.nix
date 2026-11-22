@@ -60,9 +60,11 @@ in
         collector.enable = true;
       };
 
-      # Unused here: node metrics, ssh
+      # Unused here: node metrics, ssh, pyroscope-du (blocks multi-user.target)
       services.prometheus.exporters.node.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
+      systemd.services.pyroscope-du.enable = lib.mkForce false;
+      systemd.timers.pyroscope-du.enable = lib.mkForce false;
 
       services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
@@ -84,20 +86,23 @@ in
     };
 
   testScript = ''
-    import datetime as dt
     import json
     import shlex
     import time
 
-    PYRO_URL = "http://127.0.0.1:4040"
-    VM_URL = "http://127.0.0.1:8428"
+    from testlib import (
+        CMD_TIMEOUT,
+        CURL,
+        UP_TIMEOUT,
+        dump_evidence,
+        wait_fast,
+        wait_for_http,
+        wait_for_port,
+    )
+    from testlib.o11y import PYRO_URL, VM_URL, wait_for_vm_labels
+
     GF_URL = "http://127.0.0.1:3000"
-    # Bound every request, so a hung server fails its step, not the test's
-    # globalTimeout, and `dump_evidence` still runs.
-    CURL = "curl -sS --connect-timeout 2 --max-time 10"
     GF_CURL = f"{CURL} --fail-with-body -u admin:gf-admin-testpwd"
-    # Upper bound for one command, incl. its curl
-    CMD_TIMEOUT = dt.timedelta(seconds=15)
 
     SERVICE = "${service}"
     PROFILE_TYPE = "${profileType}"
@@ -117,9 +122,10 @@ in
         )
         return json.loads(out)
 
-    def dump_evidence() -> None:
-        up_query = shlex.quote('up{job="pyroscope"}')
-        for cmd in [
+    up_query = shlex.quote('up{job="pyroscope"}')
+    EVIDENCE = [(
+        machine,
+        [
             "journalctl --no-pager -o cat -u pyroscope | tail -n 100",
             "journalctl --no-pager -o cat -u victoriametrics | tail -n 30",
             "journalctl --no-pager -o cat -u vmagent | tail -n 30",
@@ -128,20 +134,14 @@ in
             f"{CURL} {PYRO_URL}/api/v1/status/config/diff",
             f"{CURL} {VM_URL}/api/v1/query --data-urlencode query={up_query}",
             "ss -Hltunp",
-        ]:
-            _, out = machine.execute(cmd, timeout=CMD_TIMEOUT)
-            print(f"$ {cmd}\n{out}")
+        ],
+    )]
 
     machine.start()
     try:
         with subtest("Pyroscope starts + turns ready"):
-            machine.wait_for_unit(
-                "pyroscope.service", timeout=dt.timedelta(seconds=60)
-            )
-            machine.wait_until_succeeds(
-                f"{CURL} -f {PYRO_URL}/ready",
-                timeout=dt.timedelta(seconds=60),
-            )
+            machine.wait_for_unit("pyroscope.service", timeout=UP_TIMEOUT)
+            wait_for_http(machine, f"{PYRO_URL}/ready")
 
         # Regression guard: Pyroscope has no authn, and several of its
         # listeners default to all interfaces (grpc, memberlist).
@@ -183,22 +183,11 @@ in
             end_ms = push_ms + 600_000
 
         with subtest("vmagent scrapes Pyroscope into VictoriaMetrics"):
-            query = shlex.quote('up{job="pyroscope"}')
-            # Scraped samples reach VM on vmagent's next flush, then turn
-            # searchable on VM's next pending rows flush, up to 2s later.
-            # `force_flush` runs VM's now.
-            machine.wait_until_succeeds(
-                f"{CURL} -f {VM_URL}/internal/force_flush && "
-                f"{CURL} -f {VM_URL}/api/v1/query --data-urlencode query={query} "
-                "| jq -e '.data.result[0].value[1] == \"1\"'",
-                timeout=dt.timedelta(seconds=30),
-            )
+            wait_for_vm_labels(machine, 'up{job="pyroscope"} == 1')
 
         with subtest("Grafana Pyroscope datasource + plugin backend"):
-            machine.wait_for_unit(
-                "grafana.service", timeout=dt.timedelta(seconds=60)
-            )
-            machine.wait_for_open_port(3000, timeout=dt.timedelta(seconds=30))
+            machine.wait_for_unit("grafana.service", timeout=UP_TIMEOUT)
+            wait_for_port(machine, 3000)
             ds = json.loads(machine.succeed(
                 f"{GF_CURL} {GF_URL}/api/datasources/uid/pyroscope",
                 timeout=CMD_TIMEOUT,
@@ -230,10 +219,9 @@ in
                 )
                 return resp.get("flamegraph", {}).get("names", [])
 
-            def has_hot_fn(_last_try: bool) -> bool:
-                return HOT_FN in merged_names()
-
-            retry(has_hot_fn, timeout=dt.timedelta(seconds=30))
+            wait_fast(
+                lambda: HOT_FN in merged_names(), f"profile w/ {HOT_FN}"
+            )
 
             # Grafana's backend query path, like flame graph panels + Explore
             resp = gf_post("/api/ds/query", {
@@ -262,7 +250,7 @@ in
             timeout=CMD_TIMEOUT,
         ))
     except Exception:
-        dump_evidence()
+        dump_evidence(EVIDENCE)
         raise
   '';
 }

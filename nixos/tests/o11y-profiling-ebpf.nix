@@ -209,26 +209,34 @@ in
   testScript = ''
     import datetime as dt
     import json
-    import shlex
     import time
 
-    PYRO_URL = "http://127.0.0.1:4040"
+    from testlib import (
+        CMD_TIMEOUT,
+        CURL,
+        UP_TIMEOUT,
+        dump_evidence,
+        wait_fast,
+        wait_for_http,
+    )
+    from testlib.o11y import (
+        PYRO_URL,
+        metric_sum,
+        metrics_scrape,
+        pyro_fn_names,
+        pyro_label_values,
+        pyro_post as _pyro_post,
+        wait_for_vm_labels,
+    )
+
     ALLOY_URL = "http://127.0.0.1:12345"
-    VM_URL = "http://127.0.0.1:8428"
-    # Bound every request, so a hung server fails its step, not the test's
-    # globalTimeout, and `dump_evidence` still runs.
-    CURL = "curl -sS --connect-timeout 2 --max-time 10"
-    # Upper bound for one command, incl. its curl
-    CMD_TIMEOUT = dt.timedelta(seconds=15)
-    # Upper bound for profiles to show up, in s. Usually ~3-5s after
-    # Alloy starts: BPF load (~2.6s) + first flush + Pyroscope flush.
-    PROFILE_TIMEOUT_S = 90
-    # Upper bound for a service to start + turn ready
-    UP_TIMEOUT = dt.timedelta(seconds=60)
+    # Upper bound for profiles to show up. Usually ~3-5s after Alloy starts:
+    # BPF load (~2.6s) + first flush + Pyroscope flush.
+    PROFILE_TIMEOUT = dt.timedelta(seconds=90)
     # Upper bound for one of Alloy's periodic events (discovery refresh,
-    # flush), in s. Generous: polls return right after the event, and a
-    # starved VM delays it.
-    EVENT_TIMEOUT_S = 30
+    # flush). Generous: polls return right after the event, and a starved
+    # VM delays it.
+    EVENT_TIMEOUT = dt.timedelta(seconds=30)
 
     CPU_TYPE = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
     OFFCPU_TYPE = "offcpu:offcpu:nanoseconds::"
@@ -312,64 +320,34 @@ in
     def vm_now_ms() -> int:
         return int(machine.succeed("date +%s%3N", timeout=CMD_TIMEOUT))
 
-    # Query window: since boot, until well after now. From the host's
-    # clock, w/o a round trip: the guest's RTC starts from it, and +-1h
-    # absorbs any skew.
-    def window() -> dict:
-        now_ms = int(time.time() * 1000)
-        return {"start": now_ms - 3_600_000, "end": now_ms + 3_600_000}
-
-    # POST to Pyroscope's Connect query API, by default over `window()`.
-    # Retries transport errors + 5xx for `timeout_s`, then raises; fails at
-    # once on other 4xx (bad method, bad request). Never turns an error into
-    # an empty result: negative checks only see real responses.
+    # POST to Pyroscope's Connect query API w/ transient error retries.
     def pyro_post(
-        method: str, body: dict, timeout_s: float = EVENT_TIMEOUT_S
+        method: str, body: dict, timeout: dt.timedelta = EVENT_TIMEOUT
     ) -> dict:
-        data = shlex.quote(json.dumps({**window(), **body}))
-        cmd = (
-            f"{CURL} -w '\\n%{{http_code}}' "
-            f"-H 'Content-Type: application/json' --data-binary {data} "
-            f"{PYRO_URL}/querier.v1.QuerierService/{method}"
-        )
-        deadline = time.monotonic() + timeout_s
-        while True:
-            status, out = machine.execute(cmd, timeout=CMD_TIMEOUT)
-            body_out, _, code = out.rpartition("\n")
-            if status == 0 and code.startswith("2"):
-                resp = json.loads(body_out)
-                assert isinstance(resp, dict), out
-                return resp
-            print(f"Pyroscope {method}: exit {status}, HTTP {code}: {body_out}")
-            # 408 + 429 are transient, other 4xx won't get better
-            permanent = code.startswith("4") and code not in ("408", "429")
-            if status == 0 and permanent:
-                raise Exception(f"Pyroscope {method}: HTTP {code}: {body_out}")
-            if time.monotonic() > deadline:
-                raise Exception(f"Pyroscope {method}: failed for {timeout_s}s")
+        return _pyro_post(machine, method, body, retry_timeout=timeout)
 
     # Function names in the merged flame graph of `ptype` for `selector`,
-    # from profiles stamped in [`start_ms`, `end_ms`] (default: `window()`).
+    # from profiles stamped in [`start_ms`, `end_ms`] (default: +-1h).
     def fn_names(
         ptype: str,
         selector: str,
         start_ms: int | None = None,
         end_ms: int | None = None,
-        timeout_s: float = EVENT_TIMEOUT_S,
+        timeout: dt.timedelta = EVENT_TIMEOUT,
     ) -> set[str]:
-        body = {"profileTypeID": ptype, "labelSelector": selector}
-        if start_ms is not None:
-            body["start"] = start_ms
-        if end_ms is not None:
-            body["end"] = end_ms
-        resp = pyro_post("SelectMergeStacktraces", body, timeout_s)
-        # `total`: the flame graph's root, even w/o any profiles
-        return set(resp.get("flamegraph", {}).get("names", [])) - {"total"}
+        return pyro_fn_names(
+            machine,
+            ptype,
+            selector,
+            start_ms=start_ms,
+            end_ms=end_ms,
+            retry_timeout=timeout,
+        )
 
     def label_values(label: str, selector: str | None = None) -> list[str]:
-        matchers = [selector] if selector else []
-        resp = pyro_post("LabelValues", {"name": label, "matchers": matchers})
-        return resp.get("names", [])
+        return pyro_label_values(
+            machine, label, selector=selector, retry_timeout=EVENT_TIMEOUT
+        )
 
     # Poll until `check(names)` holds for the profile. Pyroscope has no push
     # notification. Returns the last names seen.
@@ -379,39 +357,25 @@ in
         end_ms: int | None = None,
     ):
         seen = set()
-        deadline = time.monotonic() + PROFILE_TIMEOUT_S
+        deadline = time.monotonic() + PROFILE_TIMEOUT.total_seconds()
 
         def poll() -> bool:
             nonlocal seen
             # Query retries share this wait's budget, so a Pyroscope outage
-            # can't stretch it by another EVENT_TIMEOUT_S.
-            left = max(0.0, deadline - time.monotonic())
+            # can't stretch it by another EVENT_TIMEOUT.
+            left = dt.timedelta(seconds=max(0.0, deadline - time.monotonic()))
             seen = fn_names(ptype, selector, start_ms, end_ms, left)
             return check(seen)
 
         try:
-            wait_fast(poll, what, PROFILE_TIMEOUT_S)
+            wait_fast(poll, what, PROFILE_TIMEOUT)
         except Exception:
             print(f"{what}: last names seen: {sorted(seen)[:60]}")
             raise
         return seen
 
-    # One scrape of a server's Prometheus metrics: its sample lines
-    def metrics_scrape(url: str) -> list[str]:
-        out = machine.succeed(f"{CURL} -f {url}/metrics", timeout=CMD_TIMEOUT)
-        return [line for line in out.splitlines() if not line.startswith("#")]
-
     def alloy_scrape() -> list[str]:
-        return metrics_scrape(ALLOY_URL)
-
-    # Metric `name` in `scrape`, summed over series w/ `match` in their
-    # labels
-    def metric(scrape: list[str], name: str, match: str = "") -> float:
-        total = 0.0
-        for line in scrape:
-            if line.startswith((name + "{", name + " ")) and match in line:
-                total += float(line.rsplit(" ", 1)[1])
-        return total
+        return metrics_scrape(machine, ALLOY_URL)
 
     # One of `pyroscope.ebpf`'s test hooks (`collector.profiling.testHooks`, see
     # nixos/pkgs/grafana-alloy): its JSON resp
@@ -481,7 +445,7 @@ in
     # pids: undiscovered (most) + discovered ones
     def fanout_metric(scrape: list[str], name: str) -> float:
         return sum(
-            metric(scrape, name, f'service_name="{service}"')
+            metric_sum(scrape, name, f'service_name="{service}"')
             for service in [UNSPECIFIED, FORK_UNIT]
         )
 
@@ -497,17 +461,9 @@ in
         ))
         return (last_pid() - pid0) % pid_max
 
-    # Poll `check` until it holds, back to back, w/o `retry`'s 1s sleeps:
-    # each check blocks on guest commands / API requests (no hard lower
-    # bound, often ~0.02-0.1s), so it's no CPU-only busy loop.
-    def wait_fast(check, what: str, timeout_s: float) -> None:
-        deadline = time.monotonic() + timeout_s
-        while not check():
-            if time.monotonic() > deadline:
-                raise Exception(f"timed out after {timeout_s}s: {what}")
-
-    def dump_evidence() -> None:
-        for cmd in [
+    EVIDENCE = [(
+        machine,
+        [
             "systemctl status alloy pyroscope ${unit} --no-pager | head -n 60",
             "journalctl --no-pager -o cat -u alloy | tail -n 100",
             "journalctl --no-pager -o cat -u pyroscope | tail -n 50",
@@ -521,9 +477,8 @@ in
             f"{CURL} {PYRO_URL}/ready",
             "tail -n 20 /var/log/nginx/access.log",
             "journalctl --no-pager -o cat -u nginx | tail -n 20",
-        ]:
-            _, out = machine.execute(cmd, timeout=CMD_TIMEOUT)
-            print(f"$ {cmd}\n{out}")
+        ],
+    )]
 
     machine.start()
     try:
@@ -531,20 +486,16 @@ in
             machine.wait_for_unit(
                 "pyroscope.service", timeout=dt.timedelta(seconds=90)
             )
-            machine.wait_until_succeeds(
-                f"{CURL} -f {PYRO_URL}/ready", timeout=UP_TIMEOUT
-            )
+            wait_for_http(machine, f"{PYRO_URL}/ready", timeout=UP_TIMEOUT)
             # A failed query raises, never reads as "no profiles"
             try:
-                pyro_post("NoSuchMethod", {}, timeout_s=0)
+                pyro_post("NoSuchMethod", {}, timeout=dt.timedelta(0))
             except Exception:
                 pass
             else:
                 raise Exception("pyro_post: a failed request passed")
             machine.wait_for_unit("alloy.service", timeout=UP_TIMEOUT)
-            machine.wait_until_succeeds(
-                f"{CURL} -f {ALLOY_URL}/-/ready", timeout=UP_TIMEOUT
-            )
+            wait_for_http(machine, f"{ALLOY_URL}/-/ready", timeout=UP_TIMEOUT)
             machine.wait_for_unit(f"{UNIT}.service", timeout=UP_TIMEOUT)
 
         with subtest("Alloy runs as uid alloy w/ exactly its caps"):
@@ -645,12 +596,12 @@ in
                     and live["labels"].get("service_name") == EXITED_UNIT
                 )
 
-            wait_fast(live_as_unit, "Alloy applies the pid", EVENT_TIMEOUT_S)
+            wait_fast(live_as_unit, "Alloy applies the pid", EVENT_TIMEOUT)
             ebpf_flush(hold=True)
             wait_fast(
                 lambda: pending_cpu(pid) >= min_samples,
                 "samples of the pid",
-                EVENT_TIMEOUT_S,
+                EVENT_TIMEOUT,
             )
             f0 = ebpf_flush(hold=True)
             assert flushed(f0, EXITED_UNIT, "process_cpu"), f0
@@ -664,7 +615,7 @@ in
             wait_fast(
                 lambda: pending_cpu(pid) >= min_samples,
                 "samples of the pid since F0",
-                EVENT_TIMEOUT_S,
+                EVENT_TIMEOUT,
             )
             machine.succeed(
                 f"systemctl stop {EXITED_UNIT}", timeout=CMD_TIMEOUT
@@ -672,7 +623,7 @@ in
             wait_fast(
                 lambda: applied_target(pid)[0] is None,
                 "Alloy applies the pid's removal",
-                EVENT_TIMEOUT_S,
+                EVENT_TIMEOUT,
             )
             _, exited = applied_target(pid)
             pending = pending_cpu(pid)
@@ -720,19 +671,22 @@ in
             wait_fast(
                 lambda: len(pending_series()) >= min_series,
                 f"samples of {min_series} series",
-                EVENT_TIMEOUT_S,
+                EVENT_TIMEOUT,
             )
-            pyro0, alloy0 = metrics_scrape(PYRO_URL), alloy_scrape()
+            pyro0, alloy0 = metrics_scrape(machine, PYRO_URL), alloy_scrape()
             flush_t0 = time.monotonic()
             flush = ebpf_flush(hold=True)
             flush_s = time.monotonic() - flush_t0
-            pyro1, alloy1 = metrics_scrape(PYRO_URL), alloy_scrape()
+            pyro1, alloy1 = metrics_scrape(machine, PYRO_URL), alloy_scrape()
 
             def delta(
                 scrape0: list[str], scrape1: list[str], name: str,
                 match: str = "",
             ) -> float:
-                return metric(scrape1, name, match) - metric(scrape0, name, match)
+                return (
+                    metric_sum(scrape1, name, match)
+                    - metric_sum(scrape0, name, match)
+                )
 
             requests = delta(
                 pyro0, pyro1, "pyroscope_distributor_push_batch_series_count"
@@ -815,7 +769,7 @@ in
             wait_fast(
                 lambda: pids_since(pids0) >= fanout_pids,
                 f"{fanout_pids} new pids",
-                PROFILE_TIMEOUT_S,
+                PROFILE_TIMEOUT,
             )
             stop_ms = int(machine.succeed(
                 f"systemctl stop {FORK_UNIT} && date +%s%3N",
@@ -829,7 +783,7 @@ in
                     fn_names(CPU_TYPE, "{}", stop_ms + COLLECT_INTERVAL_MS)
                 ),
                 "the 2nd flush after the stop",
-                PROFILE_TIMEOUT_S,
+                PROFILE_TIMEOUT,
             )
             scrape1 = alloy_scrape()
             end_ms = vm_now_ms()
@@ -856,7 +810,7 @@ in
                 "pyroscope_write_dropped_profiles_total",
                 "pyroscope_ebpf_pprofs_dropped_total",
             ]:
-                assert metric(scrape1, name) == 0, name
+                assert metric_sum(scrape1, name) == 0, name
 
         # Kernel threads have no exe, so a separate discovery labels them.
         # Trigger some: page cache writeback runs in kworkers.
@@ -906,23 +860,23 @@ in
 
         with subtest("Alloy metrics: pushes sent, none dropped, healthy"):
             scrape = alloy_scrape()
-            sent = metric(scrape, "pyroscope_write_sent_profiles_total")
+            sent = metric_sum(scrape, "pyroscope_write_sent_profiles_total")
             assert sent > 0, sent
             for name in [
                 "pyroscope_write_dropped_profiles_total",
                 "pyroscope_ebpf_pprofs_dropped_total",
                 "pyroscope_ebpf_profiling_sessions_failing_total",
             ]:
-                assert metric(scrape, name) == 0, name
+                assert metric_sum(scrape, name) == 0, name
             # Prove the series exists before trusting the == 0 below
-            healthy = metric(
+            healthy = metric_sum(
                 scrape,
                 "alloy_component_controller_running_components",
                 'health_type="healthy"',
             )
             assert healthy >= 4, healthy
             for health in ["unhealthy", "exited", "unknown"]:
-                assert metric(
+                assert metric_sum(
                     scrape,
                     "alloy_component_controller_running_components",
                     f'health_type="{health}"',
@@ -931,27 +885,10 @@ in
         # `up` + Pyroscope's disk usage via node-exporter's textfile
         # collector, for the alert rules
         with subtest("VictoriaMetrics: Alloy up, Pyroscope disk usage"):
-            # Scraped samples reach VM on vmagent's next flush, then turn
-            # searchable on VM's next pending rows flush, up to 2s later.
-            # `force_flush` runs VM's now.
-            def wait_for_query(promql: str, jq_check: str) -> None:
-                query = shlex.quote(promql)
-                machine.wait_until_succeeds(
-                    f"{CURL} -f {VM_URL}/internal/force_flush && "
-                    f"{CURL} -f {VM_URL}/api/v1/query "
-                    f"--data-urlencode query={query} | jq -e {jq_check}",
-                    timeout=dt.timedelta(seconds=30),
-                )
-
-            wait_for_query(
-                'up{job="alloy"}', "'.data.result[0].value[1] == \"1\"'"
-            )
+            wait_for_vm_labels(machine, 'up{job="alloy"} == 1')
             # Fresh numbers now, not at the next timer tick
             machine.succeed("systemctl start pyroscope-du", timeout=CMD_TIMEOUT)
-            wait_for_query(
-                "pyroscope_data_bytes",
-                "'.data.result[0].value[1] | tonumber > 0'",
-            )
+            wait_for_vm_labels(machine, "pyroscope_data_bytes > 0")
 
         # Not an assertion: resource numbers for tuning. CPU over the
         # subtests above, after the first profile (startup excluded).
@@ -969,7 +906,7 @@ in
             timeout=CMD_TIMEOUT,
         ))
     except Exception:
-        dump_evidence()
+        dump_evidence(EVIDENCE)
         raise
   '';
 }
