@@ -52,10 +52,17 @@ stdenv.mkDerivation {
     #
     # Also use nixpkgs `rg` over the embedded ripgrep, which agy otherwise
     # extracts into ~/.cache and execs from there.
+    #
+    # Also run the TUI inline instead of in the alternate screen, which breaks
+    # terminal scrollback. `--settings` is a session-only overlay on top of
+    # settings.json and works before any subcommand. A later user-supplied
+    # `--settings` replaces this one wholesale (no merge).
     wrapProgram $out/bin/agy \
       --set AGY_CLI_DISABLE_AUTO_UPDATE true \
       --set ANTIGRAVITY_DISABLE_EMBEDDED_RIPGREP true \
-      --prefix PATH : ${lib.makeBinPath [ ripgrep ]}
+      --prefix PATH : ${lib.makeBinPath [ ripgrep ]} \
+      --add-flag --settings \
+      --add-flag '{"altScreenMode":"never"}'
 
     runHook postInstall
   '';
