@@ -106,9 +106,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # =========================================================================
-    # nixbot CI
-    # =========================================================================
+    # --- nixbot CI --- #
+
     services.nixbot = {
       enable = true;
       inherit (cfg) admins domain;
@@ -162,9 +161,8 @@ in
       };
     };
 
-    # =========================================================================
-    # niks3 - S3-backed binary cache server
-    # =========================================================================
+    # --- niks3 - S3-backed binary cache server --- #
+
     services.niks3 = {
       enable = true;
       # Patched w/ a configurable inventory metrics refresh interval.
@@ -204,9 +202,8 @@ in
       wants = [ "network-online.target" ];
     };
 
-    # =========================================================================
-    # Secrets
-    # =========================================================================
+    # --- Secrets --- #
+
     sops.secrets = {
       # niks3 / Cloudflare R2 (S3-compatible store)
       niks3-s3-access-key.owner = "niks3";

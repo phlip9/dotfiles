@@ -47,9 +47,7 @@ local function definition_kind(capture)
     return capture:match("^local%.definition%.(.+)$")
 end
 
---------------------------------------------------------------------------------
--- Git hunk utilities
---------------------------------------------------------------------------------
+-- --- Git hunk utilities --- --
 
 --- Get hunks for a buffer from vim-gitgutter.
 --- @param bufnr number Buffer number
@@ -120,9 +118,7 @@ function M.get_line_diff_status(lnum, hunks)
     end
 end
 
---------------------------------------------------------------------------------
--- Custom entry maker with diff markers
---------------------------------------------------------------------------------
+-- --- Custom entry maker with diff markers --- --
 
 --- Create an entry maker that adds diff markers to symbol entries.
 --- @param hunks table[] Hunks for the buffer
@@ -185,9 +181,7 @@ function M.make_diff_entry_maker(_bufnr, hunks, opts)
     end
 end
 
---------------------------------------------------------------------------------
--- Custom previewer with diff markers in sign column
---------------------------------------------------------------------------------
+-- --- Custom previewer with diff markers in sign column --- --
 
 --- Place hunk signs as extmarks in a buffer's sign column.
 ---
@@ -271,9 +265,7 @@ function M.make_diff_previewer(opts, hunks)
     })
 end
 
---------------------------------------------------------------------------------
--- Public API: Document symbol pickers with diff markers
---------------------------------------------------------------------------------
+-- --- Public API: Document symbol pickers with diff markers --- --
 
 --- coc.nvim async action helper
 local function CocActionWithTimeout(action_type, ...)

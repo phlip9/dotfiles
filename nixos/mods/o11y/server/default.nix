@@ -74,9 +74,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # ===================================================================
-    # VictoriaMetrics - metrics storage + query
-    # ===================================================================
+    # --- VictoriaMetrics - metrics storage + query --- #
+
     # No `prometheusConfig`: its built-in scraper stays off. The collector's
     # vmagent scrapes + remote-writes to `/api/v1/write`, see
     # ../collector/default.nix.
@@ -86,9 +85,8 @@ in
       retentionPeriod = cfg.retentionPeriod;
     };
 
-    # ===================================================================
-    # prometheus-blackbox-exporter - HTTPS probes + cert expiry
-    # ===================================================================
+    # --- prometheus-blackbox-exporter - HTTPS probes + cert expiry --- #
+
     services.prometheus.exporters.blackbox = lib.mkIf (cfg.probes != [ ]) {
       enable = true;
       listenAddress = "127.0.0.1";

@@ -188,9 +188,8 @@
     linger = true;
   };
 
-  # =========================================================================
-  # resource control
-  # =========================================================================
+  # --- resource control --- #
+
   # setup different cgroup tiers so important services stay responsive even
   # under heavy CPU/memory pressure:
   # - system.slice: infra (sshd, nginx, grafana, victoriametrics, ...)
@@ -367,9 +366,8 @@
   };
   sops.secrets.phlip9-github-agent-app-secret-key = { };
 
-  # =========================================================================
-  # Paseo - Agent interface
-  #
+  # --- Paseo - Agent interface --- #
+
   # Connect:
   # - Open `https://paseo.phlip9.com`
   # - Direct Connect:
@@ -377,7 +375,6 @@
   #   - Port: 443
   #   - SSL: Yes
   #   - Password: <paseo-daemon-password>
-  # =========================================================================
   services.paseo = {
     enable = true;
     package = config.phlipPkgs.paseo;
@@ -432,9 +429,8 @@
     OOMPolicy = "continue";
   };
 
-  # =========================================================================
-  # nixbot CI
-  # =========================================================================
+  # --- nixbot CI --- #
+
   # see: doc/nixbot-ci.md
   # see: nixos/mods/nixbot-ci.nix
   services.phlip9-nixbot-ci = {
@@ -476,9 +472,8 @@
   };
   sops.secrets.ci-secrets-phlip9-notes-private = { };
 
-  # =========================================================================
-  # rbitcoin - Bitcoin full node (mainnet)
-  # =========================================================================
+  # --- rbitcoin - Bitcoin full node (mainnet) --- #
+
   # Full archive (~0.8 TiB in /var/lib/rbitcoin) w/ the scripthash index for
   # a local Esplora. The first IBD takes 10h+, then the index build takes
   # tens of minutes to hours. o11y turns on its health + /metrics listener.
@@ -502,9 +497,8 @@
     rpc.socketPath = "/run/rbitcoin/rpc.sock";
   };
 
-  # =========================================================================
-  # Observability (o11y)
-  # =========================================================================
+  # --- Observability (o11y) --- #
+
   # Grafana + VictoriaMetrics + prometheus-*-exporter(s)
   # see: doc/o11y/README.md
   # see: nixos/mods/o11y/default.nix

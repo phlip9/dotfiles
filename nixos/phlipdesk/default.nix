@@ -77,9 +77,8 @@
     users = [ "phlip9" ];
   };
 
-  # =========================================================================
-  # Observability (o11y)
-  # =========================================================================
+  # --- Observability (o11y) --- #
+
   # Collector only: exporters + vmagent + Alloy eBPF profiler, pushed to
   # sauna's ingest endpoint. No alerts for this host atm.
   # see: doc/o11y/README.md

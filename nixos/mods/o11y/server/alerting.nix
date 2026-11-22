@@ -322,9 +322,8 @@ in
       alertmanager.static_configs = hostTargets amAddr;
     };
 
-    # ===================================================================
-    # vmalert - rule evaluation
-    # ===================================================================
+    # --- vmalert - rule evaluation --- #
+
     services.vmalert.instances."" = {
       enable = true;
       settings = {
@@ -388,9 +387,8 @@ in
       };
     };
 
-    # ===================================================================
-    # Alertmanager - grouping, inhibition, routing, delivery
-    # ===================================================================
+    # --- Alertmanager - grouping, inhibition, routing, delivery --- #
+
     services.prometheus.alertmanager = {
       enable = true;
       listenAddress = "127.0.0.1";
@@ -409,9 +407,8 @@ in
       "healthchecks-watchdog-ping-url:${cfgA.healthchecksWatchdogPingUrlFile}"
     ];
 
-    # ===================================================================
-    # healthchecks-host-ping - off-box host + alerting health
-    # ===================================================================
+    # --- healthchecks-host-ping - off-box host + alerting health --- #
+
     systemd.services.healthchecks-host-ping = {
       description = "Ping healthchecks.io if the alerting stack is healthy";
       wants = [ "network-online.target" ];

@@ -330,10 +330,8 @@ in
       static_configs = hostTargets gfAddr;
     };
 
-    # ===================================================================
-    # Grafana - visualization + dashboards
-    # ===================================================================
-    #
+    # --- Grafana - visualization + dashboards --- #
+
     # Secrets loaded via systemd LoadCredential, referenced with
     # Grafana's $__file{path} provider.
 
@@ -518,10 +516,8 @@ in
       "secrets-manager-key:${cfg.grafana.secretsManagerKeyFile}"
     ];
 
-    # ===================================================================
-    # Grafana Git Sync - dashboards <-> git repo
-    # ===================================================================
-    #
+    # --- Grafana Git Sync - dashboards <-> git repo --- #
+
     # Repository resources can't be file-provisioned, so a oneshot unit
     # creates/updates ours through the API after Grafana starts, then pulls.
     assertions = lib.optionals cfgGs.enable [
@@ -623,9 +619,8 @@ in
       };
     };
 
-    # ===================================================================
-    # nginx - TLS termination + reverse proxy to Grafana
-    # ===================================================================
+    # --- nginx - TLS termination + reverse proxy to Grafana --- #
+
     services.nginx.virtualHosts = lib.mkIf (cfg.grafana.domain != null) {
       ${cfg.grafana.domain} = {
         forceSSL = true;

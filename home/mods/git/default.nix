@@ -125,9 +125,7 @@ in
     };
 
     settings.alias = {
-      #############
-      # Utilities #
-      #############
+      # --- Utilities --- #
 
       # Print the current repo's "master" branch name ("master" or "main").
       master = stripNewlines ''
@@ -149,9 +147,7 @@ in
       # `git switch` w/ fzf branch picker when run w/o args
       sw = mkAlias ./git-sw.sh [ ];
 
-      #############
-      # PR Review #
-      #############
+      # --- PR Review --- #
 
       # checkout a PR in the current repo
       pr = "!git switch $(git master) && git pull && gh pr checkout";
@@ -223,9 +219,7 @@ in
       # Print compact list of commits on this PR branch.
       prlg = "!git --no-pager log --reverse --format='* %s' $(git pr-base)..";
 
-      #############
-      # Shortcuts #
-      #############
+      # --- Shortcuts --- #
 
       a = "add";
       ab = "!git absorb --base $(git pr-base)";

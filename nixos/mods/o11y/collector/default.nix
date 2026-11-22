@@ -168,9 +168,8 @@ in
       }
     ];
 
-    # ===================================================================
-    # vmagent - scrapes `scrapeConfigs`, remote-writes to VictoriaMetrics
-    # ===================================================================
+    # --- vmagent - scrapes `scrapeConfigs`, remote-writes to VictoriaMetrics --- #
+
     services.vmagent = {
       enable = true;
       # Same binary as the server's VictoriaMetrics, not `pkgs.vmagent`
@@ -304,9 +303,8 @@ in
       };
     };
 
-    # ===================================================================
-    # prometheus-node-exporter - system metrics
-    # ===================================================================
+    # --- prometheus-node-exporter - system metrics --- #
+
     services.prometheus.exporters.node = {
       enable = true;
       listenAddress = "127.0.0.1";
@@ -317,9 +315,8 @@ in
       ];
     };
 
-    # ===================================================================
-    # prometheus-nginx-exporter - nginx stub_status metrics
-    # ===================================================================
+    # --- prometheus-nginx-exporter - nginx stub_status metrics --- #
+
     services.prometheus.exporters.nginx = lib.mkIf config.services.nginx.enable {
       enable = true;
       listenAddress = "127.0.0.1";
@@ -329,9 +326,8 @@ in
     # bound to loopback in the nginx section below.
     services.nginx.statusPage = lib.mkIf config.services.nginx.enable true;
 
-    # ===================================================================
-    # prometheus-postgres-exporter - postgres metrics
-    # ===================================================================
+    # --- prometheus-postgres-exporter - postgres metrics --- #
+
     services.prometheus.exporters.postgres =
       lib.mkIf config.services.postgresql.enable
         {
@@ -345,18 +341,16 @@ in
           extraFlags = [ "--collector.stat_checkpointer" ];
         };
 
-    # ===================================================================
-    # rbitcoin - node metrics
-    # ===================================================================
+    # --- rbitcoin - node metrics --- #
+
     # `/metrics` needs the loopback health listener.
     services.rbitcoin = lib.mkIf cfgRbitcoin.enable {
       health.enable = lib.mkDefault true;
       metrics = lib.mkDefault true;
     };
 
-    # ===================================================================
-    # nginx - stub_status vhost
-    # ===================================================================
+    # --- nginx - stub_status vhost --- #
+
     # The upstream stub_status vhost listens on all addresses. Only the local
     # exporter needs it. Upstream default causes lots of spam logs from bots.
     # NOTE(phlip9): upstream already has an ip whitelist for

@@ -229,7 +229,7 @@ in
                 _, out = node.execute(cmd, timeout=CMD_TIMEOUT)
                 print(f"{node.name}$ {cmd}\n{out}")
 
-    # --- Prometheus remote write v1, by hand: protobuf + snappy ---
+    # --- Prometheus remote write v1, by hand: protobuf + snappy --- #
 
     def varint(num: int) -> bytes:
         out = bytearray()

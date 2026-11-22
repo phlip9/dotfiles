@@ -95,9 +95,8 @@ in
       static_configs = hostTargets pyroscopeAddr;
     };
 
-    # ===================================================================
-    # Pyroscope - profile storage + queries
-    # ===================================================================
+    # --- Pyroscope - profile storage + queries --- #
+
     services.pyroscope = {
       enable = true;
       settings = {

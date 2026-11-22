@@ -1,4 +1,3 @@
--- ============================================================================
 -- Async "shell -> open/quickfix" helpers for Neovim
 --
 -- Commands:
@@ -22,15 +21,12 @@
 -- - The shell command is run via the user's configured shell:
 --     { vim.o.shell, vim.o.shellcmdflag, <cmd> }
 --   so pipes, redirects, quotes, globbing, etc. behave like a normal shell.
--- ============================================================================
 
 local uv = vim.uv or vim.loop
 
 local M = {}
 
--- ----------------------------------------------------------------------------
--- Small helpers
--- ----------------------------------------------------------------------------
+-- --- Small helpers --- --
 
 local function notify(msg, level)
     vim.notify(msg, level or vim.log.levels.INFO, { title = "sh-open" })
@@ -194,9 +190,7 @@ local function populate_quickfix(files, title)
     vim.cmd("copen")
 end
 
--- ----------------------------------------------------------------------------
--- Core async runner
--- ----------------------------------------------------------------------------
+-- --- Core async runner --- --
 
 local function run_shell_to_paths(cmd, opts, on_success)
     opts = vim.tbl_extend("force", {
@@ -257,9 +251,7 @@ local function run_shell_to_paths(cmd, opts, on_success)
     end)
 end
 
--- ----------------------------------------------------------------------------
--- Public operations
--- ----------------------------------------------------------------------------
+-- --- Public operations --- --
 
 function M.sho(cmd)
     run_shell_to_paths(cmd, {

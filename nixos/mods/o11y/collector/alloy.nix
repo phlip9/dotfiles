@@ -431,9 +431,8 @@ in
       static_configs = hostTargets cfgP.listenAddress;
     };
 
-    # ===================================================================
-    # Alloy - eBPF profiler for every process on the host
-    # ===================================================================
+    # --- Alloy - eBPF profiler for every process on the host --- #
+
     services.alloy = {
       enable = true;
       package = phlipPkgsNixos.grafana-alloy;
