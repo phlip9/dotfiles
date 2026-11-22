@@ -1,5 +1,19 @@
+diff --git a/.artifacts/diff-subscription/refresh-metrics.json b/.artifacts/diff-subscription/refresh-metrics.json
+new file mode 100644
+index 000000000..f4e6b66ed
+--- /dev/null
++++ b/.artifacts/diff-subscription/refresh-metrics.json
+@@ -0,0 +1,7 @@
++{
++  "files": 252,
++  "coldMs": 1018.5805689999997,
++  "oneFileRefreshMs": 346.56030400000054,
++  "changedBodies": 1,
++  "highlightCalls": 1
++}
+\ No newline at end of file
 diff --git a/packages/server/src/server/plugins/managed-source.ts b/packages/server/src/server/plugins/managed-source.ts
-index 636ffd816..d52d885dc 100644
+index 636ffd816..e85be0ef9 100644
 --- a/packages/server/src/server/plugins/managed-source.ts
 +++ b/packages/server/src/server/plugins/managed-source.ts
 @@ -66,6 +66,9 @@ interface OwnedLocation {
@@ -24,3 +38,25 @@ index 636ffd816..d52d885dc 100644
      const registry = parsePluginRegistryReference(input.source, this.registryOptions.defaultUrl);
      if (registry) {
        if (input.ref)
+@@ -362,11 +370,19 @@ export class ManagedPluginSources {
+     }
+   }
+ 
+-  listRegistry() {
++  async listRegistry() {
++    // Managed plugin installs disabled: never contact third-party plugin registries.
++    if (MANAGED_PLUGIN_INSTALLS_DISABLED) {
++      throw new Error("Managed plugin installs are disabled");
++    }
+     return listRegistryPlugins(this.registryOptions);
+   }
+ 
+-  getRegistryPlugin(id: string) {
++  async getRegistryPlugin(id: string) {
++    // Managed plugin installs disabled: never contact third-party plugin registries.
++    if (MANAGED_PLUGIN_INSTALLS_DISABLED) {
++      throw new Error(`Managed plugin installs are disabled: ${id}`);
++    }
+     return getRegistryPlugin(id, this.registryOptions);
+   }
+ 

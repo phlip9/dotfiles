@@ -66,6 +66,32 @@
         }
       '';
 
+      # Verify plugin registry metadata fetches are blocked (not just installs).
+      pluginRegistryProbe = pkgs.writeText "paseo-plugin-registry-probe.mjs" ''
+        import assert from "node:assert/strict";
+        import { DaemonClient } from "${config.services.paseo.package}/lib/paseo/packages/client/dist/daemon-client.js";
+
+        const client = new DaemonClient({
+          url: "ws://[::1]:6767/ws",
+          clientId: "plugin-registry-test",
+          password: "correct-password",
+          reconnect: { enabled: false },
+        });
+        try {
+          await client.connect();
+          await assert.rejects(
+            () => client.listPluginRegistry(),
+            /Managed plugin installs are disabled/,
+          );
+          await assert.rejects(
+            () => client.getRegistryPlugin("acme/example"),
+            /Managed plugin installs are disabled/,
+          );
+        } finally {
+          await client.close();
+        }
+      '';
+
       # Pre-existing, UI-managed config.json, like sauna's. Includes stale
       # values that conflict w/ declarative policy: an enabled service proxy,
       # upstream's default app.paseo.sh CORS origin, and enabled plugins.
@@ -100,6 +126,9 @@
         pkgs.jq
         (pkgs.writeShellScriptBin "paseo-precompiled-probe" ''
           exec ${lib.getExe pkgs.nodejs_22} ${precompiledProbe}
+        '')
+        (pkgs.writeShellScriptBin "paseo-plugin-registry-probe" ''
+          exec ${lib.getExe pkgs.nodejs_22} ${pluginRegistryProbe}
         '')
       ];
 
@@ -416,6 +445,7 @@
         )
         assert status != 0, output
         assert "Managed plugin installs are disabled" in output, output
+        machine.succeed("timeout 30 paseo-plugin-registry-probe")
 
     with subtest("stop kills terminal children and restart restores env"):
         machine.succeed(

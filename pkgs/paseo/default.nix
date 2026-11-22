@@ -26,7 +26,8 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     # Hard-disable the Paseo Cloud hub control channel, which attaches
     # pre-admitted sockets that bypass the daemon password.
     ./paseo-disable-hub.patch
-    # Never fetch third-party plugin code from a registry, npm, or git.
+    # Never fetch third-party plugin code or registry listings from a registry,
+    # npm, or git.
     ./paseo-disable-plugin-installs.patch
     # Don't leak PASEO_PASSWORD{,_FILE} into agent and terminal envs.
     ./paseo-scrub-secret-env.patch
