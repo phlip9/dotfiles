@@ -215,9 +215,8 @@ in
         daemon.relay.requireProtectedSecurity = lib.mkDefault true;
         # Third-party plugins run unsandboxed in the daemon.
         pluginsEnabled = lib.mkDefault false;
-        # Unused built-in plugin providers, enabled by default upstream.
+        # Unused built-in plugin provider, enabled by default upstream.
         agents.providers = {
-          antigravity.enabled = lib.mkDefault false;
           muse.enabled = lib.mkDefault false;
         };
       };

@@ -137,7 +137,7 @@
           };
           pluginsEnabled = true;
           agents.providers = {
-            antigravity.enabled = true;
+            muse.enabled = true;
             env-probe = {
               extends = "acp";
               label = "Env probe";
@@ -346,7 +346,6 @@
         machine.succeed(
             f"jq -e '.daemon.cors.allowedOrigins == [] "
             "and .pluginsEnabled == false "
-            "and .agents.providers.antigravity.enabled == false "
             "and .agents.providers.muse.enabled == false "
             "and .daemon.relay.requireProtectedSecurity == true "
             "and .agents.providers[\"env-probe\"].label == \"Env probe\" "
