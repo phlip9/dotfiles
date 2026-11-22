@@ -180,25 +180,36 @@ in
 
   testScript = ''
     import base64
-    import datetime as dt
     import json
     import shlex
     import struct
     import time
 
-    VM_URL = "http://127.0.0.1:8428"
-    PYRO_URL = "http://127.0.0.1:4040"
-    VMAGENT_URL = "http://127.0.0.1:8429"
+    from testlib import (
+        CMD_TIMEOUT,
+        CURL,
+        batch_requests,
+        dump_evidence,
+        wait_fast,
+        wait_for_http,
+        wait_for_port,
+        wait_for_value,
+    )
+    from testlib.o11y import (
+        PYRO_URL,
+        VMAGENT_URL,
+        metric_sum,
+        metrics_scrape,
+        pyro_fn_names,
+        pyro_label_values,
+        pyro_window,
+        vm_labels,
+        wait_for_vm_labels,
+    )
+
     INGEST = "https://server/o11y"
     WRITE = f"{INGEST}/metrics/api/v1/write"
     PUSH = f"{INGEST}/profiles/push.v1.PusherService/Push"
-    # Bound every request, so a hung server fails its step, not the test's
-    # globalTimeout, and `dump_evidence` still runs.
-    CURL = "curl -sS --connect-timeout 2 --max-time 10"
-    # Upper bound for one command, incl. its curl
-    CMD_TIMEOUT = dt.timedelta(seconds=15)
-    # Upper bound for a scrape or push to show up
-    WAIT_TIMEOUT = dt.timedelta(seconds=30)
 
     PASSWORDS = json.loads(${builtins.toJSON (builtins.toJSON passwords)})
     EVIL = "evil&extra_label=job=pwned"
@@ -207,23 +218,19 @@ in
     HOT_FN = "${hotFn}"
     SELECTOR = f'{{service_name="{SERVICE}"}}'
 
-    def dump_evidence() -> None:
-        for node, cmds in [
-            (server, [
-                "journalctl --no-pager -o cat -u nginx | tail -n 60",
-                "tail -n 60 /var/log/nginx/access.log",
-                "journalctl --no-pager -o cat -u victoriametrics | tail -n 30",
-                "journalctl --no-pager -o cat -u pyroscope | tail -n 30",
-            ]),
-            (collector, [
-                "journalctl --no-pager -o cat -u vmagent | tail -n 60",
-                f"{CURL} {VMAGENT_URL}/metrics "
-                "| grep -E '^vmagent_remotewrite_'",
-            ]),
-        ]:
-            for cmd in cmds:
-                _, out = node.execute(cmd, timeout=CMD_TIMEOUT)
-                print(f"{node.name}$ {cmd}\n{out}")
+    EVIDENCE = [
+        (server, [
+            "journalctl --no-pager -o cat -u nginx | tail -n 60",
+            "tail -n 60 /var/log/nginx/access.log",
+            "journalctl --no-pager -o cat -u victoriametrics | tail -n 30",
+            "journalctl --no-pager -o cat -u pyroscope | tail -n 30",
+        ]),
+        (collector, [
+            "journalctl --no-pager -o cat -u vmagent | tail -n 60",
+            f"{CURL} {VMAGENT_URL}/metrics "
+            "| grep -E '^vmagent_remotewrite_'",
+        ]),
+    ]
 
     # --- Prometheus remote write v1, by hand: protobuf + snappy --- #
 
@@ -288,41 +295,6 @@ in
         assert len(status) == 3 and status != "000", (url, args, out)
         return status
 
-    # Run `(url, method)` requests in one `curl -K -` invocation, reusing one
-    # HTTP/2 TLS connection. Returns one HTTP status per entry.
-    def batch_requests(
-        reqs: list[tuple[str, str]],
-        auth: tuple[str, str] = COLLECTOR,
-    ) -> list[str]:
-        creds = ":".join(auth)
-        stanzas = []
-        for url, method in reqs:
-            method_opt = (
-                "head"
-                if method == "HEAD"
-                else f"request = {json.dumps(method)}"
-            )
-            stanzas.append("\n".join([
-                f"url = {json.dumps(url)}",
-                f"user = {json.dumps(creds)}",
-                'output = "/dev/null"',
-                'write-out = "%{http_code}\\n"',
-                "path-as-is",
-                "connect-timeout = 2",
-                "max-time = 10",
-                method_opt,
-            ]))
-        cfg = "\nnext\n".join(stanzas) + "\n"
-        # `execute` (not `succeed`): avoids logging the 39-stanza config twice
-        rc, out = collector.execute(
-            f"printf %s {shlex.quote(cfg)} | curl -sS -K -",
-            timeout=CMD_TIMEOUT,
-        )
-        assert rc == 0, (rc, out)
-        statuses = out.splitlines()
-        assert len(statuses) == len(reqs), (len(statuses), len(reqs), out)
-        return statuses
-
     # Remote write `series` through the ingest endpoint. Returns the status.
     def write(
         series: list[list[tuple[str, str]]],
@@ -345,83 +317,13 @@ in
         assert len(status) == 3 and status != "000", (query, out)
         return status
 
-    # Instant query on the server's VictoriaMetrics, optionally flushing
-    # pending rows first.
-    def vm_query(promql: str, flush: bool = True) -> list[dict]:
-        query = shlex.quote(promql)
-        prefix = f"{CURL} -f {VM_URL}/internal/force_flush && " if flush else ""
-        out = server.succeed(
-            prefix
-            + f"{CURL} -f {VM_URL}/api/v1/query --data-urlencode query={query}",
-            timeout=CMD_TIMEOUT,
-        )
-        return json.loads(out)["data"]["result"]
-
-    def labels_of(promql: str, flush: bool = True) -> list[dict]:
-        return [res["metric"] for res in vm_query(promql, flush=flush)]
-
-    # Poll `check` until it holds, back to back, w/o `retry`'s 1s sleeps:
-    # each check blocks on a guest command.
-    def wait_fast(
-        check, what: str, timeout: dt.timedelta = WAIT_TIMEOUT
-    ) -> None:
-        deadline = time.monotonic() + timeout.total_seconds()
-        while not check():
-            if time.monotonic() > deadline:
-                raise Exception(f"timed out: {what}")
-
-    # Poll `promql` until it returns series, back to back: each query
-    # blocks on a guest command. A new series turns searchable on VM's ~1s
-    # indexdb flush tick, even after `/internal/force_flush`.
-    def wait_for_labels(promql: str, flush_each: bool = True) -> list[dict]:
-        if not flush_each:
-            server.succeed(
-                f"{CURL} -f {VM_URL}/internal/force_flush", timeout=CMD_TIMEOUT
-            )
-        got: list[dict] = []
-
-        def check() -> bool:
-            nonlocal got
-            got = labels_of(promql, flush=flush_each)
-            return bool(got)
-
-        wait_fast(check, promql)
-        return got
-
-    # Sum of vmagent's own metric `name` w/ `match` in its labels. None:
-    # vmagent isn't serving yet.
-    def vmagent_metric(name: str, match: str = "") -> float | None:
-        status, out = collector.execute(
-            f"{CURL} -f {VMAGENT_URL}/metrics", timeout=CMD_TIMEOUT
-        )
-        if status != 0:
-            return None
-        return sum(
-            float(line.rsplit(" ", 1)[1])
-            for line in out.splitlines()
-            if line.startswith((name + "{", name + " ")) and match in line
-        )
-
-    # Poll until vmagent's metric `name` w/ `match` is > 0
-    def wait_for_vmagent(name: str, match: str = "") -> None:
-        wait_fast(
-            lambda: (vmagent_metric(name, match) or 0) > 0,
-            f"{name}{{{match}}} > 0",
-        )
-
     start_all()
     try:
         with subtest("server + collector up"):
             server.wait_for_unit("victoriametrics.service")
             server.wait_for_unit("nginx.service")
             # nginx is Type=simple: wait until it has bound :443
-            wait_fast(
-                lambda: server.execute(
-                    "ss -Hltn 'sport = :443' | grep -q :443",
-                    timeout=CMD_TIMEOUT,
-                )[0] == 0,
-                "nginx :443",
-            )
+            wait_for_port(server, 443)
             collector.wait_for_unit("vmagent.service")
 
         # The source is root-only, vmagent (DynamicUser) reads its copy
@@ -530,7 +432,9 @@ in
                                "OPTIONS", "PATCH"]
             ]
             statuses = batch_requests(
-                [(url, method) for url, method, _ in checks]
+                collector,
+                [(url, method) for url, method, _ in checks],
+                auth=COLLECTOR,
             )
             for (url, method, want), got in zip(checks, statuses):
                 assert got == want, (url, method, got, want)
@@ -561,15 +465,7 @@ in
             assert request(PUSH, "-X POST", auth=None) == "401"
 
             # Wait here so Pyroscope's Raft election overlaps w/ metrics tests
-            wait_fast(
-                lambda: server.execute(
-                    f"curl -sf --connect-timeout 2 --max-time 10 "
-                    f"{PYRO_URL}/ready",
-                    timeout=CMD_TIMEOUT,
-                )[0] == 0,
-                "pyroscope /ready",
-                timeout=dt.timedelta(seconds=60),
-            )
+            wait_for_http(server, f"{PYRO_URL}/ready")
             push_ms = int(time.time() * 1000)
             collector.succeed(
                 f"PROFILECLI_PASSWORD={shlex.quote(PASSWORDS['collector'])} "
@@ -582,37 +478,23 @@ in
                 timeout=CMD_TIMEOUT,
             )
 
-            window = {"start": push_ms - 60_000, "end": push_ms + 600_000}
-
-            def pyro_post(method: str, body: dict) -> dict:
-                data = shlex.quote(json.dumps({**window, **body}))
-                return json.loads(server.succeed(
-                    f"{CURL} -f -H 'Content-Type: application/json' "
-                    f"--data-binary {data} "
-                    f"{PYRO_URL}/querier.v1.QuerierService/{method}",
-                    timeout=CMD_TIMEOUT,
-                ))
-
-            def has_hot_fn() -> bool:
-                resp = pyro_post("SelectMergeStacktraces", {
-                    "profileTypeID": PROFILE_TYPE,
-                    "labelSelector": SELECTOR,
-                })
-                return HOT_FN in resp.get("flamegraph", {}).get("names", [])
-
-            wait_fast(has_hot_fn, f"profile w/ {HOT_FN}")
-            services = pyro_post(
-                "LabelValues", {"name": "service_name"}
-            ).get("names", [])
+            window = pyro_window(push_ms, before_ms=60_000, after_ms=600_000)
+            wait_fast(
+                lambda: HOT_FN in pyro_fn_names(
+                    server, PROFILE_TYPE, SELECTOR, window=window
+                ),
+                f"profile w/ {HOT_FN}",
+            )
+            services = pyro_label_values(server, "service_name", window=window)
             assert services == [SERVICE], services
 
         with subtest("vmagent writes through ingest, instance pinned"):
             # `up` per job: its instance, once every job's first scrape
             # arrived
-            wait_for_labels('count(up) >= 3')
+            wait_for_vm_labels(server, 'count(up) >= 3')
             jobs = {
                 labels["job"]: labels["instance"]
-                for labels in labels_of("up", flush=False)
+                for labels in vm_labels(server, "up", flush=False)
             }
             assert jobs == {
                 "vmagent": "collector",
@@ -620,19 +502,39 @@ in
                 "spoof": "collector",
             }, jobs
             # vmagent sent `instance="spoofed"` for this one
-            spoof = labels_of('vm_app_version{job="spoof"}', flush=False)
+            spoof = vm_labels(
+                server, 'vm_app_version{job="spoof"}', flush=False
+            )
             instances = [labels["instance"] for labels in spoof]
             assert instances == ["collector"], spoof
-            assert labels_of('{instance="spoofed"}', flush=False) == []
+            assert vm_labels(server, '{instance="spoofed"}', flush=False) == []
 
             # VictoriaMetrics' zstd protocol, no downgrade to snappy. Its
             # samples can turn visible before vmagent counts the response.
-            wait_for_vmagent(
-                "vmagent_remotewrite_requests_total", 'status_code="2XX"'
+            def scrape_2xx() -> list[str] | None:
+                lines = metrics_scrape(collector, VMAGENT_URL)
+                if (
+                    metric_sum(
+                        lines,
+                        "vmagent_remotewrite_requests_total",
+                        'status_code="2XX"',
+                    )
+                    > 0
+                ):
+                    return lines
+                return None
+
+            scrape = wait_for_value(
+                scrape_2xx, "vmagent_remotewrite_requests_total 2XX > 0"
             )
-            assert vmagent_metric(
-                "vmagent_remotewrite_requests_total", 'status_code="400"'
-            ) == 0
+            assert (
+                metric_sum(
+                    scrape,
+                    "vmagent_remotewrite_requests_total",
+                    'status_code="400"',
+                )
+                == 0
+            )
             collector.fail(
                 "journalctl -u vmagent | grep -E 'Re-packing|Downgrading'",
                 timeout=CMD_TIMEOUT,
@@ -644,9 +546,9 @@ in
             )
 
         with subtest("crafted writes stored, rejected absent"):
-            wait_for_labels("o11y_test_after", flush_each=False)
+            wait_for_vm_labels(server, "o11y_test_after", flush_each=False)
             got = sorted(
-                labels_of('{__name__=~"o11y_test_.*"}', flush=False),
+                vm_labels(server, '{__name__=~"o11y_test_.*"}', flush=False),
                 key=lambda labels: labels["__name__"],
             )
             expected = sorted(
@@ -678,16 +580,16 @@ in
                 key=lambda labels: labels["__name__"],
             )
             assert got == expected, got
-            assert labels_of('{job="pwned"}', flush=False) == []
+            assert vm_labels(server, '{job="pwned"}', flush=False) == []
             instances = {
                 labels["instance"]
-                for labels in labels_of(
-                    'count by (instance) ({__name__!=""})', flush=False
+                for labels in vm_labels(
+                    server, 'count by (instance) ({__name__!=""})', flush=False
                 )
             }
             assert instances == {"collector", "collector2"}, instances
     except Exception:
-        dump_evidence()
+        dump_evidence(EVIDENCE)
         raise
   '';
 }
