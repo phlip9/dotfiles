@@ -1,14 +1,12 @@
-# o11y collector: Alloy eBPF profiler for every process on the host.
+# o11y collector: whole-host eBPF profiler (Alloy `pyroscope.ebpf`).
 #
-#   Alloy pyroscope.ebpf --push--> Pyroscope (see ../server/pyroscope.nix)
-#   (every process)                local, or remote via its ingest endpoint
+#   Alloy (on/off-CPU eBPF) --push--> Pyroscope (local or `collector.remote`)
 #
-# Alloy samples on-CPU + off-CPU stacks of every process on the host w/
-# eBPF, symbolizes them on the host, labels them w/ their systemd unit
-# (kernel threads: `kernel`), and pushes them to the local Pyroscope, or
-# the `collector.remote` server's. Runs as the non-root `alloy` user w/ a
-# few ambient caps. Its `/metrics` are scraped as job `alloy`.
+# Samples + symbolizes all host processes (labeled by systemd unit; kernel
+# threads as `kernel`). Runs as non-root `alloy` user w/ ambient caps;
+# self-metrics scraped as job `alloy`.
 #
+# See: ../server/pyroscope.nix
 # See: doc/o11y/README.md
 {
   config,
@@ -28,11 +26,9 @@ let
 
   inherit (import ./lib.nix { inherit config; }) hostTargets ingest;
 
-  # `collector.remote` sink, or null: the local Pyroscope
   cfgRemote = cfgC.remote;
   isLocal = cfgRemote == null;
 
-  # `pyroscope.write` component: label + Pyroscope base URL
   writeLabel = if isLocal then "local" else "remote";
   writeUrl =
     if isLocal then
@@ -40,50 +36,38 @@ let
     else
       "${cfgRemote.url}${ingest.profilesPath}";
 
-  # systemd credential w/ the remote's basic auth password
   passwordCredential = "o11y-remote-password";
-  # Its path in the config, under $CREDENTIALS_DIRECTORY
   passwordPath = alloyLit "/${passwordCredential}";
 
-  # Alloy literals: strings, numbers. Alloy strings take JSON's escapes.
+  # Alloy string/number literals follow JSON escaping.
   alloyLit = builtins.toJSON;
 
-  # Normal users w/ a fixed uid, to name their `user-<uid>.slice`s.
+  # Fixed-uid normal users, for naming user-<uid>.slice.
   namedUsers = lib.filter (user: user.isNormalUser && user.uid != null) (
     lib.attrValues config.users.users
   );
 
-  # `0::/<slice>.slice/[<parent>.slice/]<unit>.service[/<sub-cgroup>]`,
-  # captures `<unit>`, or `<template>@` for templated units. RE2, anchored.
-  # Any top-level slice, not just `system.slice`: ex: sauna runs nix-daemon
-  # + paseo in `workload.slice`.
+  # Anchored RE2 matching any slice (ex: workload.slice). Captures `<unit>` or
+  # `<template>@` to collapse template instances.
   systemUnitRegex = lib.concatStrings [
     "0::/"
-    # top-level + parent slices, ex: `system.slice/system-getty.slice/`
     "(?:[^/]+\\.slice/)+"
-    # unit name, or template prefix w/ `@`; then the instance
     "([^/@]+@?)[^/]*"
     "\\.service(?:/.*)?"
   ];
 
-  # Alloy's config, see `collector.profiling` options. `//` comments end up in
-  # /etc/alloy/config.alloy, for whoever reads it there.
   alloyConfig = ''
-    // Continuous profiling of every process on this host, see
-    // nixos/mods/o11y/collector/alloy.nix.
-    //
-    //   discovery.process -> discovery.relabel -> pyroscope.ebpf
-    //   -> pyroscope.write -> Pyroscope
+    // Whole-host eBPF profiling (nixos/mods/o11y/collector/alloy.nix).
+    // process -> relabel -> pyroscope.ebpf -> pyroscope.write
 
-    // Every process w/ its exe + cgroup. Each refresh is a full /proc scan.
-    // Skips kernel threads: they have no exe.
+    // Userspace processes (full /proc scan; skips exe-less kernel threads).
     discovery.process "all" {
       refresh_interval = ${alloyLit cfgP.refreshInterval}
 
       discover_config {
         cgroup_path = true
         exe         = true
-        // Unused: skip their /proc reads
+        // Unused; skip /proc reads.
         commandline  = false
         container_id = false
         cwd          = false
@@ -92,23 +76,19 @@ let
       }
     }
 
-    // Label each process w/ its systemd unit (`service_name`) + exe. Only
-    // labels w/o a `__` prefix reach Pyroscope.
+    // Map cgroup -> service_name, exe -> basename (non-`__` labels exported).
     discovery.relabel "units" {
       targets = discovery.process.all.targets
 
-      // `0::/<slice>.slice/[<parent>.slice/]<unit>.service[/<sub-cgroup>]`
-      // -> `<unit>`. Templated units collapse into their template, ex:
-      // `getty@tty1` -> `getty@`, so per-instance units (`sshd@<conn>`)
-      // don't create a series each. `user@<uid>.service` is renamed below.
+      // Unit or `<template>@` (collapses instances to bound cardinality).
+      // `user@<uid>.service` overridden below.
       rule {
         source_labels = ["__meta_process_cgroup_path"]
         regex         = ${alloyLit systemUnitRegex}
         target_label  = "service_name"
       }
 
-      // User sessions + user managers (overrides `user@` above):
-      // `0::/user.slice/user-<uid>.slice/...` -> `user-<uid>`
+      // User sessions + managers -> user-<uid> (overrides user@ above).
       rule {
         source_labels = ["__meta_process_cgroup_path"]
         regex         = `0::/user\.slice/user-([0-9]+)\.slice(?:/.*)?`
@@ -116,7 +96,6 @@ let
         replacement   = "user-$1"
       }
     ${lib.concatMapStrings (user: ''
-      // `user-${toString user.uid}` -> `user-${user.name}`
       rule {
         source_labels = ["service_name"]
         regex         = ${alloyLit "user-${toString user.uid}"}
@@ -132,8 +111,7 @@ let
         replacement   = "systemd"
       }
 
-      // Anything else (scopes, machine.slice, ...): same name as processes
-      // that discovery hasn't seen yet, see `targets_only` below.
+      // Fallback (scopes, machine.slice); matches targets_only=false default.
       rule {
         source_labels = ["service_name"]
         regex         = ""
@@ -141,7 +119,7 @@ let
         replacement   = "ebpf/unspecified"
       }
 
-      // Basename: `/nix/store/<hash>-foo/bin/.foo-wrapped (deleted)` -> `foo`
+      // Strip path, Nix `.foo-wrapped` wrapper, and ` (deleted)` suffix.
       rule {
         source_labels = ["__meta_process_exe"]
         regex         = `.*/(?:\.([^/]+)-wrapped|([^/]+?))(?: \(deleted\))?`
@@ -150,9 +128,7 @@ let
       }
     }
 
-    // Kernel threads (kworker, ksoftirqd, jbd2, ...), w/o an exe, so
-    // `discovery.process "all"` skips them. Only kernel threads live in
-    // the root cgroup. Another /proc scan, but only reads the cgroup.
+    // Kernel threads (no exe, skipped above; live in root cgroup 0::/).
     discovery.process "kernel" {
       refresh_interval = ${alloyLit cfgP.refreshInterval}
 
@@ -167,7 +143,6 @@ let
       }
     }
 
-    // Kernel threads -> service_name="kernel", w/o `exe`
     discovery.relabel "kernel" {
       targets = discovery.process.kernel.targets
 
@@ -184,80 +159,58 @@ let
     }
 
     pyroscope.ebpf "host" {
-      // Last target per pid wins: "units" (w/ exe) over "kernel"
+      // Last target per pid wins ("units" overrides "kernel").
       targets = array.concat(
         discovery.relabel.kernel.output,
         discovery.relabel.units.output,
       )
       forward_to = [pyroscope.write.${writeLabel}.receiver]
 
-      // Undocumented. `true` (default) only profiles processes in `targets`.
-      // `false` profiles every process; ones w/o a target (not yet
-      // discovered, < 1 refresh old) get service_name="ebpf/unspecified".
-      // Exited processes keep their target for 2 collect intervals (our
-      // patch), so their last samples still get their unit.
+      // Undocumented flag. false profiles undiscovered short-lived procs as
+      // `ebpf/unspecified`; exited procs keep targets 2 intervals (our patch).
       targets_only = false
 
       sample_rate       = ${toString cfgP.sampleRate}
       collect_interval  = ${alloyLit cfgP.collectInterval}
       off_cpu_threshold = ${alloyLit cfgP.offCpuThreshold}
 
-      // A `pid` label per sample: high cardinality (nix builds), bigger
-      // profiles. Labels stay per unit + exe.
+      // Drop pid label to avoid high cardinality (nix builds).
       pid_label = false
-      // Our patch, see nixos/pkgs/grafana-alloy
+      // Our patch (nixos/pkgs/grafana-alloy).
       per_pid_profile = ${lib.boolToString cfgP.perPidProfile}
-      // C++/Rust names w/o params or template args: short flame graph
-      // frames. Overloads merge.
+      // Strip C++/Rust params + template args (merges overloads).
       demangle = "simplified"
 
       ${lib.optionalString cfgP.testHooks ''
-        // Our patch: test-only endpoints, see `collector.profiling.testHooks`
+        // Patched test-only endpoints.
         test_hooks = true
       ''}
 
-      // Default /tmp/symb-cache is private + lost on restart (PrivateTmp)
+      // Default /tmp/symb-cache is lost on restart (PrivateTmp).
       symb_cache_path = "/var/cache/alloy/symb-cache"
-      // Default `true` pins maps in /sys/fs/bpf/otel (root 0700), which
-      // fails non-root w/ a WARN. We don't use OTel span/trace IDs.
+      // Default true tries to pin /sys/fs/bpf/otel (root 0700 -> WARN); unused.
       obi_process_context_enabled = false
     }
 
-    // Pushes each collect interval's profiles in one request, one series
-    // per profile (our patch, see nixos/pkgs/grafana-alloy; a few above
-    // ~4 MiB), w/in that interval, incl. retries. No queue: the profiler's
-    // next flush waits for it, so slow pushes never stack up. Pyroscope
-    // can store part of a request and still fail it (ex: some series rate
-    // limited), and a retry resends all of it: the stored series twice.
-    // So only retry errors that likely stored nothing.
+    // Sync batched push per interval (our patch); no queue so slow pushes
+    // don't stack. Partial ingest on failure means retries duplicate stored
+    // series, so only retry likely-empty failures.
     pyroscope.write ${alloyLit writeLabel} {
       endpoint {
         url = ${alloyLit writeUrl}
     ${lib.optionalString (!isLocal) ''
-      // The remote's ingest endpoint (../server/ingest.nix). Alloy
-      // appends `${ingest.pushProcedure}`. Password: a systemd
-      // credential, re-read per request, whitespace trimmed. A wrong one
-      // (nginx 401) isn't retried: the interval's profiles are dropped
-      // w/ one error log line.
+      // Systemd credential (re-read per req, trimmed). 401 isn't retried.
       basic_auth {
         username      = ${alloyLit cfgRemote.username}
         password_file = sys.env("CREDENTIALS_DIRECTORY") + ${passwordPath}
       }
     ''}
-        // A timed-out push may still get stored: give the first attempt
-        // the whole interval, so hitting our own deadline is never
-        // retried. A deadline error from the server side (ex: a proxy
-        // timeout) still is, below. Pyroscope acks after its next segment
-        // flush (~0.5s).
+        // Whole interval for first attempt so client timeouts aren't retried
+        // (timed-out push may still be stored).
         remote_timeout = ${alloyLit cfgP.collectInterval}
-        // Pyroscope's own rate limit (Connect ResourceExhausted): the
-        // other series are stored, and a resend draws on the same
-        // exhausted token bucket. Only covers Connect errors: a proxy's
-        // plain HTTP 429/413/400 maps to a retried code, below.
+        // Don't retry Connect ResourceExhausted (other series already stored).
         retry_on_http_429 = false
-        // Else (connection refused, 5xx, ...): ex: Pyroscope restarting.
-        // 3 attempts, ~1-2s + ~2-4s apart (default: 10 attempts, but all
-        // w/in the interval anyway). A series is stored at most 3x.
+        // Retry transient errors (restart, 5xx) up to 3x w/in the interval.
         max_backoff_retries = 3
         min_backoff_period  = "1s"
         max_backoff_period  = "4s"
@@ -268,9 +221,7 @@ let
     }
   '';
 
-  # Format the rendered config (alignment, interpolated indents), then
-  # validate it at build time, w/ the same binary as the unit: syntax,
-  # component args. Doesn't load any BPF.
+  # Format + build-time validate w/ same Alloy binary (no BPF loaded).
   alloyConfigFile =
     pkgs.runCommand "config.alloy"
       {
@@ -285,83 +236,51 @@ let
   pyroscopeAddr =
     "${cfgPyroSrv.http_listen_address}:" + toString cfgPyroSrv.http_listen_port;
 
-  # Minimal caps for `pyroscope.ebpf` + `discovery.process` as non-root.
-  # Found by dropping one at a time in a NixOS VM (kernel 7.3, sauna's
-  # sysctls); every one is load-bearing. The Alloy docs' list also has
-  # CAP_SYS_RESOURCE, only needed w/o `LimitMEMLOCK=infinity`.
-  #
-  # CAVEAT: BPF + PERFMON + SYS_PTRACE can read any kernel/user memory, so
-  # this is ~root-equivalent. Non-root buys FS/syscall/namespace confinement
-  # + no DAC_OVERRIDE/SYS_ADMIN, not a privilege boundary.
+  # Minimal non-root caps (tested in VM; CAP_SYS_RESOURCE omitted via
+  # LimitMEMLOCK=infinity).
+  # BPF + PERFMON + SYS_PTRACE can read any memory (~root-equivalent);
+  # non-root only adds FS/syscall/ns confinement.
   alloyCaps = [
-    # load BPF progs + maps. Fatal w/o.
-    "CAP_BPF"
-    # cpu-wide perf events, tracepoints, kprobes. Fatal w/o.
-    "CAP_PERFMON"
-    # other users' /proc/<pid>/{exe,maps,root}, process_vm_readv
-    # (interpreter frames). W/o: their processes aren't profiled at all.
-    "CAP_SYS_PTRACE"
-    # open /proc/<pid>/map_files/* (ELF access for unwinding + symbols).
-    # W/o: SILENT failure, user frames turn `[unknown]`.
-    "CAP_CHECKPOINT_RESTORE"
-    # traverse 0700 tracefs (off-CPU) + other users' 0500
-    # /proc/<pid>/map_files. W/o: SILENT `[unknown]` user frames.
-    "CAP_DAC_READ_SEARCH"
-    # real addrs in /proc/kallsyms under kptr_restrict=1. Fatal w/o.
-    "CAP_SYSLOG"
+    "CAP_BPF" # load BPF progs + maps (fatal w/o)
+    "CAP_PERFMON" # perf events, tracepoints, kprobes (fatal w/o)
+    "CAP_SYS_PTRACE" # /proc/<pid>/{exe,maps,root}, process_vm_readv
+    "CAP_CHECKPOINT_RESTORE" # /proc/<pid>/map_files (else SILENT [unknown])
+    "CAP_DAC_READ_SEARCH" # tracefs + map_files (else SILENT [unknown])
+    "CAP_SYSLOG" # /proc/kallsyms w/ kptr_restrict=1 (fatal w/o)
   ];
 in
 {
   options.services.phlip9-o11y.collector.profiling = {
-    enable = lib.mkEnableOption ''
-      whole-host continuous profiling: profile every process on this host
-      w/ Alloy's `pyroscope.ebpf` and push the profiles to the local
-      Pyroscope (needs `server.profiling.enable`), or to
-      `collector.remote`'s (needs `server.profiling.enable` there)
-    '';
+    enable = lib.mkEnableOption "host eBPF profiling (Alloy -> Pyroscope)";
 
     sampleRate = lib.mkOption {
       type = lib.types.ints.positive;
       default = 49;
-      description = ''
-        On-CPU stack samples per second, per CPU. Odd, so sampling
-        doesn't run in lockstep w/ periodic work.
-      '';
+      description = "On-CPU samples/sec/CPU (odd to avoid lockstep aliasing).";
     };
 
     offCpuThreshold = lib.mkOption {
       type = lib.types.numbers.between 0 1;
       default = 0.02;
       description = ''
-        Probability to record the stack of a thread that blocks (context
-        switch), weighted by time blocked, as the `offcpu` profile type.
-        0 = off. CPU cost scales w/ the host's context switch rate x this.
+        Probability to sample blocked thread stacks (weighted by block time).
+        0 = off. CPU cost scales w/ context switch rate.
       '';
     };
 
     collectInterval = lib.mkOption {
       type = lib.types.str;
       default = "15s";
-      description = ''
-        How often Alloy builds + pushes its profiles, see
-        `perPidProfile`. Also the deadline for each interval's push, incl.
-        retries.
-      '';
+      description = "Profile build + push interval (also per-push deadline).";
     };
 
     perPidProfile = lib.mkOption {
       type = lib.types.bool;
       default = false;
       description = ''
-        Per collect interval, push one profile per (labels, pid), like
-        upstream Alloy, instead of one per labels w/ all its pids'
-        samples. Pyroscope merges them per labels anyway (no `pid`
-        label).
-
-        Nix builds' short-lived pids fan out to ~600-850 per-pid profiles
-        per 15s on sauna: that many series for Pyroscope to validate +
-        ingest, each w/ its own copy of the symbols. Per labels: ~1
-        profile per (unit, exe) + profile type.
+        Push 1 profile per (labels, pid) like upstream instead of merging per
+        labels (Pyroscope merges them anyway). False avoids ~600-850 short-lived
+        nix-build series per 15s on sauna.
       '';
     };
 
@@ -369,23 +288,13 @@ in
       type = lib.types.str;
       default = "2s";
       description = ''
-        How often Alloy rescans /proc for processes to label w/ their
-        unit. Processes younger than one scan are still profiled, but as
-        `service_name="ebpf/unspecified"`, so shorter = better attribution
-        of short-lived processes (ex: nix builds: rustc, cc1, node).
-
-        Each scan reads 2 /proc files per process (~1.5ms CPU for ~300
-        processes on sauna), then relabels every process. Share of CPU
-        in unspecified, modeled on a /proc trace of nix builds on sauna,
-        w/ the exited-pid patch (see nixos/pkgs/grafana-alloy): ~28% at
-        "10s", ~13% at "5s", ~5% at "2s", ~2.5% at "1s". W/o the patch:
-        ~40% at "10s", and worse when shorter.
+        /proc rescan interval for unit labels. Unseen procs land in
+        `ebpf/unspecified` (~28% @ 10s, ~5% @ 2s, ~2.5% @ 1s on sauna nix
+        builds; ~1.5ms/scan).
       '';
     };
 
-    # Keep in sync: nixos/sauna/grafana/profiling.json profile queries
-    # match `host=~"$instance"` (the scrape targets' `instance` label),
-    # its unit var `host="$instance"`.
+    # Keep in sync w/ nixos/sauna/grafana/profiling.json (`host=~"$instance"`).
     hostLabel = lib.mkOption {
       type = lib.types.str;
       default = config.networking.hostName;
@@ -396,10 +305,7 @@ in
     listenAddress = lib.mkOption {
       type = lib.types.str;
       default = "127.0.0.1:12345";
-      description = ''
-        Alloy HTTP server: `/metrics`, `/-/ready`, debug UI. No authn,
-        keep it on loopback.
-      '';
+      description = "Loopback HTTP addr (/metrics, /-/ready, UI; no auth).";
     };
 
     testHooks = lib.mkOption {
@@ -407,11 +313,8 @@ in
       default = false;
       internal = true;
       description = ''
-        Tests only. Serve `pyroscope.ebpf`'s test endpoints (our patch,
-        see nixos/pkgs/grafana-alloy) under
-        `/api/v0/component/pyroscope.ebpf.host/`: flush on demand + hold
-        the periodic flushes, show the applied targets + pending samples.
-        No authn; a held flush stalls profiling.
+        Tests only (patched). Exposes `/api/v0/component/pyroscope.ebpf.host/`
+        flush/hold/inspect endpoints (no auth; held flush stalls profiling).
       '';
     };
   };
@@ -431,25 +334,24 @@ in
       static_configs = hostTargets cfgP.listenAddress;
     };
 
-    # --- Alloy - eBPF profiler for every process on the host --- #
+    # --- Alloy --- #
 
     services.alloy = {
       enable = true;
       package = phlipPkgsNixos.grafana-alloy;
       extraFlags = [
         "--server.http.listen-addr=${cfgP.listenAddress}"
-        # No anonymous usage stats to grafana.com
+        # No telemetry to grafana.com.
         "--disable-reporting"
       ];
     };
 
-    # The module's default `configPath` loads every /etc/alloy/*.alloy.
+    # Default configPath loads /etc/alloy/*.alloy.
     environment.etc."alloy/config.alloy" = {
       source = alloyConfigFile;
     };
 
-    # Static user instead of the module's DynamicUser: stable owner for the
-    # symbol cache across restarts, and an explicit identity to audit.
+    # Static user instead of DynamicUser for stable symb-cache ownership.
     users.users.alloy = {
       isSystemUser = true;
       group = "alloy";
@@ -457,112 +359,82 @@ in
     users.groups.alloy = { };
 
     systemd.services.alloy = {
-      # Restart, not reload (SIGHUP, the module's default), when the config
-      # changes: `pyroscope.ebpf` only applies `targets` + `forward_to` on a
-      # reload. Every other arg (sample rate, intervals, off-CPU threshold,
-      # per_pid_profile, ...) is read once at startup, so a reload accepts
-      # the new values but keeps running w/ the old ones. Costs <= 1 collect
-      # interval of profiles + the BPF load per config change.
+      # Restart rather than SIGHUP on config change; pyroscope.ebpf only
+      # reloads targets + forward_to, all other args are startup-only.
       restartTriggers = [ alloyConfigFile ];
       reloadTriggers = lib.mkForce [ ];
 
-      # Memory cap, a runaway guard: Alloy runs in system.slice, which has no
-      # cap of its own and isn't watched by oomd. Hitting MemoryMax OOM-kills
-      # it and systemd restarts it: <= 1 collect interval of profiles + the
-      # BPF load. Measured (2026-11): sauna daily max RSS 240-540 MB, worst
-      # 1.4 GB (CI burst); phlipdesk ~355 MB. BPF maps count too.
-      # No MemoryHigh: it throttles a runaway into a slow crawl instead of a
-      # prompt kill. Small swap cap for the same reason.
-      # GOMEMLIMIT, Go's soft limit, at 75% of the cap: GC harder before the
-      # kill. Explicit, else Alloy sets it to 90% of the cgroup limit.
+      # Runaway guard (system.slice has no oomd/cap). Peaked at 1.4 GB on
+      # sauna CI bursts (+ BPF maps). Omit MemoryHigh to OOM-kill fast rather
+      # than crawl. Soft GC limit at 75% of MemoryMax (overrides Alloy's 90%).
       environment.GOMEMLIMIT = "1500MiB";
 
       serviceConfig = {
         DynamicUser = lib.mkForce false;
         User = "alloy";
         Group = "alloy";
-        # Module adds `systemd-journal` for Loki log forwarding; unused
+        # Drop module's systemd-journal group (Loki unused).
         SupplementaryGroups = lib.mkForce [ ];
 
         AmbientCapabilities = alloyCaps;
         CapabilityBoundingSet = alloyCaps;
-        # The engine raises RLIMIT_MEMLOCK at startup, up to the hard limit.
-        # systemd's default 8M hard limit fails BPF map creation; this
-        # replaces CAP_SYS_RESOURCE.
+        # Engine raises RLIMIT_MEMLOCK for BPF maps; replaces CAP_SYS_RESOURCE.
         LimitMEMLOCK = "infinity";
 
-        # Symbol cache, see `symb_cache_path`
+        # Symbol cache (symb_cache_path).
         CacheDirectory = "alloy";
         CacheDirectoryMode = "0700";
 
-        # Remote's password, see `basic_auth` in the config. The source can
-        # stay root-only. `toString`: a path literal must not get copied
-        # into the store.
+        # Remote basic auth password (toString prevents store copy).
         LoadCredential = lib.mkIf (!isLocal) [
           "${passwordCredential}:${toString cfgRemote.passwordFile}"
         ];
 
-        # Hardening. Each setting below was tested w/ eBPF profiling in a VM.
+        # Hardening (VM-tested w/ eBPF profiling).
         DevicePolicy = "closed";
-        # Only pushes to Pyroscope + serves /metrics on loopback. Remote:
-        # any address, the server's IPs come from DNS. No
-        # `network-online.target` either: a push w/o network fails like any
-        # other, and the next interval tries again.
+        # Allow any IP for remote DNS; next push retries w/o network-online.
         IPAddressAllow = lib.mkIf isLocal [ "localhost" ];
         IPAddressDeny = lib.mkIf isLocal [ "any" ];
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
-        # Memory cap, see above
+        # See GOMEMLIMIT note above.
         MemoryMax = "2G";
         MemorySwapMax = "512M";
-        # Ambient caps still apply after exec
+        # Ambient caps still apply after exec.
         NoNewPrivileges = true;
         PrivateDevices = true;
         PrivateTmp = true;
         ProtectClock = true;
-        # cgroup paths come from /proc/<pid>/cgroup
+        # cgroup paths come from /proc/<pid>/cgroup.
         ProtectControlGroups = true;
         ProtectHome = true;
         ProtectHostname = true;
         ProtectKernelModules = true;
-        # MUST stay off: `true` mounts an empty, mode 0000 file over
-        # /proc/kallsyms. The engine reads it (DAC_READ_SEARCH), finds no
-        # addresses, and fails to start: "failed to read kernel symbols:
-        # unable to read kallsyms addresses". W/o CAP_DAC_OVERRIDE or
-        # CAP_SYS_ADMIN the alloy user can't write /proc/sys + /sys anyway.
+        # Must stay false or /proc/kallsyms is masked w/ 0000 (fatal).
+        # Also breaks w/ ProtectKernelLogs (drops CAP_SYSLOG), ProcSubset=pid
+        # (hides kallsyms), PrivateUsers (userns-scoped caps);
+        # ProtectProc=invisible is a no-op w/ CAP_SYS_PTRACE.
         ProtectKernelTunables = false;
-        # Also MUST stay off, all fatal for the same reason (no kallsyms):
-        # - ProtectKernelLogs: drops CAP_SYSLOG from the bounding set
-        # - ProcSubset=pid: hides /proc/kallsyms
-        # And:
-        # - PrivateUsers: caps only apply in the child userns, so other
-        #   users' /proc/<pid>/exe is unreadable
-        # - PrivatePIDs: can't see other processes
-        # - PrivateNetwork: can't reach Pyroscope
-        # - ProtectProc=invisible: works, but a no-op w/ CAP_SYS_PTRACE
         ProtectSystem = "strict";
         RemoveIPC = true;
         RestrictAddressFamilies = [
           "AF_UNIX"
           "AF_INET"
           "AF_INET6"
-          # kallsyms monitor: kobject uevents on kernel module (un)load.
-          # W/o: WARN at startup + stale module symbols.
+          # kobject uevents for module (un)load (else WARN + stale module syms).
           "AF_NETLINK"
         ];
         RestrictNamespaces = true;
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
         SystemCallArchitectures = "native";
-        # Order matters: allow-list, drop @privileged (has bpf), then re-add.
-        # perf_event_open is in @debug, but nothing else from it is needed.
+        # Drop @privileged first, then re-add bpf + perf_event_open.
         SystemCallFilter = [
           "@system-service"
           "~@privileged"
           "bpf perf_event_open"
         ];
-        # EPERM, not SIGSYS. Ex: if tracefs is unreadable, Alloy tries to
-        # mount(2) it; that should fail, not kill Alloy.
+        # Return EPERM so a failed tracefs mount(2) won't SIGSYS-kill Alloy.
         SystemCallErrorNumber = "EPERM";
         UMask = "0077";
       };
