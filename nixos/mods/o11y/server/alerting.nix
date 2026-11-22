@@ -6,22 +6,11 @@
 #        ^                       |                      |
 #        +--remoteWrite ALERTS---+                      +--> healthchecks.io
 #
-# - vmalert (127.0.0.1:8880) evaluates ./rules.nix against VM and writes
-#   `ALERTS` series back into VM, so alert state survives restarts and shows
-#   up in Grafana.
-# - Alertmanager (127.0.0.1:9093) groups, inhibits, and routes alerts:
-#   - `Watchdog` (always firing) -> healthchecks.io ping, never Discord. A
-#     missed ping means some part of the pipeline (or the host) is dead.
-#   - `severity=page` -> Discord, plus a short @mention message by day.
-#   - everything else -> Discord, no mention.
-# - healthchecks-host-ping.timer pings a second healthchecks.io check every
-#   5 min, if the local health checks pass.
-# - Grafana gets an Alertmanager datasource (see ./grafana.nix) to browse
-#   alerts and manage silences.
-#
-# Secrets (Discord webhook URL, healthchecks.io ping URLs, the Discord user
-# id) never enter the nix store: URLs go through systemd LoadCredential and
-# Alertmanager's `*_file` fields, the user id through `environmentFile`.
+# - vmalert evaluates ./rules.nix and persists `ALERTS` series in VM
+# - Alertmanager routes `Watchdog` -> healthchecks.io, pages -> Discord
+#   (+ daytime @mention), others -> Discord
+# - healthchecks-host-ping.timer checks local services every 5m
+# - Secrets pass via LoadCredential + EnvironmentFile (never Nix store)
 #
 # See: doc/o11y/README.md
 {
@@ -37,24 +26,20 @@ let
   cfgVm = config.services.victoriametrics;
   cfgAm = config.services.prometheus.alertmanager;
 
-  # Alert rule groups + Alertmanager inhibit rules
   alertRules = import ./rules.nix { inherit config lib; };
 
   inherit (import ../collector/lib.nix { inherit config; }) hostTargets;
 
   vmalertAddr = "127.0.0.1:8880";
   amAddr = "${cfgAm.listenAddress}:${toString cfgAm.port}";
-
-  # Alertmanager reads secrets from its systemd credentials directory.
   amCredsDir = "/run/credentials/alertmanager.service";
 
-  # Grafana base URL for links in ./alertmanager.tmpl
+  # Grafana base URL for links in ./alertmanager.tmpl.
   grafanaUrlTmpl = pkgs.writeText "grafana-url.tmpl" ''
     {{ define "grafana.url" }}https://${cfg.grafana.domain}{{ end }}
   '';
 
-  # Quiet hours: 23:00-09:00 America/Los_Angeles. Pages arrive w/o an
-  # @mention. Alertmanager rejects ranges that wrap around midnight.
+  # Quiet hours (23:00-09:00 PT; split across midnight since AM rejects wrap).
   night = {
     name = "night";
     time_intervals = [
@@ -74,8 +59,6 @@ let
     ];
   };
 
-  # Local health checks for healthchecks-host-ping: each unit must be
-  # active and its health endpoint must return 2xx.
   hostChecks = [
     {
       name = "victoriametrics";
@@ -94,11 +77,9 @@ let
     }
   ];
 
-  # Ping healthchecks.io (check `sauna-host`) if all local checks pass.
-  # Else log the failures and exit 0 w/o a ping: healthchecks.io alerts once
-  # its grace period runs out. Not a unit failure, else a check that catches
-  # a deploy restart leaves the unit failed (`UnitFailed`) until the next
-  # run. A failed ping (curl) still fails the unit.
+  # Ping healthchecks.io if local checks pass. Exits 0 on unhealthy check so
+  # deploy restarts don't trigger `UnitFailed` (hc alerts after grace); a failed
+  # curl ping still fails the unit.
   hostPing = pkgs.writeShellApplication {
     name = "healthchecks-host-ping";
     runtimeInputs = [
@@ -109,9 +90,7 @@ let
     text = ''
       failed=()
 
-      # check NAME UNIT URL
-      #
-      # Append a failure to $failed unless UNIT is active and URL is 2xx.
+      # Fail unless UNIT is active and URL returns 2xx.
       check() {
         local name=$1 unit=$2 url=$3
         if ! systemctl is-active --quiet "$unit"; then
@@ -131,10 +110,7 @@ let
         exit 0
       fi
 
-      # Anyone who knows the ping URL can fake pings, so it reaches curl
-      # through a private config file, never argv (world-readable in
-      # /proc). A ping URL is `https://hc-ping.com/<uuid>`: nothing to
-      # escape in the config's quoted string.
+      # Pass ping URL via private curl config to keep it out of /proc argv.
       umask 077
       conf=$(mktemp)
       trap 'rm -f "$conf"' EXIT
@@ -162,8 +138,7 @@ let
       repeat_interval = "12h";
 
       routes = [
-        # Heartbeat (see ./rules.nix): ping every ~2 min while healthy.
-        # healthchecks.io expects one ping per 5 min (+ 5 min grace).
+        # Heartbeat (./rules.nix) every ~2m; hc expects <= 5m + 5m grace.
         {
           matchers = [ ''alertname="Watchdog"'' ];
           receiver = "healthchecks-watchdog";
@@ -172,20 +147,17 @@ let
           group_interval = "1m";
           repeat_interval = "2m";
         }
-        # Pages, day + night: the full message and its resolve. One
-        # always-active receiver owns them: Alertmanager's notification log
-        # is per receiver, and a receiver only sends a resolve for a firing
-        # it sent. A time-gated receiver would drop resolves at the edges.
+        # Full page message + resolve, day and night. An always-active receiver
+        # must own resolves since AM tracks notification state per receiver and
+        # a time-gated receiver drops resolves across window edges.
         {
           matchers = [ ''severity="page"'' ];
           receiver = "discord-quiet";
           repeat_interval = "1h";
           continue = true;
         }
-        # Pages by day: an extra, short message w/ the @mention. Never a
-        # resolve. Muted at night: a page still firing at 09:00 gets its
-        # mention at the next group flush, since a muted flush logs nothing
-        # (or the last mention is older than `repeat_interval`).
+        # Extra daytime @mention (no resolve). Muted at night; pages still
+        # firing at 09:00 get mentioned on the next flush.
         {
           matchers = [ ''severity="page"'' ];
           receiver = "discord-page";
@@ -201,12 +173,11 @@ let
         discord_configs = [
           {
             webhook_url_file = "${amCredsDir}/discord-webhook-url";
-            # envsubst fills in `$DISCORD_USER_ID` from `environmentFile`
-            # before Alertmanager parses the config.
+            # Substituted via envsubst from environmentFile at start.
             content = "<@$DISCORD_USER_ID>";
             title = ''{{ template "discord.phlip9.title" . }}'';
             message = ''{{ template "discord.phlip9.mention" . }}'';
-            # discord-quiet sends the resolve.
+            # discord-quiet sends resolves.
             send_resolved = false;
           }
         ];
@@ -244,37 +215,28 @@ in
 
     discordWebhookUrlFile = lib.mkOption {
       type = lib.types.path;
-      description = ''
-        Path to a file containing the Discord webhook URL for `#alerts`.
-        In production, use config.sops.secrets.*.path.
-      '';
+      description = "Discord webhook URL file for `#alerts` (secret).";
     };
 
     environmentFile = lib.mkOption {
       type = lib.types.path;
       description = ''
-        Path to an Alertmanager EnvironmentFile w/ `DISCORD_USER_ID=<n>`, the
-        Discord user that daytime pages @mention. Alertmanager's config gets
-        envsubst'ed w/ it at start.
-        In production, use config.sops.secrets.*.path.
+        Alertmanager EnvironmentFile w/ `DISCORD_USER_ID=<n>` for daytime page
+        @mentions (secret; envsubst'd into config at start).
       '';
     };
 
     healthchecksWatchdogPingUrlFile = lib.mkOption {
       type = lib.types.path;
       description = ''
-        Path to a file containing the healthchecks.io ping URL that the
-        always-firing `Watchdog` alert pings via Alertmanager.
-        In production, use config.sops.secrets.*.path.
+        healthchecks.io ping URL file for the `Watchdog` alert (secret).
       '';
     };
 
     healthchecksHostPingUrlFile = lib.mkOption {
       type = lib.types.path;
       description = ''
-        Path to a file containing the healthchecks.io ping URL that
-        healthchecks-host-ping.timer pings every 5 min.
-        In production, use config.sops.secrets.*.path.
+        healthchecks.io ping URL file for healthchecks-host-ping (secret).
       '';
     };
 
@@ -287,62 +249,52 @@ in
         "other-server"
       ];
       description = ''
-        Hosts (`instance` labels) that get host-level alerts: CPU, memory,
-        disks, units, timers, scrape targets, stopped reporting, ... Other
-        hosts' series (ex: a desktop's collector) never fire or affect an
-        alert. See ./rules.nix.
+        Hosts (`instance` labels) receiving host-level alerts (./rules.nix).
+        Other hosts' series never fire or affect alerts.
       '';
     };
 
     groupWait = lib.mkOption {
       type = lib.types.str;
       default = "30s";
-      description = ''
-        Test knob. How long Alertmanager buffers a new alert group before
-        the first notification.
-      '';
+      description = "Test knob for Alertmanager `group_wait`.";
     };
 
     groupInterval = lib.mkOption {
       type = lib.types.str;
       default = "5m";
-      description = ''
-        Test knob. How long Alertmanager waits before notifying about
-        changes (new or resolved alerts) in an existing group.
-      '';
+      description = "Test knob for Alertmanager `group_interval`.";
     };
   };
 
   config = lib.mkIf (cfg.enable && cfgA.enable) {
     services.phlip9-o11y.collector.scrapeConfigs = {
-      # The merged setting, so the job follows a listener override.
+      # Follow any httpListenAddr override.
       vmalert.static_configs =
         hostTargets
           config.services.vmalert.instances."".settings.httpListenAddr;
       alertmanager.static_configs = hostTargets amAddr;
     };
 
-    # --- vmalert - rule evaluation --- #
+    # --- vmalert --- #
 
     services.vmalert.instances."" = {
       enable = true;
       settings = {
         httpListenAddr = vmalertAddr;
         "datasource.url" = "http://${cfgVm.listenAddress}";
-        # Write `ALERTS` + `ALERTS_FOR_STATE` series to VM ...
+        # Persist `ALERTS` / `ALERTS_FOR_STATE` in VM and restore `for` state.
         "remoteWrite.url" = "http://${cfgVm.listenAddress}";
-        # ... and restore pending `for` state from them on restart.
         "remoteRead.url" = "http://${cfgVm.listenAddress}";
         "notifier.url" = [ "http://${amAddr}" ];
-        # Keep in sync: nixos/sauna/grafana/overview.json treats the alert
-        # feed as stale w/o a Watchdog sample in 3m (> 2 evaluations).
+        # Keep in sync w/ nixos/sauna/grafana/overview.json (treats Watchdog
+        # as stale after 3m, i.e. > 2 evals).
         evaluationInterval = lib.mkDefault "1m";
-        # Base of each alert's source link (`generatorURL`, Grafana's "See
-        # source"): `<external.url>/vmalert/alert?...` on vmalert's own UI.
-        # Works through the tunnel `ssh -L 8880:127.0.0.1:8880 sauna`.
+        # Base for `generatorURL` links (reachable via
+        # `ssh -L 8880:127.0.0.1:8880 sauna`).
         "external.url" = "http://localhost:8880";
       };
-      # Other modules can append their own groups.
+      # Other modules may append groups.
       rules.groups = alertRules.groups;
     };
 
@@ -350,7 +302,7 @@ in
       wants = [ "victoriametrics.service" ];
       after = [ "victoriametrics.service" ];
 
-      # Hardening. Only talks to VM + Alertmanager on loopback.
+      # Hardening (loopback VM + Alertmanager only).
       serviceConfig = {
         CapabilityBoundingSet = [ "" ];
         DevicePolicy = "closed";
@@ -387,17 +339,16 @@ in
       };
     };
 
-    # --- Alertmanager - grouping, inhibition, routing, delivery --- #
+    # --- Alertmanager --- #
 
     services.prometheus.alertmanager = {
       enable = true;
       listenAddress = "127.0.0.1";
       port = 9093;
-      # Single node: no gossip listener on 0.0.0.0:9094.
+      # Single node; disable 0.0.0.0:9094 gossip listener.
       extraFlags = [ "--cluster.listen-address=" ];
-      # The module envsubst's the whole config, so it must not contain a
-      # literal `$` other than `$DISCORD_USER_ID`. All Go templates that
-      # need `$` live in ./alertmanager.tmpl, which is not substituted.
+      # Module envsubsts the config; keep Go templates using `$` in
+      # ./alertmanager.tmpl (unsubstituted).
       environmentFile = cfgA.environmentFile;
       configuration = amConfig;
     };
@@ -407,7 +358,7 @@ in
       "healthchecks-watchdog-ping-url:${cfgA.healthchecksWatchdogPingUrlFile}"
     ];
 
-    # --- healthchecks-host-ping - off-box host + alerting health --- #
+    # --- healthchecks-host-ping --- #
 
     systemd.services.healthchecks-host-ping = {
       description = "Ping healthchecks.io if the alerting stack is healthy";
@@ -417,13 +368,12 @@ in
       serviceConfig = {
         Type = "oneshot";
         ExecStart = lib.getExe hostPing;
-        # Every curl has a timeout; this catches a hung systemctl.
+        # Catches hung systemctl (curl calls have own timeouts).
         TimeoutStartSec = "1min";
         LoadCredential = [ "ping-url:${cfgA.healthchecksHostPingUrlFile}" ];
         DynamicUser = true;
 
-        # Hardening. Talks to loopback services, systemd over D-Bus, and
-        # healthchecks.io over HTTPS.
+        # Hardening (loopback services, systemd D-Bus, HTTPS healthchecks.io).
         CapabilityBoundingSet = [ "" ];
         DevicePolicy = "closed";
         LockPersonality = true;
@@ -461,7 +411,7 @@ in
       wantedBy = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "*:0/5";
-        # default 1min of slack is a big chunk of a 5 min period
+        # Default 1m slack is too wide for a 5m check.
         AccuracySec = "10s";
       };
     };
@@ -473,8 +423,7 @@ in
         message = "phlip9-o11y: server.alerting needs server.grafana.domain";
       }
       {
-        # envsubst would eat any other `$`, ex: a `$labels` template.
-        # (`templates` are store paths.)
+        # Reject stray `$` that envsubst would strip (ignore `templates` paths).
         assertion =
           let
             json = builtins.toJSON (removeAttrs amConfig [ "templates" ]);
