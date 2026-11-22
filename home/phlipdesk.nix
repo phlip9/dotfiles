@@ -71,6 +71,9 @@
     # # aider-chat - AI developer agent cli
     # phlipPkgs.aider-chat
 
+    # agy - Google Antigravity AI cli
+    phlipPkgs.antigravity-cli
+
     # claude - AI cli
     phlipPkgs.claude-code
 

@@ -76,6 +76,9 @@
     pkgs.rustup
     pkgs.uv
 
+    # agy - Google Antigravity AI cli
+    phlipPkgs.antigravity-cli
+
     # claude - AI cli
     phlipPkgs.claude-code
 
