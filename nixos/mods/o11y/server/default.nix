@@ -28,13 +28,12 @@ let
     hostTargets
     ;
 
-  # blackbox_exporter: ping https:// URLs and report `probe_success` and
-  # `probe_ssl_earliest_cert_expiry` metrics.
+  # Probes https:// URLs for `probe_success` + `probe_ssl_earliest_cert_expiry`.
   # See: <blackbox_exporter>/CONFIGURATION.md
   blackboxConfig = (pkgs.formats.yaml { }).generate "blackbox.yml" {
     modules.https_2xx = {
       prober = "http";
-      # < VM's default 10s scrape timeout
+      # Below VM's 10s default scrape timeout.
       timeout = "5s";
       http.fail_if_not_ssl = true;
     };
@@ -49,17 +48,14 @@ in
   ];
 
   options.services.phlip9-o11y.server = {
-    enable = lib.mkEnableOption ''
-      the o11y server: metrics storage + query (VictoriaMetrics), dashboards
-      (Grafana), and optionally alerting + profile storage
-    '';
+    enable = lib.mkEnableOption "o11y server (VM, Grafana, alerts, profiling)";
 
     retentionPeriod = lib.mkOption {
       type = lib.types.str;
       default = "3";
       description = ''
-        VictoriaMetrics data retention period.
-        Default "3" = 3 months. Supports suffixes: h, d, w, y.
+        VictoriaMetrics retention period (bare int = months; supports
+        h, d, w, y suffixes).
       '';
     };
 
@@ -67,25 +63,22 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       example = [ "https://grafana.phlip9.com/api/health" ];
-      description = ''
-        HTTPS URLs that blackbox_exporter probes on every scrape.
-      '';
+      description = "HTTPS URLs probed by blackbox_exporter on every scrape.";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    # --- VictoriaMetrics - metrics storage + query --- #
+    # --- VictoriaMetrics --- #
 
-    # No `prometheusConfig`: its built-in scraper stays off. The collector's
-    # vmagent scrapes + remote-writes to `/api/v1/write`, see
-    # ../collector/default.nix.
+    # Omit `prometheusConfig` to leave built-in scraper off; vmagent scrapes
+    # and remote-writes to `/api/v1/write` (../collector/default.nix).
     services.victoriametrics = {
       enable = true;
       listenAddress = "127.0.0.1:8428";
       retentionPeriod = cfg.retentionPeriod;
     };
 
-    # --- prometheus-blackbox-exporter - HTTPS probes + cert expiry --- #
+    # --- prometheus-blackbox-exporter --- #
 
     services.prometheus.exporters.blackbox = lib.mkIf (cfg.probes != [ ]) {
       enable = true;
@@ -97,9 +90,7 @@ in
     services.phlip9-o11y.collector.scrapeConfigs = {
       victoriametrics.static_configs = hostTargets cfgVm.listenAddress;
 
-      # Probe each URL through blackbox_exporter's `/probe?target=<url>`,
-      # labeled `instance=<url>`, not the hostname: the probe alerts name
-      # the URL.
+      # Label `instance=<url>` instead of hostname so probe alerts name the URL.
       blackbox = lib.mkIf (cfg.probes != [ ]) {
         metrics_path = "/probe";
         params.module = [ "https_2xx" ];
