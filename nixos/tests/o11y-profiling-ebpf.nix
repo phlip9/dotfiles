@@ -1,64 +1,28 @@
-# NixOS VM test: whole-host eBPF profiling, end to end.
+# Exercise whole-host eBPF profiling in one NixOS VM.
+# why VM: eBPF and perf events need the guest kernel.
 #
-# One VM w/ the phlip9-o11y profiling stack: Pyroscope + the Alloy
-# `pyroscope.ebpf` collector (non-root `alloy` user, ambient caps, hardened
-# unit). The workload, `ebpf-target.service`, is a tiny C program w/ named
-# hot/cold fns that runs as another (dynamic) user. Needs a VM, not a
-# container: eBPF + perf events need the (guest) kernel.
+#   Alloy   -> nginx (HTTPS) -> Pyroscope
+#   vmagent -> nginx (HTTPS) -> VictoriaMetrics
 #
-# The collector pushes like a remote one (`collector.remote`), to this VM's
-# own ingest endpoint: Alloy + vmagent -> nginx (HTTPS, self-signed cert,
-# basic auth) -> Pyroscope + VictoriaMetrics. sauna's loopback push w/o
-# auth only differs in Alloy's endpoint block + IP allow-list. See
-# ./o11y-ingest.nix for the endpoint itself.
+# - Collection: non-root Alloy capabilities, symbolized frames, unit labels.
+# - Regressions: off-CPU probe lifetime, exited targets, and PID fan-out.
+# - Delivery: authenticated profile pushes, batching, and scrape metrics.
 #
-# Verifies:
-# - Alloy runs as uid `alloy` w/ exactly its ambient caps
-# - Alloy pushes through the ingest endpoint: HTTP/2, basic auth w/ a
-#   systemd credential, a base URL w/ a path prefix
-# - a CPU profile for `service_name="ebpf-target"` (in `workload.slice`)
-#   w/ the user hot fn name
-#   (NOT just any profile: missing caps fail silently as `[unknown]`
-#   frames) + a symbolized kernel frame
-# - Go frames for VictoriaMetrics, a go1.27 binary w/o `.symtab`
-# - kernel threads (no exe) as `service_name="kernel"`
-# - series labels: `exe` + `host`, no pid or `__meta_*` leaks
-# - an `offcpu` profile w/ the blocking fn, also fresh after a forced GC in
-#   Alloy (regression: GC'd off-CPU probe)
-# - a process that exits keeps its unit for its last samples, after
-#   Alloy applied its removal (regression: they went to
-#   `ebpf/unspecified`), w/ Alloy's test hooks: flush on demand, applied
-#   targets, pending samples
-# - a flush w/ many label sets: one push request reaches Pyroscope, w/ a
-#   series per profile, all queryable
-# - many short-lived pids: one profile per labels, not per pid
-#   (regression: per-pid fan-out missed the push deadline under load)
-# - Alloy's `/metrics`: pushes sent, none dropped, components healthy;
-#   scraped into VictoriaMetrics
-# - `pyroscope_data_bytes` (pyroscope-du timer -> node-exporter)
-#
-# Mirrors sauna: latest kernel + its BPF/perf/ptrace sysctls.
+# Push through the VM's own ingress to exercise remote collector config.
+# see: nixos/tests/o11y-ingest.nix
 let
-  # Workload unit
+  # Units for steady profiles, exit attribution, and short-lived PIDs.
   unit = "ebpf-target";
-  # Same workload, started + stopped by the test: a process that exits
   exitedUnit = "ebpf-exited";
-  # Spawns short-lived CPU-burning children back to back, like nix builds
   forkUnit = "ebpf-forker";
-  # On-CPU fn, user frames only
   hotFn = "hot_loop_spin";
-  # Blocks in nanosleep(2): off-CPU
   coldFn = "cold_block_wait";
-  # Alloy's pprof flush period, see `collector.profiling.collectInterval`.
-  # Most waits below are a few flushes long. Also the push deadline: a
-  # flush's push acks in ~0.5s (Pyroscope's segment flush). Alloy keeps
-  # an exited pid's target for 2 intervals: the exited-process subtest's
-  # removal -> flush steps must fit, also under host load.
+
+  # Shorten collection and discovery for the exit test. A push gets one
+  # collect interval, and the stopped target is retained for two.
+  # see: nixos/mods/o11y/collector/alloy.nix
   collectIntervalS = 3;
-  # /proc rescan period, see `collector.profiling.refreshInterval`. Short:
-  # the exited-process subtest waits for Alloy to apply a start + a stop.
   refreshIntervalMs = 500;
-  # Ingest password of the VM's collector, username = hostname
   ingestPassword = "machine-test-password-0123456789";
 in
 {
@@ -74,8 +38,7 @@ in
       ingestLib = import ./lib/o11y-ingest.nix { inherit pkgs; };
       tls = ingestLib.tlsCert "machine";
 
-      # stdenv build, so fixup strips debug info (`strip -S`) but keeps
-      # `.symtab`, like most nixpkgs C/C++ binaries.
+      # Test C symbolization after stdenv strips debug info and keeps .symtab.
       ebpfTarget = pkgs.stdenv.mkDerivation {
         name = unit;
         src = ./fixtures/ebpf-target.c;
@@ -91,22 +54,21 @@ in
 
       workloadConfig = {
         ExecStart = lib.getExe ebpfTarget;
-        # Like sauna: units outside `system.slice` still get their own
-        # `service_name`.
+        # Exercise unit attribution outside system.slice.
         Slice = "workload.slice";
         DynamicUser = true;
-        # Leave CPU for Alloy + Pyroscope
+        # Leave CPU for Alloy and Pyroscope.
         Nice = 10;
       };
     in
     {
       imports = [ ./lib/victoriametrics.nix ];
 
-      # 2 vCPUs for the workload's spinners, 2 for the rest. W/ 2 total, the
-      # spinners slow everything else: ex: Alloy's BPF load ~5s, not ~2.6s.
+      # Leave two vCPUs for services while both workload threads spin.
       virtualisation.cores = 4;
       virtualisation.memorySize = 2048;
-      # = sauna
+      # Match sauna's kernel and exercise BPF, perf, and ptrace restrictions.
+      # see: nixos/sauna/default.nix
       boot.kernelPackages = pkgs.linuxPackages_latest;
       boot.kernel.sysctl = {
         "kernel.kptr_restrict" = 1;
@@ -144,21 +106,16 @@ in
           };
           profiling = {
             enable = true;
-            # Faster first profile + the exited-pid timeline. Everything
-            # else: prod defaults.
             collectInterval = "${toString collectIntervalS}s";
             refreshInterval = "${toString refreshIntervalMs}ms";
-            # Flush on demand, applied targets: the exited-process subtest
             testHooks = true;
           };
         };
       };
 
-      # Unused here: Grafana (covered by o11y-profiling), ssh
       services.grafana.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
 
-      # The ingest endpoint's vhost, HTTPS-only like sauna's
       services.nginx = {
         enable = true;
         recommendedProxySettings = true;
@@ -177,17 +134,13 @@ in
         serviceConfig = workloadConfig;
       };
 
-      # Not started at boot, see the "exited process" subtest
       systemd.services.${exitedUnit}.serviceConfig = workloadConfig // {
-        # Outranks the `Nice = 10` spinners: the samples the subtest waits
-        # for come faster
+        # Sample the exit workload quickly alongside the steady spinners.
         Nice = 0;
       };
 
-      # Not started at boot, see the "short-lived pids" subtest. Each child
-      # burns a few ms of CPU, and dies long before discovery's next
-      # refresh. 2 loops: enough new pids per flush even on a starved CI
-      # host (1 loop: ~38 per flush at host load 30).
+      # Run two loops for enough short-lived PIDs under CI load. Each child
+      # burns CPU and usually exits before Alloy's next discovery refresh.
       systemd.services.${forkUnit}.serviceConfig = workloadConfig // {
         ExecStart = pkgs.writeShellScript forkUnit ''
           spawn() {
@@ -200,8 +153,6 @@ in
           spawn &
           wait
         '';
-        # Outranks the `Nice = 10` spinners: more sampled pids per flush.
-        # 2 of 4 vCPUs max; Alloy + Pyroscope (nice 0) keep their share.
         Nice = 0;
       };
     };
@@ -230,12 +181,9 @@ in
     )
 
     ALLOY_URL = "http://127.0.0.1:12345"
-    # Upper bound for profiles to show up. Usually ~3-5s after Alloy starts:
-    # BPF load (~2.6s) + first flush + Pyroscope flush.
+    # Allow for BPF load, the first Alloy push, and Pyroscope indexing.
     PROFILE_TIMEOUT = dt.timedelta(seconds=90)
-    # Upper bound for one of Alloy's periodic events (discovery refresh,
-    # flush). Generous: polls return right after the event, and a starved
-    # VM delays it.
+    # Bound polls for discovery and flush events even under host load.
     EVENT_TIMEOUT = dt.timedelta(seconds=30)
 
     CPU_TYPE = "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
@@ -251,9 +199,10 @@ in
     KERNEL_SEL = '{service_name="kernel"}'
     HOT_FN = "${hotFn}"
     COLD_FN = "${coldFn}"
-    # Every stack of the workload's threads has one of these
+    # Named frames identify workload samples, including mislabeled ones.
+    # see: nixos/tests/fixtures/ebpf-target.c
     WORKLOAD_FNS = {HOT_FN, "hot_syscall_spin", COLD_FN}
-    # Any of these under `hot_syscall_spin` = symbolized kernel frames
+    # Kernel symbols expected from the workload's /dev/zero reads.
     KERNEL_FNS = {
         "do_syscall_64",
         "entry_SYSCALL_64_after_hwframe",
@@ -267,7 +216,7 @@ in
         "BPF", "PERFMON", "SYS_PTRACE", "CHECKPOINT_RESTORE",
         "DAC_READ_SEARCH", "SYSLOG",
     }
-    # Linux cap numbers -> names, to decode /proc/<pid>/status
+    # Capability names indexed by bit number in /proc/<pid>/status.
     CAP_NAMES = [
         "CHOWN", "DAC_OVERRIDE", "DAC_READ_SEARCH", "FOWNER", "FSETID",
         "KILL", "SETGID", "SETUID", "SETPCAP", "LINUX_IMMUTABLE",
@@ -295,17 +244,13 @@ in
             status[key] = val.strip()
         return status
 
-    # CPU time of a unit's cgroup, in ns
     def unit_cpu_ns(unit: str) -> int:
         return int(machine.succeed(
             f"systemctl show {unit} -p CPUUsageNSec --value",
             timeout=CMD_TIMEOUT,
         ))
 
-    # Open BPF link FDs of a unit's main process. Alloy opens + closes
-    # /proc files all the time; `find` fails on FDs that close while it
-    # lists them, but still prints every match. An unreadable fd dir
-    # counts 0.
+    # Count BPF links even if unrelated FDs close during the find scan.
     def bpf_links(unit: str) -> int:
         pid = machine.succeed(
             f"systemctl show {unit} -p MainPID --value", timeout=CMD_TIMEOUT
@@ -316,18 +261,16 @@ in
         )
         return len(out.split())
 
-    # The guest's clock, which stamps the profiles
+    # Use guest time for Pyroscope's profile query bounds.
     def vm_now_ms() -> int:
         return int(machine.succeed("date +%s%3N", timeout=CMD_TIMEOUT))
 
-    # POST to Pyroscope's Connect query API w/ transient error retries.
     def pyro_post(
         method: str, body: dict, timeout: dt.timedelta = EVENT_TIMEOUT
     ) -> dict:
         return _pyro_post(machine, method, body, retry_timeout=timeout)
 
-    # Function names in the merged flame graph of `ptype` for `selector`,
-    # from profiles stamped in [`start_ms`, `end_ms`] (default: +-1h).
+    # Read symbols from the merged flame graph in the requested time window.
     def fn_names(
         ptype: str,
         selector: str,
@@ -349,8 +292,7 @@ in
             machine, label, selector=selector, retry_timeout=EVENT_TIMEOUT
         )
 
-    # Poll until `check(names)` holds for the profile. Pyroscope has no push
-    # notification. Returns the last names seen.
+    # Wait for matching frames and report the last observed names on failure.
     def wait_for_profile(
         ptype: str, selector: str, check, what: str,
         start_ms: int | None = None,
@@ -361,8 +303,7 @@ in
 
         def poll() -> bool:
             nonlocal seen
-            # Query retries share this wait's budget, so a Pyroscope outage
-            # can't stretch it by another EVENT_TIMEOUT.
+            # Share the poll deadline with query retries.
             left = dt.timedelta(seconds=max(0.0, deadline - time.monotonic()))
             seen = fn_names(ptype, selector, start_ms, end_ms, left)
             return check(seen)
@@ -377,8 +318,10 @@ in
     def alloy_scrape() -> list[str]:
         return metrics_scrape(machine, ALLOY_URL)
 
-    # One of `pyroscope.ebpf`'s test hooks (`collector.profiling.testHooks`, see
-    # nixos/pkgs/grafana-alloy): its JSON resp
+    # --- Alloy test hooks --- #
+
+    # Call the profiler hooks enabled by collector.profiling.testHooks.
+    # see: nixos/pkgs/grafana-alloy/ebpf-test-hooks.patch
     def ebpf_hook(path: str, method: str = "GET") -> dict:
         out = machine.succeed(
             f"{CURL} -f -X {method} "
@@ -387,15 +330,14 @@ in
         )
         return json.loads(out)
 
-    # Flush now; returns once its pushes returned. `hold`: no periodic
-    # flushes until the next ebpf_flush w/o it. Pyroscope query window
-    # [`start_ms`, `end_ms`]: this flush's profiles, no other's.
+    # Return after pushes finish, with an isolated query window for the batch.
+    # hold pauses periodic flushes until a manual flush releases them.
     def ebpf_flush(hold: bool) -> dict:
         resp = ebpf_hook(f"flush?hold={str(hold).lower()}", "POST")
         assert resp["failed_pushes"] == 0, resp
         return resp
 
-    # The flush's profiles for `service`, of type `name` (`__name__`)
+    # Select profiles by service and type within a flush result.
     def flushed(flush: dict, service: str, name: str) -> list[dict]:
         return [
             prof for prof in flush["profiles"]
@@ -403,8 +345,7 @@ in
             and prof["labels"].get("__name__") == name
         ]
 
-    # `pid`'s target in the targets Alloy's profiler applied, as
-    # (live, retained exited)
+    # Read the profiler's applied target for a PID, live or retained after exit.
     def applied_target(pid: int) -> tuple[dict | None, dict | None]:
         resp = ebpf_hook("targets")
 
@@ -416,15 +357,13 @@ in
 
         return find("live"), find("exited")
 
-    # `pid`'s on-CPU samples that await the next flush
     def pending_cpu(pid: int) -> int:
         return sum(
             entry["samples"] for entry in ebpf_hook("pending")["pending"]
             if entry["pid"] == pid and entry["type"] == "process_cpu"
         )
 
-    # (service_name, exe, profile type) of the samples that await the
-    # next flush, by the targets Alloy applied: ~ the next flush's series
+    # Estimate the next flush's series from pending samples and applied labels.
     def pending_series() -> set[tuple]:
         targets = ebpf_hook("targets")
         labels_by_pid = {
@@ -441,20 +380,19 @@ in
             )
         return series
 
-    # Alloy's per-service pprof counter `name`, summed over the forker's
-    # pids: undiscovered (most) + discovered ones
+    # Include the forker's undiscovered PIDs under the fallback service label.
     def fanout_metric(scrape: list[str], name: str) -> float:
         return sum(
             metric_sum(scrape, name, f'service_name="{service}"')
             for service in [UNSPECIFIED, FORK_UNIT]
         )
 
-    # Last pid the kernel handed out: pids created since = the delta,
-    # modulo pid_max (wraparound)
+    # Read the last PID allocated by the guest kernel.
     def last_pid() -> int:
         out = machine.succeed("cat /proc/loadavg", timeout=CMD_TIMEOUT)
         return int(out.split()[4])
 
+    # Estimate PID churn across wraparound.
     def pids_since(pid0: int) -> int:
         pid_max = int(machine.succeed(
             "cat /proc/sys/kernel/pid_max", timeout=CMD_TIMEOUT
@@ -482,12 +420,14 @@ in
 
     machine.start()
     try:
-        with subtest("Pyroscope + Alloy + workload up"):
+        # --- Startup and profile delivery --- #
+
+        with subtest("Pyroscope, Alloy, and workload readiness"):
             machine.wait_for_unit(
                 "pyroscope.service", timeout=dt.timedelta(seconds=90)
             )
             wait_for_http(machine, f"{PYRO_URL}/ready", timeout=UP_TIMEOUT)
-            # A failed query raises, never reads as "no profiles"
+            # Surface query failures before checking for profile data.
             try:
                 pyro_post("NoSuchMethod", {}, timeout=dt.timedelta(0))
             except Exception:
@@ -498,20 +438,20 @@ in
             wait_for_http(machine, f"{ALLOY_URL}/-/ready", timeout=UP_TIMEOUT)
             machine.wait_for_unit(f"{UNIT}.service", timeout=UP_TIMEOUT)
 
-        with subtest("Alloy runs as uid alloy w/ exactly its caps"):
+        with subtest("Alloy uses its service UID and expected capabilities"):
             status = proc_status("alloy")
             alloy_uid = machine.succeed(
                 "id -u alloy", timeout=CMD_TIMEOUT
             ).strip()
             caps = decode_caps(status["CapEff"])
             print(f"alloy: Uid {status['Uid']}, CapEff {sorted(caps)}")
-            # real, effective, saved, fs
+            # Check real, effective, saved, and filesystem UIDs.
             assert status["Uid"].split() == [alloy_uid] * 4, status
             assert alloy_uid != "0", alloy_uid
             assert caps == ALLOY_CAPS, caps
             assert decode_caps(status["CapAmb"]) == ALLOY_CAPS, status
 
-        with subtest("CPU profile: user hot fn + kernel frames"):
+        with subtest("CPU profile includes named user and kernel frames"):
             names = wait_for_profile(
                 CPU_TYPE, TARGET_SEL,
                 lambda names: HOT_FN in names and bool(KERNEL_FNS & names),
@@ -521,9 +461,7 @@ in
             cpu_t0 = time.monotonic()
             cpu_ns0 = unit_cpu_ns("alloy")
 
-        # Alloy's base URL has a path prefix, `pyroscope.write` appends
-        # the Connect procedure. HTTP/2: one connection for all pushes.
-        with subtest("Alloy pushes through the ingest endpoint"):
+        with subtest("Alloy authenticates over HTTP/2 at the ingest prefix"):
             machine.succeed(
                 "grep -qE ' machine \\[.*\\] \"POST "
                 "/o11y/profiles/push.v1.PusherService/Push HTTP/2.0\" 200 ' "
@@ -532,53 +470,32 @@ in
                 timeout=CMD_TIMEOUT,
             )
 
-        with subtest("off-CPU profile: blocking fn"):
+        with subtest("Off-CPU profile includes the blocking function"):
             wait_for_profile(
                 OFFCPU_TYPE, TARGET_SEL,
                 lambda names: COLD_FN in names,
                 "offcpu",
             )
 
-        # Regression: Alloy <= 1.22 dropped its only reference to the
-        # off-CPU probe, so a GC closed the probe's BPF links: a few startup
-        # off-CPU profiles, then silence, while Alloy stays healthy. Force a
-        # GC, then require a fresh off-CPU profile + the same BPF links,
-        # after the next subtest: its flushes are the wait.
-        with subtest("off-CPU profiling: force a GC in Alloy"):
+        # --- Probe lifetime, exit attribution, and batching --- #
+
+        with subtest("Force garbage collection in Alloy"):
+            # GC used to close the unreachable off-CPU probe's BPF links.
+            # see: nixos/pkgs/grafana-alloy/ebpf-keep-probes-alive.patch
             links0 = bpf_links("alloy")
             print(f"alloy BPF links before GC: {links0}")
             assert links0 > 0, links0
-            # net/http/pprof runs runtime.GC() first w/ `gc=1`
             machine.succeed(
                 f"{CURL} -f -o /dev/null '{ALLOY_URL}/debug/pprof/heap?gc=1'",
                 timeout=CMD_TIMEOUT,
             )
-            # Alloy stamps each profile at batch flush, not at sample
-            # capture, so the batch in flight during the GC still holds
-            # pre-GC samples. Only count batches flushed >= 1 collect
-            # interval after the GC returned: all their samples are post-GC.
+            # Alloy timestamps profiles at flush. Skip the batch that spans GC.
             fresh_ms = vm_now_ms() + COLLECT_INTERVAL_MS
 
-        # Regression: Alloy looks up a pid's labels at flush time, in the
-        # targets it applied last. So the last samples of a process that
-        # exited, and whose removal Alloy applied before the next flush,
-        # went to `ebpf/unspecified`. Alloy's test hooks acknowledge every
-        # step, nothing races its timers:
-        #
-        # 1. start the unit; wait until Alloy applied its pid's target
-        # 2. flush H + hold: from here on, only the test flushes
-        # 3. wait for samples of the pid; flush F0 (hold): the unit's
-        #    profile, while live
-        # 4. wait for samples of the pid since F0: F1's last samples
-        # 5. stop the unit; wait until Alloy applied the removal; require
-        #    its target retained as exited
-        # 6. flush F1 (release): the unit's profile w/ those samples; no
-        #    unspecified profile of F0 or F1 has a workload fn
-        #
-        # W/o the fix: nothing retained at 5, and F1's samples of the pid
-        # land in unspecified.
-        with subtest("exited process: last samples keep its unit"):
-            # Per wait: a few, from 2 spinning threads at nice 0
+        with subtest("Last samples retain the exited process's unit label"):
+            # Alloy resolves labels at flush. Losing the exited target sends
+            # its last samples to ebpf/unspecified.
+            # see: nixos/pkgs/grafana-alloy/ebpf-keep-exited-targets.patch
             min_samples = 5
             machine.succeed(
                 f"systemctl start {EXITED_UNIT}", timeout=CMD_TIMEOUT
@@ -589,6 +506,7 @@ in
             ))
             assert pid != 0, pid
 
+            # Wait for the profiler to apply the discovered unit label.
             def live_as_unit() -> bool:
                 live, _ = applied_target(pid)
                 return (
@@ -597,6 +515,8 @@ in
                 )
 
             wait_fast(live_as_unit, "Alloy applies the pid", EVENT_TIMEOUT)
+
+            # Clear the buffer and use manual flushes for both snapshots.
             ebpf_flush(hold=True)
             wait_fast(
                 lambda: pending_cpu(pid) >= min_samples,
@@ -612,6 +532,7 @@ in
                 start_ms=f0["start_ms"], end_ms=f0["end_ms"],
             )
 
+            # Leave samples pending across exit and applied target removal.
             wait_fast(
                 lambda: pending_cpu(pid) >= min_samples,
                 "samples of the pid since F0",
@@ -640,8 +561,8 @@ in
                 start_ms=f1["start_ms"], end_ms=f1["end_ms"],
             )
 
-            # Per flush + type: one unspecified push, so once its window
-            # has data, all of it is queryable
+            # One fallback profile per type per flush makes readback complete
+            # as soon as that profile is visible in the flush window.
             for flush in [f0, f1]:
                 for ptype, name in [
                     (CPU_TYPE, "process_cpu"), (OFFCPU_TYPE, "offcpu"),
@@ -657,15 +578,9 @@ in
                     )
                     assert not WORKLOAD_FNS & names, (name, names)
 
-        # Batched pushes (nixos/pkgs/grafana-alloy): a flush's profiles
-        # reach Pyroscope in one push request, a series per profile, not a
-        # request each. Pyroscope's distributor counts the requests it
-        # handles + their series, Alloy its push attempts, all before the
-        # flush returns. Nothing else pushes, and the held flushes keep
-        # Alloy's periodic ones out of the window.
-        with subtest("one push request per flush, all series queryable"):
-            # Label sets (+ profile types) in the flush: VM services,
-            # kernel threads, the workload, unspecified
+        with subtest("One push per flush delivers every profile series"):
+            # Hold periodic flushes to isolate one batch in the counters.
+            # see: nixos/pkgs/grafana-alloy/pyroscope-batch-push.patch
             min_series = 8
             ebpf_flush(hold=True)
             wait_fast(
@@ -703,7 +618,6 @@ in
                 alloy0, alloy1, "pyroscope_write_sent_bytes_total"
             )
             profiles = flush["profiles"]
-            # Not an assertion: ack latency + size of one batch
             print(
                 f"batch: {len(profiles)} profiles -> {requests:.0f} "
                 f"requests, {series:.0f} series, {sent_bytes:.0f} B; push "
@@ -714,7 +628,6 @@ in
             assert attempts == 1, attempts
             assert series == len(profiles), (series, len(profiles))
 
-            # Every series, by all its labels, w/ data in the flush's window
             ptypes = {"process_cpu": CPU_TYPE, "offcpu": OFFCPU_TYPE}
             keys = {
                 (
@@ -735,32 +648,22 @@ in
                 )
             ebpf_flush(hold=False)
 
-        with subtest("off-CPU profiling survives the GC"):
+        with subtest("Off-CPU samples and BPF links survive GC"):
             wait_for_profile(
                 OFFCPU_TYPE, TARGET_SEL,
                 lambda names: COLD_FN in names,
                 "offcpu after GC",
                 start_ms=fresh_ms,
             )
-            # GC cleanups ran long before the fresh profile: >= 1 collect
-            # interval later
             links1 = bpf_links("alloy")
             print(f"alloy BPF links after GC: {links1}")
             assert links1 == links0, (links0, links1)
 
-        # Regression: Alloy built + pushed one profile per (labels, pid)
-        # per collect interval. Nix builds' short-lived pids fanned out to
-        # ~600-850 pushes per 15s on sauna; under load the tail missed the
-        # push deadline (= collect interval) and was dropped. Now one per
-        # (labels, profile type). The fan-out: the forker's new pids, all
-        # burning CPU. Negative control w/ `perPidProfile = true`: ~0.8
-        # pprofs per new pid.
-        #
-        # The window ends at a pid count, not a flush count: a starved VM
-        # makes fewer pids per flush. Alloy's counters can't mark flushes
-        # either: it bumps them per profile, so one flush's bumps can
-        # straddle a scrape.
-        with subtest("short-lived pids: one profile per labels"):
+        with subtest("Short-lived PIDs aggregate into profiles by label set"):
+            # Per-PID pushes reached 600-850 per 15s on sauna and missed the
+            # push deadline under load. Count PIDs to keep workload size
+            # stable across different VM speeds.
+            # see: nixos/pkgs/grafana-alloy/ebpf-per-pid-profile.patch
             fanout_pids = 300
             start_ms = vm_now_ms()
             pids0 = last_pid()
@@ -776,8 +679,7 @@ in
                 timeout=CMD_TIMEOUT,
             ))
             pids = pids_since(pids0)
-            # Every sample before the stop is flushed by the 2nd flush
-            # after it, w/ slack for the profiler's processing lag.
+            # Allow two flushes after stop to drain buffered samples.
             wait_fast(
                 lambda: bool(
                     fn_names(CPU_TYPE, "{}", stop_ms + COLLECT_INTERVAL_MS)
@@ -793,8 +695,7 @@ in
             samples = fanout_metric(
                 scrape1, "pyroscope_ebpf_pprof_samples_total"
             ) - fanout_metric(scrape0, "pyroscope_ebpf_pprof_samples_total")
-            # Flushes in the window, + 1 at each end: partial, or bumps
-            # straddling the scrape
+            # Allow partial flushes and counter updates across scrape bounds.
             flushes = (end_ms - start_ms) / COLLECT_INTERVAL_MS + 2
             print(
                 f"fan-out: {pids} new pids, {pprofs:.0f} pprofs, "
@@ -803,8 +704,7 @@ in
             )
             assert pids >= fanout_pids, pids
             assert samples > 0, samples
-            # Per flush + (labels, profile type): unspecified + forker,
-            # cpu + offcpu. Negative control: 257 pprofs.
+            # Allow CPU and off-CPU for each of the two service labels.
             assert pprofs <= 4 * flushes, (pprofs, flushes)
             for name in [
                 "pyroscope_write_dropped_profiles_total",
@@ -812,15 +712,15 @@ in
             ]:
                 assert metric_sum(scrape1, name) == 0, name
 
-        # Kernel threads have no exe, so a separate discovery labels them.
-        # Trigger some: page cache writeback runs in kworkers.
-        with subtest("CPU profile: kernel threads as service_name=kernel"):
+        # --- Frame symbols and series labels --- #
+
+        with subtest("Kernel thread profiles use the kernel service label"):
+            # Trigger kworker samples with page-cache writeback.
             machine.succeed(
                 "dd if=/dev/zero of=/var/tmp/writeback bs=1M count=128 "
                 "status=none && sync && rm /var/tmp/writeback",
                 timeout=CMD_TIMEOUT,
             )
-            # Every kernel thread stack: ret_from_fork > kthread > ...
             wait_for_profile(
                 CPU_TYPE, KERNEL_SEL,
                 lambda names: "kthread" in names,
@@ -829,9 +729,8 @@ in
             exes = label_values("exe", KERNEL_SEL)
             assert exes == [], exes
 
-        # VictoriaMetrics is a go1.27 binary w/o `.symtab`, only
-        # `.gopclntab`. Alloy 1.21 rejects go1.27 pclntabs.
-        with subtest("CPU profile: Go frames"):
+        with subtest("VictoriaMetrics CPU profile includes Go frames"):
+            # The binary lacks .symtab, so symbolization needs .gopclntab.
             wait_for_profile(
                 CPU_TYPE,
                 '{service_name="victoriametrics"}',
@@ -842,7 +741,7 @@ in
                 "victoriametrics cpu",
             )
 
-        with subtest("series labels: unit, exe, host; no pid, no __meta_*"):
+        with subtest("Workload profiles expose service, exe, and host labels"):
             resp = pyro_post("LabelNames", {"matchers": [TARGET_SEL]})
             names = resp.get("names", [])
             print(f"label names: {names}")
@@ -858,7 +757,9 @@ in
             print(f"service_name values: {services}")
             assert "alloy" in services, services
 
-        with subtest("Alloy metrics: pushes sent, none dropped, healthy"):
+        # --- Health metrics --- #
+
+        with subtest("Alloy reports delivery and healthy components"):
             scrape = alloy_scrape()
             sent = metric_sum(scrape, "pyroscope_write_sent_profiles_total")
             assert sent > 0, sent
@@ -868,7 +769,7 @@ in
                 "pyroscope_ebpf_profiling_sessions_failing_total",
             ]:
                 assert metric_sum(scrape, name) == 0, name
-            # Prove the series exists before trusting the == 0 below
+            # Require reported components before checking for unhealthy ones.
             healthy = metric_sum(
                 scrape,
                 "alloy_component_controller_running_components",
@@ -882,16 +783,13 @@ in
                     f'health_type="{health}"',
                 ) == 0, health
 
-        # `up` + Pyroscope's disk usage via node-exporter's textfile
-        # collector, for the alert rules
-        with subtest("VictoriaMetrics: Alloy up, Pyroscope disk usage"):
+        with subtest("VictoriaMetrics scrapes Alloy and Pyroscope disk usage"):
             wait_for_vm_labels(machine, 'up{job="alloy"} == 1')
-            # Fresh numbers now, not at the next timer tick
+            # Collect disk usage on demand to avoid waiting for the timer.
             machine.succeed("systemctl start pyroscope-du", timeout=CMD_TIMEOUT)
             wait_for_vm_labels(machine, "pyroscope_data_bytes > 0")
 
-        # Not an assertion: resource numbers for tuning. CPU over the
-        # subtests above, after the first profile (startup excluded).
+        # Log resource use for tuning. Measure CPU after the first profile.
         cpu_ns1 = unit_cpu_ns("alloy")
         cpu_pct = (cpu_ns1 - cpu_ns0) / 1e9 / (time.monotonic() - cpu_t0) * 100
         print(f"alloy: {cpu_pct:.1f}% of a core")
