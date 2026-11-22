@@ -92,6 +92,35 @@
         }
       '';
 
+      # Verify provider CLI update checks and self-updaters stay disabled.
+      providerUpdatesProbe = pkgs.writeText "paseo-provider-updates-probe.mjs" ''
+        import assert from "node:assert/strict";
+        import { DaemonClient } from "${config.services.paseo.package}/lib/paseo/packages/client/dist/daemon-client.js";
+
+        const client = new DaemonClient({
+          url: "ws://[::1]:6767/ws",
+          clientId: "provider-updates-test",
+          password: "correct-password",
+          reconnect: { enabled: false },
+        });
+        try {
+          await client.connect();
+          const inspect = await client.inspectProviderInstallation("claude");
+          assert.equal(inspect.error, null);
+          assert.equal(inspect.installation?.canUpdate, undefined);
+
+          const check = await client.checkProviderUpdates("claude");
+          assert.equal(check.error, null);
+          assert.equal(check.updateCheck, null);
+
+          const update = await client.updateProvider("claude");
+          assert.equal(update.update, null);
+          assert.match(update.error ?? "", /Provider updates are disabled/);
+        } finally {
+          await client.close();
+        }
+      '';
+
       # Pre-existing, UI-managed config.json, like sauna's. Includes stale
       # values that conflict w/ declarative policy: an enabled service proxy,
       # upstream's default app.paseo.sh CORS origin, and enabled plugins.
@@ -129,6 +158,9 @@
         '')
         (pkgs.writeShellScriptBin "paseo-plugin-registry-probe" ''
           exec ${lib.getExe pkgs.nodejs_22} ${pluginRegistryProbe}
+        '')
+        (pkgs.writeShellScriptBin "paseo-provider-updates-probe" ''
+          exec ${lib.getExe pkgs.nodejs_22} ${providerUpdatesProbe}
         '')
       ];
 
@@ -446,6 +478,9 @@
         assert status != 0, output
         assert "Managed plugin installs are disabled" in output, output
         machine.succeed("timeout 30 paseo-plugin-registry-probe")
+
+    with subtest("provider CLI updates are disabled"):
+        machine.succeed("timeout 30 paseo-provider-updates-probe")
 
     with subtest("stop kills terminal children and restart restores env"):
         machine.succeed(

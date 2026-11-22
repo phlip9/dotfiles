@@ -41,6 +41,9 @@ upstreamPaseo.overrideAttrs (prevAttrs: {
     # Compile built-in plugins during the build. Runtime only reads artifacts
     # and never needs esbuild or TypeScript in its dependency closure.
     ./paseo-precompile-plugins.patch
+    # Disable provider CLI release update checks and in-place self-updaters;
+    # provider binaries are managed declaratively by Nix.
+    ./paseo-disable-provider-updates.patch
   ];
 
   # Upstream builds w/ `--ignore-scripts`, so the root postinstall never

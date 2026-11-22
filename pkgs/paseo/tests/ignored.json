@@ -131,5 +131,149 @@
     "file": "packages/server/src/server/diff/subscriptions.test.ts",
     "test": "linked checkout observes worktree configuration and shared attributes",
     "reason": "asserts diff.context config changes hunk context length, which --unified=15 overrides"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider installation > returns a 'plugin' provider's available versions unchanged",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider installation > returns a 'built-in' provider's available versions unchanged",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider installation > reports an inconclusive check when the provider 'returns unknown'",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider installation > reports an inconclusive check when the provider 'throws'",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider installation > reports an inconclusive check when the provider 'breaks the contract'",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider installation > availability, discovery and the installed version never wait on an update check",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "ProviderInstallations > shares concurrent update checks, holds an answer for the long cache, and refresh asks again",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "ProviderInstallations > retries an inconclusive update check after the short cache",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "ProviderInstallations > an update check asks with the version the inspection reported, inspecting once",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "ProviderInstallations > asks for updates again once the installed version changes",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "ProviderInstallations > an update check reports a missing or unreadable installation without asking",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "ProviderInstallations > a provider without inspect is asked with no installed version",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "ProviderInstallations > aborts a slow update check and reports it as an error",
+    "reason": "provider update checks are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > passes output and the success message through unchanged, in order",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > reports a failure with the provider's message and keeps its output",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > turns a throw into a failure with its message and keeps earlier output",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > a refresh drops a failed update and keeps a running one",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > tells observers when a refresh drops a failed update",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > a second request while an update runs joins it instead of starting another",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > after success the next read asks the provider again and discovery refreshes",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > a failed refresh after success still reports success; a failure keeps the caches",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > retains the most recent output within the limit and marks the drop",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > advertises the update only when the provider declares one",
+    "reason": "provider self-updates are disabled"
+  },
+  {
+    "patch": "paseo-disable-provider-updates",
+    "file": "packages/server/src/server/agent/provider-installation/provider-installations.test.ts",
+    "test": "provider updates > close aborts a running update, which settles with the provider's answer",
+    "reason": "provider self-updates are disabled"
   }
 ]

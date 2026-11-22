@@ -1,0 +1,95 @@
+diff --git a/packages/server/src/server/agent/provider-installation/provider-installations.disabled.test.ts b/packages/server/src/server/agent/provider-installation/provider-installations.disabled.test.ts
+new file mode 100644
+index 000000000..47e344522
+--- /dev/null
++++ b/packages/server/src/server/agent/provider-installation/provider-installations.disabled.test.ts
+@@ -0,0 +1,89 @@
++// paseo-disable-provider-updates: verify provider update checks and self-updates stay disabled.
++import { describe, expect, test, vi } from "vitest";
++import { createTestLogger } from "../../../test-utils/test-logger.js";
++import type { AgentClient, AgentClientInstallation } from "../agent-sdk-types.js";
++import { ProviderInstallations } from "./provider-installations.js";
++
++function makeClient(installation: AgentClientInstallation): AgentClient {
++  return {
++    provider: "codex",
++    capabilities: {
++      supportsStreaming: false,
++      supportsSessionPersistence: false,
++      supportsDynamicModes: false,
++      supportsMcpServers: false,
++      supportsReasoningStream: false,
++      supportsToolInvocations: false,
++    },
++    installation,
++    async createSession() {
++      throw new Error("not opened by this test");
++    },
++    async resumeSession() {
++      throw new Error("not opened by this test");
++    },
++    async fetchCatalog() {
++      return { models: [], modes: [] };
++    },
++    async isAvailable() {
++      return true;
++    },
++  };
++}
++
++describe("paseo-disable-provider-updates", () => {
++  test("inspect omits canUpdate while keeping version and links", async () => {
++    const inspect = vi.fn(async () => ({ status: "installed" as const, version: "1.2.3" }));
++    const update = vi.fn(async () => ({ status: "succeeded" as const }));
++    const client = makeClient({
++      installUrl: "https://example.com/install",
++      updateUrl: "https://example.com/update",
++      inspect,
++      update,
++    });
++    const installations = new ProviderInstallations({
++      logger: createTestLogger(),
++      resolveClient: (provider) => (provider === "codex" ? client : null),
++    });
++
++    await expect(installations.inspect("codex")).resolves.toEqual({
++      installUrl: "https://example.com/install",
++      updateUrl: "https://example.com/update",
++      inspection: { status: "installed", version: "1.2.3" },
++    });
++    expect(inspect).toHaveBeenCalledTimes(1);
++    expect(update).not.toHaveBeenCalled();
++  });
++
++  test("checkForUpdates returns null without invoking the provider", async () => {
++    const inspect = vi.fn(async () => ({ status: "installed" as const, version: "1.2.3" }));
++    const checkForUpdates = vi.fn(async () => ({
++      status: "available" as const,
++      versions: ["2.0.0"],
++    }));
++    const client = makeClient({ inspect, checkForUpdates });
++    const installations = new ProviderInstallations({
++      logger: createTestLogger(),
++      resolveClient: (provider) => (provider === "codex" ? client : null),
++    });
++
++    await expect(installations.checkForUpdates("codex")).resolves.toBeNull();
++    expect(checkForUpdates).not.toHaveBeenCalled();
++    expect(inspect).not.toHaveBeenCalled();
++    await expect(installations.checkForUpdates("unknown")).rejects.toThrow(
++      "Provider unknown is not configured",
++    );
++  });
++
++  test("update throws without invoking the provider", () => {
++    const update = vi.fn(async () => ({ status: "succeeded" as const }));
++    const client = makeClient({ update });
++    const installations = new ProviderInstallations({
++      logger: createTestLogger(),
++      resolveClient: (provider) => (provider === "codex" ? client : null),
++    });
++
++    expect(() => installations.update("codex")).toThrow("Provider updates are disabled");
++    expect(update).not.toHaveBeenCalled();
++  });
++});

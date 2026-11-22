@@ -1,0 +1,45 @@
+diff --git a/packages/server/src/server/agent/provider-installation/provider-installations.ts b/packages/server/src/server/agent/provider-installation/provider-installations.ts
+index f48104807..38decae01 100644
+--- a/packages/server/src/server/agent/provider-installation/provider-installations.ts
++++ b/packages/server/src/server/agent/provider-installation/provider-installations.ts
+@@ -31,6 +31,9 @@ const DEFAULT_UPDATE_CHECK_CACHE_MS = 60 * 60_000;
+ /** Characters of updater output kept per update; older output is dropped first. */
+ export const DEFAULT_UPDATE_OUTPUT_LIMIT = 64 * 1024;
+ 
++// Typed as boolean so tsc keeps checking the disabled update paths.
++const PROVIDER_UPDATES_DISABLED: boolean = true;
++
+ export interface ProviderInstallationsOptions {
+   logger: Logger;
+   /** The current client for a configured provider, or null when the provider is unknown. */
+@@ -135,7 +138,7 @@ export class ProviderInstallations {
+     const result: ProviderInstallation = {};
+     if (installation.installUrl) result.installUrl = installation.installUrl;
+     if (installation.updateUrl) result.updateUrl = installation.updateUrl;
+-    if (installation.update) result.canUpdate = true;
++    if (installation.update && !PROVIDER_UPDATES_DISABLED) result.canUpdate = true;
+     const inspection = await this.readInspection(provider, client, options);
+     if (inspection) result.inspection = inspection;
+     return result;
+@@ -150,6 +153,9 @@ export class ProviderInstallations {
+     options: InspectProviderInstallationOptions = {},
+   ): Promise<ProviderInstallationUpdateCheck | null> {
+     const client = this.requireClient(provider);
++    // Provider update checks disabled: never query external vendor release APIs
++    // or spawn CLI update checks; return null so UI treats updates as unavailable.
++    if (PROVIDER_UPDATES_DISABLED) return null;
+     const installation = client.installation;
+     const checkForUpdates = installation?.checkForUpdates;
+     if (!installation || !checkForUpdates) return null;
+@@ -181,6 +187,11 @@ export class ProviderInstallations {
+    * provider declares no `update`.
+    */
+   update(provider: AgentProvider): ProviderInstallationUpdate {
++    // Provider self-updates disabled: provider CLIs are managed by Nix, not
++    // in-place vendor updaters.
++    if (PROVIDER_UPDATES_DISABLED) {
++      throw new Error("Provider updates are disabled");
++    }
+     const running = this.updates.get(provider);
+     if (running?.running) return running.snapshot();
+     const client = this.requireClient(provider);
