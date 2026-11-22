@@ -1,21 +1,18 @@
-# NixOS container test for phlip9-o11y profiling (Pyroscope).
+# Exercise the phlip9-o11y profiling stack in one NixOS container.
 #
-# Single container w/ the o11y module + profiling enabled. The test pushes a
-# fixture CPU profile w/ `profilecli upload`, over the same Connect `Push` API
-# that collectors use, then reads it back through Grafana.
+#   profilecli --Connect Push--> Pyroscope <--queries-- Grafana
 #
-# Verifies:
-# - Pyroscope starts (v2 storage, loopback-only rings) + turns ready
-# - the effective config: v2 storage, default retention
-# - vmagent scrapes Pyroscope into VictoriaMetrics
-# - Grafana's Pyroscope datasource: provisioned, plugin backend healthy
-# - a pushed profile reads back through the datasource proxy (Drilldown,
-#   mcp-grafana, profilecli) and `/api/ds/query` (panels, Explore)
+# - Pyroscope: readiness, loopback listeners, v2 storage, and 30d retention.
+# - Metrics: vmagent scrapes Pyroscope into VictoriaMetrics.
+# - Grafana: datasource provisioning, health, and profile readback.
+#
+# Upload a CPU fixture through the same Push API as Alloy. The eBPF
+# collector runs in a separate VM test.
+# see: nixos/tests/o11y-profiling-ebpf.nix
 let
-  # Labels + profile type of the fixture profile
+  # Profile selector values and a known stack frame for readback.
   service = "o11y-test";
   profileType = "process_cpu:cpu:nanoseconds:cpu:nanoseconds";
-  # A function in the fixture's stacks
   hotFn = "main.slowFunction";
 in
 {
@@ -26,6 +23,7 @@ in
   containers.machine =
     { lib, pkgs, ... }:
     let
+      # Match the newline in production sops secret files.
       secret = name: text: pkgs.writeText name "${text}\n";
     in
     {
@@ -36,8 +34,7 @@ in
         pkgs.jq
       ];
 
-      # Go CPU profile w/ ~50 samples, from Pyroscope's own test data. Copied
-      # out so only this file, not Pyroscope's source, enters the closure.
+      # Copy the Go CPU fixture to keep Pyroscope's source out of the guest.
       environment.etc."o11y-test/cpu.pb.gz".source =
         pkgs.runCommand "pyroscope-cpu.pb.gz" { }
           ''
@@ -55,20 +52,19 @@ in
           };
           profiling.enable = true;
         };
-        # No Alloy (`collector.profiling`): eBPF needs a VM, see
-        # ./o11y-profiling-ebpf.nix
         collector.enable = true;
       };
 
-      # Unused here: node metrics, ssh, pyroscope-du (blocks multi-user.target)
       services.prometheus.exporters.node.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
+
+      # Skip the disk usage scan so it can't delay multi-user.target.
       systemd.services.pyroscope-du.enable = lib.mkForce false;
       systemd.timers.pyroscope-du.enable = lib.mkForce false;
 
       services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
-      # Grafana's startup chatter. Keep warnings + errors only.
+      # Suppress routine migration, startup, and index build logs.
       services.phlip9-o11y.server.grafana.logFilters = [
         "migrator:warn"
         "resource-migrator:warn"
@@ -109,10 +105,10 @@ in
     HOT_FN = "${hotFn}"
     SELECTOR = f'{{service_name="{SERVICE}"}}'
 
-    # Pyroscope's ports: http, grpc, metastore raft, memberlist
+    # Expected listeners for HTTP, gRPC, metastore Raft, and memberlist.
     PYRO_PORTS = {4040, 9095, 9099, 7946}
 
-    # POST a JSON body through Grafana, return the parsed response.
+    # POST to Grafana and decode the JSON response.
     def gf_post(path: str, body: dict) -> dict:
         data = shlex.quote(json.dumps(body))
         out = machine.succeed(
@@ -139,15 +135,17 @@ in
 
     machine.start()
     try:
-        with subtest("Pyroscope starts + turns ready"):
+        # --- Pyroscope startup and config --- #
+
+        with subtest("Pyroscope becomes ready"):
             machine.wait_for_unit("pyroscope.service", timeout=UP_TIMEOUT)
             wait_for_http(machine, f"{PYRO_URL}/ready")
 
-        # Regression guard: Pyroscope has no authn, and several of its
-        # listeners default to all interfaces (grpc, memberlist).
-        with subtest("Pyroscope only listens on loopback"):
+        with subtest("Pyroscope binds all expected ports to loopback"):
+            # Loopback keeps unauthenticated listeners local.
+            # see: nixos/mods/o11y/server/pyroscope.nix
             out = machine.succeed("ss -Hltun", timeout=CMD_TIMEOUT)
-            # `ss` local address column: `127.0.0.1:4040`, `[::1]:9099`, ...
+            # The local address column includes the port and brackets IPv6.
             listeners = [line.split()[4] for line in out.splitlines()]
             seen = set()
             for local in listeners:
@@ -156,10 +154,10 @@ in
                     continue
                 seen.add(int(port))
                 assert addr in {"127.0.0.1", "[::1]"}, (local, out)
-            # Prove each listener exists before trusting the check above.
+            # Require every port so missing listeners fail the check too.
             assert seen == PYRO_PORTS, (seen, out)
 
-        with subtest("Pyroscope config: v2 storage, default retention"):
+        with subtest("Pyroscope uses v2 storage and default retention"):
             conf = machine.succeed(
                 f"{CURL} -f {PYRO_URL}/api/v1/status/config",
                 timeout=CMD_TIMEOUT,
@@ -168,11 +166,11 @@ in
             assert "architecture_storage: v2" in lines, conf
             assert "retention_period: 30d" in lines, conf
 
-        # Before the Grafana subtests: its segment flush + indexing overlap
-        # w/ Grafana's startup.
-        with subtest("push a profile"):
-            # Pyroscope rejects profiles older than ~1h. The fixture is from
-            # 2021, so stamp it w/ the current time.
+        # --- Profile ingest and metrics --- #
+
+        with subtest("profilecli uploads a CPU profile"):
+            # Upload early to overlap indexing w/ scrape and datasource checks.
+            # Use a fresh timestamp to pass Pyroscope's sample age limit.
             push_ms = int(time.time() * 1000)
             machine.succeed(
                 f"profilecli upload --url {PYRO_URL} --override-timestamp "
@@ -185,7 +183,9 @@ in
         with subtest("vmagent scrapes Pyroscope into VictoriaMetrics"):
             wait_for_vm_labels(machine, 'up{job="pyroscope"} == 1')
 
-        with subtest("Grafana Pyroscope datasource + plugin backend"):
+        # --- Grafana datasource --- #
+
+        with subtest("Grafana provisions a healthy Pyroscope datasource"):
             machine.wait_for_unit("grafana.service", timeout=UP_TIMEOUT)
             wait_for_port(machine, 3000)
             ds = json.loads(machine.succeed(
@@ -195,17 +195,16 @@ in
             assert ds["type"] == "grafana-pyroscope-datasource", ds
             assert ds["url"] == PYRO_URL, ds
             assert ds["isDefault"] is False, ds
-            # Runs the plugin's Go backend, which queries Pyroscope.
+
+            # The health endpoint checks the plugin's connection to Pyroscope.
             health = json.loads(machine.succeed(
                 f"{GF_CURL} {GF_URL}/api/datasources/uid/pyroscope/health",
                 timeout=CMD_TIMEOUT,
             ))
             assert health["status"] == "OK", health
 
-        with subtest("query the profile back through Grafana"):
-            # The Connect API, via the datasource proxy, like Profiles
-            # Drilldown. The profile is queryable once the segment writer
-            # flushed it + the metastore indexed it.
+        with subtest("Grafana reads the profile via proxy and backend queries"):
+            # Read stack names via the Connect proxy used by Profiles Drilldown.
             def merged_names() -> list[str]:
                 resp = gf_post(
                     "/api/datasources/proxy/uid/pyroscope"
@@ -219,11 +218,13 @@ in
                 )
                 return resp.get("flamegraph", {}).get("names", [])
 
+            # Readback waits on the segment flush and metastore indexing.
             wait_fast(
-                lambda: HOT_FN in merged_names(), f"profile w/ {HOT_FN}"
+                lambda: HOT_FN in merged_names(),
+                f"profile stack containing {HOT_FN}",
             )
 
-            # Grafana's backend query path, like flame graph panels + Explore
+            # Exercise the backend query path used by flame graph panels.
             resp = gf_post("/api/ds/query", {
                 "from": str(start_ms),
                 "to": str(end_ms),
@@ -241,7 +242,7 @@ in
             assert "error" not in result, result
             assert HOT_FN in json.dumps(result["frames"]), result
 
-        # Not an assertion: resource numbers for tuning.
+        # Log Pyroscope's CPU, memory, and disk use for tuning.
         print(machine.succeed(
             "systemctl show pyroscope -p CPUUsageNSec; "
             "grep -E '^Vm(RSS|HWM)' "
