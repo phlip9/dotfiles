@@ -1,6 +1,6 @@
-# This list of NixOS modules is always imported in our NixOS configs, unlike
-# nixos/profiles/*.nix. They are generally usually "off" by default, with
-# an "enable" option and other options to turn on and configure them.
+# Base NixOS module list always imported by every NixOS host (unlike
+# nixos/profiles/*.nix). Modules are opt-in (off by default) w/ `enable`
+# options, plus small cross-host workarounds below.
 { sources }:
 
 [
@@ -10,17 +10,13 @@
     {
       disko.enableConfig = lib.mkDefault false;
 
-      # silence a random warning
+      # Silence spurious zfs warning.
       # TODO(phlip9): periodically remove this and see if the issue persists
       boot.zfs.forceImportRoot = false;
 
-      # systemd 262 `user@.service` only skips the memory pressure watch, so
-      # PID 1 hands the user manager a locked CPU/IO pressure watch via env.
-      # The user manager then can't apply its own default threshold and warns
-      # "Failed to adjust io pressure threshold" on every start/reexec.
-      # TODO(phlip9): drop once nixpkgs' systemd includes upstream b6cdaf4a3d
-      # ("units: let systemd user/capsule manage its own CPU/I/O pressure
-      # handling").
+      # systemd 262 `user@.service` passes locked CPU/IO pressure watches from
+      # PID 1, causing "Failed to adjust io pressure threshold" on start/reexec.
+      # TODO(phlip9): drop once nixpkgs' systemd has upstream b6cdaf4a3d.
       systemd.services."user@".serviceConfig = {
         CPUPressureWatch = "skip";
         IOPressureWatch = "skip";
@@ -50,7 +46,7 @@
 
   ./xremap.nix
 
-  # nixbot CI module + its dependencies (nixbot and niks3)
+  # nixbot CI + deps
   (sources.nixbot + "/nixosModules/nixbot.nix")
   (sources.niks3 + "/nix/nixosModules/niks3.nix")
   ./nixbot-ci.nix
