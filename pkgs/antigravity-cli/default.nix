@@ -4,6 +4,8 @@
   stdenvNoCC,
   fetchurl,
   autoPatchelfHook,
+  makeBinaryWrapper,
+  ripgrep,
   versionCheckHook,
 }:
 let
@@ -32,9 +34,10 @@ stdenv.mkDerivation {
   dontConfigure = true;
   dontBuild = true;
 
-  nativeBuildInputs = lib.optionals stdenv.hostPlatform.isElf [
-    autoPatchelfHook
-  ];
+  nativeBuildInputs = [
+    makeBinaryWrapper
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isElf [ autoPatchelfHook ];
 
   strictDeps = true;
 
@@ -42,6 +45,17 @@ stdenv.mkDerivation {
     runHook preInstall
 
     install -Dm755 antigravity $out/bin/agy
+
+    # Disable the background self-updater; nix manages updates. Upstream only
+    # honors `true` here, not `1`. Without this, the updater still skips the
+    # read-only /nix/store, but only after a warning in every session log.
+    #
+    # Also use nixpkgs `rg` over the embedded ripgrep, which agy otherwise
+    # extracts into ~/.cache and execs from there.
+    wrapProgram $out/bin/agy \
+      --set AGY_CLI_DISABLE_AUTO_UPDATE true \
+      --set ANTIGRAVITY_DISABLE_EMBEDDED_RIPGREP true \
+      --prefix PATH : ${lib.makeBinPath [ ripgrep ]}
 
     runHook postInstall
   '';
