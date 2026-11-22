@@ -1,42 +1,27 @@
-# NixOS container test: the o11y ingest endpoint + a remote collector.
+# Exercise o11y ingest across two NixOS containers over HTTPS.
 #
-# Two containers:
-# - `server`: o11y server (VictoriaMetrics, Pyroscope) w/ `server.ingest` on
-#   an HTTPS-only nginx vhost (self-signed cert), w/o a collector of its own
-# - `collector`: collector only, `collector.remote` -> https://server/o11y
+#   collector (vmagent, profilecli) -> server (nginx /o11y)
+#                                    -> VictoriaMetrics, Pyroscope
 #
-# Verifies:
-# - vmagent remote-writes through nginx w/ basic auth, VictoriaMetrics'
-#   zstd protocol, HTTP/1.1; the password stays out of argv + the unit
-#   user's reach
-# - `instance` = the credential's username: vmagent's scrape target, a
-#   crafted write's body label, and its `extra_label` query args can't
-#   override it; a second credential gets its own instance
-# - no / wrong / unknown credentials -> 401, a username w/ URL syntax ->
-#   403, and none of their writes are stored
-# - only the 2 ingest endpoints, POST only: other paths, `..`, `%2F`, and
-#   methods are rejected; no read API is reachable
-# - the body limit: 16 MiB, over the vhost's own 256k
-# - profiles: a pprof pushed w/ `profilecli` through nginx over HTTP/2 w/
-#   basic auth reads back from Pyroscope; w/o or w/ wrong credentials it's
-#   rejected + not stored
+# - Metrics: vmagent zstd writes over HTTP/1.1 and auth-derived instance labels.
+# - Ingress: password handling, auth failures, POST-only routes, and body limit.
+# - Profiles: authenticated profilecli push over HTTP/2 and Pyroscope readback.
 #
-# Alloy's push through the ingest endpoint needs eBPF, so a VM: see
-# ./o11y-profiling-ebpf.nix.
+# Use fixture credentials and a self-signed cert for offline HTTPS.
+# Alloy's eBPF collector runs in a separate VM test.
+# see: nixos/tests/o11y-profiling-ebpf.nix
 let
-  # Ingest credentials: username = collector hostname
+  # The auth username sets the stored instance label.
   passwords = {
     collector = "collector-test-password-0123456789";
     collector2 = "collector2-test-password-0123456789";
-    # In the htpasswd file w/ a valid password, but the username has URL
-    # syntax: nginx must reject it before it reaches the upstream URL.
+    # Pass basic auth to exercise username validation.
     "evil&extra_label=job=pwned" = "evil-test-password-0123456789";
   };
 
-  # Labels of the fixture profile
+  # Profile labels and a known stack frame for readback.
   service = "o11y-ingest-test";
   profileType = "process_cpu:cpu:nanoseconds:cpu:nanoseconds";
-  # A function in the fixture's stacks
   hotFn = "main.slowFunction";
 in
 {
@@ -54,6 +39,8 @@ in
     let
       ingestLib = import ./lib/o11y-ingest.nix { inherit pkgs; };
       tls = ingestLib.tlsCert "server";
+
+      # Match the newline in production sops secret files.
       secret = name: text: pkgs.writeText name "${text}\n";
     in
     {
@@ -79,14 +66,16 @@ in
           htpasswdFile = "/etc/o11y-ingest/htpasswd";
         };
       };
-      # Unused here: Grafana, ssh, pyroscope-du (blocks multi-user.target)
+
       services.grafana.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
+
+      # Skip the disk usage scan so it can't delay multi-user.target.
       systemd.services.pyroscope-du.enable = lib.mkForce false;
       systemd.timers.pyroscope-du.enable = lib.mkForce false;
 
-      # Like sauna's vhost: HTTPS-only, w/ a small body limit that the
-      # ingest locations override.
+      # Set a lower vhost body limit to exercise the ingest override.
+      # see: nixos/mods/o11y/server/ingest.nix
       services.nginx = {
         enable = true;
         recommendedProxySettings = true;
@@ -101,7 +90,8 @@ in
       };
       networking.firewall.allowedTCPPorts = [ 443 ];
 
-      # Like a sops secret w/ `owner = config.services.nginx.user`
+      # Match the permissions of the production htpasswd secret.
+      # see: nixos/sauna/default.nix
       environment.etc."o11y-ingest/htpasswd" = {
         source = ingestLib.htpasswd passwords;
         mode = "0400";
@@ -127,12 +117,11 @@ in
       environment.systemPackages = [
         pkgs.curl
         pkgs.jq
-        # profilecli, same version as the server's
+        # Use profilecli from the server's Pyroscope build.
         containers.server.services.pyroscope.package
       ];
 
-      # Go CPU profile w/ ~50 samples, from Pyroscope's own test data, see
-      # ./o11y-profiling.nix
+      # Copy only the Go CPU profile from Pyroscope's test data.
       environment.etc."o11y-test/cpu.pb.gz".source =
         pkgs.runCommand "pyroscope-cpu.pb.gz" { }
           ''
@@ -147,8 +136,8 @@ in
           url = "https://server/o11y";
           passwordFile = "/etc/o11y-ingest/password";
         };
-        # A scrape target that claims another host: vmagent sends its
-        # `instance`, the server must replace it.
+
+        # Send an explicit instance label to test server-side replacement.
         scrapeConfigs.spoof = {
           static_configs = [
             {
@@ -165,13 +154,13 @@ in
           ];
         };
       };
-      # Unused here: node metrics, ssh
+
       services.prometheus.exporters.node.enable = lib.mkForce false;
       services.openssh.enable = lib.mkForce false;
 
       services.vmagent.prometheusConfig.global.scrape_interval = "1s";
 
-      # Like a root-only sops secret, w/ its trailing newline
+      # Match a root-only sops secret, including its trailing newline.
       environment.etc."o11y-ingest/password" = {
         text = "${passwords.collector}\n";
         mode = "0400";
@@ -232,8 +221,9 @@ in
         ]),
     ]
 
-    # --- Prometheus remote write v1, by hand: protobuf + snappy --- #
+    # --- Remote write v1 fixtures --- #
 
+    # Encode a protobuf varint as 7-bit chunks with continuation bits.
     def varint(num: int) -> bytes:
         out = bytearray()
         while num >= 0x80:
@@ -242,11 +232,11 @@ in
         out.append(num)
         return bytes(out)
 
-    # Length-delimited protobuf field
+    # Encode a length-delimited protobuf field.
     def proto_field(field: int, data: bytes) -> bytes:
         return varint(field << 3 | 2) + varint(len(data)) + data
 
-    # Snappy block w/o compression: the length, then one literal
+    # Encode a Snappy block as its uncompressed length and one literal.
     def snappy_literal(data: bytes) -> bytes:
         size = len(data) - 1
         if size < 60:
@@ -256,8 +246,7 @@ in
             tag = bytes([(59 + nbytes) << 2]) + size.to_bytes(nbytes, "little")
         return varint(len(data)) + tag + data
 
-    # `WriteRequest` w/ one series per label list, each w/ one sample (1 at
-    # now). Label lists may repeat a name.
+    # Encode one current sample per series and preserve duplicate label names.
     def write_request(series: list[list[tuple[str, str]]]) -> bytes:
         now_ms = int(time.time() * 1000)
         sample = (
@@ -274,12 +263,11 @@ in
             body += proto_field(1, ts + proto_field(2, sample))
         return snappy_literal(body)
 
-    # Basic auth (username, password); default: the collector's own
+    # --- Ingest requests --- #
+
     COLLECTOR = ("collector", PASSWORDS["collector"])
 
-    # curl from the collector w/ `auth` (None: no credentials). Returns the
-    # HTTP status. nginx may reset an oversize upload mid-send: a status
-    # w/ a curl error still counts.
+    # Use the HTTP status even if nginx resets an oversized upload mid-send.
     def request(
         url: str, args: str = "", auth: tuple[str, str] | None = COLLECTOR
     ) -> str:
@@ -295,7 +283,7 @@ in
         assert len(status) == 3 and status != "000", (url, args, out)
         return status
 
-    # Remote write `series` through the ingest endpoint. Returns the status.
+    # Send a remote write fixture from the collector and return its status.
     def write(
         series: list[list[tuple[str, str]]],
         auth: tuple[str, str] | None = COLLECTOR,
@@ -319,15 +307,17 @@ in
 
     start_all()
     try:
-        with subtest("server + collector up"):
+        # --- Startup and credentials --- #
+
+        with subtest("Ingest server and collector readiness"):
             server.wait_for_unit("victoriametrics.service")
             server.wait_for_unit("nginx.service")
-            # nginx is Type=simple: wait until it has bound :443
+            # nginx can be active before it binds the HTTPS port.
             wait_for_port(server, 443)
             collector.wait_for_unit("vmagent.service")
 
-        # The source is root-only, vmagent (DynamicUser) reads its copy
-        with subtest("vmagent password: a credential, not in argv"):
+        with subtest("vmagent gets its password through systemd credentials"):
+            # DynamicUser reads the credential copy of the root-only source.
             pw = PASSWORDS["collector"]
             collector.succeed(
                 "test \"$(stat -c %a:%U /etc/o11y-ingest/password)\" "
@@ -342,20 +332,21 @@ in
                 timeout=CMD_TIMEOUT,
             )
 
-        # Send all crafted + rejected writes now so VM's ~1s indexdb flush
-        # tick overlaps w/ the endpoint, body-limit, and profile subtests.
-        with subtest("crafted + bad-credential writes: HTTP status"):
+        # --- Ingest HTTP contract --- #
+
+        with subtest("Remote write status for valid and invalid credentials"):
+            # Send writes early so indexing overlaps the HTTP and profile tests.
             ok = [("__name__", "o11y_test_ok"), ("job", "crafted")]
             assert write([ok]) == "204"
 
-            # Spoofed in the body, also twice
+            # Exercise replacement of every duplicate instance label.
             body_spoof = [
                 ("__name__", "o11y_test_body"), ("instance", "evil"),
                 ("job", "crafted"), ("instance", "evil2"),
             ]
             assert write([body_spoof]) == "204"
 
-            # Spoofed in the query string, incl. VM's handshake arg
+            # Verify label overrides are ignored even with the handshake flag.
             args_spoof = [("__name__", "o11y_test_args"), ("job", "crafted")]
             query = (
                 "?extra_label=instance=evil&extra_label=job=evil"
@@ -363,7 +354,7 @@ in
             )
             assert write([args_spoof], query=query) == "204"
 
-            # Another host's credential: its own instance
+            # The second credential must set its own instance.
             second = [
                 ("__name__", "o11y_test_second"), ("instance", "collector"),
             ]
@@ -374,11 +365,9 @@ in
                 "o11y_test_noauth": (None, "401"),
                 "o11y_test_nouser": (("nobody", PASSWORDS["collector"]), "401"),
                 "o11y_test_badpw": (("collector", "wrong"), "401"),
-                # Another host's password
                 "o11y_test_otherpw": (
                     ("collector", PASSWORDS["collector2"]), "401"
                 ),
-                # A valid credential, but its username has URL syntax
                 "o11y_test_evil": ((EVIL, PASSWORDS[EVIL]), "403"),
             }
             for name, (auth, code) in rejected.items():
@@ -389,12 +378,12 @@ in
             )
             assert "www-authenticate: basic" in out.lower(), out
 
-            # Sentinel written after all crafted + rejected writes: once it is
-            # searchable, any accepted write above would be too.
+            # Write a sentinel so the final query can check for rejected rows
+            # after earlier accepted writes become searchable.
             assert write([[("__name__", "o11y_test_after")]]) == "204"
 
-        with subtest("only the 2 endpoints, POST only, no read API"):
-            # w/ valid credentials, so auth isn't what rejects them
+        with subtest("Only POST on the two ingest routes is allowed"):
+            # Use valid credentials to isolate path and method restrictions.
             not_found = [
                 "/o11y", "/o11y/", "/o11y/metrics", "/o11y/metrics/",
                 "/o11y/metrics/api/v1/query?query=up",
@@ -439,24 +428,26 @@ in
             for (url, method, want), got in zip(checks, statuses):
                 assert got == want, (url, method, got, want)
 
-        with subtest("body limit: 16 MiB, not the vhost's 256k"):
+        with subtest("Ingest applies its 16 MiB body limit"):
             collector.succeed(
                 "truncate -s 15M /tmp/15m && truncate -s 17M /tmp/17m",
                 timeout=CMD_TIMEOUT,
             )
             headers = "-H 'Content-Encoding: snappy' "
-            # Reaches VictoriaMetrics, which can't parse it
+            # The malformed 15 MiB request reaches VictoriaMetrics' decoder.
             assert request(WRITE, headers + "--data-binary @/tmp/15m") == "400"
             assert request(WRITE, headers + "--data-binary @/tmp/17m") == "413"
 
-        with subtest("profiles: push w/ basic auth over HTTP/2, read back"):
+        # --- Profile ingest --- #
+
+        with subtest("HTTP/2 profile push, readback, and auth rejection"):
             upload = (
                 f"profilecli upload --url {INGEST}/profiles "
                 "--username collector --override-timestamp "
                 "--extra-labels service_name={service} "
                 "/etc/o11y-test/cpu.pb.gz"
             )
-            # Auth rejections happen in nginx, before Pyroscope needs /ready
+            # nginx can reject credentials while Pyroscope starts.
             collector.fail(
                 "PROFILECLI_PASSWORD=wrong "
                 + upload.format(service="o11y-ingest-badpw"),
@@ -464,7 +455,7 @@ in
             )
             assert request(PUSH, "-X POST", auth=None) == "401"
 
-            # Wait here so Pyroscope's Raft election overlaps w/ metrics tests
+            # Delay the readiness wait to overlap Raft election w/ prior checks.
             wait_for_http(server, f"{PYRO_URL}/ready")
             push_ms = int(time.time() * 1000)
             collector.succeed(
@@ -483,14 +474,15 @@ in
                 lambda: HOT_FN in pyro_fn_names(
                     server, PROFILE_TYPE, SELECTOR, window=window
                 ),
-                f"profile w/ {HOT_FN}",
+                f"profile stack containing {HOT_FN}",
             )
             services = pyro_label_values(server, "service_name", window=window)
             assert services == [SERVICE], services
 
-        with subtest("vmagent writes through ingest, instance pinned"):
-            # `up` per job: its instance, once every job's first scrape
-            # arrived
+        # --- Metrics readback --- #
+
+        with subtest("vmagent HTTP/1.1 writes use the auth username"):
+            # Wait for the first scrapes before checking stored job labels.
             wait_for_vm_labels(server, 'count(up) >= 3')
             jobs = {
                 labels["job"]: labels["instance"]
@@ -501,7 +493,7 @@ in
                 "nixos-exporter": "collector",
                 "spoof": "collector",
             }, jobs
-            # vmagent sent `instance="spoofed"` for this one
+            # Check the actual payload metric from the spoof target too.
             spoof = vm_labels(
                 server, 'vm_app_version{job="spoof"}', flush=False
             )
@@ -509,8 +501,7 @@ in
             assert instances == ["collector"], spoof
             assert vm_labels(server, '{instance="spoofed"}', flush=False) == []
 
-            # VictoriaMetrics' zstd protocol, no downgrade to snappy. Its
-            # samples can turn visible before vmagent counts the response.
+            # Samples can become visible before vmagent records the response.
             def scrape_2xx() -> list[str] | None:
                 lines = metrics_scrape(collector, VMAGENT_URL)
                 if (
@@ -525,7 +516,7 @@ in
                 return None
 
             scrape = wait_for_value(
-                scrape_2xx, "vmagent_remotewrite_requests_total 2XX > 0"
+                scrape_2xx, "vmagent records a successful remote write"
             )
             assert (
                 metric_sum(
@@ -535,6 +526,7 @@ in
                 )
                 == 0
             )
+            # A zstd write should succeed without repacking or downgrading.
             collector.fail(
                 "journalctl -u vmagent | grep -E 'Re-packing|Downgrading'",
                 timeout=CMD_TIMEOUT,
@@ -545,7 +537,8 @@ in
                 timeout=CMD_TIMEOUT,
             )
 
-        with subtest("crafted writes stored, rejected absent"):
+        with subtest("Only accepted writes appear under auth labels"):
+            # Wait for the sentinel before asserting which series are absent.
             wait_for_vm_labels(server, "o11y_test_after", flush_each=False)
             got = sorted(
                 vm_labels(server, '{__name__=~"o11y_test_.*"}', flush=False),
