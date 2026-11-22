@@ -119,15 +119,18 @@ in
 
             # Test knobs: notify right away.
             groupWait = "0s";
-            groupInterval = "1s";
+            groupInterval = "100ms";
           };
         };
         collector.enable = true;
       };
+      # Unused here: ssh (secrets are writeText, no sops)
+      services.openssh.enable = lib.mkForce false;
 
       services.vmalert.instances."".rules.groups = [
         {
           name = "test";
+          interval = "100ms";
           rules = [
             (testRule "TestPage" "test_page" "page")
             (testRule "TestWarn" "test_warn" "warn")
@@ -149,12 +152,22 @@ in
         ];
       };
 
-      # Evaluate every second, on samples as fresh as possible.
+      # Evaluate real groups right away (1ms max stagger; 0s panics in vmalert)
+      # at a calm cadence; only the `test` group polls at 100ms. Keep
+      # resendDelay at 1s so alert expiry stays 4s (4 * max(interval, resend)),
+      # not 400ms.
       services.vmalert.instances."".settings = {
-        evaluationInterval = "1s";
+        evaluationInterval = "2s";
+        "group.maxStartDelay" = "1ms";
         "rule.evalDelay" = "0s";
+        "rule.resendDelay" = "1s";
       };
       services.vmagent.prometheusConfig.global.scrape_interval = "1s";
+
+      # Keep the timer active for the unit check, but prevent wall-clock
+      # `*:0/5` firings from racing w/ our manual `HOST_PING` runs.
+      systemd.timers.healthchecks-host-ping.timerConfig.OnCalendar =
+        lib.mkForce "2099-01-01 00:00:00";
 
       systemd.services.alert-sink = {
         wantedBy = [ "multi-user.target" ];
@@ -190,6 +203,7 @@ in
     import datetime as dt
     import json
     import shlex
+    import time
     from typing import Any
 
     from testlib import (
@@ -198,10 +212,11 @@ in
         UP_TIMEOUT,
         dump_evidence,
         wait_for_cmd,
+        wait_for_http,
         wait_for_port,
         wait_for_value,
     )
-    from testlib.o11y import VM_URL, metric_sum, metrics_scrape, vm_flush
+    from testlib.o11y import VM_URL, metric_sum, vm_flush
 
     SINK_LOG = "${sinkLog}"
     AM_URL = "http://127.0.0.1:9093"
@@ -213,9 +228,11 @@ in
     )
     HOST_PING = "healthchecks-host-ping.service"
 
-    # Requests the sink logged for `path`, oldest first.
+    # Requests the sink logged for `path`, oldest first. Uses `execute` so
+    # poll loops don't spam the test log.
     def sink(path: str) -> list[dict[str, Any]]:
-        out = machine.succeed(f"cat {SINK_LOG}", timeout=CMD_TIMEOUT)
+        rc, out = machine.execute(f"cat {SINK_LOG}", timeout=CMD_TIMEOUT)
+        assert rc == 0, (rc, out)
         reqs = [json.loads(line) for line in out.splitlines()]
         return [req for req in reqs if req["path"] == path]
 
@@ -227,11 +244,18 @@ in
     def discord_titled(title: str) -> list[dict[str, Any]]:
         return [msg for msg in discord() if msg["embeds"][0]["title"] == title]
 
-    # Push samples (Prometheus text format) into VictoriaMetrics. Flush
-    # them, so vmalert's next evaluation sees them, not one after VM's
-    # next pending rows flush, up to 2s later.
+    # Push samples (Prometheus text format) into VictoriaMetrics. Stamp them 5s
+    # in the past (monotonic +10ms steps leave room for 500 pushes/sec while
+    # staying <= current whole second) so vmalert's integer-second instant
+    # query sees updates on the next 100ms eval instead of waiting for the next
+    # second boundary. Flush immediately so VM's ~2s buffer doesn't hide them.
+    push_ts_ms = 0
+
     def push(*lines: str) -> None:
-        body = shlex.quote("\n".join(lines) + "\n")
+        global push_ts_ms
+        push_ts_ms = max(push_ts_ms + 10, (int(time.time()) - 5) * 1000)
+        stamped = [f"{line} {push_ts_ms}" for line in lines]
+        body = shlex.quote("\n".join(stamped) + "\n")
         machine.succeed(
             f"printf %s {body} | {CURL} -f --data-binary @- "
             f"{VM_URL}/api/v1/import/prometheus",
@@ -240,12 +264,40 @@ in
         vm_flush(machine)
 
     # Alerts Alertmanager dropped from group flushes b/c of an inhibition.
+    # Uses `execute` so poll loops don't spam the test log.
     def inhibited() -> float:
+        rc, out = machine.execute(
+            f"{CURL} -f {AM_URL}/metrics", timeout=CMD_TIMEOUT
+        )
+        assert rc == 0, (rc, out)
         return metric_sum(
-            metrics_scrape(machine, AM_URL),
+            out.splitlines(),
             "alertmanager_notifications_suppressed_total",
             'reason="inhibition"',
         )
+
+    # Active Alertmanager alerts (`/api/v2/alerts`). Uses `execute` so poll
+    # loops don't spam the test log.
+    def am_alerts() -> list[dict[str, Any]]:
+        rc, out = machine.execute(
+            f"{CURL} -f {AM_URL}/api/v2/alerts", timeout=CMD_TIMEOUT
+        )
+        assert rc == 0, (rc, out)
+        return json.loads(out)
+
+    # `(InvocationID, ActiveState, Result)` for `HOST_PING`. Uses `execute` so
+    # poll loops don't spam the test log.
+    def host_ping_state() -> tuple[str, str, str]:
+        rc, out = machine.execute(
+            "systemctl show -p InvocationID -p ActiveState -p Result "
+            f"{HOST_PING}",
+            timeout=CMD_TIMEOUT,
+        )
+        assert rc == 0, (rc, out)
+        props = dict(
+            line.split("=", 1) for line in out.splitlines() if "=" in line
+        )
+        return props["InvocationID"], props["ActiveState"], props["Result"]
 
     EVIDENCE = [(
         machine,
@@ -253,6 +305,7 @@ in
             "journalctl --no-pager -o cat -u vmalert -u alertmanager "
             f"-u {HOST_PING} -u alert-sink | tail -n 100",
             f"cat {SINK_LOG}",
+            f"{CURL} http://127.0.0.1:8880/api/v1/rules",
             f"{CURL} {AM_URL}/api/v2/alerts",
         ],
     )]
@@ -262,22 +315,44 @@ in
         # Real rules evaluate against real (container) metrics, so a broken
         # expression shows up here as a rule error.
         with subtest("services start, vmalert evaluates every rule group"):
+            machine.wait_for_unit("victoriametrics.service", timeout=UP_TIMEOUT)
+            # Push all initial test series now while vmalert is still starting,
+            # so VM's ~1s indexdb flush runs in parallel and `test_symptom`
+            # (0 = not firing) is already indexed before we flip it to 1.
+            push("test_page 1", "test_warn 1", "test_cause 1", "test_symptom 0")
+
             for unit in [
-                "victoriametrics.service",
                 "alert-sink.service",
                 "alertmanager.service",
                 "vmalert.service",
             ]:
                 machine.wait_for_unit(unit, timeout=UP_TIMEOUT)
-            wait_for_port(machine, 8880, timeout=UP_TIMEOUT)
-            wait_for_port(machine, 9093, timeout=UP_TIMEOUT)
+            wait_for_port(machine, ${toString sinkPort}, timeout=UP_TIMEOUT)
+            wait_for_http(
+                machine, "http://127.0.0.1:8880/health", timeout=UP_TIMEOUT
+            )
+            wait_for_http(machine, f"{AM_URL}/-/healthy", timeout=UP_TIMEOUT)
+
+            # Start the healthy host-ping run now while vmalert evaluates rules
+            # and alert subtests run, overlapping its ~1.1s sandboxed oneshot.
+            # Timer uses OnCalendar=2099 in test so it won't fire on its own.
+            machine.wait_for_unit(
+                "healthchecks-host-ping.timer", timeout=UP_TIMEOUT
+            )
+            host_ping_inv = host_ping_state()[0]
+            host_pings = len(sink("/host"))
+            assert host_pings == 0, sink("/host")
+            machine.succeed(f"systemctl start --no-block {HOST_PING}")
 
             # All rule groups, once every rule has run, else [].
             def rules_evaluated() -> list[dict[str, Any]]:
-                groups = json.loads(machine.succeed(
+                rc, out = machine.execute(
                     f"{CURL} -f http://127.0.0.1:8880/api/v1/rules",
                     timeout=CMD_TIMEOUT,
-                ))["data"]["groups"]
+                )
+                if rc != 0:
+                    return []
+                groups = json.loads(out)["data"]["groups"]
                 rules = [rule for group in groups for rule in group["rules"]]
                 if any(r["lastEvaluation"].startswith("0001-") for r in rules):
                     return []
@@ -294,12 +369,13 @@ in
             ]
             assert not errors, errors
 
-        with subtest("page: full message + @mention, resolve w/o mention"):
-            push("test_page 1")
+        with subtest("page + warn + inhibit cause fire; start page resolve"):
             title = "FIRING:1 page TestPage"
 
+            # Wait for both discord-quiet (full) and discord-page (@mention).
             def two_pages() -> list[dict[str, Any]] | None:
                 got = discord_titled(title)
+                assert len(got) <= 2, got
                 return got if len(got) == 2 else None
 
             msgs = wait_for_value(two_pages, title)
@@ -309,39 +385,61 @@ in
             assert desc.startswith("- **test_page**\n"), desc
             silence = "(https://grafana.test/alerting/silence/new?"
             assert silence in desc, desc
-
+            # Resolve TestPage now so it overlaps w/ the checks below.
             push("test_page 0")
-            resolved = wait_for_value(
-                lambda: discord_titled("RESOLVED page TestPage"),
-                "RESOLVED page TestPage",
-            )
-            assert all(m["content"] == "" for m in resolved), resolved
 
-        with subtest("warn reaches Discord w/o a mention"):
-            push("test_warn 1")
-            msgs = wait_for_value(
+            warn_msgs = wait_for_value(
                 lambda: discord_titled("FIRING:1 warn TestWarn"),
                 "FIRING:1 warn TestWarn",
             )
-            assert [m["content"] for m in msgs] == [""], msgs
+            assert [m["content"] for m in warn_msgs] == [""], warn_msgs
 
         with subtest("inhibited symptom held back while its cause fires"):
-            push("test_cause 1")
+            # Wait for PgDown to be active in Alertmanager before pushing the
+            # symptom, so inhibition is deterministic.
             wait_for_value(
                 lambda: discord_titled("FIRING:1 warn PgDown"),
                 "FIRING:1 warn PgDown",
             )
             before = inhibited()
             push("test_symptom 1")
-            # Alertmanager flushed the symptom's group and dropped it.
-            wait_for_value(
-                lambda: inhibited() > before,
-                "symptom inhibited",
-            )
+
+            # True once NixbotSymptom is specifically inhibited by PgDown and
+            # Alertmanager has flushed + suppressed its group notification.
+            def symptom_inhibited() -> bool:
+                alerts = am_alerts()
+                pg_fps = {
+                    alert["fingerprint"]
+                    for alert in alerts
+                    if alert["labels"].get("alertname") == "PgDown"
+                }
+                if not pg_fps:
+                    return False
+                sym = [
+                    alert
+                    for alert in alerts
+                    if alert["labels"].get("alertname") == "NixbotSymptom"
+                ]
+                return (
+                    any(
+                        pg_fps & set(alert["status"]["inhibitedBy"])
+                        for alert in sym
+                    )
+                    and inhibited() > before
+                )
+
+            wait_for_value(symptom_inhibited, "symptom inhibited by PgDown")
             symptom = "FIRING:1 warn NixbotSymptom"
             assert not discord_titled(symptom), discord()
             push("test_cause 0")
             wait_for_value(lambda: discord_titled(symptom), symptom)
+
+        with subtest("page resolve reaches Discord w/o mention"):
+            resolved = wait_for_value(
+                lambda: discord_titled("RESOLVED page TestPage"),
+                "RESOLVED page TestPage",
+            )
+            assert all(m["content"] == "" for m in resolved), resolved
 
         # After the Discord subtests: every delivery above happened while
         # the Watchdog fired.
@@ -355,31 +453,45 @@ in
             assert payload["alerts"][0]["labels"]["alertname"] == "Watchdog"
             msgs = discord()
             assert all("Watchdog" not in json.dumps(m) for m in msgs), msgs
+            # Recheck final sink snapshot in case a stray resolve mention
+            # arrived.
+            assert all(
+                m["content"] == ""
+                for m in discord_titled("RESOLVED page TestPage")
+            ), msgs
 
         with subtest("host ping: ping if healthy, else skip it"):
-            machine.succeed("systemctl is-active healthchecks-host-ping.timer")
-            # Only the runs below. A run the timer already started merges
-            # into the first `systemctl start`.
-            machine.succeed("systemctl stop healthchecks-host-ping.timer")
-            pings = len(sink("/host"))
-            machine.succeed(f"systemctl start {HOST_PING}")
-            assert len(sink("/host")) == pings + 1, sink("/host")
+            # `(ActiveState, Result)` once our async healthy run finishes.
+            def host_ping_finished() -> tuple[str, str] | None:
+                inv, state, result = host_ping_state()
+                if inv != host_ping_inv and state not in (
+                    "activating",
+                    "deactivating",
+                ):
+                    return (state, result)
+                return None
+
+            state, result = wait_for_value(
+                host_ping_finished, "healthy host ping"
+            )
+            assert (state, result) == ("inactive", "success"), (state, result)
+            assert len(sink("/host")) == host_pings + 1, sink("/host")
 
             # The run succeeds: healthchecks.io's grace period is the signal.
             machine.succeed("systemctl stop vmalert.service")
             machine.succeed(f"systemctl start {HOST_PING}")
+            unhealthy_inv = host_ping_state()[0]
             wait_for_cmd(
                 machine,
-                f"journalctl -o cat -u {HOST_PING} "
+                "journalctl -o cat "
+                f"_SYSTEMD_INVOCATION_ID={shlex.quote(unhealthy_inv)} "
                 "| grep -q 'vmalert: vmalert.service is not active'",
                 timeout=dt.timedelta(seconds=10),
             )
-            assert len(sink("/host")) == pings + 1, sink("/host")
-            machine.succeed("systemctl start vmalert.service")
+            assert len(sink("/host")) == host_pings + 1, sink("/host")
 
         with subtest("Grafana Alertmanager datasource"):
             machine.wait_for_unit("grafana.service", timeout=UP_TIMEOUT)
-            wait_for_port(machine, 3000, timeout=UP_TIMEOUT)
             # Grafana's datasource test: GET /api/v2/status through its proxy
             wait_for_cmd(
                 machine,
