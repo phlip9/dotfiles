@@ -1,5 +1,5 @@
 diff --git a/packages/server/src/utils/run-git-command.ts b/packages/server/src/utils/run-git-command.ts
-index 3a3cbf5b4..d9383bced 100644
+index e1f6fc718..003a296cd 100644
 --- a/packages/server/src/utils/run-git-command.ts
 +++ b/packages/server/src/utils/run-git-command.ts
 @@ -18,6 +18,7 @@ import {
@@ -9,8 +9,8 @@ index 3a3cbf5b4..d9383bced 100644
 +import { signalProcessTree } from "./tree-kill.js";
  
  const DEFAULT_TIMEOUT_MS = 30_000;
- const DEFAULT_MAX_OUTPUT_BYTES = 20 * 1024 * 1024; // 20MB
-@@ -420,11 +421,14 @@ function executeGitCommand<Output>(
+ export const DEFAULT_MAX_OUTPUT_BYTES = 20 * 1024 * 1024; // 20MB
+@@ -436,11 +437,19 @@ function executeGitCommand<Output>(
  
        timer = setTimeout(() => {
          timeoutError = new Error(`Git command timed out after ${timeout}ms: ${command}`);
@@ -21,6 +21,11 @@ index 3a3cbf5b4..d9383bced 100644
 -        }
 +        // Kill ssh and askpass descendants before allowing the caller to retry.
 +        void signalProcessTree(child, "SIGKILL").then(() => {
++          // Ensure direct child is also signaled (covers mocked ChildProcess
++          // instances whose synthetic pid does not exist in the host OS).
++          if (!child.killed) {
++            child.kill("SIGKILL");
++          }
 +          settle(() => reject(timeoutError));
 +          if (processExit) {
 +            settleTimeoutTrace(processExit.exitCode, processExit.signal);

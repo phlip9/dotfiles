@@ -148,10 +148,10 @@ index 00a47437c..4622be106 100644
  
  function NativeCanvasSlabLayer({
 diff --git a/packages/app/src/git/diff-document/surface.web.tsx b/packages/app/src/git/diff-document/surface.web.tsx
-index 393f6dfcd..43da60075 100644
+index e4247636b..526db8cb8 100644
 --- a/packages/app/src/git/diff-document/surface.web.tsx
 +++ b/packages/app/src/git/diff-document/surface.web.tsx
-@@ -95,7 +95,15 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -104,7 +104,15 @@ export function DiffSurface(props: DiffSurfaceProps) {
    const modelRef = useRef<ReturnType<typeof buildDiffDocumentModel> | null>(null);
    const previousModelRef = useRef<ReturnType<typeof buildDiffDocumentModel> | null>(null);
    const consumedFocusRef = useRef<string | null>(null);
@@ -167,7 +167,7 @@ index 393f6dfcd..43da60075 100644
    const horizontalOffsetsRef = useRef(new Map<string, number>());
    const selectionRef = useRef<DiffSelection | null>(null);
    const dragRef = useRef<{
-@@ -437,10 +445,13 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -451,10 +459,13 @@ export function DiffSurface(props: DiffSurfaceProps) {
    useLayoutEffect(() => {
      const previous = previousModelRef.current;
      const scroll = scrollRef.current;
@@ -184,7 +184,7 @@ index 393f6dfcd..43da60075 100644
      }
      previousModelRef.current = model;
    }, [model]);
-@@ -494,14 +505,36 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -508,14 +519,36 @@ export function DiffSurface(props: DiffSurfaceProps) {
      if (collapsedFilePaths.has(focusPath)) onToggleFile(focusPath);
      const file = model.files.find((entry) => entry.path === focusPath);
      if (file && scrollRef.current) {
@@ -223,7 +223,7 @@ index 393f6dfcd..43da60075 100644
        scrollTopRef.current = scrollTop;
        const clearedActiveHeader = activeHeaderPathRef.current !== null;
        if (clearedActiveHeader) {
-@@ -536,6 +569,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -550,6 +583,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
      },
      [paintStickyHeaderPool, schedulePaint, updateInteractionFiles, viewport.height],
    );
@@ -231,7 +231,7 @@ index 393f6dfcd..43da60075 100644
    useEffect(() => {
      const scroll = scrollRef.current;
      if (!scroll) return;
-@@ -556,7 +590,8 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -570,7 +604,8 @@ export function DiffSurface(props: DiffSurfaceProps) {
      if (!currentModel || !root) return null;
      const bounds = root.getBoundingClientRect();
      const x = clientX - bounds.left;
@@ -241,7 +241,7 @@ index 393f6dfcd..43da60075 100644
      const file = currentModel.files.find(
        (entry) => entry.top <= documentY && documentY < entry.bottom,
      );
-@@ -598,7 +633,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -637,7 +672,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
        if (
          target instanceof Element &&
          target.closest(
@@ -250,19 +250,28 @@ index 393f6dfcd..43da60075 100644
          )
        )
          return;
-@@ -663,7 +698,10 @@ export function DiffSurface(props: DiffSurfaceProps) {
-             setHoveredAffordance({
-               hit,
-               left: gutterBorder - 12,
--              top: row.top - scrollTopRef.current + (modelRef.current!.lineHeight - 22) / 2,
-+              top:
-+                row.top -
-+                scrollOffsetToDocument(scrollRef, leadingHeightRef) +
-+                (modelRef.current!.lineHeight - 22) / 2,
-             });
-           } else {
-             hasHoveredAffordanceRef.current = false;
-@@ -789,9 +827,9 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -670,7 +705,7 @@ export function DiffSurface(props: DiffSurfaceProps) {
+       if (
+         target instanceof Element &&
+         target.closest(
+-          '[data-diff-header="true"], [data-diff-review="true"], [role="menuitem"], button, input, textarea',
++          '[data-diff-header="true"], [data-diff-review="true"], [data-diff-leading="true"], [role="menuitem"], button, input, textarea',
+         )
+       )
+         return;
+@@ -721,7 +756,10 @@ export function DiffSurface(props: DiffSurfaceProps) {
+           setHoveredAffordance({
+             hit,
+             left: gutterBorder - 12,
+-            top: row.top - scrollTopRef.current + (modelRef.current!.lineHeight - 22) / 2,
++            top:
++              row.top -
++              scrollOffsetToDocument(scrollRef, leadingHeightRef) +
++              (modelRef.current!.lineHeight - 22) / 2,
+           });
+           return;
+         }
+@@ -880,9 +918,9 @@ export function DiffSurface(props: DiffSurfaceProps) {
    const contentStyle = useMemo<React.CSSProperties>(
      () => ({
        ...CONTENT_STYLE,
@@ -274,7 +283,7 @@ index 393f6dfcd..43da60075 100644
    );
    const affordanceStyle = useMemo<ViewStyle>(
      () => ({
-@@ -832,6 +870,17 @@ export function DiffSurface(props: DiffSurfaceProps) {
+@@ -924,6 +962,17 @@ export function DiffSurface(props: DiffSurfaceProps) {
          onKeyDown={keyDown}
          style={SCROLL_STYLE}
        >
@@ -292,7 +301,7 @@ index 393f6dfcd..43da60075 100644
          <div style={contentStyle} onMouseDown={preventDocumentMouseSelection}>
            <canvas ref={canvasRef} data-testid="git-diff-canvas" style={canvasStyle} />
            <StickyHeaderCanvasSlotView slotsRef={stickyHeaderSlotsRef} slotIndex={0} />
-@@ -1079,6 +1128,20 @@ function stopContextMenuPropagation(event: React.MouseEvent): void {
+@@ -1171,6 +1220,20 @@ function stopContextMenuPropagation(event: React.MouseEvent): void {
    event.stopPropagation();
  }
  
@@ -313,7 +322,7 @@ index 393f6dfcd..43da60075 100644
  const ROOT_STYLE: React.CSSProperties = {
    position: "relative",
    flex: 1,
-@@ -1102,6 +1165,13 @@ const CONTENT_STYLE: React.CSSProperties = {
+@@ -1194,6 +1257,13 @@ const CONTENT_STYLE: React.CSSProperties = {
    width: "100%",
    userSelect: "none",
  };
@@ -328,7 +337,7 @@ index 393f6dfcd..43da60075 100644
    position: "absolute",
    left: 0,
 diff --git a/packages/app/src/git/diff-document/types.ts b/packages/app/src/git/diff-document/types.ts
-index d98880eb8..41d8b633e 100644
+index 3024fda83..3291aab05 100644
 --- a/packages/app/src/git/diff-document/types.ts
 +++ b/packages/app/src/git/diff-document/types.ts
 @@ -1,3 +1,4 @@
@@ -465,10 +474,10 @@ index b6fb30454..899e0f1b2 100644
      </View>
    );
 diff --git a/packages/protocol/src/messages.ts b/packages/protocol/src/messages.ts
-index e10617889..c32a1eaa9 100644
+index 01d2c51b0..01d49f654 100644
 --- a/packages/protocol/src/messages.ts
 +++ b/packages/protocol/src/messages.ts
-@@ -2380,6 +2380,9 @@ const CheckoutCommitSchema = z.object({
+@@ -2648,6 +2648,9 @@ const CheckoutCommitSchema = z.object({
    sha: z.string(),
    shortSha: z.string(),
    subject: z.string(),
@@ -479,10 +488,10 @@ index e10617889..c32a1eaa9 100644
    authorDate: z.string(), // ISO 8601
    isOnRemote: z.boolean(), // false = local-only (unpushed)
 diff --git a/packages/server/src/utils/checkout-git.ts b/packages/server/src/utils/checkout-git.ts
-index b6a6c80a4..9923d17de 100644
+index 290eba10f..e9124e389 100644
 --- a/packages/server/src/utils/checkout-git.ts
 +++ b/packages/server/src/utils/checkout-git.ts
-@@ -2415,7 +2415,10 @@ const COMMIT_RECORD_SEPARATOR = "\x1e";
+@@ -2499,7 +2499,10 @@ const COMMIT_RECORD_SEPARATOR = "\x1e";
  // Record-separated, NUL-field-separated so arbitrary subject text stays parseable.
  // `%x1e`/`%x00` are git placeholders (literal text in the arg, real bytes in the
  // output) — passing actual NUL bytes as a process arg is rejected by Node.
@@ -494,7 +503,7 @@ index b6a6c80a4..9923d17de 100644
  
  type CheckoutCommitFileStatus = NonNullable<CheckoutCommitFile["status"]>;
  
-@@ -2425,6 +2428,7 @@ interface ParsedCheckoutCommit {
+@@ -2509,6 +2512,7 @@ interface ParsedCheckoutCommit {
    authorName: string;
    authorDate: string;
    subject: string;
@@ -502,7 +511,7 @@ index b6a6c80a4..9923d17de 100644
    files: CheckoutCommitFile[];
  }
  
-@@ -2502,26 +2506,27 @@ function parseNumstatLine(
+@@ -2586,26 +2590,27 @@ function parseNumstatLine(
  }
  
  // Parses the single combined `git log ... --raw --numstat -M` stream. Each record
@@ -537,7 +546,7 @@ index b6a6c80a4..9923d17de 100644
        const line = lines[index] ?? "";
        if (!line) {
          continue;
-@@ -2550,6 +2555,8 @@ function parseCheckoutCommitRecords(stdout: string): ParsedCheckoutCommit[] {
+@@ -2634,6 +2639,8 @@ function parseCheckoutCommitRecords(stdout: string): ParsedCheckoutCommit[] {
        authorName: fields[2] ?? "",
        authorDate: (fields[3] ?? "").trim(),
        subject: fields[4] ?? "",
@@ -546,7 +555,7 @@ index b6a6c80a4..9923d17de 100644
        files,
      });
    }
-@@ -2681,6 +2688,7 @@ export async function listCheckoutCommits({
+@@ -2768,6 +2775,7 @@ export async function listCheckoutCommits({
      sha: record.sha,
      shortSha: record.shortSha,
      subject: record.subject,

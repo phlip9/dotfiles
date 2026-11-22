@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/server/plugins/managed-source.ts b/packages/server/src/server/plugins/managed-source.ts
-index 5373b7453..6f0a7e9c2 100644
+index 636ffd816..d52d885dc 100644
 --- a/packages/server/src/server/plugins/managed-source.ts
 +++ b/packages/server/src/server/plugins/managed-source.ts
-@@ -55,6 +55,9 @@ interface OwnedLocation {
+@@ -66,6 +66,9 @@ interface OwnedLocation {
    identity: PluginInstallation["identity"];
  }
  
@@ -12,7 +12,7 @@ index 5373b7453..6f0a7e9c2 100644
  export class ManagedPluginSources {
    private readonly root: string;
    private readonly metadataPath: string;
-@@ -147,6 +150,11 @@ export class ManagedPluginSources {
+@@ -158,6 +161,11 @@ export class ManagedPluginSources {
      input: InstallInput,
      target?: PluginUpdateTarget,
    ): Promise<ManagedPluginCandidate> {

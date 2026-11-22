@@ -101,10 +101,10 @@
       "version_upper_bound": null,
       "release_prefix": null,
       "submodules": false,
-      "version": "v0.15.4",
-      "revision": "b2f00c7d3214257201040bcc8af5a3a3e21e21a5",
-      "url": "https://api.github.com/repos/getpaseo/paseo/tarball/refs/tags/v0.15.4",
-      "hash": "sha256-zqD9MrqYZ6S3O72b5y+7P0iJgIMf4MRq1zgcqBcyhko="
+      "version": "v0.17.3",
+      "revision": "4dd1b201a6da3b75d7908be308d64a7fbb49a1c8",
+      "url": "https://api.github.com/repos/getpaseo/paseo/tarball/refs/tags/v0.17.3",
+      "hash": "sha256-CO3XY6opy1I2kjSj1BPHJ03H5+vCJhrLgxRpO8WQYe8="
     },
     "rbitcoin": {
       "type": "Git",

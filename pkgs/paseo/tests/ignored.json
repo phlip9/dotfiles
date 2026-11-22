@@ -69,19 +69,19 @@
   {
     "patch": "paseo-disable-plugin-installs",
     "file": "packages/server/src/server/plugins/index.posix.test.ts",
-    "test": "PluginService > cleans a failed update when restoration also fails=false",
+    "test": "PluginService > failed update recovery with restoration failure=false > cleans the failed update and preserves the prior installation",
     "reason": "managed plugin installs are disabled"
   },
   {
     "patch": "paseo-disable-plugin-installs",
     "file": "packages/server/src/server/plugins/index.posix.test.ts",
-    "test": "PluginService > cleans a failed update when restoration also fails=true",
+    "test": "PluginService > failed update recovery with restoration failure=true > cleans the failed update and preserves the prior installation",
     "reason": "managed plugin installs are disabled"
   },
   {
     "patch": "paseo-disable-plugin-installs",
     "file": "packages/server/src/server/plugins/index.posix.test.ts",
-    "test": "PluginService > keeps the running commit when a Git update build command fails",
+    "test": "PluginService > a Git update whose build command fails > keeps the running commit when a Git update build command fails",
     "reason": "managed plugin installs are disabled"
   },
   {
@@ -93,7 +93,7 @@
   {
     "patch": "paseo-disable-plugin-installs",
     "file": "packages/server/src/server/plugins/index.posix.test.ts",
-    "test": "PluginService > resolves a bare registry id even when a matching directory exists in the daemon cwd",
+    "test": "PluginService registry source resolution > resolves a bare registry id even when a matching directory exists in the daemon cwd",
     "reason": "managed plugin installs are disabled"
   },
   {
@@ -105,13 +105,13 @@
   {
     "patch": "paseo-disable-plugin-installs",
     "file": "packages/server/src/server/plugins/index.posix.test.ts",
-    "test": "PluginService > updates the shipped legacy Git layout with enabled=false",
+    "test": "PluginService > legacy Git migration > updates the shipped legacy Git layout with enabled=false",
     "reason": "managed plugin installs are disabled"
   },
   {
     "patch": "paseo-disable-plugin-installs",
     "file": "packages/server/src/server/plugins/index.posix.test.ts",
-    "test": "PluginService > updates the shipped legacy Git layout with enabled=true",
+    "test": "PluginService > legacy Git migration > updates the shipped legacy Git layout with enabled=true",
     "reason": "managed plugin installs are disabled"
   },
   {
@@ -119,5 +119,17 @@
     "file": "packages/server/src/utils/checkout-git.test.ts",
     "test": "checkout git utilities > keeps small tracked files displayable when another tracked file has a massive diff",
     "reason": "asserts the exact diff args, which now include --unified=15"
+  },
+  {
+    "patch": "paseo-diff-context",
+    "file": "packages/server/src/server/diff/subscriptions.test.ts",
+    "test": "main checkout observes worktree configuration and shared attributes",
+    "reason": "asserts diff.context config changes hunk context length, which --unified=15 overrides"
+  },
+  {
+    "patch": "paseo-diff-context",
+    "file": "packages/server/src/server/diff/subscriptions.test.ts",
+    "test": "linked checkout observes worktree configuration and shared attributes",
+    "reason": "asserts diff.context config changes hunk context length, which --unified=15 overrides"
   }
 ]

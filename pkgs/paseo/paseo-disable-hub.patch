@@ -1,8 +1,8 @@
 diff --git a/packages/server/src/server/bootstrap.ts b/packages/server/src/server/bootstrap.ts
-index cf62c525b..7459b0849 100644
+index d5c002f2e..d242088f5 100644
 --- a/packages/server/src/server/bootstrap.ts
 +++ b/packages/server/src/server/bootstrap.ts
-@@ -1881,7 +1881,9 @@ export async function createPaseoDaemon(
+@@ -1953,7 +1953,9 @@ export async function createPaseoDaemon(
                },
                serviceProxyPublicBaseUrl,
                browserToolsBroker,
@@ -13,7 +13,7 @@ index cf62c525b..7459b0849 100644
                workspaceSetupRuntime,
                pluginRuntime,
                orchestrationSkills,
-@@ -1926,7 +1928,7 @@ export async function createPaseoDaemon(
+@@ -2000,7 +2002,7 @@ export async function createPaseoDaemon(
              daemonConfigStore.onFieldChange("relay.enabled", (value) => {
                relayRuntime?.setEnabled(value === true);
              });
@@ -23,10 +23,10 @@ index cf62c525b..7459b0849 100644
  
            logAndResolve().then(resolve, reject);
 diff --git a/packages/server/src/server/websocket-server.ts b/packages/server/src/server/websocket-server.ts
-index 43b7153ca..997c3ce42 100644
+index 75de0205e..839e6edf7 100644
 --- a/packages/server/src/server/websocket-server.ts
 +++ b/packages/server/src/server/websocket-server.ts
-@@ -1072,6 +1072,13 @@ export class VoiceAssistantWebSocketServer {
+@@ -1136,6 +1136,13 @@ export class VoiceAssistantWebSocketServer {
      admission: SessionAdmission | null = null,
      initialHello?: WSHelloMessage,
    ): Promise<void> {

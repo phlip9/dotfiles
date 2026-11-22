@@ -1,24 +1,88 @@
+diff --git a/packages/server/src/server/diff/git.ts b/packages/server/src/server/diff/git.ts
+index d09c7ce5a..4246bc3d2 100644
+--- a/packages/server/src/server/diff/git.ts
++++ b/packages/server/src/server/diff/git.ts
+@@ -5,6 +5,7 @@ import { HighlightSources } from "./sources.js";
+ import {
+   prepareAllChangesIndex,
+   PER_FILE_DIFF_MAX_BYTES,
++  GIT_PATCH_CONTEXT_ARGS,
+   GIT_PATCH_FORMAT_ARGS,
+   inspectUntrackedFile,
+   snapshotComparisonIndex,
+@@ -295,6 +296,7 @@ async function readComparisonList(
+                 "--no-index",
+                 "--no-textconv",
+                 ...GIT_PATCH_FORMAT_ARGS,
++                ...GIT_PATCH_CONTEXT_ARGS,
+                 "--",
+                 "/dev/null",
+                 file.entry.path,
+diff --git a/packages/server/src/server/diff/patches.ts b/packages/server/src/server/diff/patches.ts
+index ef5dbc08c..b68d3387d 100644
+--- a/packages/server/src/server/diff/patches.ts
++++ b/packages/server/src/server/diff/patches.ts
+@@ -1,3 +1,4 @@
++import { GIT_PATCH_CONTEXT_ARGS } from "../../utils/checkout-git.js";
+ import { runGitCommand, type GitCommandOptions } from "../../utils/run-git-command.js";
+ import { parseDiff } from "../utils/diff-highlighter.js";
+ import type { ListedFile } from "./git.js";
+@@ -49,6 +50,7 @@ export class Patches {
+         ...this.args,
+         ...(files[0].entry.oldPath !== null ? ["--diff-filter=RC"] : []),
+         "--patch",
++        ...GIT_PATCH_CONTEXT_ARGS,
+         "--",
+         ...paths.map((path) => `:(literal)${path}`),
+       ],
 diff --git a/packages/server/src/utils/checkout-git.ts b/packages/server/src/utils/checkout-git.ts
-index 358bd6eb6..b6a6c80a4 100644
+index 7d345a889..290eba10f 100644
 --- a/packages/server/src/utils/checkout-git.ts
 +++ b/packages/server/src/utils/checkout-git.ts
-@@ -647,8 +647,18 @@ function normalizeNumstatPath(pathField: string): string {
+@@ -657,6 +657,13 @@ function normalizeNumstatPath(pathField: string): string {
    return unquoteGitPath(pathField);
  }
  
 +// Lines of unchanged context around each change in displayed diffs. Git's
 +// default of 3 (or the user's diff.context) is too little to review changes.
++// Kept separate from GIT_PATCH_FORMAT_ARGS because `--unified` implies `-p`
++// and corrupts `--raw` / `--numstat` listing invocations.
 +const GIT_PATCH_CONTEXT_LINES = 15;
++export const GIT_PATCH_CONTEXT_ARGS = [`--unified=${GIT_PATCH_CONTEXT_LINES}`] as const;
 +
  // Parsed patches need a stable wire format regardless of terminal presentation settings.
--const GIT_PATCH_FORMAT_ARGS = ["--no-ext-diff", "--no-color", "--src-prefix=a/", "--dst-prefix=b/"];
-+const GIT_PATCH_FORMAT_ARGS = [
-+  "--no-ext-diff",
-+  "--no-color",
-+  "--src-prefix=a/",
-+  "--dst-prefix=b/",
-+  `--unified=${GIT_PATCH_CONTEXT_LINES}`,
-+];
- 
- function buildGitDiffArgs(args: { ignoreWhitespace?: boolean; extra: string[] }): string[] {
-   return [
+ export const GIT_PATCH_FORMAT_ARGS = [
+   "--no-ext-diff",
+@@ -755,6 +762,7 @@ async function getTrackedDiffTextForPath(input: {
+     buildGitDiffArgs({
+       ignoreWhitespace: input.ignoreWhitespace,
+       extra: [
++        ...GIT_PATCH_CONTEXT_ARGS,
+         ...(input.oldPath ? ["--diff-filter=RC"] : []),
+         ...getCheckoutDiffRefArgs(input.refsForDiff),
+         "--",
+@@ -801,6 +809,7 @@ async function getTrackedDiffTexts(input: {
+     buildGitDiffArgs({
+       ignoreWhitespace: input.ignoreWhitespace,
+       extra: [
++        ...GIT_PATCH_CONTEXT_ARGS,
+         ...getCheckoutDiffRefArgs(input.refsForDiff),
+         "--",
+         ...input.paths.map((path) => `:(literal)${path}`),
+@@ -2390,7 +2399,7 @@ async function getUntrackedDiffText(
+   const result = await runGitCommand(
+     buildGitDiffArgs({
+       ignoreWhitespace,
+-      extra: ["--no-index", "/dev/null", "--", change.path],
++      extra: [...GIT_PATCH_CONTEXT_ARGS, "--no-index", "/dev/null", "--", change.path],
+     }),
+     {
+       cwd,
+@@ -2859,6 +2868,7 @@ export async function getCommitFileDiff({
+       "--diff-merges=first-parent",
+       "-M",
+       ...GIT_PATCH_FORMAT_ARGS,
++      ...GIT_PATCH_CONTEXT_ARGS,
+       "--",
+       ...paths.map((filePath) => `:(literal)${filePath}`),
+     ],
