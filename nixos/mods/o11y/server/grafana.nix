@@ -45,34 +45,29 @@ let
       touch $out
     '';
 
-  # vmalert + Alertmanager, see ./alerting.nix
   cfgAlerting = cfg.alerting;
   cfgAm = config.services.prometheus.alertmanager;
   amAddr = "${cfgAm.listenAddress}:${toString cfgAm.port}";
 
-  # Pyroscope, see ./pyroscope.nix
   cfgProfiling = cfg.profiling;
   cfgPyroSrv = config.services.pyroscope.settings.server;
   pyroscopeAddr =
     "${cfgPyroSrv.http_listen_address}:" + toString cfgPyroSrv.http_listen_port;
 
-  # Credentials directory for the grafana.service unit.
   gfCredsDir = "/run/credentials/grafana.service";
 
-  # Host header Grafana expects, or "" if `[server] domain` is unset.
   gfHost = lib.optionalString (cfg.grafana.domain != null) cfg.grafana.domain;
 
   cfgGs = cfg.grafana.gitSync;
   gsIsLocal = cfgGs.enable && cfgGs.type == "local";
-  # Only git repositories support the branch (+ PR) workflow.
+  # Only git repos support the branch workflow.
   gsDefaultWorkflows = [
     "write"
   ]
   ++ lib.optional (cfgGs.type == "github") "branch";
 
-  # Git Sync Repository resource, minus the secure token, which the setup
-  # script injects at runtime. Field names from the Grafana source:
-  # apps/provisioning/pkg/apis/provisioning/v0alpha1/types.go
+  # Git Sync Repository manifest (token injected at runtime by setup script).
+  # See: <grafana>/apps/provisioning/pkg/apis/provisioning/v0alpha1/types.go
   gsRepo = {
     apiVersion = "provisioning.grafana.app/v0alpha1";
     kind = "Repository";
@@ -91,7 +86,6 @@ let
       github = { inherit (cfgGs.github) url branch path; };
     }
     // lib.optionalAttrs (cfgGs.type == "github" && !cfgGs.github.webhook) {
-      # Poll only. Grafana neither registers nor accepts a webhook.
       webhook.disabled = true;
     }
     // lib.optionalAttrs (cfgGs.type == "local") {
@@ -102,10 +96,8 @@ let
     builtins.toJSON gsRepo
   );
 
-  # Idempotently create or update the Git Sync Repository via Grafana's
-  # k8s-style API, authenticated as the Grafana admin, then queue a pull.
-  # Secrets come from systemd credentials and only ever pass through files,
-  # never argv.
+  # Idempotently upserts the Git Sync Repository via API and queues a pull.
+  # Reads secrets from systemd credential files (never argv).
   gsSetup = pkgs.writeShellApplication {
     name = "grafana-git-sync-setup";
     runtimeInputs = [
@@ -124,8 +116,7 @@ in
         default = null;
         example = "grafana.phlip9.com";
         description = ''
-          Public domain for Grafana. When set, creates an nginx
-          virtualHost with TLS (ACME) proxying to Grafana.
+          Public Grafana domain. Creates an nginx TLS (ACME) vhost when set.
         '';
       };
 
@@ -134,38 +125,29 @@ in
         default = [ ];
         example = [ "sqlstore:debug" ];
         description = ''
-          Per-logger levels (`<logger>:<level>`), joined into Grafana's
-          `[log] filters`. A list so the module and tests can both add some.
+          Per-logger `<logger>:<level>` filters joined into `[log] filters`
+          (list so module and tests can both append).
         '';
       };
 
       adminPasswordFile = lib.mkOption {
         type = lib.types.path;
-        description = ''
-          Path to a file containing the Grafana admin password.
-          In production, use config.sops.secrets.*.path.
-        '';
+        description = "Grafana admin password file (secret).";
       };
 
       secretKeyFile = lib.mkOption {
         type = lib.types.path;
-        description = ''
-          Path to a file containing the Grafana secret signing key.
-          In production, use config.sops.secrets.*.path.
-        '';
+        description = "Grafana secret signing key file (secret).";
       };
 
       secretsManagerKeyFile = lib.mkOption {
         type = lib.types.path;
         description = ''
-          Path to a file containing the key that encrypts data keys in
-          Grafana's secrets manager (Git Sync tokens, other secure values).
-          In production, use config.sops.secrets.*.path.
+          KMS key file encrypting Grafana secrets manager data keys (Git Sync
+          tokens, etc.; secret).
         '';
       };
 
-      # Grafana Git Sync: sync dashboards + folders w/ git repo
-      # See: doc/o11y/README.md
       gitSync = {
         enable = lib.mkEnableOption "Grafana Git Sync repository";
 
@@ -173,8 +155,8 @@ in
           type = lib.types.str;
           default = "dotfiles";
           description = ''
-            Repository resource name (`metadata.name`). Renaming creates a
-            new Repository. Delete the old one by hand.
+            Repository `metadata.name`. Renaming creates a new Repository
+            (delete the old one manually).
           '';
         };
 
@@ -183,8 +165,7 @@ in
           default = cfgGs.name;
           defaultText = lib.literalExpression "gitSync.name";
           description = ''
-            Repository display name in the Grafana UI. W/ `target = "folder"`,
-            also the root folder title.
+            UI display name (also root folder title w/ `target = "folder"`).
           '';
         };
 
@@ -194,8 +175,7 @@ in
             "local"
           ];
           description = ''
-            Repository type. `github` commits to + polls a GitHub repo.
-            `local` reads/writes a plain directory on this host (no git).
+            `github` syncs a GitHub repo; `local` uses a plain dir (no git).
           '';
         };
 
@@ -216,22 +196,16 @@ in
             type = lib.types.str;
             default = "";
             example = "nixos/sauna/grafana";
-            description = ''
-              Subdirectory in the repo for Grafana resources. Empty means
-              the repo root.
-            '';
+            description = "Repo subdir for Grafana resources (empty = root).";
           };
 
           webhook = lib.mkOption {
             type = lib.types.bool;
             default = true;
             description = ''
-              Let Grafana register and own a push + pull_request webhook on
-              the GitHub repo (instant sync, PR integration). Needs a public
-              https `root_url` and a PAT with Webhooks RW + Administration R.
-              Deliveries hit an unauthenticated, HMAC-verified
-              `.../repositories/<name>/webhook` endpoint. Polling stays on
-              as a fallback. false: poll only.
+              Register a GitHub push/PR webhook (polling stays as fallback;
+              false = poll only). Needs public HTTPS `root_url` and a PAT w/
+              Webhooks RW + Administration R (HMAC-verified endpoint).
             '';
           };
         };
@@ -240,8 +214,8 @@ in
           type = lib.types.str;
           example = "/var/lib/grafana-git-sync";
           description = ''
-            Absolute directory for a `local` repository. Created owned by
-            grafana and added to `[paths] permitted_provisioning_paths`.
+            Absolute dir for a `local` repo (created grafana-owned and added
+            to `[paths] permitted_provisioning_paths`).
           '';
         };
 
@@ -249,10 +223,8 @@ in
           type = lib.types.nullOr lib.types.path;
           default = null;
           description = ''
-            Path to a file containing a GitHub fine-grained PAT. Required
-            for `type = "github"`. Stored in Grafana's secrets manager,
-            re-sent (rotated) every time the setup unit runs.
-            In production, use config.sops.secrets.*.path.
+            GitHub fine-grained PAT file (secret; required for `github`).
+            Rotated into Grafana's secrets manager on every setup run.
           '';
         };
 
@@ -261,10 +233,8 @@ in
           default = null;
           example = "overview";
           description = ''
-            Uid of a synced dashboard to set as the org's home dashboard
-            (org preference), on every setup run. Users w/o their own home
-            dashboard preference land on it. Until it syncs, Grafana falls
-            back to its default home. null: leave the preference alone.
+            Synced dashboard uid set as org home dashboard on each setup run
+            (falls back to default until synced; null leaves it untouched).
           '';
         };
 
@@ -272,12 +242,9 @@ in
           type = lib.types.int;
           default = 3600;
           description = ''
-            Seconds between polls for repo changes. W/ `github.webhook`,
-            the webhook handles real-time updates and this is the fallback
-            poll. The setup unit also triggers one pull on every start.
-            Grafana's floor is `[provisioning] min_sync_interval` (10s).
-            Grafana only checks this every `[provisioning] resync_interval`
-            (60s), so shorter intervals also need a shorter resync.
+            Poll interval in seconds (fallback when `github.webhook` is on;
+            setup unit also pulls on start). Floor is 10s (`min_sync_interval`);
+            intervals < 60s also require lowering `resync_interval`.
           '';
         };
 
@@ -293,10 +260,8 @@ in
             [ "write" ] ++ lib.optional (gitSync.type == "github") "branch"
           '';
           description = ''
-            Allowed UI save workflows:
-            - `write`: commit directly to the configured branch
-            - `branch`: commit to a new branch (+ PR on GitHub)
-            - (empty): read-only
+            Allowed UI save workflows (`write` commits to branch, `branch`
+            opens a branch/PR on GitHub, empty = read-only).
           '';
         };
 
@@ -307,17 +272,10 @@ in
           ];
           default = "folder";
           description = ''
-            Sync target. Grafana rejects changes once a sync has run.
-
-            - `folder`: everything under a root folder w/ uid `gitSync.name`
-              and title `gitSync.title`. Git Sync creates that folder w/
-              default role permissions (Editor: edit, Viewer: view), which its
-              dashboards also inherit.
-
-            - `folderless`: top level. Root dashboards get no role permissions,
-              so only org Admins can access them; Editors, Viewers, and their
-              service accounts get 403.
-
+            Sync target (immutable after first sync). `folder` puts resources
+            under a root folder (`gitSync.name`/`title`) w/ default
+            Editor/Viewer RBAC. `folderless` puts dashboards at root w/ no role
+            permissions (non-Admins and their service accounts get 403).
             See: `<grafana>/pkg/registry/apis/provisioning/resources/folders.go`
           '';
         };
@@ -330,13 +288,10 @@ in
       static_configs = hostTargets gfAddr;
     };
 
-    # --- Grafana - visualization + dashboards --- #
-
-    # Secrets loaded via systemd LoadCredential, referenced with
-    # Grafana's $__file{path} provider.
+    # --- Grafana --- #
 
     services.phlip9-o11y.server.grafana.logFilters = [
-      # Silence these warnings
+      # Silence noisy watcher warnings.
       "search-manifest-watcher:error"
     ];
 
@@ -344,17 +299,15 @@ in
 
     services.grafana = {
       enable = true;
-      # patched so Git Sync isn't blocked by GitHub
+      # Patched so Git Sync isn't blocked by GitHub.
       package = phlipPkgsNixos.grafana;
       provision.enable = true;
 
       settings = {
         analytics.reporting_enabled = false;
 
-        # explicitly disable anonymous access
         "auth.anonymous" = {
           enable = false;
-          # don't advertise our current version
           hide_version = true;
         };
 
@@ -362,16 +315,12 @@ in
           http_addr = "127.0.0.1";
           http_port = 3000;
 
-          # configure public DNS name (if exposed publicly)
           domain = lib.mkIf (cfg.grafana.domain != null) cfg.grafana.domain;
           root_url = lib.mkIf (
             cfg.grafana.domain != null
           ) "https://${cfg.grafana.domain}/";
 
-          # reject requests via ip addr, alt. hostnames, or bad proxy config
           enforce_domain = cfg.grafana.domain != null;
-
-          # HTTPS-only browser
           cookie_secure = cfg.grafana.domain != null;
         };
 
@@ -387,26 +336,18 @@ in
           # NOTE(phlip9): can break some plugins or HTML-heavy panels
           content_security_policy = true;
 
-          # explicitly add datasources via `provision.datasources`
           data_source_proxy_whitelist = [
             cfgVm.listenAddress
           ]
           ++ lib.optional cfgAlerting.enable amAddr
-          # Profiles Drilldown, mcp-grafana, and profilecli query Pyroscope
-          # through `/api/datasources/proxy/uid/pyroscope/...`, not
-          # `/api/ds/query`, so they need this.
+          # Needed by Profiles Drilldown, mcp-grafana, and profilecli
+          # (`/api/datasources/proxy/uid/pyroscope/...`).
           ++ lib.optional cfgProfiling.enable pyroscopeAddr;
         };
 
-        # The secrets manager encrypts secure values (ex: Git Sync tokens)
-        # w/ data keys, which are encrypted by the current KMS provider.
-        # The default `secret_key.v1` provider uses a PUBLIC key from
-        # `conf/defaults.ini` and does NOT fall back to
-        # `[security] secret_key`. Grafana loads every
-        # `[secrets_manager.encryption.secret_key.*]` section as a separate
-        # provider, so adding `v2` and switching `encryption_provider` is the
-        # supported rotation path: new data keys use our key while any data
-        # keys created under `v1` stay readable.
+        # Default `secret_key.v1` uses a public key from defaults.ini (not
+        # `[security] secret_key`). Adding `v2` rotates new data keys to our
+        # key while keeping any `v1`-encrypted keys readable.
         # See: pkg/registry/apis/secret/encryption/kmsproviders/kmsproviders.go
         secrets_manager.encryption_provider = "secret_key.v2";
         "secrets_manager.encryption.secret_key.v2".secret_key =
@@ -417,23 +358,18 @@ in
           allow_org_create = false;
         };
 
-        # just take a screenshot lol
         snapshots.enable = false;
 
-        # Deprecated migration of Azure/SigV4-auth Prometheus datasources,
-        # which we don't use. It needs the core `prometheus` plugin and logs
-        # an error on every start w/o it.
+        # Deprecated Azure/SigV4 migration; logs an error on start without the
+        # core `prometheus` plugin.
         feature_toggles.prometheusTypeMigration = false;
 
         log.filters = lib.concatStringsSep " " cfg.grafana.logFilters;
       };
 
-      # Provision VictoriaMetrics as a datasource using their Grafana plugin.
       provision.datasources = {
         settings = {
           apiVersion = 1;
-          # Removing a datasource below will also remove it from Grafana after
-          # we deploy.
           prune = true;
           datasources = [
             {
@@ -445,21 +381,7 @@ in
               isDefault = true;
               editable = false;
             }
-            # TODO(phlip9): to use alerting via grafana (?) we might need to
-            # configure a separate VM datasource but using type=prometheus:
-            # <https://github.com/VictoriaMetrics/victoriametrics-datasource/issues/59#issuecomment-1541456768>
-            # {
-            #   name = "VictoriaMetrics (PromQL)";
-            #   type = "prometheus";
-            #   access = "proxy";
-            #   uid = "victoriametrics-prometheus";
-            #   url = "http://${cfgVm.listenAddress}";
-            #   isDefault = false;
-            #   editable = false;
-            # }
           ]
-          # Browse active alerts + manage silences in Grafana's alerting
-          # UI. Alertmanager's own config and routes show up read-only.
           ++ lib.optional cfgAlerting.enable {
             name = "Alertmanager";
             type = "alertmanager";
@@ -469,21 +391,18 @@ in
             editable = false;
             jsonData = {
               implementation = "prometheus";
-              # Grafana-managed alert rules: none, keep them in Grafana.
+              # Alerts are managed in vmalert, not Grafana.
               handleGrafanaManagedAlerts = false;
             };
           }
-          # Flame graphs in panels + Explore, and the Profiles Drilldown app.
           ++ lib.optional cfgProfiling.enable {
             name = "Pyroscope";
             type = "grafana-pyroscope-datasource";
             access = "proxy";
             uid = "pyroscope";
             url = "http://${pyroscopeAddr}";
-            # VM stays the default datasource.
             isDefault = false;
             editable = false;
-            # Floor for the step of profile-derived time series queries
             jsonData.minStep = "15s";
           };
         };
@@ -498,35 +417,31 @@ in
           grafana-metricsdrilldown-app
           grafana-pyroscope-app
           victoriametrics-metrics-datasource
-          # Grafana 13 dropped this from core
+          # Dropped from core in Grafana 13.
           phlipPkgsNixos.grafana-canvas-panel
         ]
-        # Grafana 13.2 dropped this from core
+        # Dropped from core in Grafana 13.2.
         ++ lib.optionals cfgProfiling.enable [
           phlipPkgsNixos.grafana-pyroscope-datasource
         ];
     };
 
-    # Inject Grafana secrets via systemd LoadCredential. The
-    # grafana.service reads them at runtime from
-    # /run/credentials/grafana.service/<name> via $__file{}.
     systemd.services.grafana.serviceConfig.LoadCredential = [
       "admin-password:${cfg.grafana.adminPasswordFile}"
       "secret-key:${cfg.grafana.secretKeyFile}"
       "secrets-manager-key:${cfg.grafana.secretsManagerKeyFile}"
     ];
 
-    # --- Grafana Git Sync - dashboards <-> git repo --- #
+    # --- Grafana Git Sync --- #
 
-    # Repository resources can't be file-provisioned, so a oneshot unit
-    # creates/updates ours through the API after Grafana starts, then pulls.
+    # Repositories can't be file-provisioned; oneshot unit upserts + pulls.
     assertions = lib.optionals cfgGs.enable [
       {
         assertion = cfgGs.type == "github" -> cfgGs.tokenFile != null;
         message = "phlip9-o11y: gitSync.tokenFile is required for github";
       }
       {
-        # Grafana rejects the branch workflow on non-git repositories.
+        # Grafana rejects `branch` workflow on non-git repos.
         # See: `<grafana>/apps/provisioning/pkg/repository/validator.go`
         assertion = gsIsLocal -> !(lib.elem "branch" cfgGs.workflows);
         message = "phlip9-o11y: gitSync.workflows: local can't use branch";
@@ -541,8 +456,7 @@ in
       }
     ];
 
-    # A local repository must live under a permitted path. This replaces
-    # Grafana's default (dev-only) list.
+    # Replaces Grafana's dev-only default list so local repo paths are allowed.
     services.grafana.settings.paths.permitted_provisioning_paths =
       lib.mkIf gsIsLocal cfgGs.local.path;
     systemd.tmpfiles.rules = lib.optional gsIsLocal (
@@ -551,9 +465,8 @@ in
 
     systemd.services.grafana-git-sync-setup = lib.mkIf cfgGs.enable {
       description = "Grafana Git Sync repository setup";
-      # Re-run on every Grafana start, so each start queues a pull.
-      # WantedBy= pulls us into grafana.service start job
-      # PartOf= propagates stops + restarts (incl. Restart= crash recovery)
+      # Run on every Grafana start/restart (incl. crash recovery) to queue a
+      # pull.
       wantedBy = [ "grafana.service" ];
       partOf = [ "grafana.service" ];
       after = [ "grafana.service" ];
@@ -561,8 +474,7 @@ in
 
       environment = {
         GRAFANA_URL = "http://${gfAddr}";
-        # With `[server] enforce_domain`, Grafana 301-redirects any request
-        # whose Host header (port ignored) doesn't match `[server] domain`.
+        # Needed w/ `enforce_domain` (else Grafana 301-redirects bad Host).
         GRAFANA_HOST = gfHost;
         GRAFANA_ADMIN_USER = cfgGf.settings.security.admin_user;
         REPO_NAME = cfgGs.name;
@@ -576,7 +488,7 @@ in
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = lib.getExe gsSetup;
-        # Room for all the waits in the setup script: 2x ~1 min, 2x ~1 min.
+        # Covers setup script wait loops (4x ~1 min).
         TimeoutStartSec = "4min";
         LoadCredential = [
           "admin-password:${cfg.grafana.adminPasswordFile}"
@@ -584,7 +496,7 @@ in
         ++ lib.optional (cfgGs.tokenFile != null) "token:${cfgGs.tokenFile}";
         DynamicUser = true;
 
-        # Hardening. Only needs to talk to Grafana on localhost.
+        # Hardening (only talks to localhost Grafana).
         CapabilityBoundingSet = [ "" ];
         IPAddressAllow = [ "localhost" ];
         IPAddressDeny = [ "any" ];
@@ -619,15 +531,14 @@ in
       };
     };
 
-    # --- nginx - TLS termination + reverse proxy to Grafana --- #
+    # --- nginx --- #
 
     services.nginx.virtualHosts = lib.mkIf (cfg.grafana.domain != null) {
       ${cfg.grafana.domain} = {
         forceSSL = true;
         enableACME = true;
 
-        # Advertise HTTPS-only access for Grafana without committing all
-        # subdomains to HSTS or browser preload lists.
+        # HSTS for Grafana only (no includeSubDomains or preload).
         extraConfig = ''
           add_header Strict-Transport-Security "max-age=31536000" always;
         '';
