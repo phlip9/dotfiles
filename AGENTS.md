@@ -27,6 +27,8 @@
 - nixos/pkgs/ (`phlipPkgsNixos` personal nix packages for NixOS machines only)
 - nixos/profiles/ (high-level, not-configurable, use-case focused NixOS configs)
 - nixos/sauna/grafana/*.json (grafana dashboards)
+- nixos/tests/ (NixOS VM and container tests)
+- nixos/tests/lib/testlib/ (shared Python helpers for NixOS test scripts)
 - nvim/init.lua (neovim config)
 - nvim/lua/ (personal neovim lua plugins and modules)
 - nvim/lua/test/ (tests for my neovim lua plugins)
@@ -201,17 +203,16 @@ to find store paths for our pinned `npins` nix inputs, use e.g.,
 
 ### nixos tests
 
-- prefer NixOS container tests over VM tests (faster)
-- faster tests expose real bugs, tighten iteration loops, and improve
-  productivity.
+- see the `nixos-test` skill (`.agents/skills/nixos-test/SKILL.md`) when
+  writing, refactoring, optimizing, or debugging tests in `nixos/tests/`.
 - make tests hermetic and event-driven, fast and deterministic.
   - trigger work directly instead of waiting for polling.
-  - disable services the test doesn't exercise to reduce container or VM setup
-    time.
   - `sleep` is an anti-pattern. wait on the exact condition, not a timer.
     prefer test knobs over sleeps. patch upstream if needed.
   - prove an event happened before asserting that it did not.
   - fix ordering in units, not in test retries.
+- investing in faster tests exposes real bugs, tightens iteration loops, and
+  improves productivity.
 - when optimizing, measure first. then change one thing at a time. check
   average system load before and after; throw away test runs taken under load.
 - every wait needs a timeout. on failure, dump evidence (journal, API

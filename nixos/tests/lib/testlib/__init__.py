@@ -3,6 +3,9 @@
 Injected into every `runNixOSTest` via `extraPythonPackages` in
 `nixos/tests/default.nix`, so `ty` and `ruff` check imports at driver build
 time and `just python-ci` checks this package on both Linux and macOS.
+
+Keep the `testlib` helper table in sync when adding/changing exports.
+see: .agents/skills/nixos-test/SKILL.md
 """
 
 from collections.abc import Callable, Sequence

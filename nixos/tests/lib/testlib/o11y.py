@@ -1,4 +1,8 @@
-"""Shared o11y helpers (VictoriaMetrics, Pyroscope, Prometheus metrics)."""
+"""Shared o11y helpers (VictoriaMetrics, Pyroscope, Prometheus metrics).
+
+Keep the `testlib` helper table in sync when adding/changing exports.
+see: .agents/skills/nixos-test/SKILL.md
+"""
 
 from collections.abc import Sequence
 import datetime as dt

@@ -1,4 +1,6 @@
 # NixOS VM + container tests
+#
+# See: .agents/skills/nixos-test/SKILL.md
 {
   # NixOS machine configs, for checks of what they deploy
   nixosConfigs,
