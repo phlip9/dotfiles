@@ -46,10 +46,16 @@
         import { DaemonClient } from "${config.services.paseo.package}/lib/paseo/packages/client/dist/daemon-client.js";
         import { builtinPlugins } from "${config.services.paseo.package}/lib/paseo/packages/server/dist/server/server/plugins/builtin/index.js";
 
-        const root = "${config.services.paseo.package}/lib/paseo";
-        assert.deepEqual(globSync("**/node_modules/{esbuild,@esbuild,typescript}", {
-          cwd: root,
-        }), []);
+        // Probe the real `server` derivation: `$out/lib/paseo/node_modules` is
+        // a symlink and Node 22 `globSync("**")` does not traverse symlinks.
+        const root = "${config.services.paseo.package.server}/lib/paseo";
+        assert.deepEqual(
+          globSync(
+            "**/node_modules/{esbuild,@esbuild,typescript,@typescript/native-preview*}",
+            { cwd: root },
+          ),
+          [],
+        );
         const client = new DaemonClient({
           url: "ws://[::1]:6767/ws",
           clientId: "precompiled-test",
