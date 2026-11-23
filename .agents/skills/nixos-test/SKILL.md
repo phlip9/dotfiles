@@ -183,6 +183,14 @@ extra effort to refactor and improve existing helpers so all tests benefit.
   formatting/parsing/CLI cases into offline unit tests.
 - Batch HTTP/TLS matrices. For example, collapse loops of status checks into
   one `batch_requests` (`curl -K -`) call.
+- Consolidate heavyweight runtime/CLI probes. Repeated Node/Python CLI launches
+  pay cold interpreter startup on every call (e.g. ~0.7-1.0s each for Paseo);
+  fold protocol/RPC checks into one persistent client script running
+  independent checks concurrently (`Promise.all`), start it early so module
+  import overlaps w/ daemon boot, and keep real CLI invocations for distinct
+  CLI-specific behavior under test. Watch for synchronous KDFs
+  (`scrypt`/`argon2`) blocking single-threaded servers (~250ms per Paseo
+  password verify) and avoid duplicate authenticated handshakes.
 - Overlap hardened unit starts, since hardened units (`SystemCallFilter`,
   `ProtectSystem=strict`, `DynamicUser`) cost ~1.1-1.3s per start in `nspawn`
   (`sd-executor` setup). Never weaken hardening for speed; instead launch async
