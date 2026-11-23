@@ -136,7 +136,14 @@ version check). Include implicit modules from profiles (`minimal.nix`,
 
 Trace user config files consumed by those packages (`config/`, `home/`),
 not just NixOS options. Use the NEW package's config validator when available;
-Nix eval does not catch application schema or palette-token changes.
+Nix eval does not catch application schema or palette-token changes. E.g.
+`noctalia config validate <file>`, `xremap --validate-config <file>`. Diff
+`noctalia config export full` (isolated `XDG_*_HOME`) old vs new to surface
+new defaults.
+
+List our patched packages (`grep -l patches nixos/pkgs/*.nix
+nixos/pkgs/*/default.nix`). If NEW bumps a base version, check upstream for
+the fix first; a patch that no longer applies fails the machine build late.
 
 ### 1b. Release notes
 
@@ -253,6 +260,9 @@ nix shell -f . pkgs.cpio pkgs.zstd pkgs.xz pkgs.gzip --command \
   "$art/<v>-<m>"/etc/tmpfiles.d/*.conf 2>&1 | grep -v '^Would'`.
 - Once machines build, start the Phase 3 NixOS test build in the
   background; failures are research findings.
+- Bootloader installer changes (`limine-install.py`, systemd-boot builder):
+  run the upstream VM tests matching our config, e.g.
+  `nix build -f . pkgsUnstable.nixosTests.limine.{uefi,secureBoot}`.
 - Upstream changelogs for bumps of stateful or public-facing services (DBs,
   web/metrics services), boot-critical packages (kernel, grub, limine,
   nvidia), and anything security-relevant. Cover the entire version range,
@@ -342,13 +352,18 @@ npins update nixbot niks3 disko
   `nixos/mods/nixbot-ci.nix`. Watch for new module defaults, and nixbot DB
   migrations (`nixbot/nixbot/migrations/`): a `DROP` blocks rollback ->
   Runtime risk.
-- Build `phlipPkgsNixos.{nixbot,nixbot-eval-jobs,niks3,niks3-server}` and
+- Build `phlipPkgsNixos.{nixbot,nixbot-eval-jobs,niks3}` and
   `nixosTests.nixbot`. Rebase local patches (`nixos/pkgs/{nixbot,niks3,...}`)
-  whose hunks fail; drop upstreamed ones.
+  whose hunks fail; drop upstreamed ones. On a failed hunk, re-check the
+  patch's purpose against the new upstream code too; a refactor can make
+  the patch apply but no longer do its job.
 - `system-diff.sh "$art/pre-sauna" <new sauna>`.
 - One commit per pin, upstream committer dates + 7-char revs:
   `niks3: 2026-09-22 1c74f96 -> 2026-11-12 73468ec`. Patch rebases go in
-  the pin's commit.
+  the pin's commit. Split `npins/sources.json` per pin from HEAD:
+  `git show HEAD:npins/sources.json | jq --indent 2 --slurpfile new
+  "$art/sources.full.json" '.pins.<pin> = $new[0].pins.<pin>'`. Stage
+  deletions w/ `git add -A <paths>`.
 
 Then the Grafana plugins, one commit each
 (`grafana-canvas-panel: 13.4.0 -> 13.5.0`). A plugin that needs a newer
