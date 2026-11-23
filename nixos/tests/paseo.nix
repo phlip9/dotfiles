@@ -1,4 +1,12 @@
-# End-to-end NixOS container test for the Paseo daemon, relay, and nginx wiring.
+# End-to-end NixOS container test for Paseo daemon, relay, CLI, and nginx.
+#
+#   paseo CLI / probe --WS/HTTP--> paseo.service (bash -lc, LoadCredential)
+#                     --nginx----> paseo-relay.service (Noise NK E2EE)
+#
+# Verifies systemd/user-session wiring, enforced config merging, precompiled
+# built-in plugins, disabled plugin installs/provider updates, env inheritance
+# and secret scrubbing across agents + terminals, relay password auth, and
+# cgroup cleanup on stop.
 {
   name = "paseo";
 
@@ -12,6 +20,8 @@
       ...
     }:
     let
+      paseoPkg = config.services.paseo.package;
+
       # Stand-in for Home Manager's ~/.profile -> hm-session-vars.sh, w/ its
       # one-time guard and sessionPath prepend. Exercises derived session
       # exports without importing Home Manager or provisioning Postgres.
@@ -38,93 +48,351 @@
         mv "login-env.$$" login-env
       '';
 
-      # Check the catalog after startup: the daemon catches built-in load
-      # failures, so health alone also passes when every plugin failed.
-      precompiledProbe = pkgs.writeText "paseo-precompiled-probe.mjs" ''
+      # Single Node.js probe that boots while paseo-server starts, overlaps
+      # HTTP/CORS/CLI checks w/ built-in plugin load, and shares one WebSocket
+      # session across RPC, plugin, agent, terminal, and relay auth checks.
+      rpcProbe = pkgs.writeText "paseo-rpc-probe.mjs" ''
         import assert from "node:assert/strict";
-        import { globSync } from "node:fs";
-        import { DaemonClient } from "${config.services.paseo.package}/lib/paseo/packages/client/dist/daemon-client.js";
-        import { builtinPlugins } from "${config.services.paseo.package}/lib/paseo/packages/server/dist/server/server/plugins/builtin/index.js";
+        import { execFile } from "node:child_process";
+        import { globSync, statSync } from "node:fs";
+        import { promisify } from "node:util";
+        import {
+          DaemonAuthenticationError,
+          DaemonClient,
+        } from "${paseoPkg}/lib/paseo/packages/client/dist/daemon-client.js";
+        import { createHostClient } from "${paseoPkg}/lib/paseo/packages/client/dist/node/index.js";
+        import { builtinPlugins } from "${paseoPkg}/lib/paseo/packages/server/dist/server/server/plugins/builtin/index.js";
+
+        const execFileAsync = promisify(execFile);
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        const PASSWORD = "correct-password";
+        const PASSWORD_FILE = "/run/credentials/paseo.service/daemon-password";
+        const PASEO_BIN = "${paseoPkg}/bin/paseo";
+        const DAEMON_HTTP = "http://[::1]:6767";
+
+        async function waitForFile(path, timeoutMs = 15_000) {
+          const deadline = Date.now() + timeoutMs;
+          while (Date.now() < deadline) {
+            try {
+              if (statSync(path).size > 0) return;
+            } catch {}
+            await sleep(10);
+          }
+          throw new Error(`Timed out waiting for non-empty file: ''${path}`);
+        }
+
+        async function waitForHealth(timeoutMs = 45_000) {
+          const deadline = Date.now() + timeoutMs;
+          let lastErr;
+          while (Date.now() < deadline) {
+            try {
+              const resp = await fetch(`''${DAEMON_HTTP}/api/health`, {
+                signal: AbortSignal.timeout(2_000),
+              });
+              if (resp.ok) return;
+              lastErr = `HTTP ''${resp.status}`;
+            } catch (err) {
+              lastErr = err;
+            }
+            await sleep(25);
+          }
+          throw new Error(`Daemon health timed out: ''${String(lastErr)}`);
+        }
+
+        // Wait for wsServer to finish built-in plugin load (503 at start).
+        async function connectDirect(timeoutMs = 25_000) {
+          const deadline = Date.now() + timeoutMs;
+          let lastErr;
+          while (Date.now() < deadline) {
+            const client = new DaemonClient({
+              url: "ws://[::1]:6767/ws",
+              clientId: "paseo-rpc-probe",
+              password: PASSWORD,
+              connectTimeoutMs: 5_000,
+              reconnect: { enabled: false },
+            });
+            try {
+              await client.connect();
+              return client;
+            } catch (err) {
+              await client.close().catch(() => {});
+              if (err instanceof DaemonAuthenticationError) throw err;
+              lastErr = err;
+              await sleep(25);
+            }
+          }
+          throw new Error(`Direct connect timed out: ''${String(lastErr)}`);
+        }
 
         // Probe the real `server` derivation: `$out/lib/paseo/node_modules` is
         // a symlink and Node 22 `globSync("**")` does not traverse symlinks.
-        const root = "${config.services.paseo.package.server}/lib/paseo";
-        assert.deepEqual(
-          globSync(
-            "**/node_modules/{esbuild,@esbuild,typescript,@typescript/native-preview*}",
-            { cwd: root },
-          ),
-          [],
-        );
-        const client = new DaemonClient({
-          url: "ws://[::1]:6767/ws",
-          clientId: "precompiled-test",
-          password: "correct-password",
-          reconnect: { enabled: false },
-        });
-        try {
-          await client.connect();
+        function assertNoRuntimeCompilers() {
+          const root = "${paseoPkg.server}/lib/paseo";
+          assert.deepEqual(
+            globSync(
+              "**/node_modules/{esbuild,@esbuild,typescript,@typescript/native-preview*}",
+              { cwd: root },
+            ),
+            [],
+          );
+        }
+
+        // Verify HTTP auth, CORS allowlist, and nginx web UI proxy while the
+        // daemon finishes loading built-in plugins.
+        async function assertHttpAndNginx() {
+          const [unauth, authed, badCors, goodCors, webUi] = await Promise.all([
+            fetch(`''${DAEMON_HTTP}/api/status`, {
+              signal: AbortSignal.timeout(10_000),
+            }),
+            fetch(`''${DAEMON_HTTP}/api/status`, {
+              headers: { Authorization: `Bearer ''${PASSWORD}` },
+              signal: AbortSignal.timeout(10_000),
+            }),
+            fetch(`''${DAEMON_HTTP}/api/health`, {
+              headers: { Origin: "https://app.paseo.sh" },
+              signal: AbortSignal.timeout(10_000),
+            }),
+            fetch(`''${DAEMON_HTTP}/api/health`, {
+              headers: { Origin: "http://paseo.test" },
+              signal: AbortSignal.timeout(10_000),
+            }),
+            // Proves both bundled web UI serving and nginx reverse proxying.
+            fetch("http://paseo.test/", {
+              signal: AbortSignal.timeout(10_000),
+            }),
+          ]);
+
+          assert.equal(unauth.status, 401);
+          assert.equal(authed.status, 200);
+          const statusBody = await authed.json();
+          assert.equal(statusBody.status, "server_info");
+
+          // Only the env-provided web UI origin may make CORS requests.
+          assert.equal(badCors.status, 200);
+          assert.equal(
+            badCors.headers.get("access-control-allow-origin"),
+            null,
+          );
+          assert.equal(goodCors.status, 200);
+          assert.equal(
+            goodCors.headers.get("access-control-allow-origin"),
+            "http://paseo.test",
+          );
+
+          assert.equal(webUi.status, 200);
+          const html = await webUi.text();
+          assert.match(html, /<html/i);
+        }
+
+        // Exercise the packaged CLI wrapper, CLI PASEO_PASSWORD_FILE patch, and
+        // valid-password Noise NK relay auth in a single CLI invocation.
+        async function assertCliRelayAuth(pairingUrl) {
+          const env = { ...process.env, PASEO_PASSWORD_FILE: PASSWORD_FILE };
+          delete env.PASEO_PASSWORD;
+          const { stdout } = await execFileAsync(
+            PASEO_BIN,
+            ["ls", "--host", pairingUrl, "--json"],
+            { env, timeout: 15_000 },
+          );
+          JSON.parse(stdout);
+        }
+
+        // Verify relay client auth rejects missing/wrong passwords. Retries
+        // transient connect failures while relay-control finishes attaching.
+        async function assertRelayAuthRejected(
+          pairingUrl,
+          password,
+          expectedReason,
+          timeoutMs = 15_000,
+        ) {
+          const deadline = Date.now() + timeoutMs;
+          let lastErr;
+          while (Date.now() < deadline) {
+            const relayClient = createHostClient(pairingUrl, {
+              clientId: `relay-reject-''${expectedReason}`,
+              ...(password !== undefined ? { password } : {}),
+              connectTimeoutMs: 5_000,
+              reconnect: { enabled: false },
+            });
+            try {
+              await relayClient.connect();
+            } catch (err) {
+              await relayClient.close().catch(() => {});
+              if (err instanceof DaemonAuthenticationError) {
+                assert.equal(err.reason, expectedReason);
+                return;
+              }
+              lastErr = err;
+              await sleep(25);
+              continue;
+            }
+            await relayClient.close().catch(() => {});
+            throw new Error(
+              `Relay client admitted (expected ''${expectedReason})`,
+            );
+          }
+          throw new Error(
+            `Relay auth reject timeout (''${expectedReason}): ''${String(lastErr)}`,
+          );
+        }
+
+        async function assertBuiltinsLoaded(client) {
           const catalog = await client.getPluginCatalog();
-          assert.deepEqual(catalog.map(({ id }) => id).sort(),
-            [...builtinPlugins].sort());
-        } finally {
-          await client.close();
-        }
-      '';
-
-      # Verify plugin registry metadata fetches are blocked (not just installs).
-      pluginRegistryProbe = pkgs.writeText "paseo-plugin-registry-probe.mjs" ''
-        import assert from "node:assert/strict";
-        import { DaemonClient } from "${config.services.paseo.package}/lib/paseo/packages/client/dist/daemon-client.js";
-
-        const client = new DaemonClient({
-          url: "ws://[::1]:6767/ws",
-          clientId: "plugin-registry-test",
-          password: "correct-password",
-          reconnect: { enabled: false },
-        });
-        try {
-          await client.connect();
-          await assert.rejects(
-            () => client.listPluginRegistry(),
-            /Managed plugin installs are disabled/,
+          assert.deepEqual(
+            catalog.map(({ id }) => id).sort(),
+            [...builtinPlugins].sort(),
           );
-          await assert.rejects(
-            () => client.getRegistryPlugin("acme/example"),
-            /Managed plugin installs are disabled/,
-          );
-        } finally {
-          await client.close();
         }
-      '';
 
-      # Verify provider CLI update checks and self-updaters stay disabled.
-      providerUpdatesProbe = pkgs.writeText "paseo-provider-updates-probe.mjs" ''
-        import assert from "node:assert/strict";
-        import { DaemonClient } from "${config.services.paseo.package}/lib/paseo/packages/client/dist/daemon-client.js";
+        async function assertPluginInstallsDisabled(client) {
+          await Promise.all([
+            assert.rejects(
+              () => client.installPluginSource({ source: "npm:left-pad" }),
+              /Managed plugin installs are disabled/,
+            ),
+            assert.rejects(
+              () => client.listPluginRegistry(),
+              /Managed plugin installs are disabled/,
+            ),
+            assert.rejects(
+              () => client.getRegistryPlugin("acme/example"),
+              /Managed plugin installs are disabled/,
+            ),
+          ]);
+        }
 
-        const client = new DaemonClient({
-          url: "ws://[::1]:6767/ws",
-          clientId: "provider-updates-test",
-          password: "correct-password",
-          reconnect: { enabled: false },
-        });
-        try {
-          await client.connect();
-          const inspect = await client.inspectProviderInstallation("claude");
+        async function assertProviderUpdatesDisabled(client) {
+          const [inspect, check, update] = await Promise.all([
+            client.inspectProviderInstallation("claude"),
+            client.checkProviderUpdates("claude"),
+            client.updateProvider("claude"),
+          ]);
           assert.equal(inspect.error, null);
           assert.equal(inspect.installation?.canUpdate, undefined);
-
-          const check = await client.checkProviderUpdates("claude");
           assert.equal(check.error, null);
           assert.equal(check.updateCheck, null);
-
-          const update = await client.updateProvider("claude");
           assert.equal(update.update, null);
           assert.match(update.error ?? "", /Provider updates are disabled/);
-        } finally {
-          await client.close();
         }
+
+        async function spawnAgentEnvProbe(client) {
+          const project = await client.openProject("/tmp/paseo-agent-env");
+          assert.ok(
+            !project.error && project.workspace,
+            `openProject failed: ''${project.error}`,
+          );
+          await assert.rejects(
+            () =>
+              client.createAgent({
+                provider: "env-probe",
+                cwd: "/tmp/paseo-agent-env",
+                workspaceId: project.workspace.id,
+                initialPrompt: "env-probe",
+              }),
+            /exited before initialization/i,
+          );
+          await waitForFile("/tmp/paseo-agent-env/login-env");
+        }
+
+        // Single workspace terminal covering PTY I/O, capture, env inheritance,
+        // and a detached child left alive for the daemon stop cgroup check.
+        async function runTerminalProbe(client) {
+          const cwd = "/tmp/paseo-terminal-test";
+          const project = await client.openProject(cwd);
+          assert.ok(
+            !project.error && project.workspace,
+            `openProject failed: ''${project.error}`,
+          );
+          const created = await client.createTerminal(
+            cwd,
+            "vm-terminal",
+            undefined,
+            { workspaceId: project.workspace.id },
+          );
+          assert.ok(
+            !created.error && created.terminal,
+            `createTerminal failed: ''${created.error}`,
+          );
+          assert.equal(created.terminal.name, "vm-terminal");
+          assert.equal(created.terminal.cwd, cwd);
+
+          const cmd =
+            "env > terminal-env.tmp && mv terminal-env.tmp terminal-env && " +
+            "(nohup sleep 600 >/dev/null 2>&1 & echo $! > child-pid) && " +
+            "echo $$ > shell-pid && " +
+            "echo paseo-terminal-output-ok && " +
+            "echo ok > terminal-ready\r";
+          client.sendTerminalInput(created.terminal.id, {
+            type: "input",
+            data: cmd,
+          });
+          await waitForFile(`''${cwd}/terminal-ready`);
+
+          const deadline = Date.now() + 10_000;
+          let lastLines = [];
+          while (Date.now() < deadline) {
+            const captured = await client.captureTerminal(created.terminal.id, {
+              start: 0,
+              stripAnsi: true,
+            });
+            lastLines = captured.lines;
+            if (lastLines.includes("paseo-terminal-output-ok")) return;
+            await sleep(20);
+          }
+          throw new Error(
+            `Terminal capture missing marker: ''${JSON.stringify(lastLines)}`,
+          );
+        }
+
+        async function runWsChecks() {
+          const client = await connectDirect();
+          try {
+            const pairing = await client.getDaemonPairingOffer();
+            assert.equal(pairing.relayEnabled, true);
+            assert.ok(
+              typeof pairing.url === "string" &&
+                pairing.url.startsWith("http://paseo.test/#offer="),
+              `unexpected pairing url: ''${pairing.url}`,
+            );
+            // Offers pin clients to replay-protected (Noise NK) relay sessions.
+            const rawOffer = pairing.url.split("#offer=", 2)[1];
+            const offer = JSON.parse(
+              Buffer.from(rawOffer, "base64url").toString("utf8"),
+            );
+            assert.equal(offer.minimumSecurityMode, "protected");
+
+            // Gate the single-shot CLI call on `password_required` so
+            // relay-control is guaranteed attached before the CLI connects.
+            const relayReadyAndCli = assertRelayAuthRejected(
+              pairing.url,
+              undefined,
+              "password_required",
+            ).then(() => assertCliRelayAuth(pairing.url));
+
+            await Promise.all([
+              assertBuiltinsLoaded(client),
+              assertPluginInstallsDisabled(client),
+              assertProviderUpdatesDisabled(client),
+              spawnAgentEnvProbe(client),
+              runTerminalProbe(client),
+              assertRelayAuthRejected(
+                pairing.url,
+                "wrong-password",
+                "incorrect_password",
+              ),
+              relayReadyAndCli,
+            ]);
+          } finally {
+            await client.close();
+          }
+        }
+
+        assertNoRuntimeCompilers();
+        await waitForHealth();
+
+        // Overlap HTTP/CORS/nginx checks w/ built-in plugin load + WS checks.
+        await Promise.all([assertHttpAndNginx(), runWsChecks()]);
       '';
 
       # Pre-existing, UI-managed config.json, like sauna's. Includes stale
@@ -155,18 +423,11 @@
     in
     {
       environment.systemPackages = [
-        config.services.paseo.package
+        paseoPkg
         pkgs.curl
         pkgs.git
-        pkgs.jq
-        (pkgs.writeShellScriptBin "paseo-precompiled-probe" ''
-          exec ${lib.getExe pkgs.nodejs_22} ${precompiledProbe}
-        '')
-        (pkgs.writeShellScriptBin "paseo-plugin-registry-probe" ''
-          exec ${lib.getExe pkgs.nodejs_22} ${pluginRegistryProbe}
-        '')
-        (pkgs.writeShellScriptBin "paseo-provider-updates-probe" ''
-          exec ${lib.getExe pkgs.nodejs_22} ${providerUpdatesProbe}
+        (pkgs.writeShellScriptBin "paseo-rpc-probe" ''
+          exec ${lib.getExe pkgs.nodejs_22} ${rpcProbe}
         '')
       ];
 
@@ -220,7 +481,8 @@
           domain = "paseo.test";
           publicBaseUrl = "http://paseo.test";
         };
-        auth.passwordFile = config.sops.secrets.paseo-daemon-password.path;
+        # Match the trailing newline in production sops secret files.
+        auth.passwordFile = "${pkgs.writeText "paseo-daemon-password" "correct-password\n"}";
         hostnames = [
           "paseo.test"
         ];
@@ -230,309 +492,261 @@
         };
       };
 
-      sops.secrets.paseo-daemon-password = { };
+      services.openssh.enable = lib.mkForce false;
     };
 
   testScript = ''
-    import base64
     import json
-    from datetime import timedelta
+    import shlex
 
-    password_file = "/run/credentials/paseo.service/daemon-password"
-    config_file = "/home/testuser/.paseo/config.json"
-
-    machine.start()
-    machine.wait_for_unit("multi-user.target")
-
-    # Resolve the configured user's runtime paths without a prior login.
-    user_uid = machine.succeed("id -u testuser").strip()
-    runtime_dir = f"/run/user/{user_uid}"
-
-    # Session env every daemon child should see: runtime dir, derived HM
-    # session vars, NixOS set-environment vars, and HM sessionPath.
-    expected_env = {
-        "HOME": "/home/testuser",
-        "XDG_RUNTIME_DIR": runtime_dir,
-        "DBUS_SESSION_BUS_ADDRESS": f"unix:path={runtime_dir}/bus",
-        "PGHOST": runtime_dir,
-        "SSH_AUTH_SOCK": f"{runtime_dir}/nix-ssh-agent.socket",
-        "TEST_SYSTEM_VAR": "1",
-    }
-    session_path_entry = "/home/testuser/.local/bin"
-    env_key_pattern = "^(" + "|".join([*expected_env, "PATH"]) + ")="
-    daemon_env_cmd = (
-        "tr '\\0' '\\n' < "
-        "/proc/$(systemctl show paseo.service -p MainPID --value)/environ"
+    from testlib import (
+        CMD_TIMEOUT,
+        CURL,
+        UP_TIMEOUT,
+        dump_evidence,
+        wait_for_cmd,
+        wait_for_http,
+        wait_for_port,
+        wait_for_value,
     )
 
-    def assert_no_secret_env(env_dump_cmd: str) -> None:
-        """Daemon children must not inherit the daemon password env."""
-        machine.fail(f"{env_dump_cmd} | grep -E '^PASEO_PASSWORD(_FILE)?='")
+    PASSWORD_FILE = "/run/credentials/paseo.service/daemon-password"
+    CONFIG_FILE = "/home/testuser/.paseo/config.json"
+    SESSION_PATH_ENTRY = "/home/testuser/.local/bin"
 
-    def assert_session_env(env_dump_cmd: str) -> None:
-        """Check selected keys in `env`-style output from env_dump_cmd."""
-        env_lines = machine.succeed(
-            f"{env_dump_cmd} | grep -E '{env_key_pattern}'"
-        )
+    EVIDENCE = [(
+        machine,
+        [
+            "journalctl --no-pager -o cat -u paseo.service | tail -n 80",
+            "journalctl --no-pager -o cat -u paseo-relay.service | tail -n 30",
+            "journalctl --no-pager -o cat -u nginx.service | tail -n 30",
+            "ss -Hltunp",
+            f"cat {CONFIG_FILE}",
+        ],
+    )]
+
+    # Parse `KEY=VAL` lines into a dict, tolerating values containing `=`.
+    def parse_env(text: str) -> dict[str, str]:
         env: dict[str, str] = {}
-        for line in env_lines.splitlines():
-            env_key, _, env_value = line.partition("=")
-            env[env_key] = env_value
-        for env_key, env_value in expected_env.items():
-            assert env.get(env_key) == env_value, (
-                f"{env_dump_cmd}: {env_key}={env.get(env_key)!r}"
-            )
+        for line in text.splitlines():
+            key, sep, value = line.partition("=")
+            if sep:
+                env[key] = value
+        return env
+
+    # Verify required session vars and HM sessionPath are present.
+    def assert_session_env(
+        env: dict[str, str],
+        expected: dict[str, str],
+        label: str,
+    ) -> None:
+        for key, value in expected.items():
+            assert env.get(key) == value, f"{label}: {key}={env.get(key)!r}"
         # A child login shell that re-runs NixOS set-environment resets PATH,
         # then skips the already-sourced HM session vars.
-        assert session_path_entry in env["PATH"].split(":"), (
-            f"{env_dump_cmd}: PATH={env['PATH']}"
+        path_val = env.get("PATH", "")
+        assert SESSION_PATH_ENTRY in path_val.split(":"), (
+            f"{label}: PATH={path_val}"
         )
 
-    with subtest("relay starts and reports health"):
-        machine.wait_for_unit("paseo-relay.service")
-        machine.succeed(
-            "curl -g -sf http://[::1]:8411/health "
-            "| jq -e '.status == \"ok\"'"
-        )
+    # Daemon children must not inherit the daemon password env.
+    def assert_no_secret_env(env: dict[str, str], label: str) -> None:
+        leaked = [
+            key
+            for key in ("PASEO_PASSWORD", "PASEO_PASSWORD_FILE")
+            if key in env
+        ]
+        assert not leaked, f"{label}: leaked secret env {leaked}"
 
-    with subtest("daemon starts and reports health"):
-        machine.wait_for_unit("paseo.service")
-        machine.succeed(
-            "systemctl show paseo.service -p ExecStart --value "
-            "| grep -E 'bash.*-lc'"
-        )
-        machine.succeed(
-            "test -f /run/credentials/paseo.service/daemon-password"
-        )
-        machine.succeed(
-            "pid=$(systemctl show paseo.service -p MainPID --value); "
-            "tr '\\0' '\\n' < /proc/$pid/environ "
-            "| grep '^PASEO_PASSWORD_FILE=/run/credentials/paseo.service/daemon-password$'"
-        )
-        machine.succeed(
-            "pid=$(systemctl show paseo.service -p MainPID --value); "
-            "tr '\\0' '\\n' < /proc/$pid/environ "
-            "| grep '^PASEO_RELAY_ENABLED=true$'"
-        )
-        machine.succeed(
-            "pid=$(systemctl show paseo.service -p MainPID --value); "
-            "tr '\\0' '\\n' < /proc/$pid/environ "
-            "| grep '^PASEO_SERVICE_PROXY_ENABLED=false$'"
-        )
-        machine.fail(
-            "pid=$(systemctl show paseo.service -p MainPID --value); "
-            "tr '\\0' '\\n' < /proc/$pid/environ "
-            "| grep '^PASEO_PASSWORD='"
-        )
-        # Type=simple unit: active before the worker listens.
-        machine.wait_until_succeeds(
-            "curl -g -sf http://[::1]:6767/api/health",
-            timeout=timedelta(seconds=60),
-        )
-        machine.succeed(
-            "test \"$(curl -g -s -o /dev/null -w '%{http_code}' "
-            "http://[::1]:6767/api/status)\" = 401"
-        )
-        machine.succeed(
-            "curl -g -sf -H 'Authorization: Bearer correct-password' "
-            "http://[::1]:6767/api/status "
-            "| jq -e '.status == \"server_info\"'"
-        )
-        machine.fail("curl -g -sf --connect-timeout 1 http://[::1]:6768/")
-        machine.succeed("ss -H -ltnp | grep -F 'Paseo Daemon'")
-        machine.fail(
-            "ss -H -ltnp | grep -F 'Paseo Daemon' | awk '{print $4}' "
-            "| grep -Ev '^(127[.]0[.]0[.]1|\\[::1\\]):'"
-        )
+    machine.start()
+    try:
+        # --- Pre-listen checks (overlap w/ paseo-server cold start) --- #
 
-    with subtest("all built-ins load without runtime compilers"):
-        machine.succeed("timeout 30 paseo-precompiled-probe")
+        with subtest("relay and nginx proxy health"):
+            machine.wait_for_unit("paseo-relay.service", timeout=UP_TIMEOUT)
+            relay_health = json.loads(
+                wait_for_http(machine, "http://[::1]:8411/health")
+            )
+            assert relay_health["status"] == "ok", relay_health
 
-    with subtest("enforced settings merge into mutable config"):
-        machine.succeed(
-            f"jq -e '.daemon.cors.allowedOrigins == [] "
-            "and .pluginsEnabled == false "
-            "and .agents.providers.muse.enabled == false "
-            "and .daemon.relay.requireProtectedSecurity == true "
-            "and .agents.providers[\"env-probe\"].label == \"Env probe\" "
-            f"and .daemon.serviceProxy.enabled == true' {config_file}"
-        )
-        machine.succeed(
-            f"test \"$(stat -c %a:%U {config_file})\" = 600:testuser"
-        )
-        # Only the env-provided web UI origin may make CORS requests.
-        machine.fail(
-            "curl -g -sf -o /dev/null -D - -H 'Origin: https://app.paseo.sh' "
-            "http://[::1]:6767/api/health "
-            "| grep -i '^access-control-allow-origin: https://app.paseo.sh'"
-        )
-        machine.succeed(
-            "curl -g -sf -o /dev/null -D - -H 'Origin: http://paseo.test' "
-            "http://[::1]:6767/api/health "
-            "| grep -i '^access-control-allow-origin: http://paseo.test'"
-        )
+            machine.wait_for_unit("nginx.service", timeout=UP_TIMEOUT)
+            wait_for_port(machine, 80)
+            proxied_relay = json.loads(
+                machine.succeed(
+                    f"{CURL} -f -H 'Host: relay.test' http://127.0.0.1/health",
+                    timeout=CMD_TIMEOUT,
+                )
+            )
+            assert proxied_relay["status"] == "ok", proxied_relay
 
-    with subtest("daemon inherits the user's runtime environment"):
-        machine.succeed(f"systemctl is-active user@{user_uid}.service")
-        machine.succeed(f"test -S {runtime_dir}/bus")
-        assert_session_env(daemon_env_cmd)
+        with subtest("enforced settings and daemon runtime env"):
+            machine.wait_for_unit("paseo.service", timeout=UP_TIMEOUT)
+            user_uid = machine.succeed(
+                "id -u testuser", timeout=CMD_TIMEOUT
+            ).strip()
+            runtime_dir = f"/run/user/{user_uid}"
+            expected_env = {
+                "HOME": "/home/testuser",
+                "XDG_RUNTIME_DIR": runtime_dir,
+                "DBUS_SESSION_BUS_ADDRESS": f"unix:path={runtime_dir}/bus",
+                "PGHOST": runtime_dir,
+                "SSH_AUTH_SOCK": f"{runtime_dir}/nix-ssh-agent.socket",
+                "TEST_SYSTEM_VAR": "1",
+            }
 
-    with subtest("agent and its tool shells inherit the session env"):
-        machine.succeed("install -d -m 0777 /tmp/paseo-agent-env")
-        # The probe exits w/o speaking ACP, so the run fails or hangs until
-        # the daemon's ACP init timeout. Only the spawn matters.
-        machine.execute(
-            f"PASEO_PASSWORD_FILE={password_file} timeout 15 "
-            "paseo run --host '[::1]:6767' --provider env-probe "
-            "--cwd /tmp/paseo-agent-env --no-wait env-probe"
-        )
-        machine.wait_until_succeeds(
-            "test -s /tmp/paseo-agent-env/login-env",
-            timeout=timedelta(seconds=30),
-        )
-        for env_dump in ["agent-env", "nonlogin-env", "login-env"]:
-            assert_session_env(f"cat /tmp/paseo-agent-env/{env_dump}")
-            assert_no_secret_env(f"cat /tmp/paseo-agent-env/{env_dump}")
+            machine.succeed(
+                f"systemctl show paseo.service -p ExecStart --value "
+                f"| grep -E 'bash.*-lc' && "
+                f"test -f {PASSWORD_FILE} && "
+                f"systemctl is-active user@{user_uid}.service && "
+                f"test -S {runtime_dir}/bus && "
+                f"test \"$(stat -c %a:%U {CONFIG_FILE})\" = 600:testuser",
+                timeout=CMD_TIMEOUT,
+            )
+            cfg = json.loads(
+                machine.succeed(f"cat {CONFIG_FILE}", timeout=CMD_TIMEOUT)
+            )
+            assert cfg["daemon"]["cors"]["allowedOrigins"] == [], cfg
+            assert cfg["pluginsEnabled"] is False, cfg
+            assert cfg["agents"]["providers"]["muse"]["enabled"] is False, cfg
+            assert (
+                cfg["daemon"]["relay"]["requireProtectedSecurity"] is True
+            ), cfg
+            assert (
+                cfg["agents"]["providers"]["env-probe"]["label"] == "Env probe"
+            ), cfg
+            assert cfg["daemon"]["serviceProxy"]["enabled"] is True, cfg
 
-    with subtest("terminal CLI drives a workspace terminal"):
-        machine.succeed("install -d -m 0777 /tmp/paseo-terminal-test")
-        machine.succeed(
-            f"PASEO_PASSWORD_FILE={password_file} "
-            "paseo terminal create --host '[::1]:6767' "
-            "--cwd /tmp/paseo-terminal-test --name vm-terminal --json "
-            "| jq -e '.name == \"vm-terminal\" "
-            "and .cwd == \"/tmp/paseo-terminal-test\"'"
-        )
-        machine.succeed(
-            f"PASEO_PASSWORD_FILE={password_file} "
-            "paseo terminal send-keys --host '[::1]:6767' vm-terminal "
-            "'env > terminal-env; "
-            "echo paseo-terminal-file-ok > terminal-result; "
-            "echo paseo-terminal-output-ok' Enter"
-        )
-        machine.wait_until_succeeds(
-            "grep -Fx paseo-terminal-file-ok "
-            "/tmp/paseo-terminal-test/terminal-result",
-            timeout=timedelta(seconds=30),
-        )
-        # Check exports from the actual terminal, not the test runner's shell.
-        assert_session_env("cat /tmp/paseo-terminal-test/terminal-env")
-        assert_no_secret_env("cat /tmp/paseo-terminal-test/terminal-env")
-        machine.succeed(
-            f"PASEO_PASSWORD_FILE={password_file} "
-            "paseo terminal capture --host '[::1]:6767' "
-            "--scrollback vm-terminal "
-            "| grep -Fx paseo-terminal-output-ok"
-        )
-        machine.succeed(
-            f"PASEO_PASSWORD_FILE={password_file} "
-            "paseo terminal kill --host '[::1]:6767' "
-            "--json vm-terminal | jq -e '.success == true'"
-        )
+            # Wait until `bash -lc` sources profile and execs paseo-server.
+            def read_daemon_env() -> dict[str, str] | None:
+                rc, out = machine.execute(
+                    "pid=$(systemctl show paseo.service -p MainPID --value) && "
+                    "[ \"$pid\" -gt 0 ] && tr '\\0' '\\n' < /proc/$pid/environ",
+                    timeout=CMD_TIMEOUT,
+                )
+                if rc != 0:
+                    return None
+                env = parse_env(out)
+                return env if "TEST_SYSTEM_VAR" in env else None
 
-    with subtest("bundled web UI is served"):
-        machine.wait_until_succeeds(
-            "curl -g -sf -H 'Host: paseo.test' http://[::1]:6767/ "
-            "| grep -i '<html'",
-            timeout=timedelta(seconds=30),
-        )
+            daemon_env = wait_for_value(
+                read_daemon_env, "paseo.service login env"
+            )
+            assert (
+                daemon_env.get("PASEO_PASSWORD_FILE") == PASSWORD_FILE
+            ), daemon_env
+            assert daemon_env.get("PASEO_RELAY_ENABLED") == "true", daemon_env
+            assert (
+                daemon_env.get("PASEO_SERVICE_PROXY_ENABLED") == "false"
+            ), daemon_env
+            assert "PASEO_PASSWORD" not in daemon_env, daemon_env
+            assert_session_env(daemon_env, expected_env, "paseo.service")
 
-    with subtest("nginx proxies web UI"):
-        machine.wait_for_unit("nginx.service")
-        machine.wait_for_open_port(80)
-        machine.succeed(
-            "curl -sf -H 'Host: paseo.test' http://127.0.0.1/ "
-            "| grep -i '<html'"
-        )
+            machine.succeed(
+                "install -d -m 0777 "
+                "/tmp/paseo-agent-env /tmp/paseo-terminal-test",
+                timeout=CMD_TIMEOUT,
+            )
 
-    with subtest("nginx proxies relay health"):
-        machine.succeed(
-            "curl -sf -H 'Host: relay.test' http://127.0.0.1/health "
-            "| jq -e '.status == \"ok\"'"
-        )
+        # --- HTTP/CORS/nginx, RPCs, plugins, agent/terminal, relay auth --- #
 
-    with subtest("relay clients must send the daemon password"):
-        pairing_url = machine.succeed(
-            f"PASEO_PASSWORD_FILE={password_file} "
-            "paseo daemon pair --host '[::1]:6767' --json | jq -r .url"
-        ).strip()
-        assert pairing_url.startswith("http://paseo.test/#offer="), pairing_url
-        # Offers pin clients to replay-protected (Noise NK) relay sessions.
-        offer_b64 = pairing_url.split("#offer=", 1)[1]
-        offer_b64 += "=" * (-len(offer_b64) % 4)
-        offer = json.loads(base64.urlsafe_b64decode(offer_b64))
-        assert offer.get("minimumSecurityMode") == "protected", offer
-        relay_ls = f"timeout 30 paseo ls --host '{pairing_url}' --json"
-        # Regression guard: before v0.15, upstream admitted credential-less
-        # relay clients as owner.
-        status, output = machine.execute(f"{relay_ls} 2>&1")
-        assert status != 0, f"relay w/o password admitted: {output}"
-        assert "password" in output.lower(), output
-        status, output = machine.execute(
-            f"PASEO_PASSWORD=wrong-password {relay_ls} 2>&1"
-        )
-        assert status != 0, f"relay w/ wrong password admitted: {output}"
-        assert "password" in output.lower(), output
-        machine.succeed(f"PASEO_PASSWORD_FILE={password_file} {relay_ls}")
+        with subtest("daemon HTTP, RPCs, plugins, terminal, and relay auth"):
+            # Launch immediately so Node module import overlaps w/ paseo-server
+            # cold start; the probe waits for /api/health and WS readiness.
+            machine.succeed("paseo-rpc-probe", timeout=UP_TIMEOUT)
 
-    with subtest("managed plugin installs are disabled"):
-        status, output = machine.execute(
-            f"PASEO_PASSWORD_FILE={password_file} timeout 30 "
-            "paseo plugin install --host '[::1]:6767' npm:left-pad 2>&1"
-        )
-        assert status != 0, output
-        assert "Managed plugin installs are disabled" in output, output
-        machine.succeed("timeout 30 paseo-plugin-registry-probe")
+            ss_out = machine.succeed("ss -Hltnp", timeout=CMD_TIMEOUT)
+            all_ports = {
+                int(line.split()[3].rpartition(":")[2])
+                for line in ss_out.splitlines()
+            }
+            # Service proxy stays disabled across all addresses (v4 and v6).
+            assert 6768 not in all_ports, (all_ports, ss_out)
+            daemon_addrs = [
+                line.split()[3]
+                for line in ss_out.splitlines()
+                if "Paseo Daemon" in line
+            ]
+            assert "[::1]:6767" in daemon_addrs, (daemon_addrs, ss_out)
+            for addr in daemon_addrs:
+                host, _, _ = addr.rpartition(":")
+                assert host in {"127.0.0.1", "[::1]"}, (daemon_addrs, ss_out)
 
-    with subtest("provider CLI updates are disabled"):
-        machine.succeed("timeout 30 paseo-provider-updates-probe")
+        # --- Child env inheritance and secret scrubbing --- #
 
-    with subtest("stop kills terminal children and restart restores env"):
-        machine.succeed(
-            f"PASEO_PASSWORD_FILE={password_file} "
-            "paseo terminal create --host '[::1]:6767' "
-            "--cwd /tmp/paseo-terminal-test --name lifecycle-terminal --json"
-        )
-        # A detached child must also be cleaned up, not just the PTY shell.
-        machine.succeed(
-            f"PASEO_PASSWORD_FILE={password_file} "
-            "paseo terminal send-keys --host '[::1]:6767' lifecycle-terminal "
-            "'nohup sleep 600 >/dev/null 2>&1 & echo $! > child-pid; "
-            "echo $$ > shell-pid' Enter"
-        )
-        machine.wait_until_succeeds(
-            "test -s /tmp/paseo-terminal-test/shell-pid",
-            timeout=timedelta(seconds=30),
-        )
-        terminal_pid = machine.succeed(
-            "cat /tmp/paseo-terminal-test/shell-pid"
-        ).strip()
-        child_pid = machine.succeed(
-            "cat /tmp/paseo-terminal-test/child-pid"
-        ).strip()
-        # Children stay in the unit's cgroup, so stopping it kills them.
-        machine.succeed(f"grep -q '/paseo[.]service$' /proc/{child_pid}/cgroup")
-        machine.succeed("systemctl stop paseo.service")
-        machine.wait_until_succeeds(
-            f"test ! -e /proc/{terminal_pid} && test ! -e /proc/{child_pid}",
-            timeout=timedelta(seconds=30),
-        )
-        machine.succeed(f"systemctl is-active user@{user_uid}.service")
-        # Simulate UI edits while stopped
-        # runuser not su since su needs a setuid wrapper + PAM account check.
-        machine.succeed(
-            "runuser testuser -c \"jq '.daemon.autoArchiveAfterMerge = true "
-            "| .pluginsEnabled = true' "
-            f"{config_file} > {config_file}.edit && "
-            f"mv {config_file}.edit {config_file}\""
-        )
-        machine.succeed("systemctl start paseo.service")
-        machine.wait_for_unit("paseo.service")
-        machine.wait_until_succeeds("curl -g -sf http://[::1]:6767/api/health")
-        assert_session_env(daemon_env_cmd)
-        machine.succeed(
-            "jq -e '.daemon.autoArchiveAfterMerge == true "
-            f"and .pluginsEnabled == false' {config_file}"
-        )
+        with subtest("agent and terminal inherit session env without secrets"):
+            env_files = [
+                "/tmp/paseo-agent-env/agent-env",
+                "/tmp/paseo-agent-env/nonlogin-env",
+                "/tmp/paseo-agent-env/login-env",
+                "/tmp/paseo-terminal-test/terminal-env",
+            ]
+            for env_file in env_files:
+                raw_env = machine.succeed(
+                    f"cat {shlex.quote(env_file)}",
+                    timeout=CMD_TIMEOUT,
+                )
+                parsed_env = parse_env(raw_env)
+                assert_session_env(parsed_env, expected_env, env_file)
+                assert_no_secret_env(parsed_env, env_file)
+
+        # --- Stop cleanup and restart config merge --- #
+
+        with subtest("stop kills terminal children and restart merges config"):
+            pids = machine.succeed(
+                "cat /tmp/paseo-terminal-test/shell-pid "
+                "/tmp/paseo-terminal-test/child-pid",
+                timeout=CMD_TIMEOUT,
+            ).splitlines()
+            terminal_pid, child_pid = pids[0].strip(), pids[1].strip()
+            # Prove both the PTY shell and detached sleep are live in the unit
+            # cgroup before stopping it.
+            machine.succeed(
+                f"grep -q '/paseo[.]service$' /proc/{terminal_pid}/cgroup "
+                f"&& grep -q '/paseo[.]service$' /proc/{child_pid}/cgroup",
+                timeout=CMD_TIMEOUT,
+            )
+            wait_for_cmd(
+                machine,
+                f"test \"$(cat /proc/{child_pid}/comm)\" = sleep",
+            )
+            machine.succeed("systemctl stop paseo.service", timeout=CMD_TIMEOUT)
+            wait_for_cmd(
+                machine,
+                f"test ! -e /proc/{terminal_pid} "
+                f"&& test ! -e /proc/{child_pid}",
+            )
+            machine.succeed(
+                f"systemctl is-active user@{user_uid}.service",
+                timeout=CMD_TIMEOUT,
+            )
+
+            # Simulate a UI edit while stopped; ExecStartPre re-enforces policy
+            # before `systemctl start` returns, so no second health wait needed.
+            edited_cfg = json.loads(
+                machine.succeed(f"cat {CONFIG_FILE}", timeout=CMD_TIMEOUT)
+            )
+            edited_cfg["daemon"]["autoArchiveAfterMerge"] = True
+            edited_cfg["pluginsEnabled"] = True
+            edit_cmd = (
+                f"umask 077 && printf '%s\\n' "
+                f"{shlex.quote(json.dumps(edited_cfg))} "
+                f"> {CONFIG_FILE}.edit && mv {CONFIG_FILE}.edit {CONFIG_FILE}"
+            )
+            machine.succeed(
+                f"runuser testuser -c {shlex.quote(edit_cmd)}",
+                timeout=CMD_TIMEOUT,
+            )
+            machine.succeed("systemctl start paseo.service", timeout=CMD_TIMEOUT)
+            restarted_cfg = json.loads(
+                machine.succeed(f"cat {CONFIG_FILE}", timeout=CMD_TIMEOUT)
+            )
+            assert (
+                restarted_cfg["daemon"]["autoArchiveAfterMerge"] is True
+            ), restarted_cfg
+            assert restarted_cfg["pluginsEnabled"] is False, restarted_cfg
+    except Exception:
+        dump_evidence(EVIDENCE)
+        raise
   '';
 }
