@@ -1,6 +1,6 @@
 " just indent settings
-set smartindent                 " smart indenting
-set expandtab                   " space tabs
-set shiftwidth=4                " 2 spaces per tab
-set softtabstop=4               " backspace deletes pseudo-tab
-set tabstop=4                   " indent every 2 columns
+setlocal smartindent                 " smart indenting
+setlocal expandtab                   " space tabs
+setlocal shiftwidth=4                " 2 spaces per tab
+setlocal softtabstop=4               " backspace deletes pseudo-tab
+setlocal tabstop=4                   " indent every 2 columns

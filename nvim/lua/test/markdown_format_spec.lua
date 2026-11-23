@@ -588,6 +588,39 @@ describe("markdown gw formatting", function()
             }, format_with_gw(input, 52))
         end)
 
+        -- A global 'smartindent' leaked from another filetype's indent script
+        -- indents lines after a 'cinwords' keyword like `for`.
+        -- see: nvim/indent/json.vim
+        it("ignores indent settings from other filetypes", function()
+            local option_names = {
+                "expandtab",
+                "shiftwidth",
+                "smartindent",
+                "softtabstop",
+                "tabstop",
+            }
+            local global_options = {}
+            for _, name in ipairs(option_names) do
+                global_options[name] = vim.go[name]
+            end
+
+            local ok, result = xpcall(function()
+                local json_bufnr = vim.api.nvim_create_buf(false, true)
+                vim.bo[json_bufnr].filetype = "json"
+                vim.api.nvim_buf_delete(json_bufnr, { force = true })
+                return format_with_gw({ "for aaa bbb" }, 8)
+            end, debug.traceback)
+
+            for name, value in pairs(global_options) do
+                vim.go[name] = value
+            end
+            if not ok then
+                error(result)
+            end
+
+            eq({ "for aaa", "bbb" }, result)
+        end)
+
         it("reflows inline code, emphasis, links, and images", function()
             local input = {
                 "A paragraph with **strong words**, _emphasized words_, "
