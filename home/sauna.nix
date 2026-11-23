@@ -1,34 +1,15 @@
-# sauna - Hetzner bare metal server home config
+# sauna - Hetzner bare metal server home-manager config
 {
-  # a reference to the home-manager config object this fn outputs
-  # config,
-  # nixpkgs
   pkgs,
-  # ../pkgs/default.nix
   phlipPkgs,
-  # nixpkgs.lib
-  # lib,
-  # # npins sources passed in via `extraSpecialArgs`
-  # sources,
   ...
 }:
 {
-  # Easily search through home-manager options:
-  # <https://mipmip.github.io/home-manager-option-search>
-
-  # Home Manager needs a bit of information about you and the paths it should
-  # manage.
   home.username = "phlip9";
   home.homeDirectory = "/home/phlip9";
 
-  # This value determines the Home Manager release that your configuration is
-  # compatible with. This helps avoid breakage when a new Home Manager release
-  # introduces backwards incompatible changes.
-  #
-  # You should not change this value, even if you update Home Manager. If you do
-  # want to update the value, then make sure to first check the Home Manager
-  # release notes.
-  home.stateVersion = "25.11"; # Please read the comment before changing.
+  # Preserve state compatibility across Home Manager upgrades.
+  home.stateVersion = "25.11";
 
   imports = [
     ./mods/core.nix
@@ -45,6 +26,7 @@
     ./mods/github-agent.nix
     ./mods/gpg-agent.nix
     ./mods/gpg.nix
+    # ./mods/hol-light-dev.nix
     ./mods/inputrc.nix
     # ./mods/jdk.nix
     ./mods/jujutsu.nix
@@ -54,6 +36,7 @@
     # ./mods/mpv.nix
     # ./mods/nethack.nix
     # ./mods/niri.nix
+    # ./mods/nix-sources.nix
     # ./mods/noctalia.nix
     ./mods/nvim/default.nix
     ./mods/postgres.nix
@@ -63,8 +46,6 @@
     ./mods/tmux.nix
   ];
 
-  # The home.packages option allows you to install Nix packages into your
-  # environment.
   home.packages = [
     pkgs.htop
     pkgs.lm_sensors
@@ -76,23 +57,18 @@
     pkgs.rustup
     pkgs.uv
 
-    # agy - Google Antigravity AI cli
     phlipPkgs.antigravity-cli
-
-    # claude - AI cli
     phlipPkgs.claude-code
-
-    # codex - AI cli
     phlipPkgs.codex
   ];
 
-  # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  # Headless server, no need for ssh-askpass
+  # --- Services --- #
+
+  # Disable the GUI password prompt on the headless server.
   services.nix-ssh-agent.ssh-askpass = null;
 
-  # per-user postgres systemd service: ./mods/postgres.nix
   services.postgres = {
     enable = true;
     ensureDatabases = [
