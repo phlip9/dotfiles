@@ -247,8 +247,6 @@ in
       systemd.services.niks3 = {
         after = [ "s3-setup.service" ];
         requires = [ "s3-setup.service" ];
-        # Count uploads in `niks3_cache_objects` within ~1s, not ~1 min.
-        environment.NIKS3_INVENTORY_REFRESH_INTERVAL = "1s";
       };
 
       systemd.services.fake-github = {
@@ -587,7 +585,9 @@ in
             'up{job="nixbot"} == 1',
             'up{job="niks3"} == 1',
             'nixbot_builds{job="nixbot",status="succeeded"} >= 1',
-            'niks3_cache_objects{job="niks3"} >= 1',
+            # Counted at push commit. `niks3_cache_objects` lags up to 5 min
+            # behind (DB-side recount floor).
+            'niks3_commit_objects_total{job="niks3"} >= 1',
         ):
             machine.wait_until_succeeds(
                 "curl -sf http://127.0.0.1:8428/internal/force_flush && "

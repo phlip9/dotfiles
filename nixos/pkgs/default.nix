@@ -67,9 +67,6 @@ fix (phlipPkgsNixos: {
   # patched to pin `nix path-info --json-format 1`
   niks3 = callPackage ./niks3 { inherit sources; };
 
-  # niks3-server, patched w/ a configurable inventory metrics refresh interval
-  niks3-server = callPackage ./niks3-server { inherit sources; };
-
   # nixos-exporter - Prometheus exporter for NixOS boots, generations, and
   # pending reboots
   nixos-exporter = callPackage ./nixos-exporter { };
