@@ -4,9 +4,9 @@
 # remove from nixos/pkgs/paseo/default.nix.
 #
 # Test files (*.test.ts(x), *.spec.ts(x), e2e/, vitest.config.*) go to a
-# separate nixos/pkgs/paseo/tests/<name>.patch: upstream's nix src filter strips
-# test files, so the package build can't apply them. import-patches.sh
-# re-applies both.
+# separate nixos/pkgs/paseo/tests/<name>.patch: nixos/pkgs/paseo/default.nix's
+# `mkScope` filter strips test files, so the package build can't apply them.
+# import-patches.sh re-applies both.
 #
 # Patches that differ only in `index <blob>..<blob>` lines are left alone, so
 # re-exporting an unchanged stack is a no-op.

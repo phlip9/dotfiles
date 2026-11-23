@@ -26,8 +26,20 @@ surface, patch review) to save context. Give them the file pointers below.
 Ours (read before starting; the docs for each piece live in these files):
 
 - `npins/sources.json` `paseo` pin (GitRelease, `pre_releases: false`)
-- `nixos/pkgs/paseo/default.nix`: wraps upstream `nix/package.nix`, our
-  `npmDepsHash`, ordered `patches` list (one comment per patch), PATH fixup
+- `nixos/pkgs/paseo/default.nix`: vendored split build
+  (`npmDeps -> nodeModules -> shared -> (server || webUi) -> paseo`),
+  per-sub-drv patch slicer (`assertAllPatchHunksMatched`), `npmDepsHash`,
+  ordered `patches` list (one comment per patch)
+- `nixos/pkgs/paseo/prune-lockfile.py`: prunes unused workspaces, dev/test/lint
+  tools, mobile-only deps, sherpa-onnx, and non-linux-x64 optional binaries
+  before `fetchNpmDeps` and `npm ci`
+- `nixos/pkgs/paseo/install-server.mjs`: traces daemon + CLI runtime closure
+  w/ `@vercel/nft` and copies into `paseo.server` (keep in sync w/ upstream
+  `scripts/trace-daemon.mjs`)
+- `nixos/pkgs/paseo/install-web-ui.mjs`: copies Expo web UI export into
+  `paseo.webUi` and precompresses `.br` (q=9) / `.gz` concurrently
+- `nixos/pkgs/paseo/metro-minify-esbuild.cjs`: esbuild Metro minifier for
+  `paseo.webUi`
 - `nixos/pkgs/paseo/*.patch`: downstream patches
 - `nixos/pkgs/paseo/tests/*.patch`: tests for the same-named patch (nix build
   skips them; import/export scripts handle them)
@@ -56,7 +68,8 @@ missing), security-relevant paths under `packages/server/src/server/`:
 - plugins: `plugins/builtin/index.ts`, `plugins/managed-source.ts`
 - providers: `agent/provider-installation/` (update checks, CLI self-updaters)
 - permissions: `authorization/operation-permissions.ts`
-- packaging: `nix/`, `scripts/trace-daemon.mjs`
+- packaging: `nix/`, `scripts/trace-daemon.mjs`,
+  `scripts/build-daemon-web-ui.mjs`, `scripts/postinstall-patches.mjs`
 
 ## Setup
 
@@ -86,9 +99,12 @@ Run in parallel subagents:
    `git log --oneline <OLD>..<NEW>`. Breaking changes to things we use:
    env vars, CLI flags (`--no-relay`), CLI commands the test drives,
    `/api/health` + `/api/status` shape, provider config schema.
-2. **Packaging**: `git diff <OLD> <NEW> -- nix/ scripts/trace-daemon.mjs`.
-   Module option/ExecStart/preStart changes affect `nixos/mods/paseo.nix`
-   overrides (`mkForce`d ExecStart, WorkingDirectory, preStart ordering).
+2. **Packaging**: `git diff <OLD> <NEW> -- nix/ patches/ scripts/trace-daemon.mjs scripts/build-daemon-web-ui.mjs scripts/postinstall-patches.mjs package.json package-lock.json 'packages/*/package.json' plugins/package.json`.
+   `nixos/pkgs/paseo/default.nix` is vendored (port upstream build/dep changes
+   to `default.nix`, `prune-lockfile.py`, `install-server.mjs`, and
+   `install-web-ui.mjs`). `nix/module.nix` is still imported: option/ExecStart/
+   preStart changes affect `nixos/mods/paseo.nix` overrides (`mkForce`d
+   ExecStart, WorkingDirectory, preStart ordering).
 3. **Security surface** (diff OLD vs NEW for each):
    - owner admission paths, i.e. every way to get a session w/o the
      password: `git grep -nE 'OWNER_PERMISSIONS|OWNER_SESSION_ADMISSION|principalId: "owner"' <rev> -- packages/server/src ':!*.test.ts'`
@@ -104,15 +120,15 @@ Run in parallel subagents:
    (drop), still applies, or needs a rebase? Grep for the patch's
    functions/keys in `<OLD>..<NEW>` history.
    - A clean apply proves nothing for patches that replace a built module
-     (`postBuild` `cp ... dist/...` in `default.nix`, e.g.
+     (`server.buildPhase` `cp ... compiler-build.js` in `default.nix`, e.g.
      `paseo-precompile-plugins`): diff the replaced module's exports and
      importers OLD..NEW. A missing export only fails at daemon startup.
-   - TEMPORARY: our `preBuild = "npm run postinstall"` works around
-     getpaseo/paseo#7673 (upstream skips `patches/*.patch`). Drop it if
-     the issue is closed or upstream `nix/package.nix` now runs
-     `postinstall`/`patch-package`; double-applying fails the build. Remove
-     this note once the workaround is gone. Your `gh` can't read getpaseo repos;
-     use `curl -s https://api.github.com/repos/getpaseo/paseo/issues/7673 | jq .state`.
+   - `nodeModules.buildPhase` runs `npm run postinstall` explicitly because
+     `npmRebuildFlags = [ "--ignore-scripts" ]` skips lifecycle hooks (see
+     upstream getpaseo/paseo#7673). Check if upstream changed
+     `scripts/postinstall-patches.mjs` or `patches/*.patch`. Your `gh` can't
+     read getpaseo repos; use
+     `curl -s https://api.github.com/repos/getpaseo/paseo/issues/7673 | jq .state`.
 
 ## Gate: report
 
@@ -134,8 +150,11 @@ where the shipped `patches` list (evaluated by `patch-list.sh` via nix, as
 import uses) differs from the branch: entries to add/remove, or order.
 Keep patches minimal and fail-closed.
 
-npmDepsHash (differs from upstream `nix/npm-deps.hash`, different nixpkgs):
-set `npmDepsHash = "";` then `nix build -f . paseo.npmDeps` and copy `got:`.
+npmDepsHash (differs from upstream `nix/npm-deps.hash`: pruned lockfile +
+nixpkgs): set `npmDepsHash = lib.fakeHash;`, run `nix build -f . paseo.npmDeps`
+(~10s), and copy `got:`. If `npm ci` or a sub-drv fails on a renamed/new
+dependency or workspace, update `prune-lockfile.py` or `default.nix`
+(`mkScope` declarations, `substituteInPlace` hooks).
 
 ```bash
 timeout 1200 nix build -f . paseo -o "$art/paseo" > "$art/build.log" 2>&1
@@ -143,11 +162,13 @@ grep -E 'error TS|FAILED|^error' "$art/build.log"
 "$art/paseo/bin/paseo" --version
 ```
 
-- The package build takes 5-10 min (tsc + Expo web UI bundle), and longer
-  when builds run concurrently. Run it in the background, one at a time.
+- Cold build takes ~2.5 min (`server` and `webUi` build in parallel).
+  Incremental rebuilds take ~35s for server/cli-only changes (`paseo.server`)
+  and ~95s for web UI changes (`paseo.webUi`). Run in the background, one heavy
+  build at a time.
 - Patched TS must typecheck (`noUnusedLocals`, control-flow narrowing).
-  Failures surface only minutes into the build as `error TS`; fix them on
-  the patch branch, then re-export.
+  Failures surface during `paseo.shared` or `paseo.server` as `error TS`; fix
+  them on the patch branch, then re-export.
 
 ## Phase 3: modules, tests, configs
 
@@ -159,7 +180,7 @@ grep -iE 'deprecat' "$art/test.log" | grep -v '^paseo>'   # CLI deprecations
 grep -E 'Failed to start built-in plugin|"level":(50|60)' "$art/test.log"
 ```
 
-The VM test itself runs ~1 min; package rebuilds dominate.
+The container test itself runs ~30s once `paseo` is built.
 
 Patch-level checks once `npins` points at NEW and patches are exported
 (`P=.agents/skills/paseo-dev/scripts/paseo-dev`):

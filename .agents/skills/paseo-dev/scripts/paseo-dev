@@ -572,7 +572,7 @@ cmd_visual() {
 cmd_build() {
   local out=$dot/tmp/paseo-build
   mkdir -p "$out"
-  log "nix build -f . paseo (5-10 min), log: $out/build.log"
+  log "nix build -f . paseo (~35s-2.5m), log: $out/build.log"
   if ! capped timeout 1800 nix build -f "$dot" paseo -o "$out/result" -L \
     > "$out/build.log" 2>&1; then
     grep -E 'error TS|^error|FAILED|ignored|can.t find file' "$out/build.log" \

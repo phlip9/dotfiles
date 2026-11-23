@@ -24,9 +24,11 @@ worktree, aliased as `P=.agents/skills/paseo-dev/scripts/paseo-dev`.
 
 - `nixos/pkgs/paseo/*.patch` is the source of truth, listed in order in
   `nixos/pkgs/paseo/default.nix` w/ one comment each. Tests for a patch live
-  in `nixos/pkgs/paseo/tests/<name>.patch`. Upstream's nix src filter strips
-  test files, so the package build applies only the main patch. Upstream tests
-  that conflict w/ a patch are listed in `nixos/pkgs/paseo/tests/ignored.json`.
+  in `nixos/pkgs/paseo/tests/<name>.patch`. `default.nix`'s `mkScope` filter
+  strips test files, so the package build applies only the main patch (sliced
+  per sub-derivation so server-only edits skip `nodeModules`, `shared`, and
+  `webUi`). Upstream tests that conflict w/ a patch are listed in
+  `nixos/pkgs/paseo/tests/ignored.json`.
 - `paseo-dev setup` creates `tmp/paseo`, a git worktree of `~/dev/paseo` at
   the pinned tag (`npins/sources.json`) on branch `wt/<dotfiles-worktree>`,
   w/ one commit per patch (subject == patch stem). It has its own
@@ -190,8 +192,8 @@ Pick by what the patch changes:
 $P export            # writes nixos/pkgs/paseo/*.patch + tests/, reports drift
 # new patch: add `./paseo-<feature>.patch` + a 1-2 line comment at the end
 # of `patches` in nixos/pkgs/paseo/default.nix
-$P build             # nix build -f . paseo (5-10 min; run in background)
-$P vmtest            # nixosTests.paseo (~2 min after build)
+$P build             # nix build -f . paseo (~35s server, ~95s webUi, ~2.5m cold)
+$P vmtest            # nixosTests.paseo (~30s after build)
 just nix-ci
 ```
 
