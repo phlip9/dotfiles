@@ -10,9 +10,7 @@
     ./nix-sources.nix
   ];
 
-  #
-  # Kernel/Boot
-  #
+  # --- Kernel/Boot --- #
 
   # don't timeout to emergency shell while waiting for LUKS disk encryption
   # password
@@ -24,15 +22,11 @@
   # Limit max journal size
   services.journald.settings.Journal.SystemMaxUse = "512M";
 
-  #
-  # Nix
-  #
+  # --- Nix --- #
 
   phlip9.nix-cache.enable = true;
 
-  #
-  # Window/Display Manager
-  #
+  # --- Window/Display Manager --- #
 
   # # enable X11 windowing system
   # services.xserver.enable = true;

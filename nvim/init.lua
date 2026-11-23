@@ -1520,9 +1520,7 @@ do  -- KEYBINDINGS {{{
     -- vim.keymap.set("n", "n", "nzzzv", opts)
     -- vim.keymap.set("n", "N", "Nzzzv", opts)
 
-    --
-    -- Terminal Mode
-    --
+    -- --- Terminal Mode --- --
 
     -- Use escape to go back to normal mode
     vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", M.with_desc("exit terminal mode", opts))
@@ -1533,9 +1531,8 @@ do  -- KEYBINDINGS {{{
     vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-W>k", M.with_desc("move to window above", opts))
     vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-W>l", M.with_desc("move to right window", opts))
 
-    --
-    -- "lazy-shift" aliases
-    --
+    -- --- "lazy-shift" aliases --- --
+
     vim.cmd([[
         command! -bar -nargs=* -complete=file -range=% -bang W         <line1>,<line2>write<bang> <args>
         command! -bar -nargs=* -complete=file -range=% -bang Write     <line1>,<line2>write<bang> <args>

@@ -185,9 +185,7 @@
     tctiEnvironment.interface = "tabrmd";
   };
 
-  #
-  # Nix
-  #
+  # --- Nix --- #
 
   nix.settings = {
     # needed for NixOS container tests
@@ -229,9 +227,7 @@
     ];
   };
 
-  #
-  # Nvidia graphics drivers
-  #
+  # --- Nvidia graphics drivers --- #
 
   # enable hardware acceleration
   hardware.graphics.enable = true;
@@ -294,9 +290,7 @@
     )
   ];
 
-  #
-  # User
-  #
+  # --- User --- #
 
   users.users.phlip9 = {
     isNormalUser = true;

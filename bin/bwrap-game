@@ -128,9 +128,7 @@ for fake_home_dir in "${fake_home_dirs[@]}"; do
     ensure_fake_home_dir "$fake_home_dir"
 done
 
-#
-# bwrap sandbox args
-#
+# --- bwrap sandbox args --- #
 
 bwrap_args=(
     --die-with-parent
@@ -280,9 +278,7 @@ for device_path in /dev/dri /dev/nvidia* /dev/snd /dev/input /dev/hidraw*; do
 done
 shopt -u nullglob
 
-#
-# Run game
-#
+# --- Run game --- #
 
 game_command=("$@")
 

@@ -181,9 +181,7 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  #
-  # Services
-  #
+  # --- Services --- #
 
   # per-user postgres systemd service: ./mods/postgres.nix
   services.postgres = {
@@ -195,9 +193,7 @@
   # from NixOS pkgs.
   services.nix-ssh-agent.ssh-askpass = "/run/current-system/sw/bin/seahorse-ssh-askpass";
 
-  #
-  # Misc
-  #
+  # --- Misc --- #
 
   programs.alacritty.fontSize = 11;
 }

@@ -11,9 +11,8 @@
   ...
 }:
 {
-  #
-  # Login greeter
-  #
+
+  # --- Login greeter --- #
 
   # minimal greetd auto-login direct to niri-session
   # - docs: <https://man.sr.ht/~kennylevinsen/greetd>

@@ -154,9 +154,7 @@
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
-  #
-  # Services
-  #
+  # --- Services --- #
 
   # per-user postgres systemd service: ./mods/postgres.nix
   services.postgres = {
@@ -164,9 +162,7 @@
     ensureDatabases = [ "lexe-dev" ];
   };
 
-  #
-  # Misc
-  #
+  # --- Misc --- #
 
   programs.alacritty.fontSize = 11;
 }
