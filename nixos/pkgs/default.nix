@@ -31,8 +31,8 @@ fix (phlipPkgsNixos: {
   # exiled-exchange-2 - Path of Exile 2 trading app for price checking
   exiled-exchange-2 = callPackage ./exiled-exchange-2.nix { };
 
-  # grafana, patched so Git Sync isn't blocked by GitHub
-  grafana = callPackage ./grafana { };
+  # grafana, w/o passthru tests (silences eval warning)
+  grafana = callPackage ./grafana.nix { };
 
   # Grafana Alloy 1.22 pre-release: Go 1.27 symbolization in pyroscope.ebpf
   grafana-alloy = callPackage ./grafana-alloy { };

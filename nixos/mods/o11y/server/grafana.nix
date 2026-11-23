@@ -299,7 +299,6 @@ in
 
     services.grafana = {
       enable = true;
-      # Patched so Git Sync isn't blocked by GitHub.
       package = phlipPkgsNixos.grafana;
       provision.enable = true;
 
