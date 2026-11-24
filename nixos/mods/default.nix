@@ -25,6 +25,7 @@
   )
 
   (sources.sops-nix + "/modules/sops/default.nix")
+  ./agent-center.nix
   ./darwin-builder.nix
   ./etc-hosts.nix
   ./github-agent-authd.nix
