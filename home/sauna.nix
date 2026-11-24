@@ -1,9 +1,15 @@
 # sauna - Hetzner bare metal server home-manager config
 {
+  config,
   pkgs,
   phlipPkgs,
   ...
 }:
+let
+  # Agent Center's skill, from the checkout `agent-center-install` builds.
+  # see: nixos/mods/agent-center.nix
+  agentCenterSkill = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/dev/lexe-projects/.agents/skills/agent-center";
+in
 {
   home.username = "phlip9";
   home.homeDirectory = "/home/phlip9";
@@ -63,6 +69,10 @@
   ];
 
   programs.home-manager.enable = true;
+
+  # Teach Claude Code + Codex agents to raise threads in Agent Center.
+  home.file.".claude/skills/agent-center".source = agentCenterSkill;
+  home.file.".codex/skills/agent-center".source = agentCenterSkill;
 
   # --- Services --- #
 

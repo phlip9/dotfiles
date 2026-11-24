@@ -410,6 +410,15 @@
   };
   sops.secrets.paseo-daemon-password = { };
 
+  # --- Agent Center - agents' open threads w/ me --- #
+
+  # Install/update: `agent-center-install` (as phlip9)
+  # Connect: `ssh -L 4400:127.0.0.1:4400 sauna`, open http://127.0.0.1:4400
+  services.agent-center = {
+    enable = true;
+    humanName = "Philip";
+  };
+
   # Contain runaway agent procs to the paseo cgroup.
   #
   # 2026-10-29: an agent `cargo test` with an infinite loop leaked ~12G/min,
