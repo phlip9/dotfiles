@@ -228,6 +228,16 @@ in
     #   settings.flatten_cname = false;
     # };
 
+    cname_agent_center_phlip9_com = {
+      inherit zone_id;
+      name = "agent-center.phlip9.com";
+      type = "CNAME";
+      content = "sauna.phlip9.com";
+      ttl = 1; # automatic
+      proxied = false;
+      settings.flatten_cname = false;
+      comment = "Agent Center dashboard";
+    };
     cname_ci_phlip9_com = {
       inherit zone_id;
       name = "ci.phlip9.com";
