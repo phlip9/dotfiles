@@ -77,6 +77,7 @@ let
 in
 
 {
+  agent-center = runNixOSTest ./agent-center.nix;
   desktop-login = runNixOSTest ./desktop-login.nix;
   github-agent-authd = runNixOSTest ./github-agent-authd.nix;
   github-webhook = runNixOSTest ./github-webhook.nix;
