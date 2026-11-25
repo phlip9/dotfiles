@@ -35,6 +35,7 @@ __pycache__/
 
 # terraform
 /config.tf.json
+/.terraform.lock.hcl
 /.terraform/
 
 # AI
